@@ -16,4 +16,3 @@ def copyslices(indata, fromslice, zmin, zmax):
                     val = indata.GetScalarComponentAsFloat(x,y,fromslice,0)
                     indata.SetScalarComponentFromFloat(x,y,z,0,val)
     return 1
-`
