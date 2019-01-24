@@ -627,7 +627,6 @@ class Window(QMainWindow):
             else:
                 scale = vtk.VTK_UNSIGNED_CHAR_MAX / (iMax - iMin)
 
-            self.rescale[1] = (scale, -iMin)
             shiftScaler = vtk.vtkImageShiftScale()
             shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
