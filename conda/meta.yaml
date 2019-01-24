@@ -1,0 +1,36 @@
+package:
+  name: ccpi-dvc-app
+  version: {{ environ['CIL_VERSION'] }}
+
+
+build:
+  preserve_egg_dir: False
+  script_env:
+    - CIL_VERSION
+
+  entry_points:
+    - DVC_Configurator = ccpi.apps.DVC_configurator:main
+
+  number: 2
+  
+requirements:
+  build:
+    - {{ pin_compatible('numpy', max_pin='x.x') }}
+    - python 
+    - setuptools
+    - cython
+    - numpy
+ 
+  run:
+    - {{ pin_compatible('numpy', max_pin='x.x') }}
+    - python
+    - numpy
+    - ccpi-viewer ==0.11.0
+    - natsort
+    - docopt
+    
+
+about:
+  home: http://www.ccpi.ac.uk
+  license:  Apache v.2.0 license
+  summary: 'CCPi Core Imaging Library (Viewer)'
