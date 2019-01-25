@@ -233,8 +233,11 @@ class Window(QMainWindow):
 
         # self.pointcloud = []
         self.start_selection = True
+        self.pointCloudCreated = False
 
         self.show()
+    def setApp(self, App):
+        self.App = App
 
     def createDock3DWidget(self):
         # Add the 3D viewer widget
@@ -294,10 +297,9 @@ class Window(QMainWindow):
         self.pointactor = actor
         actor.SetMapper(mapper)
         actor.GetProperty().SetPointSize(3)
-        actor.GetProperty().SetColor(1, .2, .2)
+        actor.GetProperty().SetColor(.2, .2, 1)
         actor.VisibilityOn()
-
-
+        actor.AddObserver("ModifiedEvent", lambda: print ("point actor modified"))
         # create a mapper/actor for the point cloud with a CubeSource and with vtkGlyph3D
         # which copies oriented and scaled glyph geometry to every input point
 
@@ -712,7 +714,7 @@ class Window(QMainWindow):
         msg.exec_()
 
     def close(self):
-        self.quit()
+        self.App.quit()
 
     def loadPointCloudFromCSV(self, filename):
         print("loadPointCloudFromCSV")
@@ -800,7 +802,7 @@ class Window(QMainWindow):
                 actor = self.vertexActor
                 actor.SetMapper(mapper)
                 actor.GetProperty().SetPointSize(3)
-                actor.GetProperty().SetColor(1, .2, .2)
+                actor.GetProperty().SetColor(1, 1, .2)
                 self.pointActor = actor
                 actor.VisibilityOn()
                 clipper.SetInputData(self.pointPolyData)
@@ -1343,51 +1345,94 @@ class Window(QMainWindow):
 
     def createPointCloud(self):
         ## Create the PointCloud
-        #
-
+        # 
+        
+        
         # Mask is read from temp file
-        tmpdir = tempfile.gettempdir()
+        tmpdir = tempfile.gettempdir() 
         reader = vtk.vtkMetaImageReader()
         reader.SetFileName(os.path.join(tmpdir, "selection.mha"))
         reader.Update()
         origin = reader.GetOutput().GetOrigin()
         spacing = reader.GetOutput().GetSpacing()
         dimensions = reader.GetOutput().GetDimensions()
-
-        pointCloud = cilRegularPointCloudToPolyData()
-        # save reference
-        self.pointCloud = pointCloud
-
-
+        
+        if not self.pointCloudCreated:
+            pointCloud = cilRegularPointCloudToPolyData()
+            # save reference
+            self.pointCloud = pointCloud
+        else:
+            pointCloud = self.pointCloud
+        
+        
         shapes = [cilRegularPointCloudToPolyData.SPHERE,
                   cilRegularPointCloudToPolyData.CUBE,
                   cilRegularPointCloudToPolyData.CIRCLE,
                   cilRegularPointCloudToPolyData.SQUARE]
         dimensionality = [3,2]
-
-
+        
+        
         pointCloud.SetMode(shapes[self.subvolumeShapeValue.currentIndex()])
         pointCloud.SetDimensionality(
                 dimensionality[self.dimensionalityValue.currentIndex()]
-                )
-
+                ) 
+        
         #slice is read from the viewer
         v = self.vtkWidget.viewer
         pointCloud.SetSlice(v.GetActiveSlice())
-
+        
         pointCloud.SetInputConnection(0, reader.GetOutputPort())
-
+        
         pointCloud.SetOverlap(0,float(self.overlapXValueEntry.text()))
         pointCloud.SetOverlap(1,float(self.overlapYValueEntry.text()))
         pointCloud.SetOverlap(2,float(self.overlapZValueEntry.text()))
-
+        
         pointCloud.SetSubVolumeRadiusInVoxel(int(self.isoValueEntry.text()))
-
+                
         pointCloud.Update()
-
+        
         print ("pointCloud number of points", pointCloud.GetNumberOfPoints())
-
-
+             
+        # Erode the transformed mask of SubVolumeRadius because we don't want to have subvolumes 
+        # outside the mask
+        if not self.pointCloudCreated:
+            erode = vtk.vtkImageDilateErode3D()
+            # save reference
+            self.erode = erode
+        else:
+            erode = self.erode
+        erode.SetInputConnection(0,reader.GetOutputPort())
+        erode.SetErodeValue(1)
+        erode.SetDilateValue(0) 
+        
+        # FIXME: Currently the 2D case is only XY
+        # For 2D we need to set the Kernel size in the plane to 1, 
+        # otherwise the erosion would erode the whole mask.
+        ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
+        if pointCloud.GetDimensionality() == 3:
+            ks[2]= pointCloud.GetSubVolumeRadiusInVoxel()
+        # if shape is box or square to be sure that the subvolume is within
+        # the mask we need to take the half of the diagonal rather than the
+        # half of the size
+        if self.subvolumeShapeValue.currentIndex() == 0 or \
+           self.subvolumeShapeValue.currentIndex() == 2:
+               ks = [round(1.41 * l) for l in ks]
+        
+        erode.SetKernelSize(ks[0],ks[1],ks[2])
+        erode.Update()
+        print ("mask created")
+        
+        
+        # Mask the point cloud with the eroded mask
+        if not self.pointCloudCreated:
+            polydata_masker = cilMaskPolyData()
+            # save reference
+            self.polydata_masker = polydata_masker
+        else:
+            polydata_masker = self.polydata_masker
+        polydata_masker.SetMaskValue(1)
+        polydata_masker.SetInputConnection(1, erode.GetOutputPort())
+        
         ## Create a Transform to modify the PointCloud
         # Translation and Rotation
         #rotate = (0.,0.,25.)
@@ -1396,10 +1441,12 @@ class Window(QMainWindow):
                 float(self.rotateYValueEntry.text()),
                 float(self.rotateZValueEntry.text())
                 )
-
-        transform = vtk.vtkTransform()
-        # save reference
-        self.transform = transform
+        if not self.pointCloudCreated:
+            transform = vtk.vtkTransform()
+            # save reference
+            self.transform = transform
+        else:
+            transform = self.transform
         # rotate around the center of the image data
         transform.Translate(dimensions[0]/2*spacing[0], dimensions[1]/2*spacing[1],0)
         # rotation angles
@@ -1407,54 +1454,36 @@ class Window(QMainWindow):
         transform.RotateY(rotate[1])
         transform.RotateZ(rotate[2])
         transform.Translate(-dimensions[0]/2*spacing[0], -dimensions[1]/2*spacing[1],0)
-
+        
         # Actual Transformation is done here
         t_filter = vtk.vtkTransformFilter()
         # save reference
         self.t_filter = t_filter
         t_filter.SetTransform(transform)
         t_filter.SetInputConnection(pointCloud.GetOutputPort())
-
-
-        # Erode the transformed mask of SubVolumeRadius because we don't want to have subvolumes
-        # outside the mask
-        erode = vtk.vtkImageDilateErode3D()
-        # save reference
-        self.erode = erode
-        erode.SetInputConnection(0,reader.GetOutputPort())
-        erode.SetErodeValue(1)
-        erode.SetDilateValue(0)
-
-        # FIXME: Currently the 2D case is only XY
-        # For 2D we need to set the Kernel size in the plane to 1,
-        # otherwise the erosion would erode the whole mask.
-        ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
-        if pointCloud.GetDimensionality() == 3:
-            ks[2]= pointCloud.GetSubVolumeRadiusInVoxel()
-        # if shape is box or square to be sure that the subvolume is within
-        # the mask we need to take the half of the diagonal rather than the
-        # half of the size
-        if self.subvolumeShapeValue.currentIndex() == 1 or \
-           self.subvolumeShapeValue.currentIndex() == 3:
-               ks = [1.41 * l for l in ks]
-
-        erode.SetKernelSize(ks[0],ks[1],ks[2])
-        erode.Update()
-        print ("mask created")
-        # Mask the point cloud with the eroded mask
-        polydata_masker = cilMaskPolyData()
-        # save reference
-        self.polydata_masker = polydata_masker
-        polydata_masker.SetMaskValue(1)
+        #if rotate != [0.,0.,0.]:
         polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
-        polydata_masker.SetInputConnection(1, erode.GetOutputPort())
+        #else:
+        #    polydata_masker.SetInputConnection(0, pointCloud.GetOutputPort())
+        
         polydata_masker.Update()
         # print ("polydata_masker type", type(polydata_masker.GetOutputDataObject(0)))
-
-        # visualise polydata
-        self.setup2DPointCloudPipeline()
-        self.vtkWidget.viewer.setInputData2(reader.GetOutput())
-        self.setup3DPointCloudPipeline()
+        
+        if not self.pointCloudCreated:
+            # visualise polydata
+            self.setup2DPointCloudPipeline()
+            self.vtkWidget.viewer.setInputData2(reader.GetOutput())
+            self.setup3DPointCloudPipeline()
+            self.pointCloudCreated = True
+        else:
+            # self.polydata_masker.Modified()
+            self.cubesphere_actor3D.VisibilityOff()
+            self.pointactor.VisibilityOff()
+            self.cubesphere_actor.VisibilityOff()
+            print ("should be already changed")
+            self.cubesphere_actor3D.VisibilityOn()
+            self.pointactor.VisibilityOn()
+            self.cubesphere_actor.VisibilityOn()
 
 
     def OnKeyPressEvent(self, interactor, event):
@@ -1573,8 +1602,6 @@ class Window(QMainWindow):
         self.setStatusTip('Done')
 
 
-
-
 def main():
     err = vtk.vtkFileOutputWindow()
     err.SetFileName("viewer.log")
@@ -1588,7 +1615,7 @@ def main():
 
     App = QApplication(sys.argv)
     gui = Window()
-
+    gui.setApp(App)
     show_spheres = False
     if not args['--spheres'] is None:
         show_spheres = True if args["--spheres"] == 1 else False
