@@ -57,8 +57,10 @@ from functools import reduce
 from numbers import Number
 from docopt import docopt
 import tempfile
-
+import json
 import numpy
+
+
 
 # Import linking class to join 2D and 3D viewers
 import ccpi.viewer.viewerLinker as vlink
@@ -200,6 +202,7 @@ class Window(QMainWindow):
         self.createDock3DWidget()
         self.createPointCloudWidget()
         self.createMaskWidget()
+        self.createRangeWidget()
         self.toolbar()
 
 
@@ -328,7 +331,8 @@ class Window(QMainWindow):
         cube_source.SetXLength(spacing[0]*radius*2)
         cube_source.SetYLength(spacing[1]*radius*2)
         cube_source.SetZLength(spacing[2]*radius*2)
-
+        
+        
 
         # clip between planes
         bpcvolume = cilClipPolyDataBetweenPlanes()
@@ -352,7 +356,16 @@ class Window(QMainWindow):
 
         subv_glyph.SetInputConnection( polydata_masker.GetOutputPort() )
 
-        subv_glyph.SetSourceConnection( sphere_source.GetOutputPort() )
+
+        if self.subvolumeShapeValue.currentIndex() == 0 or \
+           self.subvolumeShapeValue.currentIndex() == 2:
+            self.glyph_source = cube_source
+        else:
+            self.glyph_source = sphere_source
+        
+        subv_glyph.SetSourceConnection( self.glyph_source.GetOutputPort() )
+        
+        # subv_glyph.SetSourceConnection( sphere_source.GetOutputPort() )
         # subv_glyph.SetSourceConnection( cube_source.GetOutputPort() )
 
         subv_glyph.SetVectorModeToUseNormal()
@@ -414,7 +427,7 @@ class Window(QMainWindow):
             subv_glyph.SetSourceConnection( cube_source.GetOutputPort() )
         else:
             subv_glyph.SetSourceConnection( sphere_source.GetOutputPort() )
-
+        subv_glyph.Modified()
 
         # actor for the glyphs
         sphere_actor = vtk.vtkActor()
@@ -519,7 +532,7 @@ class Window(QMainWindow):
 
         self.showMaskConfigurator = QAction("Configure Mask Panel", self)
         self.showMaskConfigurator.setCheckable(True)
-        self.showMaskConfigurator.setChecked(False)
+        self.showMaskConfigurator.setChecked(True)
         self.showMaskConfigurator.triggered.connect(
                 lambda: self.mask_panel[0].show() \
                    if self.showMaskConfigurator.isChecked() else \
@@ -649,6 +662,7 @@ class Window(QMainWindow):
         else:
             self.vtkWidget.viewer.setInput3DData(reader.GetOutput())
             self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
+            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
         if read_mask:
             self.mask_reader = reader
         else:
@@ -740,167 +754,7 @@ class Window(QMainWindow):
             self.loadIntoTableWidget(self.pointcloud)
             self.renderPointCloud()
 
-    def addToPointCloud(self):
-        if len(self.pointcloud) > 0:
-            # 1. Load all of the point coordinates into a vtkPoints.
-            # Create the topology of the point (a vertex)
-            #for point in self.pointcloud:
-            #    print ("renderPointCloud " , point)
-            #    self.addToPointCloud(point)
-            # shift the location of the point which has been selected
-            # on the slicing plane as the current view orientation
-            # up 1 slice to be able to see it in front of the slice
-            orientation = self.vtkWidget.viewer.GetSliceOrientation()
 
-
-
-            vertices = self.vertices
-            spacing = self.vtkWidget.viewer.img3D.GetSpacing()
-            origin  = self.vtkWidget.viewer.img3D.GetOrigin()
-            for count in range(len(self.pointcloud)):
-                # expected slice orientation at point selection time
-                point = self.pointcloud[count][:]
-                select_orientation = [ point[i]-int(point[i]) == 0 for i in range(1,4)].index(True)
-                if select_orientation == orientation:
-                    beta = 1
-                    point[orientation+1] = point[orientation+1] + beta
-
-                p = self.vtkPointCloud.InsertNextPoint(point[1] * spacing[0] - origin[0],
-                                                       point[2] * spacing[1] - origin[1],
-                                                       point[3] * spacing[2] - origin[2])
-                vertices.InsertNextCell(1)
-                vertices.InsertCellPoint(p)
-
-
-#
-    def renderPointCloud(self):
-
-        self.addToPointCloud()
-
-        if not self.pointActorsAdded:
-
-            # 2. Add the points to a vtkPolyData.
-            self.pointPolyData.SetPoints(self.vtkPointCloud)
-            self.pointPolyData.SetVerts(self.vertices)
-
-            # render the point cloud
-            # clipping plane
-            #plane = vtk.vtkPlane()
-            plane = self.visPlane[0]
-            plane2 = self.visPlane[1]
-            #point = self.vtkPointCloud
-            clipper = self.planeClipper[0]
-            clipper2 = self.planeClipper[1]
-            #plane.SetOrigin(0, 1., 0)
-            #plane.SetNormal(0, 1., 0)
-
-            if not self.displaySpheres:
-
-                #mapper = vtk.vtkPolyDataMapper()
-                mapper = self.pointMapper
-                mapper.SetInputData(self.pointPolyData)
-                actor = self.vertexActor
-                actor.SetMapper(mapper)
-                actor.GetProperty().SetPointSize(3)
-                actor.GetProperty().SetColor(1, 1, .2)
-                self.pointActor = actor
-                actor.VisibilityOn()
-                clipper.SetInputData(self.pointPolyData)
-
-
-            else:
-                # subvolume
-                # arrow
-                subv_glyph = self.glyph3D
-                subv_glyph.SetScaleFactor(1.)
-                # arrow_glyph.SetColorModeToColorByVector()
-                sphere_source = vtk.vtkSphereSource()
-                spacing = self.vtkWidget.viewer.img3D.GetSpacing()
-                radius = self.subvol / max(spacing)
-                sphere_source.SetRadius(radius)
-                sphere_source.SetThetaResolution(12)
-                sphere_source.SetPhiResolution(12)
-                sphere_mapper = self.sphereMapper
-                sphere_mapper.SetInputConnection(
-                    subv_glyph.GetOutputPort())
-
-                subv_glyph.SetInputData(self.pointPolyData)
-                subv_glyph.SetSourceConnection(
-                    sphere_source.GetOutputPort())
-
-                # Usual actor
-                sphere_actor = self.sphereActor
-                sphere_actor.SetMapper(sphere_mapper)
-                sphere_actor.GetProperty().SetColor(1, 0, 0)
-                sphere_actor.GetProperty().SetOpacity(0.2)
-
-                clipper.SetInputConnection(subv_glyph.GetOutputPort())
-
-
-
-            clipper.SetClipFunction(plane)
-            clipper.InsideOutOn()
-            clipper2.SetClipFunction(plane2)
-            clipper2.InsideOutOn()
-            clipper2.SetInputConnection(clipper.GetOutputPort())
-
-            selectMapper = self.selectMapper
-            selectMapper.SetInputConnection(clipper2.GetOutputPort())
-            # selectMapper.AddClippingPlane(plane)
-            # selectMapper.SetInputData(self.pointPolyData)
-            # selectMapper.Update()
-
-            selectActor = self.selectActor
-            #selectActor = vtk.vtkLODActor()
-            selectActor.SetMapper(selectMapper)
-            selectActor.GetProperty().SetColor(0, 1, .2)
-            selectActor.VisibilityOn()
-            #selectActor.SetScale(1.01, 1.01, 1.01)
-            selectActor.GetProperty().SetPointSize(5)
-
-            self.vtkWidget.viewer.getRenderer().AddActor(selectActor)
-            self.viewer3DWidget.viewer.getRenderer().AddActor(actor)
-
-            selectActor3D = vtk.vtkLODActor()
-            selectMapper3D = vtk.vtkPolyDataMapper()
-            selectMapper3D.SetInputConnection(clipper2.GetOutputPort())
-
-            selectActor3D.SetMapper(selectMapper3D)
-            selectActor3D.GetProperty().SetColor(0, 1, .2)
-            selectActor3D.GetProperty().SetPointSize(5)
-            selectActor3D.VisibilityOn()
-
-
-            ### plane actors
-            # self.setupPlanes()
-
-            # self.vtkWidget.viewer.getRenderer().AddActor(actor)
-            self.viewer3DWidget.viewer.getRenderer().AddActor(selectActor3D)
-
-
-            # self.vtkWidget.viewer.getRenderer().AddActor(sphere_actor)
-            print("currently present actors",
-                  self.vtkWidget.viewer.getRenderer().GetActors().GetNumberOfItems())
-            print("currently present actors",
-                  self.viewer3DWidget.viewer.getRenderer().GetActors().GetNumberOfItems())
-            self.pointActorsAdded = True
-        else:
-            print("pointcloud already added")
-
-    def setupPlanes(self):
-        self.planesource = [ vtk.vtkPlaneSource(), vtk.vtkPlaneSource() ]
-        self.planesource[0].SetCenter(self.visPlane[0].GetOrigin())
-        self.planesource[1].SetCenter(self.visPlane[1].GetOrigin())
-        self.planesource[0].SetNormal(self.visPlane[0].GetNormal())
-        self.planesource[1].SetNormal(self.visPlane[1].GetNormal())
-
-        self.planemapper = [ vtk.vtkPolyDataMapper(), vtk.vtkPolyDataMapper() ]
-        self.planemapper[0].SetInputData(self.planesource[0].GetOutput())
-        self.planemapper[1].SetInputData(self.planesource[1].GetOutput())
-
-        self.planeactor = [ vtk.vtkActor(), vtk.vtkActor() ]
-        self.planeactor[0].SetMapper(self.planemapper[0])
-        self.planeactor[1].SetMapper(self.planemapper[1])
 
     def UpdateClippingPlanes(self, interactor, event):
         try:
@@ -911,9 +765,9 @@ class Window(QMainWindow):
             bpcpoints = self.bpcpoints
             bpcvolume = self.bpcvolume
             orientation = v.GetSliceOrientation()
-            from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XY
-            from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XZ
-            from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
+            #from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XY
+            #from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XZ
+            #from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
             if orientation == SLICE_ORIENTATION_XY:
                 norm = 1
             elif orientation == SLICE_ORIENTATION_XZ:
@@ -963,6 +817,9 @@ class Window(QMainWindow):
 
             bpcpoints.Update()
             bpcvolume.Update()
+            self.viewer3DWidget.viewer.sliceActor.VisibilityOff()
+            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
+            self.viewer3DWidget.viewer.sliceActor.VisibilityOn()
             print (">>>>>>>>>>>>>>>>>>>>>")
         except AttributeError as ae:
             print (ae)
@@ -1023,6 +880,7 @@ class Window(QMainWindow):
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
         '''
         dockWidget = QDockWidget(self)
+        dockWidget.setWindowTitle(title)
         dockWidgetContents = QWidget()
 
 
@@ -1039,7 +897,7 @@ class Window(QMainWindow):
 
         # Add group box
         paramsGroupBox = QGroupBox(internalDockWidget)
-        paramsGroupBox.setTitle(title)
+
 
         # Add form layout to group box
         groupBoxFormLayout = QFormLayout(paramsGroupBox)
@@ -1266,10 +1124,10 @@ class Window(QMainWindow):
         #self.treeWidgetInitialElements = []
         #self.treeWidgetUpdateElements = []
 
-        self.mask_panel = self.generateUIDockParameters('Mask Parameters')
+        self.mask_panel = self.generateUIDockParameters('Mask')
         dockWidget = self.mask_panel[0]
-        dockWidget.setWindowTitle('Mask')
         groupBox = self.mask_panel[5]
+        groupBox.setTitle('Mask Parameters')
         formLayout = self.mask_panel[6]
 
         # Create validation rule for text entry
@@ -1328,8 +1186,176 @@ class Window(QMainWindow):
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+    def createRangeWidget(self):
+        panel = self.generateUIDockParameters('Ranges')
+        self.range_panel = panel
+        dockWidget = panel[0]
+        groupBox = panel[5]
+        groupBox.setTitle('Range Parameters')
+        formLayout = panel[6]
+        
+        # Create validation rule for text entry
+        validator = QtGui.QDoubleValidator()
+        validator.setDecimals(2)
+        validatorint = QtGui.QIntValidator()
 
+        widgetno = 1
 
+        
+        ranges = {}
+        
+        self.ranges = ranges
+        # radius range min
+        ranges['radius_range_min_label'] = QLabel(groupBox)
+        ranges['radius_range_min_label'].setText("Radius min ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['radius_range_min_label'])
+        ranges['radius_range_min_value'] = QLineEdit(groupBox)
+        ranges['radius_range_min_value'].setValidator(validatorint)
+        
+        current_radius = self.isoValueEntry.text()
+        
+        ranges['radius_range_min_value'].setText(current_radius)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['radius_range_min_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # radius range max
+        ranges['radius_range_max_label'] = QLabel(groupBox)
+        ranges['radius_range_max_label'].setText("Radius max ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['radius_range_max_label'])
+        ranges['radius_range_max_value'] = QLineEdit(groupBox)
+        ranges['radius_range_max_value'].setValidator(validatorint)
+        ranges['radius_range_max_value'].setText("10")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['radius_range_max_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # radius range step
+        ranges['radius_range_step_label'] = QLabel(groupBox)
+        ranges['radius_range_step_label'].setText("Radius step ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['radius_range_step_label'])
+        ranges['radius_range_step_value'] = QLineEdit(groupBox)
+        ranges['radius_range_step_value'].setValidator(validatorint)
+        ranges['radius_range_step_value'].setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['radius_range_step_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        
+        separators = [QFrame(groupBox)]
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1
+        
+        # NUMBER OF POINTS IN SUBVOLUME min
+        ranges['points_in_subvol_range_min_label'] = QLabel(groupBox)
+        ranges['points_in_subvol_range_min_label'].setText("number of points in subvolume min ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['points_in_subvol_range_min_label'])
+        ranges['points_in_subvol_range_min_value'] = QLineEdit(groupBox)
+        ranges['points_in_subvol_range_min_value'].setValidator(validatorint)
+        ranges['points_in_subvol_range_min_value'].setText("10")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['points_in_subvol_range_min_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # overlap range max
+        ranges['points_in_subvol_range_max_label'] = QLabel(groupBox)
+        ranges['points_in_subvol_range_max_label'].setText("number of points in subvolume max ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['points_in_subvol_range_max_label'])
+        ranges['points_in_subvol_range_max_value'] = QLineEdit(groupBox)
+        ranges['points_in_subvol_range_max_value'].setValidator(validatorint)
+        ranges['points_in_subvol_range_max_value'].setText("10")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['points_in_subvol_range_max_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # overlap range step
+        ranges['points_in_subvol_range_step_label'] = QLabel(groupBox)
+        ranges['points_in_subvol_range_step_label'].setText("number of points in subvolume step ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['points_in_subvol_range_step_label'])
+        ranges['points_in_subvol_range_step_value'] = QLineEdit(groupBox)
+        ranges['points_in_subvol_range_step_value'].setValidator(validatorint)
+        ranges['points_in_subvol_range_step_value'].setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['points_in_subvol_range_step_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        
+        
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1
+        
+        # Add submit button
+        ranges['generate_button'] = QPushButton(groupBox)
+        ranges['generate_button'].setText("Generate DVC Config")
+        ranges['generate_button'].clicked.connect(self.generateDVCConfig)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['generate_button'])
+        widgetno += 1
+        
+        
+        
+        
+        # Add elements to layout
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+        
+    def generateDVCConfig(self):
+        '''Generates the DVC configuration with the given input'''
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.DirectoryOnly)
+        
+        # select output directory
+        fn = dialog.getExistingDirectory()
+        # print (fn)
+        outdir = os.path.abspath(fn)
+        
+        # read the ranges
+        ranges = self.ranges
+        xmin = int(ranges['radius_range_min_value'].text())
+        xmax = int(ranges['radius_range_max_value'].text())
+        xstep = int(ranges['radius_range_step_value'].text())
+        if xstep != 0 and xmax > xmin:
+            N = (xmax-xmin)//xstep + 1
+            radius = [xmin + i * xstep for i in range(N)]
+        print ("radii ", radius)
+        
+        xmin = int(ranges['points_in_subvol_range_min_value'].text())
+        xmax = int(ranges['points_in_subvol_range_max_value'].text())
+        xstep = int(ranges['points_in_subvol_range_step_value'].text())
+        if xstep != 0 and xmax > xmin:
+            N = (xmax-xmin)//xstep + 1
+            npoints = [xmin + i * xstep for i in range(N)]
+        print ("npoints", npoints)
+        
+        # 1 save the mask ?
+        # 2 create the point clouds
+        for r in radius:
+            self.isoValueEntry.setText(str(r))
+            self.createPointCloud()
+            pointcloud = self.polydata_masker.GetOutputDataObject(0)
+            array = numpy.zeros((pointcloud.GetNumberOfPoints(), 4))
+            for i in range(pointcloud.GetNumberOfPoints()):
+                pp = pointcloud.GetPoint(i)
+                array[i] = (i, *pp)
+            
+            for n in npoints:
+                # the number of points in the subvolume are not influencing the
+                # actual point cloud
+                run_dir = os.path.join(outdir, 'r{:d}_np{:d}'.format(r,n))
+                os.mkdir(run_dir)
+                fname = os.path.join(run_dir, 'pointcloud_r{:d}.roi'.format(r))
+                numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+                
+                config = {'point_cloud_filename': os.path.basename(fname)}
+                config_fname = os.path.join(run_dir, 'dvc_input.json')
+                with open(config_fname, 'w') as f:
+                    json.dump(config, f)
+            
+        
+        
     def loadIntoTableWidget(self, data):
         if len(data) <= 0:
             return
@@ -1441,12 +1467,15 @@ class Window(QMainWindow):
                 float(self.rotateYValueEntry.text()),
                 float(self.rotateZValueEntry.text())
                 )
-        if not self.pointCloudCreated:
-            transform = vtk.vtkTransform()
-            # save reference
-            self.transform = transform
-        else:
-            transform = self.transform
+#        if not self.pointCloudCreated:
+#            transform = vtk.vtkTransform()
+#            # save reference
+#            self.transform = transform
+#        else:
+#            transform = self.transform
+        transform = vtk.vtkTransform()
+        # save reference
+        self.transform = transform
         # rotate around the center of the image data
         transform.Translate(dimensions[0]/2*spacing[0], dimensions[1]/2*spacing[1],0)
         # rotation angles
@@ -1455,16 +1484,20 @@ class Window(QMainWindow):
         transform.RotateZ(rotate[2])
         transform.Translate(-dimensions[0]/2*spacing[0], -dimensions[1]/2*spacing[1],0)
         
-        # Actual Transformation is done here
-        t_filter = vtk.vtkTransformFilter()
-        # save reference
-        self.t_filter = t_filter
+        if self.pointCloudCreated:
+            t_filter = self.t_filter
+        else:
+            # Actual Transformation is done here
+            t_filter = vtk.vtkTransformFilter()
+            # save reference
+            self.t_filter = t_filter
         t_filter.SetTransform(transform)
         t_filter.SetInputConnection(pointCloud.GetOutputPort())
-        #if rotate != [0.,0.,0.]:
-        polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
-        #else:
-        #    polydata_masker.SetInputConnection(0, pointCloud.GetOutputPort())
+        if rotate != [0.,0.,0.]:
+            polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
+        else:
+            polydata_masker.SetInputConnection(0, pointCloud.GetOutputPort())
+            polydata_masker.Modified()
         
         polydata_masker.Update()
         # print ("polydata_masker type", type(polydata_masker.GetOutputDataObject(0)))
@@ -1476,6 +1509,14 @@ class Window(QMainWindow):
             self.setup3DPointCloudPipeline()
             self.pointCloudCreated = True
         else:
+            if self.subvolumeShapeValue.currentIndex() == 0 or \
+               self.subvolumeShapeValue.currentIndex() == 2:
+                self.glyph_source = self.cube_source
+                self.cubesphere.SetSourceConnection(self.cube_source.GetOutputPort())
+            else:
+                self.glyph_source = self.sphere_source
+                self.cubesphere.SetSourceConnection(self.sphere_source.GetOutputPort())
+            self.cubesphere.Update()
             # self.polydata_masker.Modified()
             self.cubesphere_actor3D.VisibilityOff()
             self.pointactor.VisibilityOff()
