@@ -39,6 +39,7 @@ from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QMessageBox
 import vtk
 from ccpi.viewer.QVTKCILViewer import QVTKCILViewer
 from ccpi.viewer.QVTKWidget import QVTKWidget
@@ -239,6 +240,8 @@ class Window(QMainWindow):
         self.pointCloudCreated = False
 
         self.show()
+        
+        
     def setApp(self, App):
         self.App = App
 
@@ -538,15 +541,25 @@ class Window(QMainWindow):
                    if self.showMaskConfigurator.isChecked() else \
                        self.mask_panel[0].hide()
                 )
-
+        
+        self.showRangesConfigurator = QAction("Configure Ranges Panel", self)
+        self.showRangesConfigurator.setCheckable(True)
+        self.showRangesConfigurator.setChecked(False)
+        self.showRangesConfigurator.triggered.connect(
+                lambda: self.range_panel[0].show() \
+                   if self.showRangesConfigurator.isChecked() else \
+                       self.range_panel[0].hide()
+                )
         viewMenu = mainMenu.addMenu('Panels')
         viewMenu.addAction(self.show3D)
-        viewMenu.addAction(self.showPointCloudConfigurator)
         viewMenu.addAction(self.showMaskConfigurator)
+        viewMenu.addAction(self.showPointCloudConfigurator)
+        viewMenu.addAction(self.showRangesConfigurator)
 
         panels.append((self.show3D, self.Dock3D))
         panels.append((self.showPointCloudConfigurator, self.pointCloudDockWidget))
-        #panels.append((self.showMaskConfigurator, self.maskDockWidget))
+        panels.append((self.showMaskConfigurator, self.mask_panel[0] ))
+        panels.append((self.showRangesConfigurator, self.range_panel[0]))
         self.panels = panels
 
         # Initialise the toolbar
@@ -1317,18 +1330,41 @@ class Window(QMainWindow):
         xmin = int(ranges['radius_range_min_value'].text())
         xmax = int(ranges['radius_range_max_value'].text())
         xstep = int(ranges['radius_range_step_value'].text())
-        if xstep != 0 and xmax > xmin:
-            N = (xmax-xmin)//xstep + 1
-            radius = [xmin + i * xstep for i in range(N)]
+        if xstep != 0:
+            if xmax > xmin:
+                N = (xmax-xmin)//xstep + 1
+                radius = [xmin + i * xstep for i in range(N)]
+            else:
+                self.warningDialog("Radius. Min ({}) value higher than Max ({})".format(
+                        xmin, xmax) )
+                return
+        else:
+            radius = [xmin]
+            
+        
         print ("radii ", radius)
         
         xmin = int(ranges['points_in_subvol_range_min_value'].text())
         xmax = int(ranges['points_in_subvol_range_max_value'].text())
         xstep = int(ranges['points_in_subvol_range_step_value'].text())
-        if xstep != 0 and xmax > xmin:
-            N = (xmax-xmin)//xstep + 1
-            npoints = [xmin + i * xstep for i in range(N)]
+        if xstep != 0:
+            if xmax > xmin:
+                N = (xmax-xmin)//xstep + 1
+                npoints = [xmin + i * xstep for i in range(N)]
+            else:
+                self.warningDialog("Points in subvolume. Min ({}) value higher than Max ({})".format(
+                        xmin, xmax) )
+                return
+        else:
+            npoints = [xmin]
         print ("npoints", npoints)
+        
+        
+        config = {}
+        
+        dims = self.vtkWidget.viewer.img3D.GetDimensions()
+        shapeselected = self.subvolumeShapeValue.currentIndex()
+        shape = 'cube' if shapeselected == 0 or shapeselected == 2 else 'sphere'
         
         # 1 save the mask ?
         # 2 create the point clouds
@@ -1340,7 +1376,13 @@ class Window(QMainWindow):
             for i in range(pointcloud.GetNumberOfPoints()):
                 pp = pointcloud.GetPoint(i)
                 array[i] = (i, *pp)
-            
+            config['subvol_geom'] = shape #: cube, sphere
+            config['subvol_size'] = r * 2 #: side length or diameter, in voxels
+            ### description of the image data files, all must be the same size and structure
+            # these will be checked when creating the dvc input files. 
+            config['vol_wide'] = dims[0] #: width in pixels of each slice
+            config['vol_high'] = dims[1] #: height in pixels of each slice
+            config['vol_tall'] = dims[2] #: number of slices in the stack
             for n in npoints:
                 # the number of points in the subvolume are not influencing the
                 # actual point cloud
@@ -1349,8 +1391,9 @@ class Window(QMainWindow):
                 fname = os.path.join(run_dir, 'pointcloud_r{:d}.roi'.format(r))
                 numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
                 
-                config = {'point_cloud_filename': os.path.basename(fname)}
-                config_fname = os.path.join(run_dir, 'dvc_input.json')
+                config['point_cloud_filename'] = os.path.basename(fname)
+                config['subvol_npts'] =	n #: number of points to distribute within the subvol
+                config_fname = os.path.join(run_dir, 'pointcloud_config.json')
                 with open(config_fname, 'w') as f:
                     json.dump(config, f)
             
@@ -1368,6 +1411,14 @@ class Window(QMainWindow):
     def updatePointCloud(self):
         print("should read the table here and save to csv")
 
+    def warningDialog(self, message):
+        dialog = QMessageBox(self)
+        dialog.setIcon(QMessageBox.Information)
+        dialog.setText(message)
+        dialog.setStandardButtons(QMessageBox.Ok)
+        retval = dialog.exec_()
+        return retval
+        
 
     def createPointCloud(self):
         ## Create the PointCloud

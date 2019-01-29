@@ -11,7 +11,7 @@ build:
   entry_points:
     - DVC_Configurator = ccpi.apps.DVC_configurator:main
 
-  number: 5
+  number: 6
   
 requirements:
   build:
