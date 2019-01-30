@@ -144,7 +144,10 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16):
     else:
         raise ValueError('Could not find files in ', wildcard_filenames)
 
-if __name__ == '__main__':
+
+
+
+def main():
     # runcontrol = DVC()
     __version__ = '0.1.0'
     print ("Starting ... ")
@@ -156,4 +159,6 @@ if __name__ == '__main__':
     for k,v in args.items():
         print (k,v)
     processTiffStack(args['-i'], args['-o'], args['--dtype'])
-        
+
+if __name__ == '__main__':
+    main()
