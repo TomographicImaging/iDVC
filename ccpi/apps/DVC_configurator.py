@@ -589,6 +589,8 @@ class Window(QMainWindow):
         self.openFileByPath(fn, read_mask)
     def openMask(self):
         self.openFile(True)
+        v = self.vtkWidget.viewer
+        v.setInputData2(self.mask_reader.GetOutput())
 
     def openFileByPath(self, fn, read_mask=False):
         # Single file selection
