@@ -10,8 +10,9 @@ build:
 
   entry_points:
     - DVC_Configurator = ccpi.apps.DVC_configurator:main
+    - cast_tiff = ccpi.apps.cast_tiff:main
 
-  number: 6
+  number: 7
   
 requirements:
   build:
@@ -26,8 +27,10 @@ requirements:
     - python
     - numpy
     - ccpi-viewer ==0.11.0
+    - ccpi-dvc
     - natsort
     - docopt
+    - tqdm
     
 
 about:
