@@ -489,7 +489,7 @@ class Window(QMainWindow):
         # define load PointCloud
         openPointCloud = QAction(self.style().standardIcon(
             QStyle.SP_DirOpenIcon), 'Open Point Cloud', self)
-        openMask.triggered.connect(self.openPointCloud)
+        openPointCloud.triggered.connect(self.openPointCloud)
 
         # define save mask
         saveMask = QAction(self.style().standardIcon(
@@ -590,7 +590,22 @@ class Window(QMainWindow):
     def openMask(self):
         self.openFile(True)
         v = self.vtkWidget.viewer
+        # save the mask to a temporary file
+        writer = vtk.vtkMetaImageWriter()
+        tmpdir = tempfile.gettempdir()
+        writer.SetFileName(os.path.join(tmpdir, "selection.mha"))
+        writer.SetInputConnection(self.mask_reader.GetOutputPort())
+        writer.Write()
+        self.mask_reader = vtk.vtkMetaImageReader()
+        self.mask_reader.SetFileName(os.path.join(tmpdir, "selection.mha"))
+        self.mask_reader.Update()
+        
+        
+        print ("current displayed img", id(v.img3D), id(v.sliceActor))
         v.setInputData2(self.mask_reader.GetOutput())
+        print ("current displayed img", id(v.img3D), id(v.sliceActor), id(v.sliceActor2))
+        # v.setInputData(v.img3D)
+        
 
     def openFileByPath(self, fn, read_mask=False):
         # Single file selection
@@ -729,11 +744,17 @@ class Window(QMainWindow):
         dialog = QFileDialog(self)
         dialog.setAcceptMode(QFileDialog.AcceptSave)
 
-        fn = dialog.getSaveFileName(self, 'Save Mask As', '.', "NumpyMETAImage")
+        fn = dialog.getSaveFileName(self, 'Save Mask As', '.', "Meta Image (mhd)")
 
         # Only save if the user has selected a name
         if fn[0]:
-            print ("Well done")
+            print ("Well done, ", fn)
+            v = self.vtkWidget.viewer
+            writer = vtk.vtkMetaImageWriter()
+            writer.SetInputData(v.image2)
+            writer.SetFileName(fn[0])
+            writer.Write()
+            
     def displayFileErrorDialog(self, file):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Critical)
@@ -1476,13 +1497,18 @@ class Window(QMainWindow):
         # outside the mask
         if not self.pointCloudCreated:
             erode = vtk.vtkImageDilateErode3D()
+            erode.SetErodeValue(1)
+            erode.SetDilateValue(0) 
             # save reference
             self.erode = erode
+            self.erode_pars = {'selection_mtime':os.path.getmtime(
+                    os.path.join(tmpdir, "selection.mha"))}
+            
         else:
             erode = self.erode
-        erode.SetInputConnection(0,reader.GetOutputPort())
-        erode.SetErodeValue(1)
-        erode.SetDilateValue(0) 
+            
+        
+        
         
         # FIXME: Currently the 2D case is only XY
         # For 2D we need to set the Kernel size in the plane to 1, 
@@ -1490,6 +1516,15 @@ class Window(QMainWindow):
         ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
         if pointCloud.GetDimensionality() == 3:
             ks[2]= pointCloud.GetSubVolumeRadiusInVoxel()
+            
+        #else:
+        #    # erode in 2D
+        #    voi = vtk.vtkExtractVOI()
+        #    voi.SetInputConnection(reader.GetOutputPort())
+        #    voi.SetVOI(self.vtkWidget.viewer.voi.GetVOI())
+        #    voi.Update()
+        #    erode.SetInputConnection(0,voi.GetOutputPort())
+            
         # if shape is box or square to be sure that the subvolume is within
         # the mask we need to take the half of the diagonal rather than the
         # half of the size
@@ -1497,8 +1532,30 @@ class Window(QMainWindow):
            self.subvolumeShapeValue.currentIndex() == 2:
                ks = [round(1.41 * l) for l in ks]
         
-        erode.SetKernelSize(ks[0],ks[1],ks[2])
-        erode.Update()
+        
+        # the mask erosion takes a looong time. Try not do it all the 
+        # time if neither mask nor other values have changed
+        if not self.pointCloudCreated:
+            self.erode_pars['ks'] =  ks[:]        
+            run_erode = True
+        else:
+            run_erode = False
+            # test if mask is different from last one by checking the modification
+            # time
+            mtime = os.path.getmtime(os.path.join(tmpdir, "selection.mha"))
+            if mtime != self.erode_pars['selection_mtime']:
+                print("mask has changed")
+                run_erode = True
+            if ks != self.erode_pars['ks']:
+                run_erode = True
+                print("radius has changed")
+                self.erode_pars['ks'] = ks[:]
+            
+        
+        if run_erode:
+            erode.SetInputConnection(0,reader.GetOutputPort())
+            erode.SetKernelSize(ks[0],ks[1],ks[2])
+            erode.Update()
         print ("mask created")
         
         
