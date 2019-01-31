@@ -315,8 +315,8 @@ class Window(QMainWindow):
         self.cubesphere = subv_glyph
         subv_glyph.SetScaleFactor(1.)
 
-        erode = self.erode
-        spacing = erode.GetOutput().GetSpacing()
+        
+        spacing = self.vtkWidget.viewer.img3D.GetSpacing()
         pointCloud = self.pointCloud
         radius = pointCloud.GetSubVolumeRadiusInVoxel()
 
@@ -380,7 +380,7 @@ class Window(QMainWindow):
         self.cubesphere_actor = sphere_actor
         sphere_actor.SetMapper(sphere_mapper)
         sphere_actor.GetProperty().SetColor(1, 0, 0)
-        sphere_actor.GetProperty().SetOpacity(0.2)
+        #sphere_actor.GetProperty().SetOpacity(0.2)
         sphere_actor.GetProperty().SetRepresentationToWireframe()
 
         self.vtkWidget.viewer.getRenderer().AddActor(actor)
@@ -1627,22 +1627,31 @@ class Window(QMainWindow):
             self.setup3DPointCloudPipeline()
             self.pointCloudCreated = True
         else:
+            spacing = self.vtkWidget.viewer.img3D.GetSpacing()
+            radius = pointCloud.GetSubVolumeRadiusInVoxel()
+    
             if self.subvolumeShapeValue.currentIndex() == 0 or \
                self.subvolumeShapeValue.currentIndex() == 2:
                 self.glyph_source = self.cube_source
+                self.cube_source.SetXLength(spacing[0]*radius*2)
+                self.cube_source.SetYLength(spacing[1]*radius*2)
+                self.cube_source.SetZLength(spacing[2]*radius*2)    
                 self.cubesphere.SetSourceConnection(self.cube_source.GetOutputPort())
             else:
                 self.glyph_source = self.sphere_source
+                self.sphere_source.SetRadius(radius * spacing[0])
                 self.cubesphere.SetSourceConnection(self.sphere_source.GetOutputPort())
+            
+            
             self.cubesphere.Update()
             # self.polydata_masker.Modified()
-            self.cubesphere_actor3D.VisibilityOff()
-            self.pointactor.VisibilityOff()
-            self.cubesphere_actor.VisibilityOff()
+#            self.cubesphere_actor3D.VisibilityOff()
+#            self.pointactor.VisibilityOff()
+#            self.cubesphere_actor.VisibilityOff()
             print ("should be already changed")
-            self.cubesphere_actor3D.VisibilityOn()
-            self.pointactor.VisibilityOn()
-            self.cubesphere_actor.VisibilityOn()
+#            self.cubesphere_actor3D.VisibilityOn()
+#            self.pointactor.VisibilityOn()
+#            self.cubesphere_actor.VisibilityOn()
 
 
     def OnKeyPressEvent(self, interactor, event):
