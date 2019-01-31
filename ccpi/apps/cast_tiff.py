@@ -96,7 +96,7 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16):
             
             stats = vtk.vtkImageAccumulate()
             print ("looking for min max in the dataset")
-            for fname in flist:
+            for fname in tqdm(flist):
                 reader.SetFileName(fname)
                 reader.Update()
                 stats.SetInputConnection(reader.GetOutputPort())
