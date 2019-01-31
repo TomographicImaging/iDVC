@@ -39,7 +39,6 @@ from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QComboBox
-from PyQt5.QtWidgets import QMessageBox
 import vtk
 from ccpi.viewer.QVTKCILViewer import QVTKCILViewer
 from ccpi.viewer.QVTKWidget import QVTKWidget
@@ -194,6 +193,8 @@ class Window(QMainWindow):
                 interactorStyle=vlink.Linked2DInteractorStyle
                 )
         self.vtkWidget.viewer.debug = False
+        self.vtkWidget.viewer.style.debug = False
+        
         self.iren = self.vtkWidget.getInteractor()
         self.vl.addWidget(self.vtkWidget)
 
@@ -303,7 +304,7 @@ class Window(QMainWindow):
         self.pointactor = actor
         actor.SetMapper(mapper)
         actor.GetProperty().SetPointSize(3)
-        actor.GetProperty().SetColor(.2, .2, 1)
+        actor.GetProperty().SetColor(0., 1., 1.)
         actor.VisibilityOn()
         actor.AddObserver("ModifiedEvent", lambda: print ("point actor modified"))
         # create a mapper/actor for the point cloud with a CubeSource and with vtkGlyph3D
@@ -801,9 +802,6 @@ class Window(QMainWindow):
             bpcpoints = self.bpcpoints
             bpcvolume = self.bpcvolume
             orientation = v.GetSliceOrientation()
-            #from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XY
-            #from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XZ
-            #from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
             if orientation == SLICE_ORIENTATION_XY:
                 norm = 1
             elif orientation == SLICE_ORIENTATION_XZ:
@@ -822,12 +820,6 @@ class Window(QMainWindow):
 
             normal[orientation] = norm
             origin [orientation] = (v.style.GetActiveSlice() + beta ) * slice_thickness - orig[orientation]
-            # print("event {} origin above {} beta {}".format(event, origin, beta))
-
-            # print("slice {} beta {} orig {} spac {} normal {}".format(v.GetActiveSlice(), beta,
-            #      orig, spac , normal))
-            # print("origin", origin, orientation)
-            # print("<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>")
 
             bpcpoints.SetPlaneOriginAbove(origin)
             bpcpoints.SetPlaneNormalAbove(normal)
@@ -844,7 +836,6 @@ class Window(QMainWindow):
 
             origin_below = [i for i in origin]
             origin_below[orientation] = ( slice_below ) * slice_thickness - orig[orientation]
-            print("event {} origin below {} beta {}".format(event, origin_below, beta))
 
             bpcpoints.SetPlaneOriginBelow(origin_below)
             bpcpoints.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
@@ -853,10 +844,8 @@ class Window(QMainWindow):
 
             bpcpoints.Update()
             bpcvolume.Update()
-            self.viewer3DWidget.viewer.sliceActor.VisibilityOff()
-            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
-            self.viewer3DWidget.viewer.sliceActor.VisibilityOn()
-            print (">>>>>>>>>>>>>>>>>>>>>")
+            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.8)
+            # print (">>>>>>>>>>>>>>>>>>>>>")
         except AttributeError as ae:
             print (ae)
             print ("Probably Point Cloud not yet created")
@@ -1133,6 +1122,21 @@ class Window(QMainWindow):
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.rotateZValueEntry)
         widgetno += 1
 
+
+        # Add should extend checkbox
+        self.erodeCheck = QCheckBox(self.graphParamsGroupBox)
+        self.erodeCheck.setText("Erode mask")
+        self.erodeCheck.setEnabled(True)
+        self.erodeCheck.setChecked(False)
+        self.erodeCheck.stateChanged.connect(lambda: 
+            self.warningDialog('Erosion of mask may take long time!', 
+                               window_title='WARNING', 
+                               detailed_text='You may better leave this unchecked while experimenting with the point clouds' ) \
+                               if self.erodeCheck.isChecked() else (lambda: True) )
+
+        self.graphWidgetFL.setWidget(widgetno,QFormLayout.FieldRole, self.erodeCheck)
+        widgetno += 1
+        
         # Add submit button
         self.graphParamsSubmitButton = QPushButton(self.graphParamsGroupBox)
         self.graphParamsSubmitButton.setText("Generate Point Cloud")
@@ -1359,7 +1363,8 @@ class Window(QMainWindow):
                 radius = [xmin + i * xstep for i in range(N)]
             else:
                 self.warningDialog("Radius. Min ({}) value higher than Max ({})".format(
-                        xmin, xmax) )
+                        xmin, xmax), window_title="Value Error", 
+                     )
                 return
         else:
             radius = [xmin]
@@ -1376,7 +1381,7 @@ class Window(QMainWindow):
                 npoints = [xmin + i * xstep for i in range(N)]
             else:
                 self.warningDialog("Points in subvolume. Min ({}) value higher than Max ({})".format(
-                        xmin, xmax) )
+                        xmin, xmax) , window_title="Value Error")
                 return
         else:
             npoints = [xmin]
@@ -1434,10 +1439,12 @@ class Window(QMainWindow):
     def updatePointCloud(self):
         print("should read the table here and save to csv")
 
-    def warningDialog(self, message):
+    def warningDialog(self, message, window_title='', detailed_text=''):
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Information)
         dialog.setText(message)
+        dialog.setWindowTitle(window_title)
+        dialog.setDetailedText(detailed_text)
         dialog.setStandardButtons(QMessageBox.Ok)
         retval = dialog.exec_()
         return retval
@@ -1552,7 +1559,7 @@ class Window(QMainWindow):
                 self.erode_pars['ks'] = ks[:]
             
         
-        if run_erode:
+        if run_erode and self.erodeCheck.isChecked():
             erode.SetInputConnection(0,reader.GetOutputPort())
             erode.SetKernelSize(ks[0],ks[1],ks[2])
             erode.Update()
@@ -1567,7 +1574,10 @@ class Window(QMainWindow):
         else:
             polydata_masker = self.polydata_masker
         polydata_masker.SetMaskValue(1)
-        polydata_masker.SetInputConnection(1, erode.GetOutputPort())
+        if self.erodeCheck.isChecked():
+            polydata_masker.SetInputConnection(1, erode.GetOutputPort())
+        else:
+            polydata_masker.SetInputConnection(1, reader.GetOutputPort())
         
         ## Create a Transform to modify the PointCloud
         # Translation and Rotation
@@ -1603,11 +1613,9 @@ class Window(QMainWindow):
             self.t_filter = t_filter
         t_filter.SetTransform(transform)
         t_filter.SetInputConnection(pointCloud.GetOutputPort())
-        if rotate != [0.,0.,0.]:
-            polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
-        else:
-            polydata_masker.SetInputConnection(0, pointCloud.GetOutputPort())
-            polydata_masker.Modified()
+        
+        polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
+        # polydata_masker.Modified()
         
         polydata_masker.Update()
         # print ("polydata_masker type", type(polydata_masker.GetOutputDataObject(0)))
