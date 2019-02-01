@@ -4,16 +4,15 @@ DataExplorer
 UI to configure a DVC run
 
 Usage:
- DataExplorer.py [ -h ] [ --imagedata=<path> ] [ --spheres=0 ] [ --subvol=10 ]
+ DataExplorer.py [ -h ] [ -i <path> ] [ --subvol=10 ]
 
 Options:
- --imagedata=path      input filename
- --spheres=n        whether to show spheres
+ -i path            input filename
  --subvol=n         the max size of the subvolume in voxel
  -h       display help
 
 Example:
-    python DVC_configurator.py --imagedata ..\..\..\CCPi-Simpleflex\data\head.mha
+    DVC_Configurator -i ..\..\..\CCPi-Simpleflex\data\head.mha
 """
 
 import sys
@@ -47,7 +46,7 @@ from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XY
 from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XZ
 from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
 from ccpi.viewer.utils import cilRegularPointCloudToPolyData
-from ccpi.viewer.utils import cilMaskPolyData , cilClipPolyDataBetweenPlanes
+from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 from ccpi.viewer.utils import cilNumpyMETAImageWriter
 from natsort import natsorted
 import imghdr
@@ -474,9 +473,9 @@ class Window(QMainWindow):
         closeAction.setShortcut("Ctrl+Q")
         closeAction.triggered.connect(self.close)
 
-        tableAction = QAction("Point Cloud Setup", self)
-        tableAction.setShortcut("Ctrl+T")
-        tableAction.triggered.connect(self.showPointCloudWidget)
+        # tableAction = QAction("Point Cloud Setup", self)
+        # tableAction.setShortcut("Ctrl+T")
+        # tableAction.triggered.connect(self.showPointCloudWidget)
 
         # define actions
         # load data
@@ -488,18 +487,18 @@ class Window(QMainWindow):
             QStyle.SP_FileDialogStart), 'Open Mask Data', self)
         openMask.triggered.connect(self.openMask)
         # define load PointCloud
-        openPointCloud = QAction(self.style().standardIcon(
-            QStyle.SP_DirOpenIcon), 'Open Point Cloud', self)
-        openPointCloud.triggered.connect(self.openPointCloud)
+        # openPointCloud = QAction(self.style().standardIcon(
+        #    QStyle.SP_DirOpenIcon), 'Open Point Cloud', self)
+        #openPointCloud.triggered.connect(self.openPointCloud)
 
         # define save mask
         saveMask = QAction(self.style().standardIcon(
             QStyle.SP_DialogSaveButton), 'Save Mask Data', self)
         saveMask.triggered.connect(self.saveMask)
         # define save pointcloud
-        savePointCloud = QAction(self.style().standardIcon(
-            QStyle.SP_DialogSaveButton), 'Save point cloud', self)
-        savePointCloud.triggered.connect(self.savePointCloud)
+        #savePointCloud = QAction(self.style().standardIcon(
+        #    QStyle.SP_DialogSaveButton), 'Save point cloud', self)
+        #savePointCloud.triggered.connect(self.savePointCloud)
 
         saveAction = QAction(self.style().standardIcon(
             QStyle.SP_DialogSaveButton), 'Save current render as PNG', self)
@@ -509,13 +508,13 @@ class Window(QMainWindow):
         fileMenu = mainMenu.addMenu('File')
         fileMenu.addAction(openAction)
         fileMenu.addAction(openMask)
-        fileMenu.addAction(openPointCloud)
+        # fileMenu.addAction(openPointCloud)
 
         fileMenu.addAction(saveMask)
-        fileMenu.addAction(savePointCloud)
+        # fileMenu.addAction(savePointCloud)
 
         fileMenu.addAction(closeAction)
-        fileMenu.addAction(tableAction)
+        # fileMenu.addAction(tableAction)
 
         panels = []
 
@@ -996,8 +995,8 @@ class Window(QMainWindow):
         self.subvolumeShapeValue = QComboBox(self.graphParamsGroupBox)
         self.subvolumeShapeValue.addItem("Cube")
         self.subvolumeShapeValue.addItem("Sphere")
-        self.subvolumeShapeValue.addItem("Box")
-        self.subvolumeShapeValue.addItem("Circle")
+        # self.subvolumeShapeValue.addItem("Box")
+        # self.subvolumeShapeValue.addItem("Circle")
         self.subvolumeShapeValue.setCurrentIndex(0)
 
         self.treeWidgetUpdateElements.append(self.subvolumeShapeValue)
@@ -1034,7 +1033,7 @@ class Window(QMainWindow):
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItem("3D")
         self.dimensionalityValue.addItem("2D")
-        self.dimensionalityValue.setCurrentIndex(0)
+        self.dimensionalityValue.setCurrentIndex(1)
         self.dimensionalityValue.currentIndexChanged.connect(lambda: \
                     self.overlapZValueEntry.setEnabled(True) \
                     if self.dimensionalityValue.currentIndex() == 0 else \
@@ -1558,7 +1557,7 @@ class Window(QMainWindow):
                 print("radius has changed")
                 self.erode_pars['ks'] = ks[:]
             
-        
+        print ("Erode checked" ,self.erodeCheck.isChecked())
         if run_erode and self.erodeCheck.isChecked():
             erode.SetInputConnection(0,reader.GetOutputPort())
             erode.SetKernelSize(ks[0],ks[1],ks[2])
@@ -1784,20 +1783,20 @@ def main():
     App = QApplication(sys.argv)
     gui = Window()
     gui.setApp(App)
-    show_spheres = False
-    if not args['--spheres'] is None:
-        show_spheres = True if args["--spheres"] == 1 else False
-
-    subvol_size = 5
+    
     if not args['--subvol'] is None:
         subvol_size = int(args["--subvol"])
+        gui.setSubvolSize(subvol_size)
 
-    if not args['--imagedata'] is None:
-        fname = os.path.abspath(args["--imagedata"])
+    if not args['-i'] is None:
+        fname = os.path.abspath(args["-i"])
         gui.openFileByPath(( (fname , ),))
 
-    gui.setSubvolSize(subvol_size)
-    gui.dislayPointCloudAsSpheres(show_spheres)
+    # this should be deleted
+    # show_spheres = False
+    # if not args['--spheres'] is None:
+    #    show_spheres = True if args["--spheres"] == 1 else False
+    # gui.dislayPointCloudAsSpheres(show_spheres)
 
 
     sys.exit(App.exec())
