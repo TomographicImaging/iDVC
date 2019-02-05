@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-DataExplorer
+predvc
 
-UI to configure a DVC run
+configure a DVC run from the graphical user interface 
 
 Usage:
- predvc.py [ -h ] [--reference=<path>] [--correlate=<path>] [--guiconfig=<path>]
+ predvc.py [ -h ] --ref <path> --cor <path> --guiconfig <path> -o output_fname
 
 Options:
- --reference=path      reference filename
- --correlate=path      correlate filename  
- --guiconfig=path      output of DVC_configurator
- -h       display help
+ --ref path            reference filename
+ --cor path            correlate filename  
+ --guiconfig path      output of DVC_configurator
+ -o file name          output file name
+ -h                    display help
 
-Example:
-    python DVC_configurator.py --imagedata ..\..\..\CCPi-Simpleflex\data\head.mha
 
 Created on Tue Jan 29 13:38:37 2019
 
@@ -120,6 +119,7 @@ subvol_aspect		{subvol_aspect}		### subvolume aspect ratio
 # VTK_DOUBLE,          #
 
 def processTiffStack(ref_fname, output_fname, bitdepth=16):
+    '''reads a tiff stack and casts to UNSIGNED INT 8 or 16, saves to MetaImage'''
     flist = glob.glob(ref_fname)
     if len(flist) > 0:
         reader = vtk.vtkTIFFReader()
@@ -127,6 +127,7 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
         reader.SetFileName(flist[0])
         reader.Update()
         vtk_bit_depth = reader.GetOutput().GetScalarType()
+        print ("Scalar type" , reader.GetOutput().GetScalarTypeAsString())
         if vtk_bit_depth == vtk.VTK_UNSIGNED_CHAR:
             bit_depth = 8
             all_min = vtk.VTK_UNSIGNED_CHAR_MAX
@@ -139,7 +140,7 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
             bit_depth = 16
             all_min = vtk.VTK_UNSIGNED_SHORT_MAX
             all_max = vtk.VTK_UNSIGNED_SHORT_MIN
-        elif vtk_bit_depth == vtk.VTK_SIGNED_SHORT:
+        elif vtk_bit_depth == vtk.VTK_SHORT:
             bit_depth = 16
             all_min = vtk.VTK_SIGNED_SHORT_MAX
             all_max = vtk.VTK_SIGNED_SHORT_MIN
@@ -151,6 +152,14 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
             bit_depth = 32
             all_min = vtk.VTK_INT_MAX
             all_max = vtk.VTK_INT_MIN
+        elif vtk_bit_depth == vtk.VTK_FLOAT:
+            all_min = vtk.VTK_FLOAT_MAX
+            all_max = vtk.VTK_FLOAT_MIN
+            bit_depth = 32
+        elif vtk_bit_depth == vtk.VTK_DOUBLE:
+            all_min = vtk.VTK_DOUBLE_MAX
+            all_max = vtk.VTK_DOUBLE_MIN
+            bit_depth = 64
         else:
             raise TypeError('Cannot handle non integer type of images')
         print ("Bit depth for input is {}".format(bit_depth))
@@ -159,8 +168,14 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
             print ("should cast image to")
             if bitdepth == 8:
                 dtype = vtk.VTK_UNSIGNED_CHAR
+                imax = vtk.VTK_UNSIGNED_CHAR_MAX
+                imin = 0
+                dtypestring = 'uint8'
             elif bitdepth == 16:
                 dtype = vtk.VTK_UNSIGNED_SHORT
+                imax = vtk.VTK_UNSIGNED_SHORT_MAX
+                imin = 0
+                dtypestring = 'uint16'
             print ("should cast image to {}".format(dtype))
             
             stats = vtk.vtkImageAccumulate()
@@ -175,32 +190,27 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
                 all_max = all_max if iMax < all_max else iMax
                 all_min = all_min if iMin > all_min else iMin
             
-            writer = vtk.vtkMetaImageWriter()
-            shiftScaler = vtk.vtkImageShiftScale ()
+            writer = vtk.vtkTIFFWriter()
             
+            scale = int( (imax - imin) / (all_max - all_min))
+            
+            shiftScaler = vtk.vtkImageShiftScale ()
+            shiftScaler.SetInputConnection(reader.GetOutputPort())
+            shiftScaler.SetScale(scale)
+            shiftScaler.SetShift(-all_min)
+            shiftScaler.SetOutputScalarType(dtype)
+            
+            writer.SetInputConnection(shiftScaler.GetOutputPort())
+                
             new_flist = []
             for fname in flist:
                 reader.SetFileName(fname)
                 reader.Update()
-            
-                if reader.GetOutput().GetScalarType() == vtk.VTK_UNSIGNED_SHORT:
-                    imax = vtk.VTK_UNSIGNED_SHORT_MAX
-                elif reader.GetOutput().GetScalarType() == vtk.VTK_SIGNED_SHORT:
-                    imax = vtk.VTK_SIGNED_SHORT_MAX
-                elif vtk_bit_depth == vtk.VTK_UNSIGNED_INT:
-                    imax = vtk.VTK_UNSIGNED_INT_MAX
-                elif reader.GetOutput().GetScalarType() == vtk.VTK_INT:
-                    imax = vtk.VTK_INT_MAX
-                scale = int(imax / (all_max - all_min))
-            
-                shiftScaler.SetInputConnection(reader.GetOutputPort())
-                shiftScaler.SetScale(scale)
-                shiftScaler.SetShift(-all_min)
-                shiftScaler.SetOutputScalarType(dtype)
+                                
                 shiftScaler.Update() 
                 
-                writer.SetFileName('{}bit_{}'.format(bitdepth, fname))
-                writer.SetInputConnection(shiftScaler.GetOutputPort())
+                writer.SetFileName(os.path.join(os.path.dirname(fname), 
+                                   '{}bit_{}'.format(dtypestring, os.path.basename(fname))))
                 writer.Write()
                 new_flist.append(writer.GetFileName())
             
@@ -210,7 +220,9 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
             flist = new_flist[:]
         else:
             print ("no need to cast image type")
-            
+        
+        
+        # convert to Meta Image
         # load the whole bitdepth (16 bit)
         sa = vtk.vtkStringArray()
         for fname in flist:
@@ -232,37 +244,204 @@ def processTiffStack(ref_fname, output_fname, bitdepth=16):
     else:
         raise ValueError('File Not Found')
 
+def createPointCloud(mask_filename, shape, dimensionality, 
+                     sliceno, overlap, radius, rotation):
+    ## Create the PointCloud
+    # 
+    
+    
+    reader = vtk.vtkMetaImageReader()
+    reader.SetFileName(mask_filename)
+    reader.Update()
+    origin = reader.GetOutput().GetOrigin()
+    spacing = reader.GetOutput().GetSpacing()
+    dimensions = reader.GetOutput().GetDimensions()
+    
+    
+    pointCloud = cilRegularPointCloudToPolyData()   
+    
+    pointCloud.SetMode(shape)
+    pointCloud.SetDimensionality(dimensionality) 
+    pointCloud.SetSlice(sliceno)
+    
+    pointCloud.SetInputConnection(0, reader.GetOutputPort())
+    
+    pointCloud.SetOverlap(0,overlap[0])
+    pointCloud.SetOverlap(1,overlap[1])
+    pointCloud.SetOverlap(2,overlap[2])
+    
+    pointCloud.SetSubVolumeRadiusInVoxel(radius)
+            
+    pointCloud.Update()
+    
+    print ("pointCloud number of points", pointCloud.GetNumberOfPoints())
+         
+    # Erode the transformed mask of SubVolumeRadius because we don't want to have subvolumes 
+    # outside the mask
+    
+    erode = vtk.vtkImageDilateErode3D()
+    erode.SetErodeValue(1)
+    erode.SetDilateValue(0)     
+    
+    
+    # FIXME: Currently the 2D case is only XY
+    # For 2D we need to set the Kernel size in the plane to 1, 
+    # otherwise the erosion would erode the whole mask.
+    ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
+    if pointCloud.GetDimensionality() == 3:
+        ks[2]= pointCloud.GetSubVolumeRadiusInVoxel()
+        
+    
+        
+    # if shape is box or square to be sure that the subvolume is within
+    # the mask we need to take the half of the diagonal rather than the
+    # half of the size
+    if shape == 'cube':
+        ks = [round(1.41 * l) for l in ks]
+    
+    
+    # the mask erosion takes a looong time. 
+    erode.SetInputConnection(0,reader.GetOutputPort())
+    erode.SetKernelSize(ks[0],ks[1],ks[2])
+    erode.Update()
+    print ("mask created")
+    
+    
+    # Mask the point cloud with the eroded mask
+    
+    polydata_masker = cilMaskPolyData()
+    polydata_masker.SetMaskValue(1)
+    polydata_masker.SetInputConnection(1, erode.GetOutputPort())
+    
+    ## Create a Transform to modify the PointCloud
+    # Translation and Rotation
+    
+    transform = vtk.vtkTransform()
+    # rotate around the center of the image data
+    transform.Translate(dimensions[0]/2*spacing[0], dimensions[1]/2*spacing[1],0)
+    # rotation angles
+    transform.RotateX(rotation[0])
+    transform.RotateY(rotation[1])
+    transform.RotateZ(rotation[2])
+    transform.Translate(-dimensions[0]/2*spacing[0], -dimensions[1]/2*spacing[1],0)
+    
+
+    # Actual Transformation is done here
+    t_filter = vtk.vtkTransformFilter()
+    t_filter.SetTransform(transform)
+    t_filter.SetInputConnection(pointCloud.GetOutputPort())
+    
+    polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
+    
+    polydata_masker.Update()
+    
+    mpc = polydata_masker.GetOutputDataObject(0)
+    array = numpy.zeros((mpc.GetNumberOfPoints(), 4))
+    for i in range(mpc.GetNumberOfPoints()):
+        pp = mpc.GetPoint(i)
+        array[i] = (i, *pp)
+    # numpy.savetxt(fn[0], array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+    return array
+def getBitDepth(imagedata):
+    vtk_bit_depth = imagedata.GetScalarType()
+    print ("Input Scalar type" , imagedata.GetScalarTypeAsString())
+    if vtk_bit_depth == vtk.VTK_UNSIGNED_CHAR:
+        bit_depth = 8
+    elif vtk_bit_depth == vtk.VTK_SIGNED_CHAR:
+        bit_depth = 8
+    elif vtk_bit_depth == vtk.VTK_UNSIGNED_SHORT:
+        bit_depth = 16
+    elif vtk_bit_depth == vtk.VTK_SHORT:
+        bit_depth = 16
+    else:
+        raise TypeError('Cannot handle this type of images')
+    return bit_depth
+
 if __name__ == '__main__':
     # runcontrol = DVC()
     __version__ = '0.1.0'
     print ("Starting ... ")
     args = docopt(__doc__, version=__version__)
+    
+    #args = {'--guiconfig' : os.path.abspath('../../wip/r3_np100/pointcloud_config.json'),
+    #        '--reference' : os.path.abspath('D:/Nghia_slices/rec_*.tif')}
     print ("Parsing args")
     print ("Passed args " , args)
     
-    with open(args['--guiconfig'], 'r') as f:
-        guiconfig = json.load(f)
+    #with open(args['--guiconfig'], 'r') as f:
+    #    guiconfig = json.load(f)
 
-    if '--reference' in args.keys():
-        ref_fname = args['--reference']
-        processTiffStack(ref_fname, 'prova')        
-            
-        
-        
-    # cor_fname = args['--correlate']
     
-    msg = example_config.format(reference_filename='reference_filename' , 
-                                correlate_filename='correlate_filename',
-                                point_cloud_filename=guiconfig['point_cloud_filename'],
-                                output_filename='output_filename',
-                                vol_bit_depth='8',
-                                vol_hdr_lngth='80',
+    ref_fname = args['--ref']
+    cor_fname = args['--cor']
+    config = args['--guiconfig']
+    output = args['-o']
+    
+    ref_reader = vtk.vtkMetaImageReader()
+    cor_reader = vtk.vtkMetaImageReader()
+    
+    ref_reader.SetFileName(os.path.abspath(ref_fname))
+    cor_reader.SetFileName(os.path.abspath(cor_fname))
+    
+    # check that the dimensions of the reference and correlate are the same
+    ref_reader.Update()
+    cor_reader.Update()
+    ref_dims = ref_reader.GetOutput().GetDimensions()
+    cor_dims = cor_reader.GetOutput().GetDimensions()
+    assert ref_dims == cor_dims 
+           
+    
+    with open(config, 'r') as f:
+        guiconfig = json.load(f)
+        radius = config['radius_range']
+        mask_file = config['mask_file']
+        mask_reader = vtk.vtkMetaImageReader()
+        mask_reader.SetFileName(mask_file)
+        mask_reader.Update()
+        
+        # check that the dimensions of the mask are the same as the correlate 
+        # and reference datasets
+        mask_dims = mask_reader.GetOutput().GetDimensions()
+        assert mask_dims == ref_dims
+        
+        #subvol_geom = config["subvol_geom"]: "cube", "vol_wide": 2560, "vol_high": 2560, "vol_tall": 7, "subvol_npoints_range": [2000, 3000, 4000], "shape": "cube", "dimensionality": 3, "current_slice": 3, "overlap": [0.4, 0.2, 0.2], "rotation": [0.0, 0.0, -23.6]
+        for r in radius:
+            # create the point cloud for the specific radius
+            array = createPointCloud(mask_filename=mask_file, 
+                                   shape=config['subvol_geom'],
+                                   dimensionality=config['dimensionality'],
+                                   sliceno=config['current_slice'],
+                                   overlap=config['overlap'],
+                                   radius=r,
+                                   rotation=config['rotation']
+                                   )
+            # range on the number of points in the subvolume
+            for n in npoints:
+                # the number of points in the subvolume are not influencing the
+                # actual point cloud
+                run_dir = os.path.join(outdir, 'r{:d}_np{:d}'.format(r,n))
+                os.mkdir(run_dir)
+                fname = os.path.join(run_dir, 'pointcloud_r{:d}.roi'.format(r))
+                numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+                
+                
+                bit_depth = getBitDepth(ref_reader.GetOutput())
+        
+    
+    
+                msg = example_config.format(
+                                reference_filename=ref_fname , 
+                                correlate_filename=cor_fname,
+                                point_cloud_filename=fname,
+                                output_filename=output,
+                                vol_bit_depth=bit_depth, #: get from ref
+                                vol_hdr_lngth='0',#: get from ref
                                 vol_wide=guiconfig['vol_wide'],
                                 vol_high=guiconfig['vol_high'],
                                 vol_tall=guiconfig['vol_tall'],
                                 subvol_geom=guiconfig['subvol_geom'],
-                                subvol_size=guiconfig['subvol_size'],
-                                subvol_npts=guiconfig['subvol_npts'],
+                                subvol_size= r * 2,
+                                subvol_npts= n,
                                 subvol_thresh='off',
                                 gray_thresh_min='27',
                                 gray_thresh_max='127',
