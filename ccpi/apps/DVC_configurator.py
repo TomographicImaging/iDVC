@@ -191,7 +191,7 @@ class Window(QMainWindow):
                 viewer=CILViewer2D,
                 interactorStyle=vlink.Linked2DInteractorStyle
                 )
-        self.vtkWidget.viewer.debug = False
+        self.vtkWidget.viewer.debug = True
         self.vtkWidget.viewer.style.debug = False
         
         self.iren = self.vtkWidget.getInteractor()
@@ -587,7 +587,20 @@ class Window(QMainWindow):
         if not fn[0]:
             return
         self.openFileByPath(fn, read_mask)
+        if not read_mask:
+            self.vtkWidget.viewer.setInput3DData(self.reader.GetOutput())
+            self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
+            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
+ 
+            
     def openMask(self):
+        print("openMask")
+        v = self.vtkWidget.viewer
+        if not isinstance(v.img3D, vtk.vtkImageData):
+            return self.warningDialog(window_title="Error", 
+                               message="Load a dataset on the viewer first" )
+            
+        
         self.openFile(True)
         v = self.vtkWidget.viewer
         # save the mask to a temporary file
@@ -600,11 +613,17 @@ class Window(QMainWindow):
         self.mask_reader.SetFileName(os.path.join(tmpdir, "selection.mha"))
         self.mask_reader.Update()
         
-        
-        print ("current displayed img", id(v.img3D), id(v.sliceActor))
+        dims = v.img3D.GetDimensions()
+        if not dims == self.mask_reader.GetOutput().GetDimensions():
+            return self.warningDialog( 
+                    window_title="Error", 
+                    message="Mask and Dataset are not compatible",
+                    detailed_text='Dataset dimensions {}\nMask dimensions {}'\
+                           .format(dims, 
+                                   self.mask_reader.GetOutput().GetDimensions()
+                                   ))
+            
         v.setInputData2(self.mask_reader.GetOutput())
-        print ("current displayed img", id(v.img3D), id(v.sliceActor), id(v.sliceActor2))
-        # v.setInputData(v.img3D)
         
 
     def openFileByPath(self, fn, read_mask=False):
@@ -690,13 +709,14 @@ class Window(QMainWindow):
             self.displayFileErrorDialog(file)
 
         else:
-            self.vtkWidget.viewer.setInput3DData(reader.GetOutput())
-            self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
-            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
-        if read_mask:
-            self.mask_reader = reader
-        else:
-            self.reader = reader
+            if read_mask:
+                self.mask_reader = reader
+            else:
+                self.reader = reader
+#            self.vtkWidget.viewer.setInput3DData(reader.GetOutput())
+#            self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
+#            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
+        
         self.setStatusTip('Ready')
 
 
@@ -1390,39 +1410,90 @@ class Window(QMainWindow):
         config = {}
         
         dims = self.vtkWidget.viewer.img3D.GetDimensions()
-        shapeselected = self.subvolumeShapeValue.currentIndex()
-        shape = 'cube' if shapeselected == 0 or shapeselected == 2 else 'sphere'
         
         # 1 save the mask ?
-        # 2 create the point clouds
-        for r in radius:
-            self.isoValueEntry.setText(str(r))
-            self.createPointCloud()
-            pointcloud = self.polydata_masker.GetOutputDataObject(0)
-            array = numpy.zeros((pointcloud.GetNumberOfPoints(), 4))
-            for i in range(pointcloud.GetNumberOfPoints()):
-                pp = pointcloud.GetPoint(i)
-                array[i] = (i, *pp)
-            config['subvol_geom'] = shape #: cube, sphere
-            config['subvol_size'] = r * 2 #: side length or diameter, in voxels
-            ### description of the image data files, all must be the same size and structure
-            # these will be checked when creating the dvc input files. 
-            config['vol_wide'] = dims[0] #: width in pixels of each slice
-            config['vol_high'] = dims[1] #: height in pixels of each slice
-            config['vol_tall'] = dims[2] #: number of slices in the stack
-            for n in npoints:
-                # the number of points in the subvolume are not influencing the
-                # actual point cloud
-                run_dir = os.path.join(outdir, 'r{:d}_np{:d}'.format(r,n))
-                os.mkdir(run_dir)
-                fname = os.path.join(run_dir, 'pointcloud_r{:d}.roi'.format(r))
-                numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
-                
-                config['point_cloud_filename'] = os.path.basename(fname)
-                config['subvol_npts'] =	n #: number of points to distribute within the subvol
-                config_fname = os.path.join(run_dir, 'pointcloud_config.json')
-                with open(config_fname, 'w') as f:
-                    json.dump(config, f)
+        # Mask is read from temp file
+        tmpdir = tempfile.gettempdir() 
+        reader = vtk.vtkMetaImageReader()
+        reader.SetFileName(os.path.join(tmpdir, "selection.mha"))
+        reader.Update()
+        
+        writer = vtk.vtkMetaImageWriter()
+        writer.SetInputConnection(reader.GetOutputPort())
+        writer.SetFileName(os.path.join(outdir,"mask.mhd"))
+        writer.SetCompression(1)
+        writer.Write()
+        # 2 create the point clouds config
+        config['radius_range'] = radius
+        config['mask_file'] = os.path.join('mask.mhd')
+        
+        shapeselected = self.subvolumeShapeValue.currentIndex()
+        shape = 'cube' if shapeselected == 0 or shapeselected == 1 else 'sphere'
+        
+        config['subvol_geom'] = shape #: cube, sphere
+        # config['subvol_size'] = r * 2 #: side length or diameter, in voxels
+        ### description of the image data files, 
+        # all must be the same size and structure
+        # these will be checked when creating the dvc input files. 
+        config['vol_wide'] = dims[0] #: width in pixels of each slice
+        config['vol_high'] = dims[1] #: height in pixels of each slice
+        config['vol_tall'] = dims[2] #: number of slices in the stack
+        config['subvol_npoints_range'] = npoints
+        
+        config['shape'] = shape
+        dimensionality = [3,2]
+        config['dimensionality'] = \
+                        dimensionality[self.dimensionalityValue.currentIndex()]
+        #slice is read from the viewer this is relevant for 2D 
+        v = self.vtkWidget.viewer
+        config['current_slice'] = v.GetActiveSlice()
+        config['overlap'] = [ float(self.overlapXValueEntry.text()),
+                              float(self.overlapYValueEntry.text()),
+                              float(self.overlapZValueEntry.text()) ]
+        
+        rotate = (
+                float(self.rotateXValueEntry.text()),
+                float(self.rotateYValueEntry.text()),
+                float(self.rotateZValueEntry.text())
+                )
+        config['rotation'] = rotate
+        
+        
+        config_fname = os.path.join(outdir, 'dvcrun_config.json')
+        with open(config_fname, 'w') as f:
+            json.dump(config, f)
+    
+#        for r in radius:
+#            self.isoValueEntry.setText(str(r))
+#            self.createPointCloud()
+#            pointcloud = self.polydata_masker.GetOutputDataObject(0)
+#            array = numpy.zeros((pointcloud.GetNumberOfPoints(), 4))
+#            for i in range(pointcloud.GetNumberOfPoints()):
+#                pp = pointcloud.GetPoint(i)
+#                array[i] = (i, *pp)
+#            config['radius'] = r
+#            config['mask_file'] = os.path.join('..','mask.mhd')
+#            config['subvol_geom'] = shape #: cube, sphere
+#            config['subvol_size'] = r * 2 #: side length or diameter, in voxels
+#            ### description of the image data files, 
+#            # all must be the same size and structure
+#            # these will be checked when creating the dvc input files. 
+#            config['vol_wide'] = dims[0] #: width in pixels of each slice
+#            config['vol_high'] = dims[1] #: height in pixels of each slice
+#            config['vol_tall'] = dims[2] #: number of slices in the stack
+#            for n in npoints:
+#                # the number of points in the subvolume are not influencing the
+#                # actual point cloud
+#                run_dir = os.path.join(outdir, 'r{:d}_np{:d}'.format(r,n))
+#                os.mkdir(run_dir)
+#                fname = os.path.join(run_dir, 'pointcloud_r{:d}.roi'.format(r))
+#                numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+#                
+#                config['point_cloud_filename'] = os.path.basename(fname)
+#                config['subvol_npts'] =	n #: number of points to distribute within the subvol
+#                config_fname = os.path.join(run_dir, 'pointcloud_config.json')
+#                with open(config_fname, 'w') as f:
+#                    json.dump(config, f)
             
         
         
@@ -1438,7 +1509,7 @@ class Window(QMainWindow):
     def updatePointCloud(self):
         print("should read the table here and save to csv")
 
-    def warningDialog(self, message, window_title='', detailed_text=''):
+    def warningDialog(self, message='', window_title='', detailed_text=''):
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Information)
         dialog.setText(message)
