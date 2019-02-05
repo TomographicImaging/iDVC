@@ -26,7 +26,7 @@ requirements:
     - {{ pin_compatible('numpy', max_pin='x.x') }}
     - python
     - numpy
-    - ccpi-viewer ==19.01
+    - ccpi-viewer
 #    - ccpi-dvc
     - natsort
     - docopt
