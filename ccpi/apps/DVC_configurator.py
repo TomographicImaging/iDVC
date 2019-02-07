@@ -38,6 +38,7 @@ from PyQt5.QtWidgets import QCheckBox
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QComboBox
+from PyQt5.QtWidgets import QProgressBar, QStatusBar
 import vtk
 from ccpi.viewer.QVTKCILViewer import QVTKCILViewer
 from ccpi.viewer.QVTKWidget import QVTKWidget
@@ -48,6 +49,8 @@ from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
 from ccpi.viewer.utils import cilRegularPointCloudToPolyData
 from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 from ccpi.viewer.utils import cilNumpyMETAImageWriter
+from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver, \
+                                    QtThreadedProgressBarInterface
 from natsort import natsorted
 import imghdr
 import os
@@ -139,24 +142,6 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
                 vertices.InsertCellPoint(i)
 
 
-class ErrorObserver:
-
-    def __init__(self):
-        self.__ErrorOccurred = False
-        self.__ErrorMessage = None
-        self.CallDataType = 'string0'
-
-    def __call__(self, obj, event, message):
-        self.__ErrorOccurred = True
-        self.__ErrorMessage = message
-
-    def ErrorOccurred(self):
-        occ = self.__ErrorOccurred
-        self.__ErrorOccurred = False
-        return occ
-
-    def ErrorMessage(self):
-        return self.__ErrorMessage
 
 
 def sentenceCase(string):
@@ -170,11 +155,11 @@ def sentenceCase(string):
         return ''
 
 
-class Window(QMainWindow):
+class Window(QMainWindow, QtThreadedProgressBarInterface):
 
     def __init__(self):
-        super().__init__()
-        self.setWindowTitle('CIL Viewer')
+        super(Window, self).__init__()
+        self.setWindowTitle('DVC Configurator')
         self.setGeometry(50, 50, 1200, 600)
 
         self.e = ErrorObserver()
@@ -191,8 +176,8 @@ class Window(QMainWindow):
                 viewer=CILViewer2D,
                 interactorStyle=vlink.Linked2DInteractorStyle
                 )
-        self.vtkWidget.viewer.debug = True
-        self.vtkWidget.viewer.style.debug = False
+        self.vtkWidget.viewer.debug = False
+        self.vtkWidget.viewer.style.debug = True
         
         self.iren = self.vtkWidget.getInteractor()
         self.vl.addWidget(self.vtkWidget)
@@ -229,8 +214,22 @@ class Window(QMainWindow):
 
         # self.createTableWidget()
 
-        self.statusBar()
+        #Create status bar
+        self.statusbar = QStatusBar(self)
         self.setStatusTip('Open file to begin visualisation...')
+        self.setStatusBar(self.statusbar)
+        
+        self.setStatusTip('Open file to begin visualisation...')
+        
+        # Add progress bar
+        # self.progressBar = QProgressBar(self)
+        # initialize the progress bar interface
+        self.progressbar = QProgressBar(self)
+        self.progressBar = self.progressbar
+        
+        self.progressBar.setMaximumWidth(250)
+        self.progressBar.hide()
+        self.statusbar.addPermanentWidget(self.progressBar)
 
         self.subvol = 80
         self.displaySpheres = True
@@ -238,6 +237,10 @@ class Window(QMainWindow):
         # self.pointcloud = []
         self.start_selection = True
         self.pointCloudCreated = False
+        # Add threading
+        self.threadpool = QtCore.QThreadPool()
+        self.e = ErrorObserver()
+
 
         self.show()
         
@@ -495,10 +498,10 @@ class Window(QMainWindow):
         saveMask = QAction(self.style().standardIcon(
             QStyle.SP_DialogSaveButton), 'Save Mask Data', self)
         saveMask.triggered.connect(self.saveMask)
-        # define save pointcloud
-        #savePointCloud = QAction(self.style().standardIcon(
-        #    QStyle.SP_DialogSaveButton), 'Save point cloud', self)
-        #savePointCloud.triggered.connect(self.savePointCloud)
+        # define save dataset voi
+        saveVOI = QAction(self.style().standardIcon(
+            QStyle.SP_DialogSaveButton), 'Save Volume of Interest', self)
+        saveVOI.triggered.connect(self.saveVOI)
 
         saveAction = QAction(self.style().standardIcon(
             QStyle.SP_DialogSaveButton), 'Save current render as PNG', self)
@@ -508,9 +511,9 @@ class Window(QMainWindow):
         fileMenu = mainMenu.addMenu('File')
         fileMenu.addAction(openAction)
         fileMenu.addAction(openMask)
-        # fileMenu.addAction(openPointCloud)
 
         fileMenu.addAction(saveMask)
+        fileMenu.addAction(saveVOI)
         # fileMenu.addAction(savePointCloud)
 
         fileMenu.addAction(closeAction)
@@ -578,6 +581,7 @@ class Window(QMainWindow):
             self.Dock3D.show()
         else:
             self.Dock3D.hide()
+       
 
     def openFile(self, read_mask=False):
         fn = QFileDialog.getOpenFileNames(self, 'Open File')
@@ -586,13 +590,31 @@ class Window(QMainWindow):
         # Quit the method cleanly
         if not fn[0]:
             return
+        print ("doSomething", fn)
+        self.showProgressBar()
+        self.progressBar.setMinimum(0)
+        self.progressBar.setMaximum(0)
+        self.progressBar.setValue(0)
+        
         self.openFileByPath(fn, read_mask)
-        if not read_mask:
-            self.vtkWidget.viewer.setInput3DData(self.reader.GetOutput())
-            self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
-            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
- 
-            
+
+#        worker = Worker(self.openFileByPath, fn=fn, read_mask=read_mask)
+#        
+#        # Progress bar signal handling
+#        worker.signals.result.connect(self.getResult)
+#        worker.signals.finished.connect(self.completeProgressBar)
+#        worker.signals.progress.connect(self.updateProgressBar)
+#        # self.openFileByPath(fn, read_mask)
+#        print ("doSomething start Worker")
+#        self.progressBar.show()
+#        self.threadpool.start(worker)
+
+    def getResult(self, result):
+        out = result[0]
+        args = result[1]
+        kwargs = result[2]
+        print (**kwargs)
+        
     def openMask(self):
         print("openMask")
         v = self.vtkWidget.viewer
@@ -626,7 +648,13 @@ class Window(QMainWindow):
         v.setInputData2(self.mask_reader.GetOutput())
         
 
-    def openFileByPath(self, fn, read_mask=False):
+    def openFileByPath(self, fn, read_mask=False, progress_callback=None):
+        print ("Worker")
+        print (type(self))
+        self.progressBar.setMinimum(0)
+        self.progressBar.setMaximum(0)
+        self.progressBar.setValue(0)
+        
         # Single file selection
         if len(fn[0]) == 1:
             file = fn[0][0]
@@ -718,7 +746,14 @@ class Window(QMainWindow):
 #            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
         
         self.setStatusTip('Ready')
-
+        if not read_mask:
+            self.vtkWidget.viewer.setInput3DData(self.reader.GetOutput())
+            self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
+            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
+ 
+        
+        self.progressBar.setMaximum(100)
+        
 
     def openPointCloud(self):
         fn = QFileDialog.getOpenFileNames(self, 'Open File')
@@ -764,7 +799,7 @@ class Window(QMainWindow):
         dialog = QFileDialog(self)
         dialog.setAcceptMode(QFileDialog.AcceptSave)
 
-        fn = dialog.getSaveFileName(self, 'Save Mask As', '.', "Meta Image (mhd)")
+        fn = dialog.getSaveFileName(self, 'Save Mask As', '.', "Meta Image (.mhd)")
 
         # Only save if the user has selected a name
         if fn[0]:
@@ -774,7 +809,31 @@ class Window(QMainWindow):
             writer.SetInputData(v.image2)
             writer.SetFileName(fn[0])
             writer.Write()
+    def saveVOI(self):
+        v = self.vtkWidget.viewer
+        if v.getROI() == ():
+            return self.warningDialog(window_title='Error', 
+                               message='Select a Volume of Interest')
+        dialog = QFileDialog(self)
+        dialog.setAcceptMode(QFileDialog.AcceptSave)
+
+        fn = dialog.getSaveFileName(self, 'Save Mask As', '.', "Meta Image (.mhd)")
+
+        # Only save if the user has selected a name
+        if fn[0]:
+            print ("extract VOI, ", fn)
             
+            extent = v.getROIExtent()
+            voi = vtk.vtkExtractVOI()
+            voi.SetVOI(*extent)
+            voi.SetInputData(v.img3D)
+            voi.Update()
+            print ("save VOI, ", fn)
+            writer = vtk.vtkMetaImageWriter()
+            writer.SetInputConnection(voi.GetOutputPort())
+            writer.SetFileName(fn[0])
+            writer.Write()    
+        
     def displayFileErrorDialog(self, file):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Critical)
@@ -1418,10 +1477,16 @@ class Window(QMainWindow):
         reader.SetFileName(os.path.join(tmpdir, "selection.mha"))
         reader.Update()
         
+        print ("save mask")
         writer = vtk.vtkMetaImageWriter()
         writer.SetInputConnection(reader.GetOutputPort())
         writer.SetFileName(os.path.join(outdir,"mask.mhd"))
         writer.SetCompression(1)
+        writer.Write()
+        # 2 save the dataset
+        print ("save dataset")
+        writer.SetInputData(self.vtkWidget.viewer.img3D)
+        writer.SetCompression(0)
         writer.Write()
         # 2 create the point clouds config
         config['radius_range'] = radius
@@ -1732,6 +1797,21 @@ class Window(QMainWindow):
             self.start_selection = not self.start_selection
 
     def extendMask(self):
+        """
+        Trigger method to allow threading of long running process
+        """
+        print ("doSomething")
+        self.showProgressBar()
+
+        worker = Worker(self.extendMaskThread)
+        print ("doSomething start Worker")
+        self.threadpool.start(worker)
+
+        # Progress bar signal handling
+        worker.signals.finished.connect(self.completeProgressBar)
+        worker.signals.progress.connect(self.updateProgressBar)
+
+    def extendMaskThread(self, progress_callback=None):
         # FIXME, needs to get the orientation from the viewer and
         # copy to slices below
         poly = vtk.vtkPolyData()
@@ -1772,6 +1852,7 @@ class Window(QMainWindow):
 
         mask0.Update()
         mask1.Update()
+        progress_callback.emit(20)
 
         # Create a Mask from the lasso.
         stencil = vtk.vtkImageStencil()
@@ -1788,7 +1869,8 @@ class Window(QMainWindow):
         zmin = sliceno -down if sliceno-down>=0 else 0
         zmax = sliceno + up if sliceno+up < dims[2] else dims[2]
 
-        vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax)
+        progress_callback.emit(25)
+        vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, progress_callback)
 #                for x in range(dims[0]):
 #                    for y in range(dims[1]):
 #                        for z in range(zmin, zmax):
@@ -1796,7 +1878,7 @@ class Window(QMainWindow):
 #                                val = stencil.GetOutput().GetScalarComponentAsFloat(x,y,sliceno,0)
 #                                stencil.GetOutput().SetScalarComponentFromFloat(x,y,z,0,val)
 #
-
+        progress_callback.emit(80)
         # save the mask to a file temporarily
         writer = vtk.vtkMetaImageWriter()
         tmpdir = tempfile.gettempdir()
@@ -1838,6 +1920,30 @@ class Window(QMainWindow):
         writer.Write()
         self.extendMaskCheck.setEnabled(True)
         self.setStatusTip('Done')
+
+#    def updateProgressBar(self, value):
+#        """
+#        Set progress bar percentage.
+#
+#        :param (int) value:
+#            Integer value between 0-100.
+#        """
+#
+#        self.progressBar.setValue(value)
+#
+#    def completeProgressBar(self):
+#        """
+#        Set the progress bar to 100% complete and hide
+#        """
+#        self.progressBar.setValue(100)
+#        self.progressBar.hide()
+#
+#    def showProgressBar(self):
+#        """
+#        Set the progress bar to 0% complete and show
+#        """
+#        self.progressBar.setValue(0)
+#        self.progressBar.show()
 
 
 def main():
