@@ -113,7 +113,7 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16):
             shiftScaler = vtk.vtkImageShiftScale ()
             shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
-            shiftScaler.SetShift(-all_min)
+            shiftScaler.SetShift(-all_min + 0.5/scale) #rounds to the nearest int as VTK only rounds down
             shiftScaler.SetOutputScalarType(dtype)
             
             writer.SetInputConnection(shiftScaler.GetOutputPort())
