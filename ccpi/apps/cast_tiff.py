@@ -43,10 +43,14 @@ import matplotlib.pyplot as plt
 def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, percentiles=None):
     '''reads a tiff stack and casts to UNSIGNED INT 8 or 16, saves to MetaImage'''
     tmp = glob.glob(wildcard_filenames)
+    print ("Found {} files".format(len(tmp)))
+    
     if extent != None:
-       flist = [tmp[i] for i in range(extent[2], extent[3])] 
+        print ("Volume of interest ", extent)
+        flist = [tmp[i] for i in range(extent[4], extent[5])] 
     else:
         flist = tmp
+    print ("processing {} files of {}".format(len(flist), len(tmp)))
     if len(flist) > 0:
         reader = vtk.vtkTIFFReader()
         #  determine bit depth
@@ -147,7 +151,7 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
                 else:
                     h = numpy.histogram(img_data, nbins, (all_min, all_max))
                     histogram += h[0]
-            
+
             if percentiles is None:
                 percentiles = (1,99)
             # find the bin at which we have to cut for the percentiles
@@ -181,14 +185,15 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
             
             
             shiftScaler = vtk.vtkImageShiftScale ()
-            if extent != None:
+            shiftScaler.ClampOverflowOn()
+            if extent != None and False:
                 voi.SetInputConnection(reader.GetOutputPort())
                 voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
                 shiftScaler.SetInputConnection(voi.GetOutputPort())
             else:
                 shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
-            shiftScaler.SetShift(-all_min)
+            shiftScaler.SetShift(-bin_edges[min_perc])
             shiftScaler.SetOutputScalarType(dtype)
             
             writer = vtk.vtkTIFFWriter()
@@ -204,7 +209,10 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
                 
                 reader.SetFileName(fname)
                 reader.Update()
-                if extent != None:
+                if extent != None and False:
+                    voi.SetInputConnection(reader.GetOutputPort())
+                    voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
+                    
                     voi.Update()
                 shiftScaler.Update() 
                 
@@ -230,15 +238,16 @@ def main():
     __version__ = '0.1.0'
     print ("Starting ... ")
     args = docopt.docopt(__doc__, version=__version__)
-    print(args) 
+    for k,v in args.items():
+        print (k,v) 
     if args['--dtype'] is None:
         args['--dtype'] = 8
-    extent = args.get('-extent', None)
+    extent = args.get('--extent', None)
     if extent is not None:
-        extent = eval('['+exent+']')
+        extent = eval('['+extent+']')
+    print ("extent", extent)
     
-    for k,v in args.items():
-        print (k,v)
+    
     processTiffStack(args['-i'], args['-o'], args['--dtype'], extent=extent)
 
 if __name__ == '__main__':
