@@ -5,12 +5,13 @@ tiffTo8bit
 Convert TIFF files to uint8 or uint16 bit
 
 Usage:
- tiffTo8bit.py [ -h ] -i=<path> -o=<path> [ --dtype=8 ] 
+ cast_tiff.py [ -h ] -i <path> -o <path> [ --dtype 8 ] [ --extent=xmin,xmax,ymin,ymax,zmin,zmax ]
 
 Options:
  -i=path           input filename(s)
  -o=path           output directory
  --dtype=8         the bit depth (8 or 16)
+ --extent=xmin,xmax,ymin,ymax,zmin,zmax
  -h       display help
  
 version = 1.0
@@ -19,11 +20,14 @@ Created on Thu Jan 24 14:54:50 2019
 """
 
 import docopt
-import os
+import os, sys
 # import json
 import glob
 import vtk
 from tqdm import tqdm
+from vtk.util import numpy_support
+import numpy
+import matplotlib.pyplot as plt 
 
 # VTK_SIGNED_CHAR,     # int8
 # VTK_UNSIGNED_CHAR,   # uint8
@@ -36,9 +40,13 @@ from tqdm import tqdm
 # VTK_FLOAT,           # float32
 # VTK_DOUBLE,          #
 
-def processTiffStack(wildcard_filenames, output_dir, bitdepth=16):
+def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, percentiles=None):
     '''reads a tiff stack and casts to UNSIGNED INT 8 or 16, saves to MetaImage'''
-    flist = glob.glob(wildcard_filenames)
+    tmp = glob.glob(wildcard_filenames)
+    if extent != None:
+       flist = [tmp[i] for i in range(extent[2], extent[3])] 
+    else:
+        flist = tmp
     if len(flist) > 0:
         reader = vtk.vtkTIFFReader()
         #  determine bit depth
@@ -95,26 +103,95 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16):
             print ("Casting images to {}".format(dtypestring))
             
             stats = vtk.vtkImageAccumulate()
+            voi = vtk.vtkExtractVOI()
             print ("looking for min max in the dataset")
-            for fname in tqdm(flist):
+            
+            
+            for i,fname in tqdm(enumerate(flist)):
                 reader.SetFileName(fname)
                 reader.Update()
-                stats.SetInputConnection(reader.GetOutputPort())
+                if extent != None:
+                    voi.SetInputConnection(reader.GetOutputPort())
+                    voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
+                    voi.Update()
+                    stats.SetInputConnection(voi.GetOutputPort())
+                else:
+                    stats.SetInputConnection(reader.GetOutputPort())
                 stats.Update()
                 iMin = stats.GetMin()[0]
                 iMax = stats.GetMax()[0]
                 all_max = all_max if iMax < all_max else iMax
                 all_min = all_min if iMin > all_min else iMin
             
-            writer = vtk.vtkTIFFWriter()
             
-            scale = int( (imax - imin) / (all_max - all_min))
-            print ("min {}\nmax {}\nscale {}".format(all_min, all_max, scale))
+            # create a histogram of the whole dataset
+            nbins = vtk.VTK_UNSIGNED_SHORT_MAX + 1
+            nbins = 255
+            print ("Constructing the histogram of the whole dataset")
+            for i,fname in enumerate(tqdm(flist)):
+                reader.SetFileName(fname)
+                reader.Update()
+                if extent != None:
+                    voi.SetInputConnection(reader.GetOutputPort())
+                    voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
+                    voi.Update()
+                    img_data = numpy_support.vtk_to_numpy(
+                        voi.GetOutput().GetPointData().GetScalars()
+                        )
+                else:
+                    img_data = numpy_support.vtk_to_numpy(
+                        reader.GetOutput().GetPointData().GetScalars()
+                        )
+                if i == 0:
+                    histogram , bin_edges = numpy.histogram(img_data, nbins, (all_min, all_max))
+                else:
+                    h = numpy.histogram(img_data, nbins, (all_min, all_max))
+                    histogram += h[0]
+            
+            if percentiles is None:
+                percentiles = (1,99)
+            # find the bin at which we have to cut for the percentiles
+            nvoxels = histogram.sum()
+            percentiles = [p * nvoxels / 100 for p in percentiles]
+            current_perc = 0
+            for i,el in enumerate(histogram):
+                current_perc += el
+                if current_perc > percentiles[0]:
+                    break
+            min_perc = i
+            current_perc = 0
+            for i,el in enumerate(histogram):
+                current_perc += el
+                if current_perc >= percentiles[1]:
+                    break
+            max_perc = i
+
+            #plt.hist(histogram, range=(bin_edges[0], bin_edges[-1]), log=True)
+            #plt.bar(bin_edges[1:], histogram, log=True)
+            #plt.semilogy(bin_edges[1:],histogram)
+            plt.plot(bin_edges[1:],histogram)
+            plt.axvline(x=bin_edges[min_perc])
+            plt.axvline(x=bin_edges[max_perc])
+            plt.show()
+            scale = (imax - imin) / (bin_edges[max_perc] - bin_edges[min_perc])
+            print ("min {}\tmax {}\nedge_min {}\tedge_max {}\nscale {}".format(
+                all_min, all_max, bin_edges[min_perc] ,bin_edges[max_perc], scale))
+            
+            #sys.exit(0)
+            
+            
             shiftScaler = vtk.vtkImageShiftScale ()
-            shiftScaler.SetInputConnection(reader.GetOutputPort())
+            if extent != None:
+                voi.SetInputConnection(reader.GetOutputPort())
+                voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
+                shiftScaler.SetInputConnection(voi.GetOutputPort())
+            else:
+                shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
             shiftScaler.SetShift(-all_min)
             shiftScaler.SetOutputScalarType(dtype)
+            
+            writer = vtk.vtkTIFFWriter()
             
             writer.SetInputConnection(shiftScaler.GetOutputPort())
             
@@ -127,7 +204,8 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16):
                 
                 reader.SetFileName(fname)
                 reader.Update()
-                                
+                if extent != None:
+                    voi.Update()
                 shiftScaler.Update() 
                 
                 writer.SetFileName(os.path.join(os.path.abspath(output_dir), 
@@ -152,13 +230,16 @@ def main():
     __version__ = '0.1.0'
     print ("Starting ... ")
     args = docopt.docopt(__doc__, version=__version__)
-     
+    print(args) 
     if args['--dtype'] is None:
         args['--dtype'] = 8
+    extent = args.get('-extent', None)
+    if extent is not None:
+        extent = eval('['+exent+']')
     
     for k,v in args.items():
         print (k,v)
-    processTiffStack(args['-i'], args['-o'], args['--dtype'])
+    processTiffStack(args['-i'], args['-o'], args['--dtype'], extent=extent)
 
 if __name__ == '__main__':
     main()
