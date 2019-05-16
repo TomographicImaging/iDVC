@@ -1796,7 +1796,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
             self.start_selection = not self.start_selection
 
-    def extendMask(self):
+    def extendMaskWorker(self):
         """
         Trigger method to allow threading of long running process
         """
@@ -1811,7 +1811,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         worker.signals.finished.connect(self.completeProgressBar)
         worker.signals.progress.connect(self.updateProgressBar)
 
-    def extendMaskThread(self, progress_callback=None):
+    def extendMask(self, progress_callback=None):
         # FIXME, needs to get the orientation from the viewer and
         # copy to slices below
         poly = vtk.vtkPolyData()
@@ -1852,7 +1852,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         mask0.Update()
         mask1.Update()
-        progress_callback.emit(20)
+        # progress_callback.emit(20)
 
         # Create a Mask from the lasso.
         stencil = vtk.vtkImageStencil()
@@ -1869,8 +1869,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         zmin = sliceno -down if sliceno-down>=0 else 0
         zmax = sliceno + up if sliceno+up < dims[2] else dims[2]
 
-        progress_callback.emit(25)
-        vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, progress_callback)
+        # progress_callback.emit(25)
+        vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, None)
 #                for x in range(dims[0]):
 #                    for y in range(dims[1]):
 #                        for z in range(zmin, zmax):
@@ -1878,7 +1878,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 #                                val = stencil.GetOutput().GetScalarComponentAsFloat(x,y,sliceno,0)
 #                                stencil.GetOutput().SetScalarComponentFromFloat(x,y,z,0,val)
 #
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
         # save the mask to a file temporarily
         writer = vtk.vtkMetaImageWriter()
         tmpdir = tempfile.gettempdir()
