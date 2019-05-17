@@ -193,7 +193,9 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
             else:
                 shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
+
             shiftScaler.SetShift(-bin_edges[min_perc])
+  
             shiftScaler.SetOutputScalarType(dtype)
             
             writer = vtk.vtkTIFFWriter()
