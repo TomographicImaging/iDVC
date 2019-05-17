@@ -5,13 +5,15 @@ tiffTo8bit
 Convert TIFF files to uint8 or uint16 bit
 
 Usage:
- cast_tiff.py [ -h ] -i <path> -o <path> [ --dtype 8 ] [ --extent=xmin,xmax,ymin,ymax,zmin,zmax ]
+ cast_tiff.py [ -h ] -i <path> -o <path> [ --dtype 8 ] [--percentiles=1,99] [ --extent=xmin,xmax,ymin,ymax,zmin,zmax ] [ --crop ] 
 
 Options:
  -i=path           input filename(s)
  -o=path           output directory
  --dtype=8         the bit depth (8 or 16)
+ --percentiles=min,max , i.e. 1,99
  --extent=xmin,xmax,ymin,ymax,zmin,zmax
+ --crop 
  -h       display help
  
 version = 1.0
@@ -40,14 +42,18 @@ import matplotlib.pyplot as plt
 # VTK_FLOAT,           # float32
 # VTK_DOUBLE,          #
 
-def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, percentiles=None):
+def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, 
+                     extent=None, percentiles=None, crop=False):
     '''reads a tiff stack and casts to UNSIGNED INT 8 or 16, saves to MetaImage'''
     tmp = glob.glob(wildcard_filenames)
     print ("Found {} files".format(len(tmp)))
     
     if extent != None:
         print ("Volume of interest ", extent)
-        flist = [tmp[i] for i in range(extent[4], extent[5])] 
+        if len(extent) == 4:
+            flist = tmp
+        elif len(extent) == 6:
+            flist = [tmp[i] for i in range(extent[4], extent[5])] 
     else:
         flist = tmp
     print ("processing {} files of {}".format(len(flist), len(tmp)))
@@ -114,7 +120,7 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
             for i,fname in tqdm(enumerate(flist)):
                 reader.SetFileName(fname)
                 reader.Update()
-                if extent != None:
+                if extent is not None:
                     voi.SetInputConnection(reader.GetOutputPort())
                     voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
                     voi.Update()
@@ -131,11 +137,11 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
             # create a histogram of the whole dataset
             nbins = vtk.VTK_UNSIGNED_SHORT_MAX + 1
             nbins = 255
-            print ("Constructing the histogram of the whole dataset")
+            print ("Constructing the histogram of the whole dataset: crop", crop)
             for i,fname in enumerate(tqdm(flist)):
                 reader.SetFileName(fname)
                 reader.Update()
-                if extent != None:
+                if extent is not None:
                     voi.SetInputConnection(reader.GetOutputPort())
                     voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
                     voi.Update()
@@ -170,9 +176,6 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
                     break
             max_perc = i
 
-            #plt.hist(histogram, range=(bin_edges[0], bin_edges[-1]), log=True)
-            #plt.bar(bin_edges[1:], histogram, log=True)
-            #plt.semilogy(bin_edges[1:],histogram)
             plt.plot(bin_edges[1:],histogram)
             plt.axvline(x=bin_edges[min_perc])
             plt.axvline(x=bin_edges[max_perc])
@@ -181,16 +184,16 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
             print ("min {}\tmax {}\nedge_min {}\tedge_max {}\nscale {}".format(
                 all_min, all_max, bin_edges[min_perc] ,bin_edges[max_perc], scale))
             
-            #sys.exit(0)
-            
-            
+            # scale and cast the image
             shiftScaler = vtk.vtkImageShiftScale ()
             shiftScaler.ClampOverflowOn()
-            if extent != None and False:
+            if extent is not None and crop:
+                print("Scaling and cropping the volume on selection")
                 voi.SetInputConnection(reader.GetOutputPort())
                 voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
                 shiftScaler.SetInputConnection(voi.GetOutputPort())
             else:
+                print("Scaling the volume on selection")
                 shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
             shiftScaler.SetShift(-bin_edges[min_perc])
@@ -209,11 +212,7 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16, extent=None, p
                 
                 reader.SetFileName(fname)
                 reader.Update()
-                if extent != None and False:
-                    voi.SetInputConnection(reader.GetOutputPort())
-                    voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
-                    
-                    voi.Update()
+                
                 shiftScaler.Update() 
                 
                 writer.SetFileName(os.path.join(os.path.abspath(output_dir), 
@@ -242,13 +241,28 @@ def main():
         print (k,v) 
     if args['--dtype'] is None:
         args['--dtype'] = 8
+    else:
+        dtype = int(args['--dtype'])
+        if dtype not in [8,16]:
+            raise ValueError('Accepted input is 8 or 16, got ', dtype)
+        args['--dtype'] = dtype
     extent = args.get('--extent', None)
     if extent is not None:
         extent = eval('['+extent+']')
     print ("extent", extent)
+    crop = args.get('--crop', False)
+    percentiles = args.get('--percentiles', None)
+    if percentiles is not None:
+        m,M = [ float(i) for i in percentiles.split(',') ]
+        if m < 0:
+            raise ValueError('min percentile is 0, got', m)
+        if M > 100:
+            raise ValueError('max percentile is 100, got', M)
+        percentiles = [m,M]
     
     
-    processTiffStack(args['-i'], args['-o'], args['--dtype'], extent=extent)
+    processTiffStack(args['-i'], args['-o'], args['--dtype'], percentiles=percentiles,
+       extent=extent, crop=crop)
 
 if __name__ == '__main__':
     main()
