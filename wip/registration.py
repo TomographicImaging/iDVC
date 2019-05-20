@@ -106,6 +106,128 @@ class cilToRGB(VTKPythonAlgorithmBase):
     def GetOutput(self):
         return self.GetOutputDataObject(0)
 
+
+class cilImageMathematics(VTKPythonAlgorithmBase):
+    '''vtkAlgorithm to do image mathematics with int images returning float images
+
+    '''
+    ADD = numpy.add
+    SUBTRACT = numpy.subtract
+    MULTIPLY = numpy.multiply
+    DIVIDE = numpy.divide
+
+    def __init__(self):
+        VTKPythonAlgorithmBase.__init__(self, nInputPorts=2, nOutputPorts=1)
+        self.__operation = None
+        self.__out_dtype = vtk.VTK_FLOAT
+
+    def SetOperation(self, operation):
+        '''Sets the value at which the mask is active'''
+        if operation not in [cilImageMathematics.ADD, cilImageMathematics.SUBTRACT,
+            cilImageMathematics.MULTIPLY, cilImageMathematics.DIVIDE]:
+            raise ValueError('unsupported operation ', operation)
+        
+        if operation != self.__operation:
+            self.__operation = operation
+            #color = (1.,1.,1.)
+            print ("operation set to", operation)
+            self.Modified()
+
+    def GetOperation(self):
+        return self.__operation
+    def SetOutputScalarTypeToFloat(self):
+        self.__out_dtype = vtk.VTK_FLOAT
+        self.Modified()
+    def SetOutputScalarTypeToDouble(self):
+        self.__out_dtype = vtk.VTK_DOUBLE
+        self.Modified()
+    def GetOutputType(self):
+        return self.__out_dtype
+
+    def FillInputPortInformation(self, port, info):
+        if port == 0:
+            info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
+        elif port == 1:
+            info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
+        
+        return 1
+
+    def FillOutputPortInformation(self, port, info):
+        info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkImageData")
+        return 1
+
+    def add_to_float(self,x,y, **kwargs):
+        return float(x) + float(y)
+    def subtract_to_float(self,x,y, **kwargs):
+        return float(x) - float(y)
+    def multiply_to_float(self,x,y, **kwargs):
+        return float(x) * float(y)
+    def divide_to_float(self,x,y, **kwargs):
+        return float(x) / float(y)
+
+    def RequestData(self, request, inInfo, outInfo):
+        print ("RequestData")
+        inimage1 = vtk.vtkDataSet.GetData(inInfo[0])
+        inimage2 = vtk.vtkDataSet.GetData(inInfo[1])
+        output = vtk.vtkImageData.GetData(outInfo)
+        print ("inimage1 ", inimage1.GetScalarTypeAsString())
+        print ("inimage2 ", inimage2.GetScalarTypeAsString())
+        stack = vtk.vtkImageData()
+        sliced = inimage1.GetExtent()
+        stack.SetExtent(sliced[0],sliced[1], 
+                        sliced[2],sliced[3], 
+                        sliced[4], sliced[5])
+        stack.AllocateScalars(self.__out_dtype, 1)
+        print ("Allocated ", stack.GetScalarTypeAsString())
+        dims = inimage1.GetDimensions()
+        stack_array = numpy.reshape(
+        numpy_support.vtk_to_numpy(
+                        stack.GetPointData().GetScalars()
+                        ),
+            (dims[0],dims[1],dims[2]) , order='F'
+        )
+        im1 = numpy.reshape(
+            numpy_support.vtk_to_numpy(
+                        inimage1.GetPointData().GetScalars()
+                        ),
+            (dims[0],dims[1],dims[2]), order='F'
+        )
+        im2 = numpy.reshape(
+            numpy_support.vtk_to_numpy(
+                        inimage2.GetPointData().GetScalars()
+                        ),
+            (dims[0],dims[1],dims[2]), order='F'
+        )
+        operation = self.__operation
+        if operation == cilImageMathematics.ADD:
+            func = self.add_to_float
+        elif operation == cilImageMathematics.SUBTRACT:
+            func = self.subtract_to_float
+        elif operation == cilImageMathematics.MULTIPLY:
+            func = self.multiply_to_float
+        elif operation == cilImageMathematics.DIVIDE:
+            func = self.divide_to_float
+        else:
+            raise ValueError('Unsupported operation ', operation)
+        print (func)
+        np_op = numpy.frompyfunc(func, 2, 1)
+        print (np_op)
+        if self.__out_dtype == vtk.VTK_FLOAT:
+            dtype = numpy.float32
+        elif self.__out_dtype == vtk.VTK_DOUBLE:
+            dtype = numpy.float64
+        print ("doing it")
+        a = numpy.asarray(np_op(im1,im2), dtype=dtype)
+        #stack_array[:] = numpy.asarray(np_op(im1,im2), dtype=dtype)
+        stack_array[:,:,:] = a
+        #print ("operation" , a)
+        print (im1.min(), im2.min(), im1.max(), im2.max(), a.min(), a.max())
+        # put the output in the out port
+        output.ShallowCopy(stack)
+        return 1 
+    def GetOutput(self):
+        return self.GetOutputDataObject(0)
+
 def OnKeyPressEvent(interactor, event):
     '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
     trans = list(translate.GetTranslation())
@@ -177,22 +299,31 @@ if __name__ == '__main__':
 
         reader2.SetFileNames(sa)
         reader2.Update()
-
-    cast1 = vtk.vtkImageCast()
-    cast2 = vtk.vtkImageCast()
-    cast1.SetInputConnection(voi.GetOutputPort())
-    cast1.SetOutputScalarTypeToFloat()
-    cast2.SetInputConnection(translate.GetOutputPort())
-    cast2.SetOutputScalarTypeToFloat()
-    
-    subtract = vtk.vtkImageMathematics()
-    subtract.SetOperationToSubtract()
-    # subtract.SetInput1Data(voi.GetOutput())
-    # subtract.SetInput2Data(translate.GetOutput())
-    subtract.SetInputConnection(1,cast1.GetOutputPort())
-    subtract.SetInputConnection(0,cast2.GetOutputPort())
-    
-    subtract.Update()
+    use_vtk = True
+    if use_vtk:
+        cast1 = vtk.vtkImageCast()
+        cast2 = vtk.vtkImageCast()
+        cast1.SetInputConnection(voi.GetOutputPort())
+        cast1.SetOutputScalarTypeToFloat()
+        cast2.SetInputConnection(translate.GetOutputPort())
+        cast2.SetOutputScalarTypeToFloat()
+        
+        subtract = vtk.vtkImageMathematics()
+        subtract.SetOperationToSubtract()
+        # subtract.SetInput1Data(voi.GetOutput())
+        # subtract.SetInput2Data(translate.GetOutput())
+        subtract.SetInputConnection(1,cast1.GetOutputPort())
+        subtract.SetInputConnection(0,cast2.GetOutputPort())
+        
+        subtract.Update()
+    else:
+        subtract = cilImageMathematics()
+        subtract.SetOperation(cilImageMathematics.SUBTRACT)
+        #subtract.SetOperation('pippo')
+        subtract.SetOutputScalarTypeToFloat()
+        subtract.SetInputConnection(0,voi.GetOutputPort())
+        subtract.SetInputConnection(1,translate.GetOutputPort())
+        subtract.Update()
 
     print ("subtract type", subtract.GetOutput().GetScalarTypeAsString())
     
