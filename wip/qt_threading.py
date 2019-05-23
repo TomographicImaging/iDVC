@@ -588,7 +588,7 @@ class ViewerCastWindow(QMainWindow):
                     self.displayFileErrorDialog(tfile)
                     return
 
-            # get an idea of the sheer size of the image
+            # get an idea of the shear size of the image
             reader = vtk.vtkTIFFReader()
             reader.SetFileName(filenames[0])
             reader.Update()
@@ -666,6 +666,13 @@ class ViewerCastWindow(QMainWindow):
             resampler.Update()
             writer.Write()
         return outfilenames
+    def downsample_z(self):
+        kwargs = {'on_result': self.async_viewer_data_loader, 
+                    'on_progress': self.progress_fn, 
+                    'on_finished': self.done_status_bar, 
+                    'downsample_factors': downsample_factors,
+                    'filenames': filenames}
+        self.start_worker(self.downsample, **kwargs)
         
     def saveFile(self):
         dialog = QFileDialog(self)
@@ -696,14 +703,23 @@ class ViewerCastWindow(QMainWindow):
         print ("on result of downsample")
         print (result[0])
         self.filenames = result[0]
+        # the image has been downsampled xy
+        self.downsample_factors[0] = 1
+        self.downsample_factors[1] = 1
+        if self.downsample_factors[2] != 1:
+            on_result = self.downsample_z
+        else:
+            on_result = self.updateStatusTip
+
         kwargs = {'filenames': result[0], 
                   'bitdepth' : 8,
                   'extent' : None,
                   'percentiles' : None,
                   'crop' : False,
-                  'on_result': self.updateStatusTip,
+                  'on_result': on_result,
                   'on_finished' : self.thread_complete,
-                  'on_progress' : print
+                  'on_progress' : print,
+                  ''
         }
         self.start_worker(self.cast_tiff, **kwargs)
     def start_cast_tiff_worker(self):
@@ -766,6 +782,13 @@ class ViewerCastWindow(QMainWindow):
         'on_result' : self.load_dataset_into_viewer,
         'on_finished' : lambda: self.progressbar.setValue(0),
         'on_progress' : lambda: print}
+        self.start_worker(self.load_dataset_thread, **kwargs)
+    
+    def async_viewer_data_loader(self, result):
+        kwargs = {'filenames' : result[0], 
+            'on_result' : self.load_dataset_into_viewer,
+            'on_finished' : lambda: self.progressbar.setValue(0),
+            'on_progress' : lambda: print}
         self.start_worker(self.load_dataset_thread, **kwargs)
         
     def update_progressbar(self, value):
