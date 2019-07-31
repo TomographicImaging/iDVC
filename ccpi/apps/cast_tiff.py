@@ -47,23 +47,26 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16,
     '''reads a tiff stack and casts to UNSIGNED INT 8 or 16, saves to MetaImage'''
     tmp = glob.glob(wildcard_filenames)
     print ("Found {} files".format(len(tmp)))
-    
+    return processListOfTiffStack(tmp, output_dir, bitdepth, extent, percentiles, crop)
+
+def processListOfTiffStack(tmp, output_dir, bitdepth=16, extent=None, 
+                           percentiles=None, crop=False, prettyprint=print):
     if extent != None:
-        print ("Volume of interest ", extent)
+        prettyprint ("Volume of interest ", extent)
         if len(extent) == 4:
             flist = tmp
         elif len(extent) == 6:
             flist = [tmp[i] for i in range(extent[4], extent[5])] 
     else:
         flist = tmp
-    print ("processing {} files of {}".format(len(flist), len(tmp)))
+    prettyprint ("processing {} files of {}".format(len(flist), len(tmp)))
     if len(flist) > 0:
         reader = vtk.vtkTIFFReader()
         #  determine bit depth
         reader.SetFileName(flist[0])
         reader.Update()
         vtk_bit_depth = reader.GetOutput().GetScalarType()
-        print ("Input Scalar type" , reader.GetOutput().GetScalarTypeAsString())
+        prettyprint ("Input Scalar type" , reader.GetOutput().GetScalarTypeAsString())
         if vtk_bit_depth == vtk.VTK_UNSIGNED_CHAR:
             bit_depth = 8
             all_min = vtk.VTK_UNSIGNED_CHAR_MAX
@@ -110,11 +113,11 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16,
                 imax = vtk.VTK_UNSIGNED_SHORT_MAX
                 imin = 0
                 dtypestring = 'uint16'
-            print ("Casting images to {}".format(dtypestring))
+            prettyprint ("Casting images to {}".format(dtypestring))
             
             stats = vtk.vtkImageAccumulate()
             voi = vtk.vtkExtractVOI()
-            print ("looking for min max in the dataset")
+            prettyprint ("looking for min max in the dataset")
             
             
             for i,fname in tqdm(enumerate(flist)):
@@ -136,8 +139,8 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16,
             
             # create a histogram of the whole dataset
             nbins = vtk.VTK_UNSIGNED_SHORT_MAX + 1
-            nbins = 255
-            print ("Constructing the histogram of the whole dataset: crop", crop)
+            # nbins = 255
+            prettyprint ("Constructing the histogram of the whole dataset: crop", crop)
             for i,fname in enumerate(tqdm(flist)):
                 reader.SetFileName(fname)
                 reader.Update()
@@ -181,19 +184,19 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16,
             plt.axvline(x=bin_edges[max_perc])
             plt.show()
             scale = (imax - imin) / (bin_edges[max_perc] - bin_edges[min_perc])
-            print ("min {}\tmax {}\nedge_min {}\tedge_max {}\nscale {}".format(
+            prettyprint ("min {}\tmax {}\nedge_min {}\tedge_max {}\nscale {}".format(
                 all_min, all_max, bin_edges[min_perc] ,bin_edges[max_perc], scale))
             
             # scale and cast the image
             shiftScaler = vtk.vtkImageShiftScale ()
             shiftScaler.ClampOverflowOn()
             if extent is not None and crop:
-                print("Scaling and cropping the volume on selection")
+                prettyprint("Scaling and cropping the volume on selection")
                 voi.SetInputConnection(reader.GetOutputPort())
                 voi.SetVOI(extent[0], extent[1], extent[2], extent[3], 0, 0)
                 shiftScaler.SetInputConnection(voi.GetOutputPort())
             else:
-                print("Scaling the volume on selection")
+                prettyprint("Scaling the volume on selection")
                 shiftScaler.SetInputConnection(reader.GetOutputPort())
             shiftScaler.SetScale(scale)
             shiftScaler.SetShift(-bin_edges[min_perc])
@@ -225,7 +228,7 @@ def processTiffStack(wildcard_filenames, output_dir, bitdepth=16,
             # copy the new file list into flist
             flist = new_flist[:]
         else:
-            print ("no need to cast image type")        
+            prettyprint ("no need to cast image type")        
     else:
         raise ValueError('Could not find files in ', wildcard_filenames)
 

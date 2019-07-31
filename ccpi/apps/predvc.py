@@ -26,8 +26,10 @@ import os
 import json
 import glob
 import vtk
+import numpy
 from ccpi.viewer.utils import parseNpyHeader
-from ccpi.viewer.utils import cilNumpyMETAImageWriter
+from ccpi.viewer.utils import cilNumpyMETAImageWriter, cilRegularPointCloudToPolyData, \
+                              cilMaskPolyData
 
 
 example_config = '''
@@ -342,6 +344,7 @@ def createPointCloud(mask_filename, shape, dimensionality,
         array[i] = (i, *pp)
     # numpy.savetxt(fn[0], array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
     return array
+
 def getBitDepth(imagedata):
     vtk_bit_depth = imagedata.GetScalarType()
     print ("Input Scalar type" , imagedata.GetScalarTypeAsString())
@@ -394,6 +397,7 @@ if __name__ == '__main__':
     with open(config, 'r') as f:
         guiconfig = json.load(f)
         radius = config['radius_range']
+        npoints = config['subvol_npoints_range']
         mask_file = config['mask_file']
         mask_reader = vtk.vtkMetaImageReader()
         mask_reader.SetFileName(mask_file)
@@ -419,10 +423,10 @@ if __name__ == '__main__':
             for n in npoints:
                 # the number of points in the subvolume are not influencing the
                 # actual point cloud
-                run_dir = os.path.join(outdir, 'r{:d}_np{:d}'.format(r,n))
+                run_dir = os.path.join('.', 'r{:d}_np{:d}'.format(r,n))
                 os.mkdir(run_dir)
                 fname = os.path.join(run_dir, 'pointcloud_r{:d}.roi'.format(r))
-                numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+                numpy.savetxt(fname, array, '%d\t%.3f\t%.3f\t%.3f')
                 
                 
                 bit_depth = getBitDepth(ref_reader.GetOutput())
@@ -446,7 +450,7 @@ if __name__ == '__main__':
                                 gray_thresh_min='27',
                                 gray_thresh_max='127',
                                 min_vol_fract='0.2',
-                                disp_max='38',
+                                disp_max='10',
                                 num_srch_dof='6', 
                                 obj_function='znssd',
                                 interp_type='tricubic',
