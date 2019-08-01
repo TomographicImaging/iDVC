@@ -252,21 +252,6 @@ if __name__ == '__main__':
     err.SetFileName("viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
 
-    wildcard_filenames = '204506_8bit/*.tif'
-    filenames = glob.glob(wildcard_filenames)
-
-    reader = vtk.vtkTIFFReader()
-    sa = vtk.vtkStringArray()
-    #i = 0
-    # while (i < 1054):
-    for fname in filenames:
-        #fname = os.path.join(directory,"8bit-1%04d.tif" % i)
-        i = sa.InsertNextValue(fname)
-
-    print("read {} files".format(i))
-
-    reader.SetFileNames(sa)
-    # reader.Update()
     reader = vtk.vtkMetaImageReader()
     reader.SetFileName('../../../../CCPi-Simpleflex/data/head.mha')
     reader.Update()
