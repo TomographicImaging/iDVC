@@ -238,110 +238,30 @@ class cilImageMathematics(VTKPythonAlgorithmBase):
 def OnKeyPressEvent(interactor, event):
     '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
     trans = list(translate.GetTranslation())
+
+    orientation = v.style.GetSliceOrientation()
+    ij = [0,1]
+    if orientation == SLICE_ORIENTATION_XY:
+        ij = [0,1]
+    elif orientation == SLICE_ORIENTATION_XZ:
+        ij = [0,2]
+    elif orientation == SLICE_ORIENTATION_YZ:
+        ij = [1,2]
     if interactor.GetKeyCode() == "j":
-        trans[1] += 1
+        trans[ij[1]] += 1
     elif interactor.GetKeyCode() == "n":
-        trans[1] -= 1
+        trans[ij[1]] -= 1
     elif interactor.GetKeyCode() == "b":
-        trans[0] -= 1
+        trans[ij[0]] -= 1
     elif interactor.GetKeyCode() == "m":
-        trans[0] += 1
+        trans[ij[0]] += 1
     translate.SetTranslation(*trans)
     translate.Update()
     subtract.Update()
+    print ("Translation", trans)
     v.setInputData(subtract.GetOutput())
-
-def OnKeyPressEventTransform(interactor, event):
-    '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
-    shift = 0.5
-    trans = [0,0,0]
-    if interactor.GetKeyCode() == "j":
-        trans[1] = shift
-    elif interactor.GetKeyCode() == "n":
-        trans[1] = -shift
-    elif interactor.GetKeyCode() == "b":
-        trans[0] = shift
-    elif interactor.GetKeyCode() == "m":
-        trans[0] = -shift
-    transform.Translate(*trans)
-    transform.Update()
-    translate.Update()
-    subtract.Update()
-    v.setInputData(subtract.GetOutput())
-
-def OnSliceEvent(interactor, event):
-    '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
-    # update the ROI 
-    sliceno = v.style.GetActiveSlice()
-    print (sliceno)
-    orientation = v.style.GetSliceOrientation()
-    extent = list(reader.GetOutput().GetExtent())
-    # Calculate the size of the ROI
-    if orientation == SLICE_ORIENTATION_XY:
-        print ("slice orientation : YZ")
-        extent[4] = sliceno
-        extent[5] = sliceno + 1
-    elif orientation == SLICE_ORIENTATION_XZ:
-        print ("slice orientation : YZ")
-        extent[2] = sliceno
-        extent[3] = sliceno + 1
-
-    elif orientation == SLICE_ORIENTATION_YZ:
-        print ("slice orientation : YZ")
-        extent[0] = sliceno
-        extent[1] = sliceno + 1
-    voi.SetVOI(extent)
-    voi2.SetVOI(extent)
-    voi.Update()
-    voi2.Update()
-    subtract.Update()
-
-    extentc = list(subtract.GetOutput().GetExtent())
-    if orientation == SLICE_ORIENTATION_XY:
-        print ("slice orientation : YZ")
-        extentc[4] = sliceno
-        extentc[5] = sliceno + 1
-    elif orientation == SLICE_ORIENTATION_XZ:
-        print ("slice orientation : YZ")
-        extentc[2] = sliceno
-        extentc[3] = sliceno + 1
-
-    elif orientation == SLICE_ORIENTATION_YZ:
-        print ("slice orientation : YZ")
-        extentc[0] = sliceno
-        extentc[1] = sliceno + 1
-
-    data.CopyAndCastFrom(subtract.GetOutput(), *extentc)
-    # dims = data.GetDimensions()
-    # im1 = numpy.reshape(
-    #         numpy_support.vtk_to_numpy(
-    #                     data.GetPointData().GetScalars()
-    #                     ),
-    #         (dims[0],dims[1],dims[2]), order='F'
-    #     )
-    # dims = subtract.GetOutput().GetDimensions()
-    # im2 = numpy.reshape(
-    #     numpy_support.vtk_to_numpy(
-    #                 subtract.GetOutput().GetPointData().GetScalars()
-    #                 ),
-    #     (dims[0],dims[1],dims[2]), order='F'
-    # )
-    # if orientation == SLICE_ORIENTATION_XY:
-    #     print ("slice orientation : YZ")
-    #     im1[sliceno,:,:] = im2
-    # elif orientation == SLICE_ORIENTATION_XZ:
-    #     print ("slice orientation : YZ")
-    #     im1[:,sliceno,:] = im2
-
-    # elif orientation == SLICE_ORIENTATION_YZ:
-    #     print ("slice orientation : YZ")
-    #     im1[:,:,sliceno] = im2
-    #v.setInputData(subtract.GetOutput())
-    print ("data" , data.GetDimensions(), data.GetExtent())
-    print ("subtract", subtract.GetOutput().GetDimensions(), subtract.GetOutput().GetExtent())
-    v.setInputData(data)
     v.style.UpdatePipeline()
-
+    #v.style.UpdateROIHistogram()
 
 #%%
 if __name__ == '__main__':
@@ -392,63 +312,36 @@ if __name__ == '__main__':
 
     v = CILViewer2D()
     
-    if len(sys.argv) >= 4:
-        if sys.argv[3] == 'translate':
-            #voi = reader
-            print("translate")
-            translate = vtk.vtkImageTranslateExtent()
-            translate.SetTranslation(0,0,0)
-            translate.SetInputData(data2)
-            translate.Update()
 
-            v.style.AddObserver('KeyPressEvent', OnKeyPressEvent, 0.5)
-        elif sys.argv[3] == 'transform':
-            # doesn't work
-            print("transform")
-            translate = vtk.vtkTransformFilter()
-            transform = vtk.vtkTransform()
-            transform.Translate(0,0,0)
-            translate.SetInputData(data2)
-            translate.SetTransform(transform)
-            translate.Update()
-            print (translate.GetOutput().GetDimensions())
-            v.style.AddObserver('KeyPressEvent', OnKeyPressEventTransform, 0.5)
-        else:
-            raise ValueError('no method')
-    else:
-        print ("no method specified")
+    #voi = reader
+    print("translate")
+    translate = vtk.vtkImageTranslateExtent()
+    translate.SetTranslation(0,0,0)
+    translate.SetInputData(data2)
+    translate.Update()
+
+    v.style.AddObserver('KeyPressEvent', OnKeyPressEvent, 0.5)
+    
 
 
 
     # print ("out of the reader", reader.GetOutput())
     
-    use_vtk = True
-    if use_vtk:
-        cast1 = vtk.vtkImageCast()
-        cast2 = vtk.vtkImageCast()
-        cast1.SetInputData(data1)
-        cast1.SetOutputScalarTypeToFloat()
-        cast2.SetInputConnection(translate.GetOutputPort())
-        cast2.SetOutputScalarTypeToFloat()
-        
-        subtract = vtk.vtkImageMathematics()
-        subtract.SetOperationToSubtract()
-        # subtract.SetInput1Data(voi.GetOutput())
-        # subtract.SetInput2Data(translate.GetOutput())
-        subtract.SetInputConnection(1,cast1.GetOutputPort())
-        subtract.SetInputConnection(0,cast2.GetOutputPort())
-        
-        subtract.Update()
-    else:
-        # this won't work as the shape of the image is not constant
-        subtract = cilImageMathematics()
-        subtract.SetOperation(cilImageMathematics.SUBTRACT)
-        #subtract.SetOperation('pippo')
-        subtract.SetOutputScalarTypeToFloat()
-        subtract.SetInputConnection(0,voi.GetOutputPort())
-        subtract.SetInputConnection(1,translate.GetOutputPort())
-        subtract.Update()
 
+    cast1 = vtk.vtkImageCast()
+    cast2 = vtk.vtkImageCast()
+    cast1.SetInputData(data1)
+    cast1.SetOutputScalarTypeToFloat()
+    cast2.SetInputConnection(translate.GetOutputPort())
+    cast2.SetOutputScalarTypeToFloat()
+    
+    subtract = vtk.vtkImageMathematics()
+    subtract.SetOperationToSubtract()
+    subtract.SetInputConnection(1,cast1.GetOutputPort())
+    subtract.SetInputConnection(0,cast2.GetOutputPort())
+    
+    subtract.Update()
+    
     print ("subtract type", subtract.GetOutput().GetScalarTypeAsString(), subtract.GetOutput().GetDimensions())
     
     stats = vtk.vtkImageHistogramStatistics()
