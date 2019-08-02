@@ -49,8 +49,8 @@ from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
 from ccpi.viewer.utils import cilRegularPointCloudToPolyData
 from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 from ccpi.viewer.utils import cilNumpyMETAImageWriter
-from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver, \
-                                    QtThreadedProgressBarInterface
+from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver#, \
+                                    #QtThreadedProgressBarInterface
 from natsort import natsorted
 import imghdr
 import os
@@ -155,6 +155,31 @@ def sentenceCase(string):
         return ''
 
 
+class QtThreadedProgressBarInterface(object):
+    def updateProgressBar(self, value):
+        """
+        Set progress bar percentage.
+        :param (int) value:
+            Integer value between 0-100.
+        """
+
+        self.progressBar.setValue(value)
+
+    def completeProgressBar(self):
+        """
+        Set the progress bar to 100% complete and hide
+        """
+        self.progressBar.setValue(100)
+        self.progressBar.hide()
+
+    def showProgressBar(self):
+        """
+        Set the progress bar to 0% complete and show
+        """
+        self.progressBar.setValue(0)
+        self.progressBar.show()
+
+
 class Window(QMainWindow, QtThreadedProgressBarInterface):
 
     def __init__(self):
@@ -185,10 +210,12 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.frame.setLayout(self.vl)
         self.setCentralWidget(self.frame)
 
-        self.createDock3DWidget()
-        self.createPointCloudWidget()
+        # create the various panels in the order one should execute them
+        self.createRegistrationWidget()
         self.createMaskWidget()
+        self.createPointCloudWidget()        
         self.createRangeWidget()
+        self.createDock3DWidget()
         self.toolbar()
 
 
@@ -470,7 +497,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
     def toolbar(self):
         openAction = QAction("Open", self)
         openAction.setShortcut("Ctrl+O")
-        openAction.triggered.connect(self.openFile)
+        openAction.triggered.connect(lambda: self.openFile('reference'))
 
         closeAction = QAction("Close", self)
         closeAction.setShortcut("Ctrl+Q")
@@ -484,7 +511,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         # load data
         openAction = QAction(self.style().standardIcon(
             QStyle.SP_DirOpenIcon), 'Open Volume Data', self)
-        openAction.triggered.connect(self.openFile)
+        openAction.triggered.connect(lambda: self.openFile('reference'))
         # define load mask
         openMask = QAction(self.style().standardIcon(
             QStyle.SP_FileDialogStart), 'Open Mask Data', self)
@@ -527,6 +554,26 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         # self.show3D.setShortcut("Ctrl+T")
         self.show3D.triggered.connect(self.showHide3D)
 
+        self.showRegistrationPanel = QAction("Manual Registration Panel", self)
+        self.showRegistrationPanel.setCheckable(False)
+        self.showRegistrationPanel.setChecked(False)
+        self.showRegistrationPanel.triggered.connect(
+                lambda: self.registration_panel[0].show() \
+                   if self.showRegistrationPanel.isChecked() else \
+                       self.registration_panel[0].hide()
+                )
+
+        
+        self.showMaskConfigurator = QAction("Configure Mask Panel", self)
+        self.showMaskConfigurator.setCheckable(True)
+        self.showMaskConfigurator.setChecked(False)
+        self.showMaskConfigurator.triggered.connect(
+                lambda: self.mask_panel[0].show() \
+                   if self.showMaskConfigurator.isChecked() else \
+                       self.mask_panel[0].hide()
+                )
+        
+
         self.showPointCloudConfigurator = QAction("Configure Point Cloud Panel", self)
         self.showPointCloudConfigurator.setCheckable(True)
         self.showPointCloudConfigurator.setChecked(False)
@@ -536,15 +583,6 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                        self.pointCloudDockWidget.hide()
                 )
 
-        self.showMaskConfigurator = QAction("Configure Mask Panel", self)
-        self.showMaskConfigurator.setCheckable(True)
-        self.showMaskConfigurator.setChecked(True)
-        self.showMaskConfigurator.triggered.connect(
-                lambda: self.mask_panel[0].show() \
-                   if self.showMaskConfigurator.isChecked() else \
-                       self.mask_panel[0].hide()
-                )
-        
         self.showRangesConfigurator = QAction("Configure Ranges Panel", self)
         self.showRangesConfigurator.setCheckable(True)
         self.showRangesConfigurator.setChecked(False)
@@ -553,16 +591,23 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                    if self.showRangesConfigurator.isChecked() else \
                        self.range_panel[0].hide()
                 )
-        viewMenu = mainMenu.addMenu('Panels')
-        viewMenu.addAction(self.show3D)
-        viewMenu.addAction(self.showMaskConfigurator)
-        viewMenu.addAction(self.showPointCloudConfigurator)
-        viewMenu.addAction(self.showRangesConfigurator)
+
+        
+
+        #popupMenu = self.createPopupMenu()
+
+        # viewMenu = mainMenu.addMenu('Panels')
+        # viewMenu.addAction(self.show3D)
+        # viewMenu.addAction(self.showMaskConfigurator)
+        # viewMenu.addAction(self.showPointCloudConfigurator)
+        # viewMenu.addAction(self.showRangesConfigurator)
 
         panels.append((self.show3D, self.Dock3D))
         panels.append((self.showPointCloudConfigurator, self.pointCloudDockWidget))
         panels.append((self.showMaskConfigurator, self.mask_panel[0] ))
         panels.append((self.showRangesConfigurator, self.range_panel[0]))
+        panels.append((self.showRegistrationPanel, self.registration_panel[0]))
+        
         self.panels = panels
 
         # Initialise the toolbar
@@ -573,6 +618,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         # Add actions to toolbar
         self.toolbar.addAction(openAction)
         self.toolbar.addAction(saveAction)
+        self.toolbar.addAction(self.show3D)
 
 
 
@@ -583,20 +629,30 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
             self.Dock3D.hide()
        
 
-    def openFile(self, read_mask=False):
+    def openFile(self, dataset='reference'):
         fn = QFileDialog.getOpenFileNames(self, 'Open File')
 
         # If the user has pressed cancel, the first element of the tuple will be empty.
         # Quit the method cleanly
         if not fn[0]:
             return
-        print ("doSomething", fn)
+        if not dataset:
+            raise ValueError('dataset is False')
+        print ("doSomething", fn, dataset)
         self.showProgressBar()
         self.progressBar.setMinimum(0)
         self.progressBar.setMaximum(0)
         self.progressBar.setValue(0)
         
-        self.openFileByPath(fn, read_mask)
+        self.openFileByPath(fn, dataset)
+
+        if dataset == 'reference':
+            rp = self.registration_parameters
+            rp['select_correlate_button'].setEnabled(True)
+        elif dataset == 'correlate':
+            rp = self.registration_parameters
+            rp['start_registration_button'].setEnabled(True)
+            rp['register_on_selection_check'].setEnabled(True)
 
 #        worker = Worker(self.openFileByPath, fn=fn, read_mask=read_mask)
 #        
@@ -623,7 +679,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                                message="Load a dataset on the viewer first" )
             
         
-        self.openFile(True)
+        self.openFile('mask')
         v = self.vtkWidget.viewer
         # save the mask to a temporary file
         writer = vtk.vtkMetaImageWriter()
@@ -648,7 +704,15 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         v.setInputData2(self.mask_reader.GetOutput())
         
 
-    def openFileByPath(self, fn, read_mask=False, progress_callback=None):
+    def openFileByPath(self, fn, dataset='reference', progress_callback=None):
+        '''Reads dataset from file
+
+        :param dataset: can be 'reference' , 'correlate' or 'mask'
+        '''
+        if dataset not in ['reference' , 'correlate' ,'mask']:
+            return self.warningDialog(
+                message='Load dataset can be done only for Reference, Correlate and Mask image.\nGot {}'.format(dataset),
+                    window_title='Load Error')
         print ("Worker")
         print (type(self))
         self.progressBar.setMinimum(0)
@@ -706,7 +770,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
             reader.Update()
 
         dtype = vtk.VTK_UNSIGNED_CHAR
-        if reader.GetOutput().GetScalarType() != dtype:
+        # deactivate this path
+        if reader.GetOutput().GetScalarType() != dtype and False:
             # need to cast to 8 bits unsigned
 
             stats = vtk.vtkImageAccumulate()
@@ -737,20 +802,21 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
             self.displayFileErrorDialog(file)
 
         else:
-            if read_mask:
+            if dataset == 'mask':
                 self.mask_reader = reader
-            else:
+            elif dataset == 'reference':
                 self.reader = reader
+            else:
+                self.correlate_reader = reader 
 #            self.vtkWidget.viewer.setInput3DData(reader.GetOutput())
 #            self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
 #            self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
         
         self.setStatusTip('Ready')
-        if not read_mask:
+        if dataset == 'reference':
             self.vtkWidget.viewer.setInput3DData(self.reader.GetOutput())
             self.viewer3DWidget.viewer.setInput3DData(self.vtkWidget.viewer.img3D)
             self.viewer3DWidget.viewer.sliceActor.GetProperty().SetOpacity(0.99)
- 
         
         self.progressBar.setMaximum(100)
         
@@ -1419,7 +1485,250 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+    
+    def createRegistrationWidget(self):
+
+        #self.treeWidgetInitialElements = []
+        #self.treeWidgetUpdateElements = []
+
+        self.registration_panel = self.generateUIDockParameters('Manual Registration')
+        dockWidget = self.registration_panel[0]
+        groupBox = self.registration_panel[5]
+        groupBox.setTitle('Registration Parameters')
+        formLayout = self.registration_panel[6]
+
+        # Create validation rule for text entry
+        validatorint = QtGui.QIntValidator()
+
+        widgetno = 1
+
+        rp = {}
         
+        # Translate X field
+        rp['translate_X_label'] = QLabel(groupBox)
+        rp['translate_X_label'].setText("Translate X")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['translate_X_label'])
+        rp['translate_X_entry']= QLineEdit(groupBox)
+        rp['translate_X_entry'].setValidator(validatorint)
+        rp['translate_X_entry'].setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_X_entry'])
+        widgetno += 1
+        # Translate Y field
+        rp['translate_Y_label'] = QLabel(groupBox)
+        rp['translate_Y_label'].setText("Translate Y")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['translate_Y_label'])
+        rp['translate_Y_entry']= QLineEdit(groupBox)
+        rp['translate_Y_entry'].setValidator(validatorint)
+        rp['translate_Y_entry'].setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Y_entry'])
+        widgetno += 1
+        # Translate Z field
+        rp['translate_Z_label'] = QLabel(groupBox)
+        rp['translate_Z_label'].setText("Translate Z")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['translate_Z_label'])
+        rp['translate_Z_entry']= QLineEdit(groupBox)
+        rp['translate_Z_entry'].setValidator(validatorint)
+        rp['translate_Z_entry'].setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Z_entry'])
+        widgetno += 1
+
+        # Add should extend checkbox
+
+        rp['register_on_selection_check'] = QCheckBox(groupBox)
+        rp['register_on_selection_check'].setText("Register on Selection")
+        rp['register_on_selection_check'].setEnabled(False)
+
+        formLayout.setWidget(widgetno,QFormLayout.FieldRole, rp['register_on_selection_check'])
+        widgetno += 1
+        # Add Load Correlate image button
+        rp['select_correlate_button'] = QPushButton(groupBox)
+        rp['select_correlate_button'].setText("Select Correlate Image")
+        rp['select_correlate_button'].setEnabled(False)
+        rp['select_correlate_button'].setChecked(False)
+        rp['select_correlate_button'].clicked.connect( lambda: self.openFile(dataset='correlate') )
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['select_correlate_button'])
+        widgetno += 1
+        # Add submit button
+        rp['start_registration_button'] = QPushButton(groupBox)
+        rp['start_registration_button'].setText("Start Registration")
+        rp['start_registration_button'].setCheckable(True)
+        rp['start_registration_button'].setEnabled(False)
+        rp['start_registration_button'].clicked.connect(self.manualRegistration)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['start_registration_button'])
+        widgetno += 1
+
+        # rp['start_registration_button'].stateChanged.connect(lambda: rp['start_registration_button'].setText("Stop Registration") \
+        #                                          if rp['start_registration_button'].isChecked() \
+        #                                          else rp['start_registration_button'].setText("Start Registration"))
+
+
+        # Add elements to layout
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+        # save to instance
+        self.registration_parameters = rp
+
+    def manualRegistration(self):
+        rp = self.registration_parameters
+        v = self.vtkWidget.viewer
+        if rp['start_registration_button'].isChecked():
+            print ("Start Registration Checked")
+            rp['register_on_selection_check'].setEnabled(True)
+            rp['start_registration_button'].setText("Stop Registration")
+
+            # setup the appropriate stuff to run the registration
+            print("translate")
+            translate = vtk.vtkImageTranslateExtent()
+            translate.SetTranslation(-1,1,2)
+            
+            if rp['register_on_selection_check'].isChecked():
+                print ("Extracting selection")
+                # get the selected ROI
+                voi = vtk.vtkExtractVOI()
+                voi.SetInputData(self.reader.GetOutput())
+                roi = v.ROI
+                extent = [ roi[0][0], roi[1][0], roi[0][1], roi[1][1], roi[0][2], roi[1][2] ]
+                # spacing = self.reader.GetOutput().GetSpacing()
+                # extent[0] /= spacing[0]
+                # extent[1] /= spacing[0]
+                # extent[2] /= spacing[1]
+                # extent[3] /= spacing[1]
+                # extent[4] /= spacing[2]
+                # extent[5] /= spacing[2]
+                print ("Current roi", roi, extent)
+                
+                voi.SetVOI(*extent)
+                voi.Update()
+                print ("Done")
+
+            
+                # copy the data to be registered if selection 
+                data1 = vtk.vtkImageData()
+                data1.DeepCopy(voi.GetOutput())
+                
+                print ("Reading image 2")
+                self.correlate_reader.Update()
+            
+                # copy the data to be registered if selection 
+                voi.SetInputConnection(self.correlate_reader.GetOutputPort())
+                print ("Extracting selection")
+                voi.Update()
+                data2 = vtk.vtkImageData()
+                data2.DeepCopy(voi.GetOutput())
+                translate.SetInputData(data2)
+            
+                print ("clearing memory")
+                del voi
+                fname = self.correlate_reader.GetFileName()
+                print ("filename", fname, type(self.correlate_reader))
+                cr = type(self.correlate_reader)()
+                cr.SetFileName(fname)
+                self.correlate_reader = cr
+                print ("clearing memory done")
+
+            else:
+                print ("Registration on whole image")
+                data1 = vtk.vtkImageData()
+                data1.DeepCopy(self.reader.GetOutput())
+                
+                # data1 = self.reader.GetOutput()
+                self.correlate_reader.Update()
+                data2 = vtk.vtkImageData()
+                data2.DeepCopy(self.correlate_reader.GetOutput())
+                translate.SetInputData(data2)
+                print ("clearing memory")
+                fname = self.correlate_reader.GetFileName()
+                print ("filename", fname, type(self.correlate_reader))
+                cr = type(self.correlate_reader)()
+                cr.SetFileName(fname)
+                self.correlate_reader = cr
+                print ("clearing memory done")
+
+                #data2 = self.correlate_reader.GetOutput()
+                #translate.SetInputConnection(self.correlate_reader.GetOutputPort())
+                print ("Reading image 2")
+
+            print ("Done")
+
+            
+            #voi = reader
+            translate.Update()
+
+            v.style.AddObserver('KeyPressEvent', self.OnKeyPressEventForRegistration, 0.5)
+
+            # print ("out of the reader", reader.GetOutput())
+
+            cast1 = vtk.vtkImageCast()
+            cast2 = vtk.vtkImageCast()
+            cast1.SetInputData(data1)
+            cast1.SetOutputScalarTypeToFloat()
+            cast2.SetInputConnection(translate.GetOutputPort())
+            cast2.SetOutputScalarTypeToFloat()
+            
+            subtract = vtk.vtkImageMathematics()
+            subtract.SetOperationToSubtract()
+            subtract.SetInputConnection(1,cast1.GetOutputPort())
+            subtract.SetInputConnection(0,cast2.GetOutputPort())
+            
+            subtract.Update()
+            
+            print ("subtract type", subtract.GetOutput().GetScalarTypeAsString(), subtract.GetOutput().GetDimensions())
+            
+            stats = vtk.vtkImageHistogramStatistics()
+            stats.SetInputConnection(subtract.GetOutputPort())
+            stats.Update()
+            print ("stats ", stats.GetMinimum(), stats.GetMaximum(), stats.GetMean(), stats.GetMedian())
+
+            v.setInputData(subtract.GetOutput())
+            # trigger visualisation by programmatically click 'z'
+            interactor = v.getInteractor()
+            interactor.SetKeyCode("z")
+            v.style.OnKeyPress(interactor, 'KeyPressEvent')
+            #v.startRenderLoop()
+            self.translate = translate
+            self.subtract = subtract
+            self.cast = [cast1, cast2]
+
+        else:
+            print ("Start Registration Unchecked")
+            rp['start_registration_button'].setText("Start Registration")
+            v.setInput3DData(self.reader.GetOutput())
+
+    def OnKeyPressEventForRegistration(self, interactor, event):
+        '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
+        print('OnKeyPressEventForRegistration', event)
+        translate = self.translate
+        v = self.vtkWidget.viewer
+        subtract = self.subtract
+        trans = list(translate.GetTranslation())
+        orientation = v.style.GetSliceOrientation()
+        ij = [0,1]
+        if orientation == SLICE_ORIENTATION_XY:
+            ij = [0,1]
+        elif orientation == SLICE_ORIENTATION_XZ:
+            ij = [0,2]
+        elif orientation == SLICE_ORIENTATION_YZ:
+            ij = [1,2]
+        if interactor.GetKeyCode() == "j":
+            trans[ij[1]] += 1
+        elif interactor.GetKeyCode() == "n":
+            trans[ij[1]] -= 1
+        elif interactor.GetKeyCode() == "b":
+            trans[ij[0]] -= 1
+        elif interactor.GetKeyCode() == "m":
+            trans[ij[0]] += 1
+        translate.SetTranslation(*trans)
+        translate.Update()
+        subtract.Update()
+        print ("Translation", trans)
+        # update the current translation on the interface?
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(trans[0]))
+        rp['translate_Y_entry'].setText(str(trans[1]))
+        rp['translate_Z_entry'].setText(str(trans[2]))
+        v.setInputData(subtract.GetOutput())
+        print ("OnKeyPressEventForRegistration", v.img3D.GetDimensions(), subtract.GetOutput().GetDimensions())
+        v.style.UpdatePipeline()
+
     def generateDVCConfig(self):
         '''Generates the DVC configuration with the given input'''
         dialog = QFileDialog(self)
@@ -1525,6 +1834,9 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         
         
         config_fname = os.path.join(outdir, 'dvcrun_config.json')
+        print ("DVC config:", config_fname)
+        print (config)
+
         with open(config_fname, 'w') as f:
             json.dump(config, f)
     
