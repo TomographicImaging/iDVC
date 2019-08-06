@@ -1334,30 +1334,43 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         widgetno = 1
 
-
+        mp = {}
+        self.mask_parameters = mp
         # extend above field
-        self.extendAboveLabel = QLabel(groupBox)
-        self.extendAboveLabel.setText("Extend Above ")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, self.extendAboveLabel)
-        self.extendAboveEntry= QLineEdit(groupBox)
-        self.extendAboveEntry.setValidator(validatorint)
-        self.extendAboveEntry.setText("10")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, self.extendAboveEntry)
-        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        # self.extendAboveLabel = QLabel(groupBox)
+        # self.extendAboveLabel.setText("Extend Above ")
+        # formLayout.setWidget(widgetno, QFormLayout.LabelRole, self.extendAboveLabel)
+        # self.extendAboveEntry= QLineEdit(groupBox)
+        # self.extendAboveEntry.setValidator(validatorint)
+        # self.extendAboveEntry.setText("10")
+        # formLayout.setWidget(widgetno, QFormLayout.FieldRole, self.extendAboveEntry)
+        mp['mask_extend_above_label'] = QLabel(groupBox)
+        mp['mask_extend_above_label'].setText("Extend Above ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp['mask_extend_above_label'])
+        mp['mask_extend_above_entry'] = QSpinBox(groupBox)
+        mp['mask_extend_above_entry'].setSingleStep(1)
+        mp['mask_extend_above_entry'].setValue(10)
+        mp['mask_extend_above_entry'].setEnabled(True)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp['mask_extend_above_entry'])
         widgetno += 1
         # extend below field
-        self.extendBelowLabel = QLabel(groupBox)
-        self.extendBelowLabel.setText("Extend Below ")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, self.extendBelowLabel)
-        self.extendBelowEntry= QLineEdit(groupBox)
-        self.extendBelowEntry.setValidator(validatorint)
-        self.extendBelowEntry.setText("10")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, self.extendBelowEntry)
-        #self.treeWidgetUpdateElements.append(self.extendBelowEntry)
-        #self.treeWidgetUpdateElements.append(self.extendBelowLabel)
+        # self.extendBelowLabel = QLabel(groupBox)
+        # self.extendBelowLabel.setText("Extend Below ")
+        # formLayout.setWidget(widgetno, QFormLayout.LabelRole, self.extendBelowLabel)
+        # self.extendBelowEntry= QLineEdit(groupBox)
+        # self.extendBelowEntry.setValidator(validatorint)
+        # self.extendBelowEntry.setText("10")
+        # formLayout.setWidget(widgetno, QFormLayout.FieldRole, self.extendBelowEntry)
+        # widgetno += 1
+        mp['mask_extend_below_label'] = QLabel(groupBox)
+        mp['mask_extend_below_label'].setText("Extend Above ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp['mask_extend_below_label'])
+        mp['mask_extend_below_entry'] = QSpinBox(groupBox)
+        mp['mask_extend_below_entry'].setSingleStep(1)
+        mp['mask_extend_below_entry'].setValue(10)
+        mp['mask_extend_below_entry'].setEnabled(True)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp['mask_extend_below_entry'])
         widgetno += 1
-
 
 
 
@@ -2405,8 +2418,12 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         stencil.Update()
         dims = stencil.GetOutput().GetDimensions()
 
-        down = int(self.extendBelowEntry.text())
-        up   = int(self.extendAboveEntry.text())
+        # down = int(self.extendBelowEntry.text())
+        # up   = int(self.extendAboveEntry.text())
+        down = self.mask_parameters['mask_extend_below_entry'].value()
+        up = self.mask_parameters['mask_extend_above_entry'].value()
+
+
         # do not extend outside the image
         zmin = sliceno -down if sliceno-down>=0 else 0
         zmax = sliceno + up if sliceno+up < dims[2] else dims[2]
