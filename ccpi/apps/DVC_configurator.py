@@ -35,7 +35,7 @@ from PyQt5.QtWidgets import QPushButton
 from PyQt5.QtWidgets import QFormLayout
 from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import QCheckBox
-from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtWidgets import QLineEdit, QSpinBox
 from PyQt5.QtWidgets import QLabel
 from PyQt5.QtWidgets import QComboBox
 from PyQt5.QtWidgets import QProgressBar, QStatusBar
@@ -72,6 +72,10 @@ from ccpi.viewer.CILViewer2D import CILViewer2D
 from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
 
 from ccpi.apps import vtkutils
+
+
+
+
 
 class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
     '''vtkAlgorithm to read a point cloud from a NumPy array
@@ -495,9 +499,9 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         return False
 
     def toolbar(self):
-        openAction = QAction("Open", self)
-        openAction.setShortcut("Ctrl+O")
-        openAction.triggered.connect(lambda: self.openFile('reference'))
+        # openAction = QAction("Open", self)
+        # openAction.setShortcut("Ctrl+O")
+        # openAction.triggered.connect(lambda: self.openFile('reference'))
 
         closeAction = QAction("Close", self)
         closeAction.setShortcut("Ctrl+Q")
@@ -508,10 +512,14 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         # tableAction.triggered.connect(self.showPointCloudWidget)
 
         # define actions
-        # load data
+        # load data reference
         openAction = QAction(self.style().standardIcon(
-            QStyle.SP_DirOpenIcon), 'Open Volume Data', self)
+            QStyle.SP_DirOpenIcon), 'Open Reference Volume', self)
         openAction.triggered.connect(lambda: self.openFile('reference'))
+        # load data correlate
+        openActionCorrelate = QAction(self.style().standardIcon(
+            QStyle.SP_DirOpenIcon), 'Open Correlate Volume', self)
+        openActionCorrelate.triggered.connect(lambda: self.openFile('correlate'))
         # define load mask
         openMask = QAction(self.style().standardIcon(
             QStyle.SP_FileDialogStart), 'Open Mask Data', self)
@@ -537,6 +545,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         mainMenu = self.menuBar()
         fileMenu = mainMenu.addMenu('File')
         fileMenu.addAction(openAction)
+        fileMenu.addAction(openActionCorrelate)
         fileMenu.addAction(openMask)
 
         fileMenu.addAction(saveMask)
@@ -617,6 +626,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         # Add actions to toolbar
         self.toolbar.addAction(openAction)
+        self.toolbar.addAction(openActionCorrelate)
         self.toolbar.addAction(saveAction)
         self.toolbar.addAction(self.show3D)
 
@@ -648,7 +658,6 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         if dataset == 'reference':
             rp = self.registration_parameters
-            rp['select_correlate_button'].setEnabled(True)
         elif dataset == 'correlate':
             rp = self.registration_parameters
             rp['start_registration_button'].setEnabled(True)
@@ -729,7 +738,9 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                     reader = vtk.vtkMetaImageReader()
                     reader.AddObserver("ErrorEvent", self.e)
                     reader.SetFileName(file)
-                    reader.Update()
+                    if dataset != 'correlate':
+                        reader.Update()
+                        print("update reader")
                 elif file.split(".")[1] == 'csv':
                     self.pointcloud = []
                     self.loadPointCloudFromCSV(file)
@@ -767,7 +778,9 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
             print("read {} files".format(i))
 
             reader.SetFileNames(sa)
-            reader.Update()
+            if dataset != 'correlate':
+                print("update reader")
+                reader.Update()
 
         dtype = vtk.VTK_UNSIGNED_CHAR
         # deactivate this path
@@ -1504,6 +1517,73 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         rp = {}
         
+        # Button select point0
+        rp['select_point_zero'] = QPushButton(groupBox)
+        rp['select_point_zero'].setText("Select Point 0")
+        rp['select_point_zero'].setEnabled(True)
+        rp['select_point_zero'].setCheckable(True)
+        rp['select_point_zero'].setChecked(False)
+        rp['select_point_zero'].clicked.connect( lambda: self.selectPointZero() )
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['select_point_zero'])
+        widgetno += 1
+        # Point0 Location
+        rp['point_zero_label'] = QLabel(groupBox)
+        rp['point_zero_label'].setText("Point Zero Location")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['point_zero_label'])
+        rp['point_zero_entry']= QLineEdit(groupBox)
+        rp['point_zero_entry'].setEnabled(False)
+        rp['point_zero_entry'].setText("")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['point_zero_entry'])
+        widgetno += 1
+        # Put the viewer at the slice where point 0 is
+        # Button select point0
+        rp['goto_point_zero'] = QPushButton(groupBox)
+        rp['goto_point_zero'].setText("Center on Point 0")
+        rp['goto_point_zero'].setEnabled(True)
+        rp['goto_point_zero'].setCheckable(False)
+        rp['goto_point_zero'].setChecked(False)
+        rp['goto_point_zero'].clicked.connect( lambda: self.centerOnPointZero() )
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['goto_point_zero'])
+        widgetno += 1
+        
+        separators = []
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1
+        # Add should extend checkbox
+        rp['register_on_selection_check'] = QCheckBox(groupBox)
+        rp['register_on_selection_check'].setText("Register on Selection")
+        rp['register_on_selection_check'].setEnabled(True)
+        rp['register_on_selection_check'].setChecked(False)
+        rp['register_on_selection_check'].stateChanged.connect( self.displayRegistrationSelection )
+
+        formLayout.setWidget(widgetno,QFormLayout.FieldRole, rp['register_on_selection_check'])
+        widgetno += 1
+        # Registration Box
+        rp['registration_box_size_label'] = QLabel(groupBox)
+        rp['registration_box_size_label'].setText("Registration Box Size")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['registration_box_size_label'])
+        # rp['registration_box_size_entry']= QLineEdit(groupBox)
+        # rp['registration_box_size_entry'].setValidator(validatorint)
+        # rp['registration_box_size_entry'].setText("10")
+        # rp['registration_box_size_entry'].setEnabled(False)
+        # rp['registration_box_size_entry'].returnPressed.connect(self.displayRegistrationSelection)
+        rp['registration_box_size_entry'] = QSpinBox(groupBox)
+        rp['registration_box_size_entry'].setSingleStep(1)
+        rp['registration_box_size_entry'].setValue(10)
+        rp['registration_box_size_entry'].setEnabled(False)
+        rp['registration_box_size_entry'].valueChanged.connect(self.displayRegistrationSelection)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['registration_box_size_entry'])
+        widgetno += 1
+
+
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1
         # Translate X field
         rp['translate_X_label'] = QLabel(groupBox)
         rp['translate_X_label'].setText("Translate X")
@@ -1511,6 +1591,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         rp['translate_X_entry']= QLineEdit(groupBox)
         rp['translate_X_entry'].setValidator(validatorint)
         rp['translate_X_entry'].setText("0")
+        rp['translate_X_entry'].setEnabled(False)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_X_entry'])
         widgetno += 1
         # Translate Y field
@@ -1520,6 +1601,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         rp['translate_Y_entry']= QLineEdit(groupBox)
         rp['translate_Y_entry'].setValidator(validatorint)
         rp['translate_Y_entry'].setText("0")
+        rp['translate_Y_entry'].setEnabled(False)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Y_entry'])
         widgetno += 1
         # Translate Z field
@@ -1529,25 +1611,10 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         rp['translate_Z_entry']= QLineEdit(groupBox)
         rp['translate_Z_entry'].setValidator(validatorint)
         rp['translate_Z_entry'].setText("0")
+        rp['translate_Z_entry'].setEnabled(False)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Z_entry'])
         widgetno += 1
 
-        # Add should extend checkbox
-
-        rp['register_on_selection_check'] = QCheckBox(groupBox)
-        rp['register_on_selection_check'].setText("Register on Selection")
-        rp['register_on_selection_check'].setEnabled(False)
-
-        formLayout.setWidget(widgetno,QFormLayout.FieldRole, rp['register_on_selection_check'])
-        widgetno += 1
-        # Add Load Correlate image button
-        rp['select_correlate_button'] = QPushButton(groupBox)
-        rp['select_correlate_button'].setText("Select Correlate Image")
-        rp['select_correlate_button'].setEnabled(False)
-        rp['select_correlate_button'].setChecked(False)
-        rp['select_correlate_button'].clicked.connect( lambda: self.openFile(dataset='correlate') )
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['select_correlate_button'])
-        widgetno += 1
         # Add submit button
         rp['start_registration_button'] = QPushButton(groupBox)
         rp['start_registration_button'].setText("Start Registration")
@@ -1585,8 +1652,14 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                 # get the selected ROI
                 voi = vtk.vtkExtractVOI()
                 voi.SetInputData(self.reader.GetOutput())
-                roi = v.ROI
-                extent = [ roi[0][0], roi[1][0], roi[0][1], roi[1][1], roi[0][2], roi[1][2] ]
+                # box around the point0
+                p0 = eval(rp['point_zero_entry'].text())
+                bbox = rp['registration_box_size_entry'].value()
+                extent = [ p0[0] - bbox//2, p0[0] + bbox//2, 
+                           p0[1] - bbox//2, p0[1] + bbox//2, 
+                           p0[2] - bbox//2, p0[2] + bbox//2]
+
+                extent = [ el if el > 0 else 0 for i,el in enumerate(extent) ]
                 # spacing = self.reader.GetOutput().GetSpacing()
                 # extent[0] /= spacing[0]
                 # extent[1] /= spacing[0]
@@ -1594,7 +1667,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                 # extent[3] /= spacing[1]
                 # extent[4] /= spacing[2]
                 # extent[5] /= spacing[2]
-                print ("Current roi", roi, extent)
+                print ("Current roi", extent)
                 
                 voi.SetVOI(*extent)
                 voi.Update()
@@ -1607,7 +1680,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
                 
                 print ("Reading image 2")
                 self.correlate_reader.Update()
-            
+                print ("image 2", self.correlate_reader.GetOutput().GetDimensions())
+                
                 # copy the data to be registered if selection 
                 voi.SetInputConnection(self.correlate_reader.GetOutputPort())
                 print ("Extracting selection")
@@ -1691,44 +1765,199 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         else:
             print ("Start Registration Unchecked")
             rp['start_registration_button'].setText("Start Registration")
+            # hide registration box
+            self.registration_box['actor'].VisibilityOff()
             v.setInput3DData(self.reader.GetOutput())
+            v.style.UpdatePipeline()
 
     def OnKeyPressEventForRegistration(self, interactor, event):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
         print('OnKeyPressEventForRegistration', event)
-        translate = self.translate
-        v = self.vtkWidget.viewer
-        subtract = self.subtract
-        trans = list(translate.GetTranslation())
-        orientation = v.style.GetSliceOrientation()
-        ij = [0,1]
-        if orientation == SLICE_ORIENTATION_XY:
-            ij = [0,1]
-        elif orientation == SLICE_ORIENTATION_XZ:
-            ij = [0,2]
-        elif orientation == SLICE_ORIENTATION_YZ:
-            ij = [1,2]
-        if interactor.GetKeyCode() == "j":
-            trans[ij[1]] += 1
-        elif interactor.GetKeyCode() == "n":
-            trans[ij[1]] -= 1
-        elif interactor.GetKeyCode() == "b":
-            trans[ij[0]] -= 1
-        elif interactor.GetKeyCode() == "m":
-            trans[ij[0]] += 1
-        translate.SetTranslation(*trans)
-        translate.Update()
-        subtract.Update()
-        print ("Translation", trans)
-        # update the current translation on the interface?
         rp = self.registration_parameters
-        rp['translate_X_entry'].setText(str(trans[0]))
-        rp['translate_Y_entry'].setText(str(trans[1]))
-        rp['translate_Z_entry'].setText(str(trans[2]))
-        v.setInputData(subtract.GetOutput())
-        print ("OnKeyPressEventForRegistration", v.img3D.GetDimensions(), subtract.GetOutput().GetDimensions())
-        v.style.UpdatePipeline()
+        if interactor.GetKeyCode() in ['j','n','b','m'] and \
+            rp['start_registration_button'].isChecked():
 
+            translate = self.translate
+            v = self.vtkWidget.viewer
+            subtract = self.subtract
+            trans = list(translate.GetTranslation())
+            orientation = v.style.GetSliceOrientation()
+            ij = [0,1]
+            if orientation == SLICE_ORIENTATION_XY:
+                ij = [0,1]
+            elif orientation == SLICE_ORIENTATION_XZ:
+                ij = [0,2]
+            elif orientation == SLICE_ORIENTATION_YZ:
+                ij = [1,2]
+            if interactor.GetKeyCode() == "j":
+                trans[ij[1]] += 1
+            elif interactor.GetKeyCode() == "n":
+                trans[ij[1]] -= 1
+            elif interactor.GetKeyCode() == "b":
+                trans[ij[0]] -= 1
+            elif interactor.GetKeyCode() == "m":
+                trans[ij[0]] += 1
+            translate.SetTranslation(*trans)
+            translate.Update()
+            subtract.Update()
+            print ("Translation", trans)
+            # update the current translation on the interface?
+            rp = self.registration_parameters
+            rp['translate_X_entry'].setText(str(trans[0]))
+            rp['translate_Y_entry'].setText(str(trans[1]))
+            rp['translate_Z_entry'].setText(str(trans[2]))
+            v.setInputData(subtract.GetOutput())
+            print ("OnKeyPressEventForRegistration", v.img3D.GetDimensions(), subtract.GetOutput().GetDimensions())
+            v.style.UpdatePipeline()
+
+    def selectPointZero(self):
+
+        rp = self.registration_parameters
+        v = self.vtkWidget.viewer
+        if rp['select_point_zero'].isChecked():
+            v.style.AddObserver('LeftButtonPressEvent', self.OnLeftButtonPressEventForPointZero, 0.5)
+            # should find a way to not show this again
+            self.warningDialog(
+                window_title='Select Point 0',
+                message='Select point 0 by SHIFT-Left Click on the Image'
+            )
+            rp['select_point_zero'].setText('Selecting point 0')
+        else:
+            rp['select_point_zero'].setText('Select Point 0')
+        
+        
+
+
+
+
+    def OnLeftButtonPressEventForPointZero(self, interactor, event):
+        print('OnLeftButtonPressEventForPointZero', event)
+        v = self.vtkWidget.viewer
+        shift = interactor.GetShiftKey()
+        point0actor = 'Point0' in v.actors
+        rp = self.registration_parameters
+        if shift and rp['select_point_zero'].isChecked():
+            print ("Shift pressed", shift)
+            position = interactor.GetEventPosition()
+            #vox = v.style.display2world(position)
+            p0l = v.style.display2imageCoordinate(position)[:-1]
+            spacing = v.img3D.GetSpacing()
+            origin = v.img3D.GetOrigin()
+            p0 = [ el * spacing[i] + origin[i] for i,el in enumerate(p0l) ]
+            vox = p0
+            print ("vox ", vox, 'p0', p0)
+            bbox = rp['registration_box_size_entry'].value()
+            extent = [ p0[0] - int( bbox * spacing[0] / 2 ), p0[0] + int( bbox * spacing[0] / 2 ), 
+                       p0[1] - int( bbox * spacing[1] / 2 ), p0[1] + int( bbox * spacing[1] / 2 ), 
+                       p0[2] - int( bbox * spacing[2] / 2 ), p0[2] + int( bbox * spacing[2] / 2 )]
+            if not point0actor:
+                #point0 = vtk.vtkSphereSource()
+                # calculate radius 
+                #point0.SetRadius(3)
+                #point0.SetCenter(*vox)
+                #point0.Update()
+                point0 = vtk.vtkCursor3D()
+                point0.SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+                point0.SetFocalPoint(*vox)
+                point0.AllOff()
+                point0.AxesOn()
+                point0.OutlineOn()
+                #point0.TranslationModeOn()
+                point0.Update()
+                point0Mapper = vtk.vtkPolyDataMapper()
+                point0Mapper.SetInputConnection(point0.GetOutputPort())
+                point0Actor = vtk.vtkLODActor()
+                point0Actor.SetMapper(point0Mapper)
+                point0Actor.GetProperty().SetColor(1.,0.,0.)
+                v.AddActor(point0Actor, 'Point0')
+                self.viewer3DWidget.viewer.getRenderer().AddActor(point0Actor)
+                self.point0 = [ point0 , point0Mapper, point0Actor ] 
+            else:
+                self.point0[0].SetFocalPoint(*vox)
+                self.point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+                self.point0[0].Update()
+            rp = self.registration_parameters
+            rp['point_zero_entry'].setText(str(v.style.display2imageCoordinate(position)[:-1]))
+
+
+    def centerOnPointZero(self):
+        '''Centers the viewing slice where Point 0 is'''
+        rp = self.registration_parameters
+        v = self.vtkWidget.viewer
+        #v3 = 
+        point0 = eval (rp['point_zero_entry'].text())
+        if isinstance (point0, tuple):
+            orientation = v.style.GetSliceOrientation()
+            gotoslice = point0[orientation]
+            v.style.SetActiveSlice( gotoslice )
+            v.style.UpdatePipeline(True)
+
+    def displayRegistrationSelection(self):
+        print ("displayRegistrationSelection")
+        rp = self.registration_parameters
+        rp['registration_box_size_entry'].setEnabled( rp['register_on_selection_check'].isChecked() )
+        v = self.vtkWidget.viewer
+        rbdisplay = 'RegistrationBox' in v.actors
+        if rp['register_on_selection_check'].isChecked():
+            spacing = v.img3D.GetSpacing()
+            origin = v.img3D.GetOrigin()
+            p0 = [ el * spacing[i] + origin[i] for i,el in enumerate(eval(rp['point_zero_entry'].text())) ]
+            bbox = rp['registration_box_size_entry'].value()
+            extent = [ p0[0] - int( bbox * spacing[0] / 2 ), p0[0] + int( bbox * spacing[0] / 2 ), 
+                       p0[1] - int( bbox * spacing[1] / 2 ), p0[1] + int( bbox * spacing[1] / 2 ), 
+                       p0[2] - int( bbox * spacing[2] / 2 ), p0[2] + int( bbox * spacing[2] / 2 )]
+            print ("registration_box_extent", extent)
+            if not rbdisplay:
+                point0 = vtk.vtkCursor3D()
+                point0.SetModelBounds(*extent)
+                point0.SetFocalPoint(*p0)
+                point0.AllOff()
+                point0.OutlineOn()
+                #point0.TranslationModeOn()
+                point0.Update()
+                point0Mapper = vtk.vtkPolyDataMapper()
+                point0Mapper.SetInputConnection(point0.GetOutputPort())
+                point0Actor = vtk.vtkLODActor()
+                point0Actor.SetMapper(point0Mapper)
+                point0Actor.GetProperty().SetColor(0.,.5,.5)
+                v.AddActor(point0Actor, 'RegistrationBox')
+                self.viewer3DWidget.viewer.getRenderer().AddActor(point0Actor)
+                self.registration_box = {'source': point0 , 'mapper': point0Mapper, 
+                                        'actor': point0Actor }
+                v.style.UpdatePipeline()
+            else:
+                self.registration_box['actor'].VisibilityOn()
+                bb = self.registration_box['source']
+                bb.SetModelBounds(*extent)
+                bb.SetFocalPoint(*p0)
+                v.style.UpdatePipeline()
+        else:
+            if rbdisplay:
+                # hide actor
+                self.registration_box['actor'].VisibilityOff()
+                v.style.UpdatePipeline()
+
+
+
+    def createRunConfigurationWidget(self):
+
+        #self.treeWidgetInitialElements = []
+        #self.treeWidgetUpdateElements = []
+
+        self.runconf_panel = self.generateUIDockParameters('Run Configuration')
+        dockWidget = self.runconf_panel[0]
+        groupBox = self.runconf_panel[5]
+        groupBox.setTitle('Run Parameters')
+        formLayout = self.runconf_panel[6]
+
+        # Create validation rule for text entry
+        validatorint = QtGui.QIntValidator()
+
+        widgetno = 1
+
+        rp = {}
+
+        
     def generateDVCConfig(self):
         '''Generates the DVC configuration with the given input'''
         dialog = QFileDialog(self)
@@ -2079,6 +2308,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
     
             if self.subvolumeShapeValue.currentIndex() == 0 or \
                self.subvolumeShapeValue.currentIndex() == 2:
+               #cube
                 self.glyph_source = self.cube_source
                 self.cube_source.SetXLength(spacing[0]*radius*2)
                 self.cube_source.SetYLength(spacing[1]*radius*2)
