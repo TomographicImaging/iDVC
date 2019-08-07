@@ -51,6 +51,9 @@ from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 from ccpi.viewer.utils import cilNumpyMETAImageWriter
 from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver#, \
                                     #QtThreadedProgressBarInterface
+
+from ccpi.dvc import dvcw as dvc
+from ccpi.dvc import DVC
 from natsort import natsorted
 import imghdr
 import os
@@ -561,12 +564,14 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.show3D = QAction("Show 3D View", self)
         self.show3D.setCheckable(True)
         self.show3D.setChecked(False)
+        self.show3D.setEnabled(False)
         # self.show3D.setShortcut("Ctrl+T")
         self.show3D.triggered.connect(self.showHide3D)
 
         self.showRegistrationPanel = QAction("1 - Manual Registration Panel", self)
-        self.showRegistrationPanel.setCheckable(False)
+        self.showRegistrationPanel.setCheckable(True)
         self.showRegistrationPanel.setChecked(False)
+        self.showRegistrationPanel.setEnabled(False)
         self.showRegistrationPanel.triggered.connect(
                 lambda: self.registration_panel[0].show() \
                    if self.showRegistrationPanel.isChecked() else \
@@ -577,6 +582,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.showMaskConfigurator = QAction("2 - Configure Mask Panel", self)
         self.showMaskConfigurator.setCheckable(True)
         self.showMaskConfigurator.setChecked(False)
+        self.showMaskConfigurator.setEnabled(False)
         self.showMaskConfigurator.triggered.connect(
                 lambda: self.mask_panel[0].show() \
                    if self.showMaskConfigurator.isChecked() else \
@@ -587,6 +593,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.showPointCloudConfigurator = QAction("3 - Configure Point Cloud Panel", self)
         self.showPointCloudConfigurator.setCheckable(True)
         self.showPointCloudConfigurator.setChecked(False)
+        self.showPointCloudConfigurator.setEnabled(False)
         self.showPointCloudConfigurator.triggered.connect(
                 lambda: self.pointCloudDockWidget.show() \
                    if self.showPointCloudConfigurator.isChecked() else \
@@ -596,6 +603,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.showRangesConfigurator = QAction("4 - Configure Ranges Panel", self)
         self.showRangesConfigurator.setCheckable(True)
         self.showRangesConfigurator.setChecked(False)
+        self.showRangesConfigurator.setEnabled(False)
         self.showRangesConfigurator.triggered.connect(
                 lambda: self.range_panel[0].show() \
                    if self.showRangesConfigurator.isChecked() else \
@@ -605,6 +613,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.showRunConfigurator = QAction("5 - Configure Run Panel", self)
         self.showRunConfigurator.setCheckable(True)
         self.showRunConfigurator.setChecked(False)
+        self.showRunConfigurator.setEnabled(False)
         self.showRunConfigurator.triggered.connect(
                 lambda: self.runconf_panel[0].show() \
                    if self.showRunConfigurator.isChecked() else \
@@ -635,10 +644,17 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
 
         # Add actions to toolbar
-        self.toolbar.addAction(openAction)
-        self.toolbar.addAction(openActionCorrelate)
-        self.toolbar.addAction(saveAction)
+        #self.toolbar.addAction(openAction)
+        #self.toolbar.addAction(openActionCorrelate)
+        #self.toolbar.addAction(saveAction)
         self.toolbar.addAction(self.show3D)
+        self.toolbar.addAction(self.showRegistrationPanel)
+        self.toolbar.addAction(self.showMaskConfigurator)
+        self.toolbar.addAction(self.showPointCloudConfigurator)
+        self.toolbar.addAction(self.showRangesConfigurator)
+        self.toolbar.addAction(self.showRunConfigurator)
+        
+        
 
 
 
@@ -668,10 +684,13 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         if dataset == 'reference':
             rp = self.registration_parameters
+            self.show3D.setEnabled(True)
         elif dataset == 'correlate':
+            self.showRegistrationPanel.setEnabled(True)
             rp = self.registration_parameters
             rp['start_registration_button'].setEnabled(True)
             rp['register_on_selection_check'].setEnabled(True)
+            
 
 #        worker = Worker(self.openFileByPath, fn=fn, read_mask=read_mask)
 #        
@@ -1142,8 +1161,14 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         validator.setDecimals(2)
         validatorint = QtGui.QIntValidator()
 
+        dockWidget = self.pointCloudDockWidget
+        dockWidget.visibilityChanged.connect(lambda: self.showRangesConfigurator.setEnabled(True))
+
+
         widgetno = 1
 
+        pc = {}
+        self.pointcloud_parameters = pc
 
         # Add ISO Value field
         self.isoValueLabel = QLabel(self.graphParamsGroupBox)
@@ -1156,6 +1181,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.treeWidgetUpdateElements.append(self.isoValueEntry)
         self.treeWidgetUpdateElements.append(self.isoValueLabel)
         widgetno += 1
+        pc['pointcloud_radius_entry'] = self.isoValueEntry
+
         # Add collapse priority field
         self.subvolumeShapeLabel = QLabel(self.graphParamsGroupBox)
         self.subvolumeShapeLabel.setText("Subvolume shape")
@@ -1172,7 +1199,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeShapeValue)
         widgetno += 1
-
+        pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
 #        # Add local/global checkbox
 #        self.isGlobalCheck = QCheckBox(self.graphParamsGroupBox)
 #        self.isGlobalCheck.setText("Global Iso")
@@ -1211,6 +1238,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.dimensionalityValue)
         widgetno += 1
+        pc['pointcloud_dimensionality_entry'] = self.dimensionalityValue
 
 
 
@@ -1227,6 +1255,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.overlapXValueEntry)
         widgetno += 1
+        pc['pointcloud_overlap_x_entry'] = self.overlapXValueEntry
         # Add Overlap Y
         self.overlapYLabel = QLabel(self.graphParamsGroupBox)
         self.overlapYLabel.setText("Overlap Y")
@@ -1239,6 +1268,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.overlapYValueEntry)
         widgetno += 1
+        pc['pointcloud_overlap_y_entry'] = self.overlapYValueEntry
         # Add Overlap Z
         self.overlapZLabel = QLabel(self.graphParamsGroupBox)
         self.overlapZLabel.setText("Overlap Z")
@@ -1252,6 +1282,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.overlapZValueEntry)
         widgetno += 1
+        pc['pointcloud_overlap_z_entry'] = self.overlapZValueEntry
 
         # Add Rotation X
         self.rotateXLabel = QLabel(self.graphParamsGroupBox)
@@ -1264,6 +1295,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         self.treeWidgetUpdateElements.append(self.rotateXLabel)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.rotateXValueEntry)
         widgetno += 1
+        pc['pointcloud_rotation_x_entry'] = self.rotateXValueEntry
 
         # Add Overlap Y
         self.rotateYLabel = QLabel(self.graphParamsGroupBox)
@@ -1277,6 +1309,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.rotateYValueEntry)
         widgetno += 1
+        pc['pointcloud_rotation_y_entry'] = self.rotateYValueEntry
+
         # Add Overlap Z
         self.rotateZLabel = QLabel(self.graphParamsGroupBox)
         self.rotateZLabel.setText("Rotation angle Z")
@@ -1289,6 +1323,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.rotateZValueEntry)
         widgetno += 1
+        pc['pointcloud_rotation_z_entry'] = self.rotateZValueEntry
 
 
         # Add should extend checkbox
@@ -1304,6 +1339,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
 
         self.graphWidgetFL.setWidget(widgetno,QFormLayout.FieldRole, self.erodeCheck)
         widgetno += 1
+        pc['pointcloud_erode_entry'] = self.erodeCheck
+
         
         # Add submit button
         self.graphParamsSubmitButton = QPushButton(self.graphParamsGroupBox)
@@ -1337,6 +1374,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         groupBox = self.mask_panel[5]
         groupBox.setTitle('Mask Parameters')
         formLayout = self.mask_panel[6]
+
+        dockWidget.visibilityChanged.connect(lambda: self.showPointCloudConfigurator.setEnabled(True))
 
         # Create validation rule for text entry
         validator = QtGui.QDoubleValidator()
@@ -1408,13 +1447,17 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
     def createRangeWidget(self):
+        '''create the multi run configuration dockable widget'''
         panel = self.generateUIDockParameters('4 - Ranges')
         self.range_panel = panel
         dockWidget = panel[0]
         groupBox = panel[5]
-        groupBox.setTitle('Range Parameters')
+        groupBox.setTitle('Multi Run Configuration Parameters')
         formLayout = panel[6]
         
+        dockWidget.visibilityChanged.connect(lambda: self.showRunConfigurator.setEnabled(True))
+
+
         # Create validation rule for text entry
         validator = QtGui.QDoubleValidator()
         validator.setDecimals(2)
@@ -1512,18 +1555,16 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         
         # Add submit button
         ranges['generate_button'] = QPushButton(groupBox)
-        ranges['generate_button'].setText("Generate DVC Config")
-        ranges['generate_button'].clicked.connect(self.generateDVCConfig)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, ranges['generate_button'])
+        ranges['generate_button'].setText("Generate Multi-run DVC Config")
+        ranges['generate_button'].clicked.connect(self.generateMultiRunDVCConfig)
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, ranges['generate_button'])
         widgetno += 1
-        
-        
-        
-        
+
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
     
     def createRegistrationWidget(self):
+        '''Create the Registration Dockable Widget'''
 
         #self.treeWidgetInitialElements = []
         #self.treeWidgetUpdateElements = []
@@ -1533,6 +1574,8 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         groupBox = self.registration_panel[5]
         groupBox.setTitle('Registration Parameters')
         formLayout = self.registration_panel[6]
+
+        dockWidget.visibilityChanged.connect(lambda: self.showMaskConfigurator.setEnabled(True))
 
         # Create validation rule for text entry
         validatorint = QtGui.QIntValidator()
@@ -1982,6 +2025,15 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         rp = {}
         self.run_configuration_parameter = rp
 
+        rp['run_points_in_subvolume_label'] = QLabel(groupBox)
+        rp['run_points_in_subvolume_label'].setText("Points in subvolume")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['run_points_in_subvolume_label'])
+        rp['run_points_in_subvolume_entry'] = QSpinBox(groupBox)
+        rp['run_points_in_subvolume_entry'].setValue(1000)
+        rp['run_points_in_subvolume_entry'].setSingleStep(10)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['run_points_in_subvolume_entry'])
+        widgetno += 1
+
         rp['run_max_displacement_label'] = QLabel(groupBox)
         rp['run_max_displacement_label'].setText("Maximum Displacement (voxels)")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['run_max_displacement_label'])
@@ -1991,7 +2043,7 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         widgetno += 1
 
         rp['run_ndof_label'] = QLabel(groupBox)
-        rp['run_ndof_label'].setText("Maximum Displacement (voxels)")
+        rp['run_ndof_label'].setText("Number of Degrees of Freedom")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['run_ndof_label'])
         rp['run_ndof_entry'] = QComboBox(groupBox)
         rp['run_ndof_entry'].addItem('3')
@@ -2015,20 +2067,35 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         widgetno += 1
 
         rp['run_iterp_type_label'] = QLabel(groupBox)
-        rp['run_iterp_type_label'].setText("Maximum Displacement (voxels)")
+        rp['run_iterp_type_label'].setText("Interpolation type")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['run_iterp_type_label'])
         rp['run_iterp_type_entry'] = QComboBox(groupBox)
+        rp['run_iterp_type_entry'].addItem('Nearest')
         rp['run_iterp_type_entry'].addItem('Trilinear')
         rp['run_iterp_type_entry'].addItem('Tricubic')
-        rp['run_iterp_type_entry'].setCurrentIndex(1)
+        rp['run_iterp_type_entry'].setCurrentIndex(2)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['run_iterp_type_entry'])
+        widgetno += 1
+        # Add horizonal seperator
+        separator = QFrame(groupBox)
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separator)
+        widgetno += 1
+        
+
+        # Add submit button
+        rp['run_dvc_button'] = QPushButton(groupBox)
+        rp['run_dvc_button'].setText("Test Run DVC")
+        rp['run_dvc_button'].clicked.connect(self.testRun)
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['run_dvc_button'])
         widgetno += 1
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
         
-    def generateDVCConfig(self):
-        '''Generates the DVC configuration with the given input'''
+    def generateMultiRunDVCConfig(self):
+        '''Generates the Multi run DVC configuration with the given input'''
         dialog = QFileDialog(self)
         dialog.setFileMode(QFileDialog.DirectoryOnly)
         
@@ -2139,7 +2206,143 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
             json.dump(config, f)
     
 
-            
+    def generateTestDVCConfig(self):
+        '''Generates Test DVC configuration with the given input'''
+        dialog = QFileDialog(self)
+        dialog.setFileMode(QFileDialog.DirectoryOnly)
+        
+        # select output directory
+        fn = dialog.getExistingDirectory()
+        # print (fn)
+        outdir = os.path.abspath(fn)
+        
+        # reference to data stored in the panel
+        rp = self.registration_parameters
+        pc = self.pointcloud_parameters
+        rc = self.run_configuration_parameter
+        
+        config = {}
+        
+        
+        
+        # # 1 save the mask ?
+        # # Mask is read from temp file
+        # tmpdir = tempfile.gettempdir() 
+        # reader = vtk.vtkMetaImageReader()
+        # reader.SetFileName(os.path.join(tmpdir, "selection.mha"))
+        # reader.Update()
+        
+        # print ("save mask")
+        # writer = vtk.vtkMetaImageWriter()
+        # writer.SetInputConnection(reader.GetOutputPort())
+        # writer.SetFileName(os.path.join(outdir,"mask.mhd"))
+        # writer.SetCompression(1)
+        # writer.Write()
+        # 2 save the dataset
+        print ("save dataset")
+        reference_fname = self.reader.GetFileName()
+        if isinstance(self.reader, vtk.vtkTIFFReader):
+            reference_fname = os.path.join(outdir,"reference.mhd")
+            writer = vtk.vtkMetaImageWriter()
+            writer.SetInputData(self.reader.GetOutput())
+            writer.SetFileName(reference_fname)
+            writer.SetCompression(0)
+            writer.Write()
+        reference_fname = self.correlate_reader.GetFileName()
+        if isinstance(self.correlate_reader, vtk.vtkTIFFReader):
+            correlate_fname = os.path.join(outdir,"correlate.mhd")
+            writer = vtk.vtkMetaImageWriter()
+            writer.SetInputData(self.correlate_reader.GetOutput())
+            writer.SetFileName(correlate_fname)
+            writer.SetCompression(0)
+            writer.Write()
+
+
+        config['reference_filename'] = reference_fname
+        config['correlate_filename'] = correlate_fname
+        # 2 create the point clouds config
+        #config['mask_file'] = os.path.join('mask.mhd')
+        
+        shapeselected = pc['pointcloud_volume_shape_entry'].currentIndex()
+        shape = 'cube' if shapeselected == 0 or shapeselected == 1 else 'sphere'
+        
+        config['subvol_geom'] = shape #: cube, sphere
+        # config['subvol_size'] = r * 2 #: side length or diameter, in voxels
+        ### description of the image data files, 
+        # all must be the same size and structure
+        # these will be checked when creating the dvc input files. 
+        dims = self.reader.GetOutput().GetDimensions()
+        dtype = self.reader.GetOutput().GetScalarType()
+        if dtype == vtk.VTK_CHAR or dtype == vtk.VTK_UNSIGNED_CHAR:
+            vdepth = 8
+        elif dtype == vtk.VTK_SHORT or dtype == vtk.VTK_UNSIGNED_SHORT:
+            vdepth = 16
+        else:
+            self.warningDialog(
+                message='Can process only 8 or 16 integer data. Got {}'.format(
+                   self.reader.GetOutput().GetScalarTypeAsString()),
+                window_title="ERROR"
+                )
+            return
+        config['vol_wide'] = dims[0] #: width in pixels of each slice
+        config['vol_high'] = dims[1] #: height in pixels of each slice
+        config['vol_tall'] = dims[2] #: number of slices in the stack
+        config['vol_bit_depth'] = vdepth
+        config['subvol_thresh'] = 'off'
+        
+        config['shape'] = shape
+        dimensionality = [3,2]
+        
+        config['dimensionality'] = \
+                        dimensionality[pc['pointcloud_dimensionality_entry'].currentIndex()]
+        
+
+        config['overlap'] = [ float(pc['pointcloud_overlap_x_entry'].text()),
+                              float(pc['pointcloud_overlap_y_entry'].text()),
+                              float(pc['pointcloud_overlap_z_entry'].text()) ]
+        
+        rotate = (
+                float(pc['pointcloud_rotation_x_entry'].text()),
+                float(pc['pointcloud_rotation_y_entry'].text()),
+                float(pc['pointcloud_rotation_z_entry'].text())
+                )
+        config['rotation'] = rotate
+        
+        obj_funcs = ['sad','ssd','zssd','nssd','znssd']
+        config['obj_function'] = abj_funcs[rc['run_objf_entry'].currentIndex()]
+        
+        interp_types = ['nearest' , 'trilinear' , 'tricubic' ]
+        config['interp_type'] = interp_types[rc['run_iterp_type_entry'].currentIndex()]
+
+        config['displ_max'] = rc['run_max_displacement_entry'].value()
+
+        ndofs = [3,6,12]
+        config['num_src_dof'] = ndofs[rc['run_ndof_entry'].currentIndex()]
+
+        config['rigid_trans'] = [ int(rp['translate_X_entry'].text()) , 
+                                  int(rp['translate_Y_entry'].text()) ,
+                                  int(rp['translate_Z_entry'].text()) ]
+        config['subvol_npts'] = rc['run_points_in_subvolume_entry'].value()
+        config['subvol_size'] = int(pc['pointcloud_radius_entry'].text())
+
+
+        config_fname = os.path.join(outdir, 'dvcrun_config.json')
+        print ("DVC config:", config_fname)
+        print (config)
+
+        with open(config_fname, 'w') as f:
+            json.dump(config, f)
+    
+
+        controller = DVC()
+        controller.config_run(config_fname)
+
+        pointcloud = dvc.DataCloud()
+        # the points are in self.polydata_masker
+        pointcloud.loadPointCloudFromNumpy(roi[:10])
+        pointcloud.organize_cloud(controller.run)
+
+        #controller.run.run_dvc_cmd(pc)
         
         
     def loadIntoTableWidget(self, data):
@@ -2505,6 +2708,11 @@ class Window(QMainWindow, QtThreadedProgressBarInterface):
         writer.Write()
         self.extendMaskCheck.setEnabled(True)
         self.setStatusTip('Done')
+
+    def testRun(self):
+        '''run a DVC optimisation with the current parameters'''
+        self.run_control = dvc.RunControl()
+        self.data_cloud = dvc.DataCloud()
 
 #    def updateProgressBar(self, value):
 #        """
