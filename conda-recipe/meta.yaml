@@ -9,7 +9,7 @@ build:
     - CIL_VERSION
 
   entry_points:
-    - DVC_Interface = ccpi.dvc.apps.DVC_Interface:main
+    - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
 
   number: 7
   
