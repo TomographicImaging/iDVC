@@ -22,19 +22,16 @@ from distutils.core import setup
 from Cython.Build import cythonize
 from distutils.extension import Extension
 
-cil_version=os.environ['CIL_VERSION']
-if  cil_version == '':
-    print("Please set the environmental variable CIL_VERSION")
-    sys.exit(1)
+cil_version= '20.06'
 
-sourcefiles = ["src/vtkutils.pyx"]
+sourcefiles = ["src/image_data.py"]
 
-extensions = [Extension("ccpi.apps.vtkutils", sourcefiles)]
+extensions = [Extension("ccpi.apps.image_data", sourcefiles)]
 
 setup(
-      name="DVC configurator app",
-      description='CCPi DVC Configurator',
+      name="DVC App Prototype 1",
+      description='First Prototype for the CCPi DVC Configurator',
 	   version=cil_version,
-	   packages = {'ccpi','ccpi.apps'},
-      ext_modules=cythonize(extensions)
+	   packages = {'ccpi','ccpi.dvc.apps'},
+      ext_modules=extensions
 )
