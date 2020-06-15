@@ -1,5 +1,5 @@
 package:
-  name: ccpi-dvc-app
+  name: ccpi-dvc-app-prototype1
   version: {{ environ['CIL_VERSION'] }}
 
 
@@ -9,21 +9,18 @@ build:
     - CIL_VERSION
 
   entry_points:
-    - DVC_Configurator = ccpi.apps.DVC_configurator:main
-    - cast_tiff = ccpi.apps.cast_tiff:main
+    - DVC_Interface = ccpi.dvc.apps.DVC_Interface:main
 
   number: 7
   
 requirements:
   build:
-    - {{ pin_compatible('numpy', max_pin='x.x') }}
     - python 
     - setuptools
     - cython
     - numpy
  
   run:
-    - {{ pin_compatible('numpy', max_pin='x.x') }}
     - python
     - numpy
     - ccpi-viewer
