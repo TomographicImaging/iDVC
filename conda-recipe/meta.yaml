@@ -1,17 +1,17 @@
 package:
   name: ccpi-dvc-app-prototype1
-  version: {{ environ['CIL_VERSION'] }}
+  version: 20.06
 
 
 build:
   preserve_egg_dir: False
-  script_env:
-    - CIL_VERSION
+  
 
   entry_points:
     - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
+    #- DVC_Interface = ccpi.dvc.apps.dvc_interface:main
 
-  number: 7
+  number: 0
   
 requirements:
   build:
@@ -24,7 +24,6 @@ requirements:
     - python
     - numpy
     - ccpi-viewer
-#    - ccpi-dvc
     - natsort
     - docopt
     - tqdm

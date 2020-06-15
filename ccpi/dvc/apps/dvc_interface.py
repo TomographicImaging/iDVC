@@ -72,75 +72,7 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-import vtkutils
-
-from image_data import ImageDataCreator
-
-class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copied from dvc_configurator.py
-    '''vtkAlgorithm to read a point cloud from a NumPy array
-    '''
-    def __init__(self):
-        VTKPythonAlgorithmBase.__init__(self, nInputPorts=0, nOutputPorts=1)
-        self.__Points = vtk.vtkPoints()
-        self.__Vertices = vtk.vtkCellArray()
-        self.__Data = None
-
-
-    def GetPoints(self):
-        '''Returns the Points'''
-        return self.__Points
-    def SetData(self, value):
-        '''Sets the points from a numpy array or list'''
-        if not isinstance (value, np.ndarray) :
-            raise ValueError('Data must be a numpy array. Got', value)
-
-        if not np.array_equal(value,self.__Data):
-            self.__Data = value
-            self.Modified()
-
-    def GetData(self):
-        return self.__Data
-
-
-    def GetNumberOfPoints(self):
-        '''returns the number of points in the point cloud'''
-        return self.__Points.GetNumberOfPoints()
-
-
-    def FillInputPortInformation(self, port, info):
-        # if port == 0:
-        #    info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
-        return 1
-
-    def FillOutputPortInformation(self, port, info):
-        info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
-        return 1
-
-    def RequestData(self, request, inInfo, outInfo):
-
-        # print ("Request Data")
-        # image_data = vtk.vtkDataSet.GetData(inInfo[0])
-        pointPolyData = vtk.vtkPolyData.GetData(outInfo)
-        vtkPointCloud = self.__Points
-        for point in self.GetData():
-            # point = id, x, y, z
-            vtkPointCloud.InsertNextPoint( point[1] , point[2] , point[3])
-
-        self.FillCells()
-
-        pointPolyData.SetPoints(self.__Points)
-        pointPolyData.SetVerts(self.__Vertices)
-        return 1
-
-
-    def FillCells(self):
-        '''Fills the Vertices'''
-        vertices = self.__Vertices
-        number_of_cells = vertices.GetNumberOfCells()
-        for i in range(self.GetNumberOfPoints()):
-            if i >= number_of_cells:
-                vertices.InsertNextCell(1)
-                vertices.InsertCellPoint(i)
+from ccpi.dvc.apps import image_data
 
 
 class MainWindow(QMainWindow):
@@ -4221,7 +4153,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 
     def CreateSessionSelector(self, stage): 
         temp_folders = []
-
+        print ("TEMP FOLDER IS ", self.temp_folder)
         for r, d, f in os.walk(self.temp_folder):
             for file in f:
                 if '.zip' in file:
@@ -5258,7 +5190,9 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
                 groupBoxFormLayout)
 
 
-if __name__ == "__main__":
+def main():
+
+
     err = vtk.vtkFileOutputWindow()
     err.SetFileName("viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
@@ -5269,4 +5203,7 @@ if __name__ == "__main__":
     window.show()
 
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
 

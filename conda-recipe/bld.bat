@@ -12,8 +12,9 @@ copy "%RECIPE_DIR%\..\setup.py" "%SRC_DIR%\ccpi"
 cd %SRC_DIR%\ccpi
 
 :: issue cmake to create setup.py
-::cmake -G "NMake Makefiles" %RECIPE_DIR%\..\..\..\ -DBUILD_PYTHON_WRAPPERS=ON -DCONDA_BUILD=ON -DBUILD_CUDA=OFF -DCMAKE_BUILD_TYPE="Release" -DLIBRARY_LIB="%CONDA_PREFIX%\lib" -DLIBRARY_INC="%CONDA_PREFIX%" -DCMAKE_INSTALL_PREFIX="%PREFIX%\Library" 
+cmake -G "NMake Makefiles" %RECIPE_DIR%\..\..\..\ -DBUILD_PYTHON_WRAPPERS=OFF -DCONDA_BUILD=ON -DBUILD_CUDA=OFF -DCMAKE_BUILD_TYPE="Release" -DLIBRARY_LIB="%CONDA_PREFIX%\lib" -DLIBRARY_INC="%CONDA_PREFIX%" -DCMAKE_INSTALL_PREFIX="%PREFIX%\Library" 
 
+nmake install
 ::%PYTHON% setup-regularisers.py build_ext
 ::if errorlevel 1 exit 1
 
