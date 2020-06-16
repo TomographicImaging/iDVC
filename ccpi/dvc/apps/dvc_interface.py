@@ -20,7 +20,7 @@ from os.path import isfile, join
 from os import path
 
 import vtk
-from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor #
+# from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor #
 from ccpi.viewer.QCILRenderWindowInteractor import QCILRenderWindowInteractor #
 from ccpi.viewer import viewer2D, viewer3D # 
 from ccpi.viewer.QCILViewerWidget import QCILViewerWidget #
@@ -72,7 +72,8 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-from ccpi.dvc.apps import image_data
+from ccpi.dvc.apps.image_data import ImageDataCreator
+
 
 
 class MainWindow(QMainWindow):
@@ -83,9 +84,6 @@ class MainWindow(QMainWindow):
 
         self.temp_folder = None
 
-        self.CreateWorkingTempFolder()
-        self.CreateSessionSelector("new window")
-        
         self.setWindowTitle("DVC Interface")
         
         self.InitialiseSessionVars()
@@ -136,9 +134,10 @@ class MainWindow(QMainWindow):
         self.status = self.statusBar()
         self.status.showMessage("Ready")
              
-        # Window dimensions
+        # # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
-        self.setGeometry(geometry.width(), geometry.height(),1200, 600)
+        border = 100
+        self.setGeometry(border, border,geometry.width()-2*border, geometry.height()-2*border)
 
         self.e = ErrorObserver()
 
@@ -149,18 +148,22 @@ class MainWindow(QMainWindow):
         else:
             self.copy_files = False
 
+        self.CreateWorkingTempFolder()
+        self.CreateSessionSelector("new window")
+        
+
 
 #Setting up the session:
     def CreateWorkingTempFolder(self):
-        directories = [x for x in next(os.walk(working_directory))[1]]
+        # directories = [os.path.abspath(x) for x in next(os.walk(working_directory))[1]]
 
-        temp_folder = None
+        temp_folder = os.path.join(working_directory,'temp')
 
-        for dir in directories:
-            if 'temp' in dir:
-                temp_folder = dir
+        # for ddir in directories:
+        #     if os.path.join(working_directory,'temp') in [ddir]:
+        #         temp_folder = os.path.abspath(ddir)
         
-        if(not temp_folder):
+        if not os.path.isdir(temp_folder):
             temp_folder = os.mkdir("temp")
 
         self.temp_folder = temp_folder
@@ -4153,17 +4156,18 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 
     def CreateSessionSelector(self, stage): 
         temp_folders = []
-        print ("TEMP FOLDER IS ", self.temp_folder)
-        for r, d, f in os.walk(self.temp_folder):
-            for file in f:
-                if '.zip' in file:
-                     array = file.split("_")
-                     if(len(array)>1):
-                        name = array[-2] + " " + array[-1]
-                        name = name[:-4]
-                        temp_folders.append(name)
+        if self.temp_folder is not None:
+            for r, d, f in os.walk(self.temp_folder):
+                for file in f:
+                    if '.zip' in file:
+                        array = file.split("_")
+                        if(len(array)>1):
+                            name = array[-2] + " " + array[-1]
+                            name = name[:-4]
+                            temp_folders.append(name)
 
         if len(temp_folders) ==0 and stage =="new window":
+            # self.show()
             return
         elif len(temp_folders) == 0:
             self.e('', '', '')
@@ -4174,7 +4178,12 @@ which will later be doubled to get the pointcloud size and then input to the DVC
 
         else:     
             self.SessionSelectionWindow = CreateSessionSelectionWindow(self, temp_folders)
-            self.SessionSelectionWindow.show()
+            self.SessionSelectionWindow.finished.connect(self.do_something)
+            self.SessionSelectionWindow.open()
+
+    def do_something(self):
+        print ("do something")
+        self.NewSession()
 
     def NewSession(self):
         self.InitialiseSessionVars()
@@ -4542,11 +4551,11 @@ class CreateSettingsWindow(QDialog):
         self.close()
         #print(self.parent.settings.value("copy_files"))
 
-class CreateSessionSelectionWindow(QtWidgets.QWidget):
+class CreateSessionSelectionWindow(QtWidgets.QDialog):
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
     def __init__(self, parent, temp_folders):
-        super().__init__()
+        super(CreateSessionSelectionWindow, self).__init__(parent=parent)
 
         self.parent = parent
 
