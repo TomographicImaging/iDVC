@@ -73,6 +73,7 @@ import copy
 from distutils.dir_util import copy_tree
 
 from ccpi.dvc.apps import image_data
+#from image_data import ImageDataCreator
 
 
 class MainWindow(QMainWindow):
@@ -193,6 +194,7 @@ class MainWindow(QMainWindow):
         self.run_config_file = None
         self.mask_load = False
         self.raw_import_dialog = None
+        self.reg_load = False
           
     def UpdateClippingPlanes(self, interactor, event):
         try:
@@ -4154,14 +4156,15 @@ which will later be doubled to get the pointcloud size and then input to the DVC
     def CreateSessionSelector(self, stage): 
         temp_folders = []
         print ("TEMP FOLDER IS ", self.temp_folder)
-        for r, d, f in os.walk(self.temp_folder):
-            for file in f:
-                if '.zip' in file:
-                     array = file.split("_")
-                     if(len(array)>1):
-                        name = array[-2] + " " + array[-1]
-                        name = name[:-4]
-                        temp_folders.append(name)
+        if self.temp_folder is not None:
+            for r, d, f in os.walk(self.temp_folder):
+                for file in f:
+                    if '.zip' in file:
+                        array = file.split("_")
+                        if(len(array)>1):
+                            name = array[-2] + " " + array[-1]
+                            name = name[:-4]
+                            temp_folders.append(name)
 
         if len(temp_folders) ==0 and stage =="new window":
             return
