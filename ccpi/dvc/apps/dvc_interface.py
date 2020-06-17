@@ -342,8 +342,6 @@ class MainWindow(QMainWindow):
 
 #Loading the DockWidgets:
     def CreateDockWindows(self):
-
-        
         
         self.setTabPosition(QtCore.Qt.AllDockWidgetAreas,QTabWidget.North)
 
@@ -2384,7 +2382,6 @@ which will later be doubled to get the pointcloud size and then input to the DVC
     def createPointCloud(self, filename = "latest_pointcloud.roi", progress_callback=None, radius = None):
             ## Create the PointCloud
             print("Create point cloud")
-            #print(filename)
             # Mask is read from temp file
             tmpdir = tempfile.gettempdir() 
             reader = vtk.vtkMetaImageReader()
@@ -2395,8 +2392,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             spacing = reader.GetOutput().GetSpacing()
             dimensions = reader.GetOutput().GetDimensions()
 
-            print("read mask")
-            
+            #print("Dimensions ", dimensions)          
             
             if not self.pointCloudCreated:
                 print("Not created")
@@ -2537,8 +2533,10 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             polydata_masker.SetMaskValue(1)
             if self.erodeCheck.isChecked():
                 polydata_masker.SetInputConnection(1, erode.GetOutputPort())
+                mask_data = erode.GetOutput()
             else:
                 polydata_masker.SetInputConnection(1, reader.GetOutputPort())
+                mask_data = reader.GetOutput()
             
             ## Create a Transform to modify the PointCloud
             # Translation and Rotation
@@ -2582,32 +2580,32 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             elif orientation == SLICE_ORIENTATION_YZ:
                 transform.Translate(0, -dimensions[1]/2*spacing[1],-dimensions[2]/2*spacing[2])
 
-            #Translate pointcloud so that point 0 is in the cloud
-            if hasattr(self, 'point0'):
-                pointCloud_points = []
-                pointCloud_distances = []
-                print("Point 0: ", self.point0_loc)
-                for i in range (0, pointCloud.GetNumberOfPoints()):
-                    current_point = pointCloud.GetPoints().GetPoint(i)
-                    pointCloud_points.append(current_point)
-                    pointCloud_distances.append((self.point0_loc[0]-current_point[0])**2+(self.point0_loc[1]-current_point[1])**2+(self.point0_loc[2]-current_point[2])**2)
 
-                lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
+            #print(type(mask_data))
+            mm = mask_data.GetScalarComponentAsDouble(int(self.point0_loc[0]),int(self.point0_loc[1]), int(self.point0_loc[2]), 0)
 
-                print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
+            if int(mm) == 1: #if point0 is in the mask
 
-                pointCloud_Translation = (self.point0_loc[0]-pointCloud_points[lowest_distance_index][0],self.point0_loc[1]-pointCloud_points[lowest_distance_index][1],self.point0_loc[2]-pointCloud_points[lowest_distance_index][2])
+                #Translate pointcloud so that point 0 is in the cloud
+                if hasattr(self, 'point0'):
+                    pointCloud_points = []
+                    pointCloud_distances = []
+                    print("Point 0: ", self.point0_loc)
+                    for i in range (0, pointCloud.GetNumberOfPoints()):
+                        current_point = pointCloud.GetPoints().GetPoint(i)
+                        pointCloud_points.append(current_point)
+                        pointCloud_distances.append((self.point0_loc[0]-current_point[0])**2+(self.point0_loc[1]-current_point[1])**2+(self.point0_loc[2]-current_point[2])**2)
 
-                print("Translation from it is:", pointCloud_Translation)
+                    lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
 
-                #transform = vtk.vtkTransform()
-                transform.Translate(pointCloud_Translation)
+                    print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
 
-                # t_filter = vtk.vtkTransformFilter()
-                # # save reference
-                # t_filter.SetTransform(transform)
-                # t_filter.SetInputConnection(pointCloud.GetOutputPort())
+                    pointCloud_Translation = (self.point0_loc[0]-pointCloud_points[lowest_distance_index][0],self.point0_loc[1]-pointCloud_points[lowest_distance_index][1],self.point0_loc[2]-pointCloud_points[lowest_distance_index][2])
 
+                    print("Translation from it is:", pointCloud_Translation)
+
+                    #transform = vtk.vtkTransform()
+                    transform.Translate(pointCloud_Translation)
 
             
             if self.pointCloudCreated:
@@ -2619,12 +2617,16 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 self.t_filter = t_filter
             t_filter.SetTransform(transform)
             t_filter.SetInputConnection(pointCloud.GetOutputPort())
+
+            #print("Number of points after transform", t_filter.GetOutputPort().GetNumberOfPoints() )
             
             polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
             # polydata_masker.Modified()
             
             polydata_masker.Update()
             # print ("polydata_masker type", type(polydata_masker.GetOutputDataObject(0)))
+
+            #print("Points in mask now: ", polydata_masker)
 
             
 
@@ -2646,7 +2648,10 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             pointcloud = self.polydata_masker.GetOutputDataObject(0)
             #array = np.zeros((pointcloud.GetNumberOfPoints(), 4))
             array = []
-            count = 2
+            if int(mm) == 1: #if point0 is in the mask
+                count = 2
+            else:
+                count = 1
             for i in range(pointcloud.GetNumberOfPoints()):
                 pp = pointcloud.GetPoint(i)
                 distance = pp[0]-self.point0_loc[0] + pp[1]-self.point0_loc[1] + pp[2]-self.point0_loc[2]
