@@ -196,6 +196,7 @@ class MainWindow(QMainWindow):
         self.run_config_file = None
         self.mask_load = False
         self.raw_import_dialog = None
+        self.reg_load = False
           
     def UpdateClippingPlanes(self, interactor, event):
         try:
@@ -478,21 +479,21 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 self.create_progress_window("Copying", "Copying files", 100, None)
                 self.progress_window.setValue(1)
                 file_num = 0
-                for file in files:
-                    file_name = file.split("/")[-1]
-                    file_ext = file.split(".")[-1]
+                for f in files:
+                    file_name = f.split("/")[-1]
+                    file_ext = f.split(".")[-1]
                     if file_ext == "mhd":
                         new_file_dest = os.path.join(tempfile.tempdir, file_name[:-3] + "mha")
                     else:
                         new_file_dest = os.path.join(tempfile.tempdir, file_name)
                     
-                    copy_worker = Worker(self.copy_file, file, new_file_dest)
+                    copy_worker = Worker(self.copy_file, f, new_file_dest)
                     self.threadpool.start(copy_worker)
                     files[file_num] = new_file_dest
                     file_num+=1
                     count+=1
                     if len(files) == 1:
-                        self.show_copy_progress(file, new_file_dest, 1, file_ext, len(files))
+                        self.show_copy_progress(f, new_file_dest, 1, file_ext, len(files))
                     else:
                         self.progress_window.setValue(count/len(files)*100)
             else:
@@ -514,14 +515,14 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 # Make sure that the files are sorted 0 - end
                 filenames = natsorted(files)
                 # Basic test for tiff images
-                for file in filenames:
-                    ftype = imghdr.what(file)
+                for f in filenames:
+                    ftype = imghdr.what(f)
                     if ftype != 'tiff':
                         # A non-TIFF file has been loaded, present error message and exit method
                         self.e(
                             '', '', 'When reading multiple files, all files must TIFF formatted.')
                         error_title = "READ ERROR"
-                        error_text = "Error reading file: ({filename})".format(filename=file)
+                        error_text = "Error reading file: ({filename})".format(filename=f)
                         self.displayFileErrorDialog(message=error_text, title=error_title)
                         #self.CreateSessionSelector()
                         #return #prevents dialog showing for every single file by exiting the for loop
@@ -550,14 +551,14 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         else:
             shutil.copyfile(start_location, end_location)
 
-    def show_copy_progress(self, file, new_file_dest,ratio, file_type, num_files):
+    def show_copy_progress(self, _file, new_file_dest,ratio, file_type, num_files):
 
         while not os.path.exists(new_file_dest):
             time.sleep(0.001)
 
         if(file_type != "mhd"):
-            while os.path.getsize(file) != os.path.getsize(new_file_dest):
-                self.progress_window.setValue(int((float(os.path.getsize(new_file_dest))/float(os.path.getsize(file)*ratio))*100))
+            while os.path.getsize(_file) != os.path.getsize(new_file_dest):
+                self.progress_window.setValue(int((float(os.path.getsize(new_file_dest))/float(os.path.getsize(_file)*ratio))*100))
                 time.sleep(0.1)
                 
         self.progress_window.setValue(100)
@@ -3384,8 +3385,8 @@ which will later be doubled to get the pointcloud size and then input to the DVC
 
     def select_roi(self, label, next_button):
         dialogue = QFileDialog()
-        file = dialogue.getOpenFileName(self,"Select a roi")
-        array = file[0].split("/")
+        f = dialogue.getOpenFileName(self,"Select a roi")
+        array = f[0].split("/")
         self.roi = array[-1]
         label.setText(self.roi)
         if self.roi:
@@ -3707,12 +3708,12 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         points_list=[]
 
         for r, d, f in os.walk(directory):
-            for file in f:
-                if '.roi' in file:
-                    self.result_widgets['pc_entry'].addItem((file.split('_')[-1]).split('.')[0])
+            for _file in f:
+                if '.roi' in _file:
+                    self.result_widgets['pc_entry'].addItem((f.split('_')[-1]).split('.')[0])
 
-                if file.endswith(".disp"):
-                    file_name= file[:-5]
+                if f.endswith(".disp"):
+                    file_name= f[:-5]
                     file_path = directory + "/" + file_name
                     result = run_outcome(file_path)
                     self.result_list.append(result)
@@ -3768,48 +3769,6 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                         self.PointCloudWorker("load vectors", filename = None, disp_file = run_file, vector_dim = 3)
 
 
-
-#Generate Graphs Panel:
-    # def CreateGenerateGraphsPanel(self):
-    #     self.gen_graphs_panel = generateUIDockParameters(self, "6 - Generate Graphs")
-    #     dockWidget = self.gen_graphs_panel[0]
-    #     dockWidget.setObjectName("GenerateGraphsPanel")
-    #     groupBox = self.gen_graphs_panel[5]
-    #     groupBox.setTitle('Display Results')
-    #     formLayout = self.gen_graphs_panel[6]
-
-    #     #Create the widgets:
-    #     widgetno = 1
-
-    #     gg_widgets = {}
-
-    #     gg_widgets['dir_label'] = QLabel(groupBox)
-    #     gg_widgets['dir_label'].setText("Select directory:")
-    #     formLayout.setWidget(widgetno, QFormLayout.LabelRole, gg_widgets['dir_label'])
-
-    #     gg_widgets['dir_name_label'] = QLabel(groupBox)
-    #     gg_widgets['dir_name_label'].setText("")
-    #     formLayout.setWidget(widgetno, QFormLayout.FieldRole, gg_widgets['dir_name_label'])
-    #     widgetno += 1
-
-    #     gg_widgets['dir_browse'] = QPushButton(groupBox)
-    #     gg_widgets['dir_browse'].setText("Browse..")
-    #     formLayout.setWidget(widgetno, QFormLayout.FieldRole, gg_widgets['dir_browse'])
-    #     widgetno += 1
-
-    #     gg_widgets['gen_button'] = QPushButton(groupBox)
-    #     gg_widgets['gen_button'].setText("Display Graphs")
-    #     gg_widgets['gen_button'].setEnabled(False)
-    #     formLayout.setWidget(widgetno, QFormLayout.SpanningRole, gg_widgets['gen_button'])
-    #     widgetno += 1
-
-    #     #Button functions:
-    #     gg_widgets['dir_browse'].clicked.connect(lambda: self.select_directory(gg_widgets['dir_name_label'], [gg_widgets['gen_button']],self.results_folder,"Select a directory to save the run", "results"))
-    #     gg_widgets['gen_button'].clicked.connect(self.create_graphs_window)
-
-    #     self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
-    #     self.gg_widgets = gg_widgets
-
     def create_graphs_window(self, results_folder=None):
         print("Create graphs")
         self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
@@ -3826,9 +3785,9 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 result_list=[]
                 plot_titles = ["Objective Minimum", "Displacement in x", "Displacement in y", "Displacement in z", "Change in phi", "Change in theta", "Change in psi"]
                 #print(results_folder[0])
-                for file in listdir(self.results_folder):
-                    if file.endswith(".disp"):
-                        file_name= file[:-5]
+                for f in listdir(self.results_folder):
+                    if f.endswith(".disp"):
+                        file_name= f[:-5]
                         file_path = self.results_folder + "/" + file_name
                         result = run_outcome(file_path)
                         result_list.append(result)
@@ -4000,9 +3959,9 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         tempdir = shutil.move(tempfile.tempdir, 'temp/'+suffix_text)
         tempfile.tempdir = tempdir
 
-        fd, file = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
+        fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
 
-        with open(file, "w+") as tmp:
+        with open(f, "w+") as tmp:
             json.dump(self.config, tmp)
             print("Saving")
 
@@ -4036,13 +3995,13 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         for r, d, f in os.walk(directory):
             #for folder in d:
                 #zip.write(os.path.join(directory, folder),folder, compress_type=zipfile.ZIP_DEFLATED)
-            for file in f:
+            for _file in f:
                 if compress:
                     compress_type = zipfile.ZIP_DEFLATED
                 else:
                     compress_type = zipfile.ZIP_STORED
 
-                zip.write(os.path.join(r, file),os.path.join(r, file)[len(directory)+1:],compress_type=compress_type)#zipfile.ZIP_DEFLATED)
+                zip.write(os.path.join(r, _file),os.path.join(r, _file)[len(directory)+1:],compress_type=compress_type)#zipfile.ZIP_DEFLATED)
         zip.close()
 
         print("Finished zip")
@@ -4067,13 +4026,13 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         self.SaveWindow.close()
         QMainWindow.closeEvent(self, event)
         
-    def show_zip_progress(self, file, new_file_dest,ratio):
+    def show_zip_progress(self, folder, new_file_dest,ratio):
         print("in show zip progress")
         
         self.progress_window.setValue(10)
 
         temp_size = 0
-        for dirpath, dirnames, filenames in os.walk(file):
+        for dirpath, dirnames, filenames in os.walk(folder):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
                     #print(fp)
@@ -4097,12 +4056,12 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                     #zip_size = 0
         #print("Finished showing zip progress")
     
-    def show_export_progress(self, file, new_file_dest):
+    def show_export_progress(self, folder, new_file_dest):
         
         self.progress_window.setValue(10)
 
         temp_size = 0
-        for dirpath, dirnames, filenames in os.walk(file):
+        for dirpath, dirnames, filenames in os.walk(folder):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
                     #print(fp)
@@ -4127,7 +4086,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 time.sleep(0.01)
 
                 exp_size = 0
-                for dirpath, dirnames, filenames in os.walk(file):
+                for dirpath, dirnames, filenames in os.walk(folder):
                     for f in filenames:
                         fp = os.path.join(dirpath, f)
                         #print(fp)
@@ -4158,9 +4117,9 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         temp_folders = []
         if self.temp_folder is not None:
             for r, d, f in os.walk(self.temp_folder):
-                for file in f:
-                    if '.zip' in file:
-                        array = file.split("_")
+                for _file in f:
+                    if '.zip' in _file:
+                        array = _file.split("_")
                         if(len(array)>1):
                             name = array[-2] + " " + array[-1]
                             name = name[:-4]
@@ -4200,12 +4159,12 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         selected_folder = ""
 
         for r, d, f in os.walk(self.temp_folder):
-            for file in f:
-                if date_and_time + '.zip' in file:
+            for _file in f:
+                if date_and_time + '.zip' in _file:
                     
-                    selected_folder_name = file
+                    selected_folder_name = _file
                     #print(selected_folder_name)
-                    selected_folder =  os.path.join(self.temp_folder, file)
+                    selected_folder =  os.path.join(self.temp_folder, _file)
                     break
 
         progress_callback.emit(50)
@@ -4219,10 +4178,10 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         mask_folder_exists = False
         results_folder_exists = False
         for r, d, f in os.walk(loaded_tempdir):
-            for dir in d:
-                if 'Masks' in dir:
+            for directory in d:
+                if 'Masks' in directory:
                     mask_folder_exists = True
-                if 'Results' in dir:
+                if 'Results' in directory:
                     results_folder_exists = True
 
         if not mask_folder_exists:
@@ -4246,10 +4205,10 @@ which will later be doubled to get the pointcloud size and then input to the DVC
  
         json_filename = date_and_time + ".json"
         for r, d, f in os.walk(loaded_tempdir):
-            for file in f:
-                if json_filename in file:
+            for _file in f:
+                if json_filename in _file:
                     #print(file)
-                    selected_file = os.path.join(loaded_tempdir, file)
+                    selected_file = os.path.join(loaded_tempdir, _file)
 
         with open(selected_file) as tmp:
             self.config = json.load(tmp)
@@ -4283,9 +4242,9 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         pointcloud_files = []
         #get list of pointcloud files:
         for r, d, f in os.walk(tempfile.tempdir):
-            for file in f:
-                if '.roi' in file:
-                    pointcloud_files.append(file)
+            for _file in f:
+                if '.roi' in _file:
+                    pointcloud_files.append(_file)
         if len(pointcloud_files) >0:
             self.pointcloud_parameters['pointcloudList'].addItems(pointcloud_files)
             self.pointcloud_parameters['pointcloudList'].setEnabled(True)
@@ -4449,14 +4408,14 @@ Please move the file back to this location and reload the session, select a diff
             #get list of mask files:
             #print(mask_folder)
             for r, d, f in os.walk(mask_folder):
-                for file in f:
-                    if '.mha' in file:
+                for _file in f:
+                    if '.mha' in _file:
                         #array = file.split("_")
                         #if(len(array)>1):
                             #name = array[-2] + " " + array[-1]
                             #name= array[-1]
                             #name = name[:-4]
-                        mask_files.append(file)
+                        mask_files.append(_file)
             self.mask_parameters['masksList'].addItems(mask_files)
             self.mask_parameters['masksList'].setEnabled(True)
             self.mask_parameters['masksList'].setCurrentText("latest_selection.mha")
@@ -4469,8 +4428,8 @@ Please move the file back to this location and reload the session, select a diff
         results_directory = os.path.join(tempfile.tempdir, "Results")
 
         for r, d, f in os.walk(results_directory):
-            for dir in d:
-                self.result_widgets['run_entry'].addItem(dir.split('_')[-1])
+            for directory in d:
+                self.result_widgets['run_entry'].addItem(directory.split('_')[-1])
 
         self.reg_load = False
         if 'point0' in self.config:
@@ -4503,8 +4462,6 @@ Please move the file back to this location and reload the session, select a diff
             #     self.config['point0'] = self.point0_loc
             # else:
             #     self.config['point0'] = None
-
-            
 
 
 
@@ -5200,8 +5157,6 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
 
 
 def main():
-
-
     err = vtk.vtkFileOutputWindow()
     err.SetFileName("viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
