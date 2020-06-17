@@ -1,8 +1,10 @@
 import sys
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PyQt5.QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
+from PyQt5.QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
+from PyQt5.QtWidgets import QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
+from PyQt5.QtWidgets import QProgressDialog, QDialogButtonBox
+from PyQt5.QtGui import QRegExpValidator, QKeySequence, QCloseEvent
 import os
 import time
 import numpy as np
@@ -75,6 +77,72 @@ from distutils.dir_util import copy_tree
 #from ccpi.dvc.apps import image_data
 from image_data import ImageDataCreator
 
+class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copied from dvc_configurator.py
+    '''vtkAlgorithm to read a point cloud from a NumPy array
+    '''
+    def __init__(self):
+        VTKPythonAlgorithmBase.__init__(self, nInputPorts=0, nOutputPorts=1)
+        self.__Points = vtk.vtkPoints()
+        self.__Vertices = vtk.vtkCellArray()
+        self.__Data = None
+
+
+    def GetPoints(self):
+        '''Returns the Points'''
+        return self.__Points
+    def SetData(self, value):
+        '''Sets the points from a numpy array or list'''
+        if not isinstance (value, np.ndarray) :
+            raise ValueError('Data must be a numpy array. Got', value)
+
+        if not np.array_equal(value,self.__Data):
+            self.__Data = value
+            self.Modified()
+
+    def GetData(self):
+        return self.__Data
+
+
+    def GetNumberOfPoints(self):
+        '''returns the number of points in the point cloud'''
+        return self.__Points.GetNumberOfPoints()
+
+
+    def FillInputPortInformation(self, port, info):
+        # if port == 0:
+        #    info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
+        return 1
+
+    def FillOutputPortInformation(self, port, info):
+        info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
+        return 1
+
+    def RequestData(self, request, inInfo, outInfo):
+
+        # print ("Request Data")
+        # image_data = vtk.vtkDataSet.GetData(inInfo[0])
+        pointPolyData = vtk.vtkPolyData.GetData(outInfo)
+        vtkPointCloud = self.__Points
+        for point in self.GetData():
+            # point = id, x, y, z
+            vtkPointCloud.InsertNextPoint( point[1] , point[2] , point[3])
+
+        self.FillCells()
+
+        pointPolyData.SetPoints(self.__Points)
+        pointPolyData.SetVerts(self.__Vertices)
+        return 1
+
+
+    def FillCells(self):
+        '''Fills the Vertices'''
+        vertices = self.__Vertices
+        number_of_cells = vertices.GetNumberOfCells()
+        for i in range(self.GetNumberOfPoints()):
+            if i >= number_of_cells:
+                vertices.InsertNextCell(1)
+                vertices.InsertCellPoint(i)
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -123,13 +191,12 @@ class MainWindow(QMainWindow):
 
         #Export Session
         export_action = QAction("Export Session", self)
-        #exit_action.setShortcut(QKeySequence.Quit)
         export_action.triggered.connect(self.export_session)
         self.file_menu.addAction(export_action)
 
         # Exit QAction
         exit_action = QAction("Exit", self)
-        #exit_action.setShortcut(QKeySequence.Quit)
+        exit_action.setShortcut(QKeySequence.Quit)
         exit_action.triggered.connect(self.close)
         self.file_menu.addAction(exit_action)
 
@@ -2541,9 +2608,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 # t_filter.SetTransform(transform)
                 # t_filter.SetInputConnection(pointCloud.GetOutputPort())
 
-                
 
-        
             
             if self.pointCloudCreated:
                 t_filter = self.t_filter
@@ -2592,6 +2657,8 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                 else:
                     array.append((count, *pp))
                     count += 1
+
+            print(array[0])
             np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
             self.roi = os.path.join(tempfile.tempdir, filename)
             print(self.roi)
@@ -3708,10 +3775,10 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         for r, d, f in os.walk(directory):
             for _file in f:
                 if '.roi' in _file:
-                    self.result_widgets['pc_entry'].addItem((f.split('_')[-1]).split('.')[0])
+                    self.result_widgets['pc_entry'].addItem((_file.split('_')[-1]).split('.')[0])
 
-                if f.endswith(".disp"):
-                    file_name= f[:-5]
+                if _file.endswith(".disp"):
+                    file_name= _file[:-5]
                     file_path = directory + "/" + file_name
                     result = run_outcome(file_path)
                     self.result_list.append(result)
@@ -5153,6 +5220,9 @@ def main():
     err = vtk.vtkFileOutputWindow()
     err.SetFileName("viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
+
+    # log = open("dvc_interface.log", "a")
+    # sys.stdout = log
 
     app = QtWidgets.QApplication([])
 
