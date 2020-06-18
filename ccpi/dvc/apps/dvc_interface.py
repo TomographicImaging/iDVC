@@ -231,7 +231,7 @@ class MainWindow(QMainWindow):
         if(not temp_folder):
             temp_folder = os.mkdir("temp")
 
-        self.temp_folder = temp_folder
+        self.temp_folder = os.path.abspath(temp_folder)
         tempfile.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
 
         os.mkdir(os.path.join(tempfile.tempdir, "Masks")) # Creates folder in tempdir to save mask files in
@@ -544,8 +544,8 @@ and then input to the DVC code.")
                 self.progress_window.setValue(1)
                 file_num = 0
                 for f in files:
-                    file_name = f.split("/")[-1]
-                    file_ext = f.split(".")[-1]
+                    file_name = os.path.basename(f)
+                    file_ext = file_name.split(".")[-1]
                     if file_ext == "mhd":
                         new_file_dest = os.path.join(tempfile.tempdir, file_name[:-3] + "mha")
                     else:
@@ -573,7 +573,7 @@ and then input to the DVC code.")
                     #print(self.vis_widget_2D.image_file)
                     self.image[image_var].append(files[0])
                     #print(self.vis_widget_2D.image_file)
-                label.setText(files[0].split("\\")[-1])
+                label.setText(os.path.basename(files[0]))
                 
             else:
                 # Make sure that the files are sorted 0 - end
@@ -594,7 +594,7 @@ and then input to the DVC code.")
                     self.image[image_var] = filenames
                 else:
                     self.image[image_var]=filenames
-                label.setText(self.image[image_var][0].split("/")[-1] + " + " + str(len(files)) + " more files.")
+                label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
             
             next_button.setEnabled(True)
             #print(self.vis_widget_2D.image_file)
@@ -724,16 +724,17 @@ and then input to the DVC code.")
                 #first we need to set the z slice -> go to slice self.config['point0'][2]
                 self.createPoint0(self.config['point0'])
                 rp = self.registration_parameters
-                rp['translate_X_entry'].setText(str(self.config['reg_translation'][0]*-1))
-                rp['translate_Y_entry'].setText(str(self.config['reg_translation'][1]*-1))
-                rp['translate_Z_entry'].setText(str(self.config['reg_translation'][2]*-1))
-                self.translate = vtk.vtkImageTranslateExtent()
-                self.translate.SetTranslation(self.config['reg_translation'])
-                self.registration_parameters['register_on_selection_check'].setChecked(self.config['reg_sel'] )
-                self.registration_parameters['register_on_selection_check'].setEnabled(True )
-                self.registration_parameters['registration_box_size_entry'].setValue(self.config['reg_sel_size'])
-                self.registration_parameters['registration_box_size_entry'].setEnabled(True)
-                self.displayRegistrationSelection()
+                if self.config['reg_translation'] is not None:
+                    rp['translate_X_entry'].setText(str(self.config['reg_translation'][0]*-1))
+                    rp['translate_Y_entry'].setText(str(self.config['reg_translation'][1]*-1))
+                    rp['translate_Z_entry'].setText(str(self.config['reg_translation'][2]*-1))
+                    self.translate = vtk.vtkImageTranslateExtent()
+                    self.translate.SetTranslation(self.config['reg_translation'])
+                    self.registration_parameters['register_on_selection_check'].setChecked(self.config['reg_sel'] )
+                    self.registration_parameters['register_on_selection_check'].setEnabled(True )
+                    self.registration_parameters['registration_box_size_entry'].setValue(self.config['reg_sel_size'])
+                    self.registration_parameters['registration_box_size_entry'].setEnabled(True)
+                    self.displayRegistrationSelection()
                 self.displayViewer(registration_open = False)
                 self.reg_load = False
 
@@ -1945,7 +1946,7 @@ and then input to the DVC code.")
         mask = dialogue.getOpenFileName(self,"Select a mask")[0]
         if mask:
             if ".mha" in mask:
-                filename = mask.split("/")[-1]
+                filename = os.path.basename(mask)
                 shutil.copyfile(mask, os.path.join(tempfile.tempdir, "Masks/" + filename))
                 self.mask_parameters["masksList"].addItem(filename)
                 self.mask_parameters["masksList"].setCurrentText(filename)
@@ -2319,8 +2320,9 @@ and then input to the DVC code.")
             #self.roi = array[-1]
             #label.setText(self.roi)
         if self.copy_files:
-            filename = self.roi.split("/")[-1]
+            filename = os.path.basename(self.roi)
             shutil.copyfile(self.roi, os.path.join(tempfile.tempdir, filename))
+            self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             self.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.pointcloud_parameters['pointcloudList'].setCurrentText(filename)
 
@@ -2669,7 +2671,7 @@ and then input to the DVC code.")
 
             print(array[0])
             np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
-            self.roi = os.path.join(tempfile.tempdir, filename)
+            self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             print(self.roi)
             print("finished making the cloud")
 
@@ -2700,7 +2702,7 @@ and then input to the DVC code.")
         progress_callback.emit(80)
 
         print(pointcloud_file)
-        pointcloud_file = pointcloud_file.split("\\")[-1]
+        pointcloud_file = os.path.basename(pointcloud_file)
         print(self.pointCloud_details)
         print(pointcloud_file)
 
@@ -3446,12 +3448,12 @@ and then input to the DVC code.")
         selection = dialogue.getExistingDirectory(self,title)
         folder = []
         folder.append(selection)
-        label.setText(folder[0][len(working_directory):])
+        label.setText(os.path.basename(folder[0]))
         if folder[0]:
             for button in next_buttons:
                 button.setEnabled(True)
             if(type == "run"):
-                self.run_folder = [folder[0][len(working_directory):]]
+                self.run_folder = [folder[0]]
             elif(type == "results"):
                 self.results_folder = folder
         #print(self.run_folder)
@@ -3460,9 +3462,8 @@ and then input to the DVC code.")
     def select_roi(self, label, next_button):
         dialogue = QFileDialog()
         f = dialogue.getOpenFileName(self,"Select a roi")
-        array = f[0].split("/")
-        self.roi = array[-1]
-        label.setText(self.roi)
+        self.roi = f[0]
+        label.setText(os.path.basename(self.roi))
         if self.roi:
             next_button.setEnabled(True)
 
@@ -3580,12 +3581,12 @@ and then input to the DVC code.")
         if(self.image_copied[0]):
             self.reference_file = self.dvc_input_image[0][0]
         else:
-            self.reference_file = self.dvc_input_image[0][0][len(working_directory) + 1:]
+            self.reference_file = self.dvc_input_image[0][0]
 
         if(self.image_copied[1]):
             self.correlate_file = self.dvc_input_image[1][0]
         else:
-            self.correlate_file = self.dvc_input_image[1][0][len(working_directory) + 1:]
+            self.correlate_file = self.dvc_input_image[1][0]
 
         run_config = {}
         run_config['points'] = self.points
@@ -3612,7 +3613,7 @@ and then input to the DVC code.")
             run_config['rigid_trans']= "0.0 0.0 0.0"
 
 
-        self.run_folder = os.path.join(results_folder, folder_name)
+        self.run_folder = os.path.abspath(os.path.join(results_folder, folder_name))
         run_config['run_folder']= self.run_folder
 
         suffix_text = "run_config"
@@ -3835,7 +3836,7 @@ and then input to the DVC code.")
                             if result.subvol_points == subvol_points:
                                 print("SUB MATCH")
                                 run_file = result.disp_file_name
-                                run_file = results_folder + "\\" + run_file.split('/')[-1]
+                                run_file = results_folder + "\\" + os.path.basename(run_file)
 
                     if(self.result_widgets['vec_entry'].currentText() == "2D"):
                         self.PointCloudWorker("load vectors", filename = self.roi, disp_file = run_file, vector_dim = 2)
@@ -3915,14 +3916,12 @@ and then input to the DVC code.")
             image = [[],[]]
             for i in self.image[0]:
                 if self.image_copied[0]:
-                    array = i.split("\\")
-                    image[0].append(array[-1])
+                    image[0].append(os.path.basename(i))
                 else:
                     image[0].append(i)
             for j in self.image[1]:
                 if self.image_copied[1]:
-                    array=j.split("\\")
-                    image[1].append(array[-1])
+                    image[1].append(os.path.basename(j))
                 else:
                    image[1].append(j)
 
@@ -3935,34 +3934,37 @@ and then input to the DVC code.")
             dvc_input_image = [[],[]]
             for i in self.dvc_input_image[0]:
                 if self.image_copied[0]:
-                    array = i.split("\\")
-                    dvc_input_image[0].append(array[-1])
+                    dvc_input_image[0].append(os.path.basename(i))
                 else:
                     dvc_input_image[0].append(i)
             for j in self.dvc_input_image[1]:
                 if self.image_copied[1]:
-                    array=j.split("\\")
-                    dvc_input_image[1].append(array[-1])
+                    dvc_input_image[1].append(os.path.basename(j))
                 else:
                    dvc_input_image[1].append(j)
             self.config['dvc_input_image']=dvc_input_image
 
             if (self.roi):
-                if self.roi.startswith("temp\\"):
-                    if "Results/_" in self.roi:
-                        self.roi = self.roi[self.roi.find("Results/"):]
-                    
-                    else:
-                        print(self.roi)
-                        print("starts with temp")
-                        array = self.roi.split("\\")
-                        self.roi  = array[-1]
+                if tempfile.tempdir in self.roi:
+                    print("pointcloud in temp dir")
+                    self.config['roi_file'] =  self.roi[len(os.path.abspath(tempfile.tempdir))+1:]
+                    print(self.config['roi_file'])
+                    self.config['roi_ext'] = False
+                else:
+                    self.config['roi_file'] = self.roi
+                    self.config['roi_ext'] = True 
+            else:
+                self.config['roi_file'] = self.roi 
+
+
 
             print("Resulting roi", self.roi)
 
-            self.config['roi_file'] = self.roi 
+            
 
         if hasattr(self, 'mask_file'):
+            print("Mask")
+            print(self.mask_file)
             self.config['mask_file']=self.mask_file
             self.config['mask_details']=self.mask_details
         
@@ -4303,8 +4305,8 @@ and then input to the DVC code.")
             self.pointCloudLoaded = self.config['pointcloud_loaded']
             if self.pointCloudLoaded:
                 self.roi = self.config['roi_file']
-                if  "Results/_" in self.roi or not "/" in self.roi:
-                    self.roi = os.path.join(tempfile.tempdir, self.roi)
+                if  not self.config['roi_ext']:
+                    self.roi = os.path.abspath(os.path.join(tempfile.tempdir, self.roi))
 
         #pointcloud files could still exist even if there wasn't a pointcloud displayed when the session was saved.
         pointcloud_files = []
@@ -4332,7 +4334,7 @@ and then input to the DVC code.")
 
                     #save paths to images to variable
                     if self.config['image_copied'][j]:
-                        path = os.path.join(tempfile.tempdir, i)
+                        path = os.path.abspath(os.path.join(tempfile.tempdir, i))
                         print("The path is")
                         print(path)
                         self.image[j].append(path)
@@ -4353,7 +4355,7 @@ Please move the file back to this location and reload the session, select a diff
 
                     #save paths to images to variable
                     if self.config['image_copied'][j]:
-                        path = os.path.join(tempfile.tempdir, i)
+                        path = os.path.abspath(os.path.join(tempfile.tempdir, i))
                         print("The DVC input path is")
                         print(path)
                         self.dvc_input_image[j].append(path)
@@ -4371,14 +4373,14 @@ Please move the file back to this location and reload the session, select a diff
             
              # Set labels to display file names:
             if len(self.config['image'][0])>1:
-                self.si_widgets['ref_file_label'].setText(self.config['image'][0][0].split("/")[-1] + " + " + str(len(self.config['image'][0])-1) + " more files.")
+                self.si_widgets['ref_file_label'].setText(os.path.basename(self.config['image'][0][0]) + " + " + str(len(self.config['image'][0])-1) + " more files.")
             else:
-                self.si_widgets['ref_file_label'].setText(self.config['image'][0][0].split("/")[-1])
+                self.si_widgets['ref_file_label'].setText(os.path.basename(self.config['image'][0][0]))
             
             if len(self.config['image'][1])>1:
-                self.si_widgets['cor_file_label'].setText(self.config['image'][1][0].split("/")[-1] + " + " + str(len(self.config['image'][1])-1) + " more files.")
+                self.si_widgets['cor_file_label'].setText(os.path.basename(self.config['image'][1][0]) + " + " + str(len(self.config['image'][1])-1) + " more files.")
             elif self.config['image'][1]:
-                self.si_widgets['cor_file_label'].setText(self.config['image'][1][0].split("/")[-1])                      
+                self.si_widgets['cor_file_label'].setText(os.path.basename(self.config['image'][1][0]))                      
 
             #self.roi = self.config['roi_file']
         
