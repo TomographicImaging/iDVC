@@ -48,8 +48,6 @@ from vtk.util import numpy_support
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.numpy_interface import algorithms as algs
 
-from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
-
 import ccpi.viewer.viewerLinker as vlink
 
 working_directory = os.getcwd()
@@ -72,9 +70,9 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-from ccpi.dvc.apps.image_data import ImageDataCreator
+from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-
+__version__ = '1.0.0'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3503,15 +3501,8 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         print("DVC in: ", self.dvc_input_image)
             
         
-        if(self.image_copied[0]):
-            self.reference_file = self.dvc_input_image[0][0]
-        else:
-            self.reference_file = self.dvc_input_image[0][0][len(working_directory) + 1:]
-
-        if(self.image_copied[1]):
-            self.correlate_file = self.dvc_input_image[1][0]
-        else:
-            self.correlate_file = self.dvc_input_image[1][0][len(working_directory) + 1:]
+        self.reference_file = self.dvc_input_image[0][0]
+        self.correlate_file = self.dvc_input_image[1][0]
 
         run_config = {}
         run_config['points'] = self.points
@@ -3553,7 +3544,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         
 
     def run_external_code(self):
-        #print("About to run dvc")
+        print("About to run dvc")
 
         self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
         self.progress_window.setValue(1)
@@ -3565,14 +3556,12 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         self.process.readyRead.connect(lambda: self.update_progress(exe = True))
         self.process.finished.connect(self.finished_run)
 
-        #python_file = os.path.abspath("dvc_runner.exe")
-        python_file = os.path.abspath("dvc_runner.py")
-        #self.process.start(python_file, [self.run_config_file])
-
-        pythonCommand = "python " + "dvc_runner.py" + " " + self.run_config_file
-
-        #print (pythonCommand)
-
+        # python_file = os.path.abspath("dvc_runner")
+        # self.process.start(python_file, [self.run_config_file])
+        
+        python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
+        pythonCommand = "python " + python_file + " " + self.run_config_file
+        print (pythonCommand)
         self.process.start(pythonCommand)
 
         self.cancelled = False
@@ -3583,9 +3572,13 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         if exe:
             line_b = self.process.readLine()
             line = str(line_b,"utf-8")
-            #print(line)
+            print(line)
             if len(line) > 4:
-                num = float(line[:3]) #weird delay means isn't correct
+                try:
+                    num = float(line[:3]) #weird delay means isn't correct
+                except ValueError as ve:
+                    print(ve, file=sys.stderr)
+                    num = 0
                 if num > self.progress_window.value() and self.progress_window.value()<99:
                     self.progress_window.setValue(num)
         else:
@@ -3710,10 +3703,10 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         for r, d, f in os.walk(directory):
             for _file in f:
                 if '.roi' in _file:
-                    self.result_widgets['pc_entry'].addItem((f.split('_')[-1]).split('.')[0])
+                    self.result_widgets['pc_entry'].addItem((_file.split('_')[-1]).split('.')[0])
 
-                if f.endswith(".disp"):
-                    file_name= f[:-5]
+                if _file.endswith(".disp"):
+                    file_name= _file[:-5]
                     file_path = directory + "/" + file_name
                     result = run_outcome(file_path)
                     self.result_list.append(result)
@@ -3733,8 +3726,16 @@ which will later be doubled to get the pointcloud size and then input to the DVC
         print("Number of results:")
         if hasattr(self, 'result_list'):
             print(len(self.result_list))
-            radius = int(self.result_widgets['pc_entry'].currentText())
-            subvol_points = int(self.result_widgets['subvol_entry'].currentText())
+            try:
+                radius = int(self.result_widgets['pc_entry'].currentText())
+            except ValueError as ve:
+                self.warningDialog("Invalid input at Pointcloud Radius", "Error")
+                return
+            try:
+                subvol_points = int(self.result_widgets['subvol_entry'].currentText())
+            except ValueError as ve:
+                self.warningDialog("Invalid input at Pointcloud Radius", "Error")
+                return
 
             if(subvol_points == ""):
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
@@ -4837,7 +4838,8 @@ class GraphsWindow(QMainWindow):
              
         # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
-        self.setGeometry(geometry.width() * 0.8, geometry.height() * 0.8, 1200, 600)
+
+        self.setGeometry(geometry.width() * 0.2, geometry.height() * 0.2, 1200, 600)
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
   
 class ResultsWidget(QtWidgets.QWidget):

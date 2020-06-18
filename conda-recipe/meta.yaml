@@ -1,7 +1,7 @@
 package:
   name: ccpi-dvc-app-prototype1
-  version: 20.06
-
+  version: 20.06.8
+# conda build ... -c file://my_local_channel --override-channels
 
 build:
   preserve_egg_dir: False
@@ -9,9 +9,9 @@ build:
 
   entry_points:
     - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
-    #- DVC_Interface = ccpi.dvc.apps.dvc_interface:main
+    - dvc_runner = ccpi.dvc.apps.dvc_runner:main
 
-  number: 0
+  number: 2
   
 requirements:
   build:
