@@ -206,7 +206,7 @@ class MainWindow(QMainWindow):
              
         # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
-        self.setGeometry(geometry.width(), geometry.height(),1200, 600)
+        self.setGeometry(100,100, geometry.width()-200, geometry.height()-200)
 
         self.e = ErrorObserver()
 
@@ -262,6 +262,7 @@ class MainWindow(QMainWindow):
         self.mask_load = False
         self.raw_import_dialog = None
         self.reg_load = False
+        self.loading_session = False 
           
     def UpdateClippingPlanes(self, interactor, event):
         try:
@@ -409,12 +410,16 @@ class MainWindow(QMainWindow):
         self.help_text = ["'raw' and 'npy' formats are recommended.\n You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append("Click 'Select point 0' to select a point and region for registering the image.\n It is recommended to select 'Register on Selection' \
-and select a size smaller than 1000.\n Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from.")
+and select a size smaller than 1000.\n Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m. \n Then click 'Stop Registration' \
+and you can switch orientation using 'x, y, z', and then click 'Start Registration' again to register in another plane. \n Once you are satisfied with the registration, make sure the point 0 \
+you have selected is the point you want the DVC to start from.")
         
-        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand.")
+        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand. \n \
+When you are happy with your region click 'Create Mask'.")
 
-        self.help_text.append("If you load a pointcloud from a file, you must still specify the pointcloud radius on this panel, \
-which will later be doubled to get the pointcloud size and then input to the DVC code.")
+        self.help_text.append("If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0. \
+Otherwise, this will not happen. \n If you load a pointcloud from a file, you must still specify the pointcloud radius on this panel, which will later be doubled to get the pointcloud size \
+and then input to the DVC code.")
 
         self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results. You can access these options under 'File'.")
 
@@ -433,9 +438,6 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             self.help_label.setText(self.help_text[panel_no])
         
 
-
-
-
 #Select Image Panel:
     def CreateSelectImagePanel(self):
         self.select_image_panel = generateUIDockParameters(self, "1 - Select Image")
@@ -448,7 +450,6 @@ which will later be doubled to get the pointcloud size and then input to the DVC
 
         dockWidget.visibilityChanged.connect(partial(self.displayHelp,panel_no = 0))
 
-        
 
         #Create the widgets:
 
@@ -1169,6 +1170,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
                 print ("Start Registration Checked")
+                self.centerOnPointZero()
                 rp['register_on_selection_check'].setEnabled(True)
                 rp['start_registration_button'].setText("Stop Registration")
 
@@ -1193,6 +1195,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             else:
                 print ("Start Registration Unchecked")
                 rp['start_registration_button'].setText("Start Registration")
+                self.centerOnPointZero()
                 # hide registration box
                 #if hasattr(self, 'registration_box'):
                     #self.registration_box['actor'].VisibilityOff()
@@ -2648,6 +2651,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             pointcloud = self.polydata_masker.GetOutputDataObject(0)
             #array = np.zeros((pointcloud.GetNumberOfPoints(), 4))
             array = []
+            print("Points:", pointcloud.GetNumberOfPoints())
             if int(mm) == 1: #if point0 is in the mask
                 count = 2
             else:
@@ -3839,15 +3843,14 @@ which will later be doubled to get the pointcloud size and then input to the DVC
                         self.PointCloudWorker("load vectors", filename = None, disp_file = run_file, vector_dim = 3)
 
 
-    def create_graphs_window(self, results_folder=None):
+    def create_graphs_window(self):
         print("Create graphs")
-        self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
-        print(self.results_folder)
-        print(type(self.results_folder))
-        # if results_folder == None:
-        #     results_folder = self.results_folder
-        if hasattr(self, 'results_folder'):
-            if self.results_folder is not None:
+        if self.result_widgets['run_entry'].currentText() is not "":
+            self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+        else:
+            self.results_folder = None
+
+        if self.results_folder is not None:
                 self.graph_window = GraphsWindow(self)
                 self.graph_window.show()
 
@@ -4492,6 +4495,9 @@ Please move the file back to this location and reload the session, select a diff
 
         results_directory = os.path.join(tempfile.tempdir, "Results")
 
+        for i in range(self.result_widgets['run_entry'].count()):
+            self.result_widgets['run_entry'].removeItem(i)
+
         for r, d, f in os.walk(results_directory):
             for directory in d:
                 self.result_widgets['run_entry'].addItem(directory.split('_')[-1])
@@ -4902,7 +4908,7 @@ class GraphsWindow(QMainWindow):
              
         # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
-        self.setGeometry(geometry.width() * 0.8, geometry.height() * 0.8, 1200, 600)
+        self.setGeometry(100,100, geometry.width()-200, geometry.height()-200)
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
   
 class ResultsWidget(QtWidgets.QWidget):
