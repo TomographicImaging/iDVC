@@ -65,7 +65,7 @@ class ImageDataCreator():
             create_progress_window(self,"Converting", "Converting Image")
             image_worker = Worker(load_npy_image,image, image_data, info_var)     
 
-        elif file_extension in ['tif']:
+        elif file_extension in ['tif', 'tiff']:
             reader = vtk.vtkTIFFReader()
             reader.AddObserver("ErrorEvent", self.e)
             create_progress_window(self,"Converting", "Converting Image")

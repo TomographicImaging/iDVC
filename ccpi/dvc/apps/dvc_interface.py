@@ -195,6 +195,7 @@ class MainWindow(QMainWindow):
         self.mask_load = False
         self.raw_import_dialog = None
         self.reg_load = False
+        self.loading_session = False
           
     def UpdateClippingPlanes(self, interactor, event):
         try:
@@ -3773,13 +3774,12 @@ which will later be doubled to get the pointcloud size and then input to the DVC
 
     def create_graphs_window(self, results_folder=None):
         print("Create graphs")
-        self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
-        print(self.results_folder)
-        print(type(self.results_folder))
-        # if results_folder == None:
-        #     results_folder = self.results_folder
-        if hasattr(self, 'results_folder'):
-            if self.results_folder is not None:
+        if self.result_widgets['run_entry'].currentText() is not "":
+            self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+        else:
+            self.results_folder = None
+
+        if self.results_folder is not None:
                 self.graph_window = GraphsWindow(self)
                 self.graph_window.show()
 
@@ -4428,6 +4428,9 @@ Please move the file back to this location and reload the session, select a diff
 
 
         results_directory = os.path.join(tempfile.tempdir, "Results")
+        
+        for i in range(self.result_widgets['run_entry'].count()):
+            self.result_widgets['run_entry'].removeItem(i)
 
         for r, d, f in os.walk(results_directory):
             for directory in d:
