@@ -572,10 +572,11 @@ which will later be doubled to get the pointcloud size and then input to the DVC
 
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
-            self.ref_image_data3D = vtk.vtkImageData()
+            #self.ref_image_data3D = vtk.vtkImageData()
+            self.ref_image_data3D = self.ref_image_data
             self.image_info = dict()
+            #ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
             ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
-    
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
         ImageDataCreator.createImageData(self, self.image[1], [self.corr_image_data], self.image_info, True, partial(self.save_image_info, "cor"))
@@ -3575,7 +3576,7 @@ which will later be doubled to get the pointcloud size and then input to the DVC
             print(line)
             if len(line) > 4:
                 try:
-                    num = float(line[:3]) #weird delay means isn't correct
+                    num = float(line.split(' ')[0]) #weird delay means isn't correct
                 except ValueError as ve:
                     print(ve, file=sys.stderr)
                     num = 0

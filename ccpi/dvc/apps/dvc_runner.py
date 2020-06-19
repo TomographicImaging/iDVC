@@ -65,8 +65,10 @@ subvol_aspect		{subvol_aspect}		### subvolume aspect ratio
 def update_progress(process):
     global count
     count+=1
-    print(str(count/(total_points+required_runs)*100), "% \n")
+    print("{:.0f} \n".format(count/(total_points+required_runs)*100))
     string = process.readLine()
+    #line = str(string,"utf-8")
+    #print(line)
     #print ("DVC update", string)
     sys.stdout.flush()
 
@@ -130,8 +132,8 @@ exe_file = "dvc.exe"
 process = QtCore.QProcess()
 process.setWorkingDirectory(run_folder)
 process.finished.connect(finished_run)
-#process.setStandardOutputFile("QProcess_Output.txt") #use in testing to get errors from QProcess
-process.setStandardErrorFile("QProcess_Error.txt")
+# process.setStandardOutputFile(os.path.join(run_folder, "QProcess_Output.txt")) #use in testing to get errors from QProcess
+# process.setStandardErrorFile(os.path.join(run_folder, "QProcess_Error.txt"))
 
 process.readyRead.connect(lambda: update_progress(process))
 
@@ -242,7 +244,6 @@ for roi_file in roi_files:
     
         #if run_count == len( subvolume_points):
         process.start( exe_file , [ param_file ] )          
-        process.finished.connect(finished_run)
         cancelled=False
 
         process.waitForFinished(msecs=2147483647) #wait for process to finish before doing next run
