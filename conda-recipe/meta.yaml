@@ -9,21 +9,18 @@ build:
 
   entry_points:
     - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
-    - dvc_runner = ccpi.dvc.apps.dvc_runner:main
-
-  number: 2
+  number: 5
   
 requirements:
   build:
     - python 
     - setuptools
-    - cython
-    - numpy
+    
  
   run:
     - python
     - numpy
-    - ccpi-viewer
+    - ccpi-viewer ==20.06.1
     - natsort
     - docopt
     - tqdm
@@ -32,4 +29,4 @@ requirements:
 about:
   home: http://www.ccpi.ac.uk
   license:  Apache v.2.0 license
-  summary: 'CCPi Core Imaging Library (Viewer)'
+  summary: 'CCPi Digital Volume Correlation GUI'
