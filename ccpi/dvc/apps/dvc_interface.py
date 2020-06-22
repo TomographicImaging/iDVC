@@ -225,11 +225,13 @@ class MainWindow(QMainWindow):
         temp_folder = None
 
         for directory in directories:
-            if 'temp' in directory:
+            if 'DVC_Sessions' in directory:
                 temp_folder = directory
         
-        if(not temp_folder):
-            temp_folder = os.mkdir("temp")
+        if temp_folder is None:
+            os.mkdir("DVC_Sessions")
+            temp_folder = os.path.join(working_directory, "DVC_Sessions")
+        #print(temp_folder)
 
         self.temp_folder = os.path.abspath(temp_folder)
         tempfile.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
@@ -683,7 +685,7 @@ and then input to the DVC code.")
         self.vis_widget_2D.setImageData(self.ref_image_data) 
         self.vis_widget_2D.displayImageData()
         #print("3D")
-        print(50)
+        #print(50)
         self.progress_window.setValue(50)
         self.vis_widget_3D.setImageData(self.ref_image_data3D)
         self.vis_widget_3D.displayImageData()
@@ -883,10 +885,10 @@ and then input to the DVC code.")
 
 
         if self.pointCloud_shape == cilRegularPointCloudToPolyData.CUBE:
-            print("CUBE")
+            #print("CUBE")
             self.glyph_source = t_filter #self.cube_source
         else:
-            print("SPHERE")
+            #print("SPHERE")
             self.glyph_source = self.sphere_source
         
         subv_glyph.SetSourceConnection( self.glyph_source.GetOutputPort() )
@@ -969,7 +971,7 @@ and then input to the DVC code.")
         if self.pointCloud_shape == 'cube':
             subv_glyph.SetSourceConnection( cube_source.GetOutputPort() )
         else:
-            print("SPHERE")
+            #print("SPHERE")
             subv_glyph.SetSourceConnection( sphere_source.GetOutputPort() )
         subv_glyph.Modified()
 
@@ -1363,7 +1365,7 @@ and then input to the DVC code.")
         progress_callback.emit(95)
 
     def reg_viewer_update(self, type = None):
-        print("Reg viewer update")
+        #print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
@@ -1389,7 +1391,7 @@ and then input to the DVC code.")
 
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        print('OnKeyPressEventForRegistration', key_code) #,event)
+        #print('OnKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
@@ -1410,7 +1412,7 @@ and then input to the DVC code.")
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         trans = list(self.translate.GetTranslation())
-        print("Previous translation: ", trans)
+        #print("Previous translation: ", trans)
         orientation = v.style.GetSliceOrientation()
         ij = [0,1]
         if orientation == SLICE_ORIENTATION_XY:
@@ -1434,7 +1436,7 @@ and then input to the DVC code.")
         self.translate.SetTranslation(*trans)
         self.translate.Update()
         self.subtract.Update()
-        print ("Translation", trans)
+        #print ("Translation", trans)
         
         # v.setInputData(subtract.GetOutput())
         # print ("OnKeyPressEventForRegistration", v.img3D.GetDimensions(), subtract.GetOutput().GetDimensions())
@@ -1522,7 +1524,7 @@ and then input to the DVC code.")
         rp = self.registration_parameters
         rp['point_zero_entry'].setText(str(p0l))
         self.point0_loc = p0
-        print("Finished")
+        #print("Finished")
 
     def centerOnPointZero(self):
         '''Centers the viewing slice where Point 0 is'''
@@ -1535,7 +1537,7 @@ and then input to the DVC code.")
             if point0 !="": 
                 point0= eval(point0)
             if isinstance (point0, tuple) or isinstance(point0, list):
-                print("Tuple")
+                #print("Tuple")
                 orientation = v.style.GetSliceOrientation()
                 gotoslice = point0[orientation]
                 v.style.SetActiveSlice( gotoslice )
@@ -1547,7 +1549,7 @@ and then input to the DVC code.")
 
     def displayRegistrationSelection(self):
         if hasattr(self, 'vis_widget_reg'):
-            print ("displayRegistrationSelection")
+            #print ("displayRegistrationSelection")
             rp = self.registration_parameters
             rp['registration_box_size_entry'].setEnabled( rp['register_on_selection_check'].isChecked() )
             v = self.vis_widget_reg.frame.viewer
@@ -1772,7 +1774,7 @@ and then input to the DVC code.")
             print("Dims:" + str(dims))
 
 
-            print(image_data.GetSpacing())
+            #print(image_data.GetSpacing())
             
 
             progress_callback.emit(40)
@@ -1999,8 +2001,8 @@ and then input to the DVC code.")
 
         if(type == "load session"):
             if(self.roi):
-                print("ROI true")
-                print(self.roi)
+                #print("ROI true")
+                #print(self.roi)
                 self.PointCloudWorker("load pointcloud file")
                 self.pointCloudLoaded = True
         
@@ -2310,7 +2312,7 @@ and then input to the DVC code.")
     def select_pointcloud(self): #, label):
         dialogue = QFileDialog()
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
-        print(self.roi)
+        #print(self.roi)
         if self.roi:
             if ".roi" in self.roi:
                 self.PointCloudWorker("load pointcloud file")
@@ -2362,11 +2364,11 @@ and then input to the DVC code.")
         self.createVectors3D(disp_file)
 
     def progress_complete(self):
-        print("FINISHED")
+        #print("FINISHED")
         self.progress_window.setValue(100)
 
     def createSavePointCloudWindow(self, save_only):
-        print("Create save pointcloud window -----------------------------------------------------------------------------------")
+        #print("Create save pointcloud window -----------------------------------------------------------------------------------")
         if not self.mask_reader:
                 self.warningDialog(window_title="Error", 
                                message="Load a mask on the viewer first" )
@@ -2400,16 +2402,16 @@ and then input to the DVC code.")
             #print("Dimensions ", dimensions)          
             
             if not self.pointCloudCreated:
-                print("Not created")
+                #print("Not created")
                 #self.clearPointCloud() #removes existing pointcloud from viewer if one has been loaded from a file - TODO make sure this is done outside thread, cant do in thread
                 pointCloud = cilRegularPointCloudToPolyData()
                 # save reference
                 self.pointCloud = pointCloud
-                print("Not created")
+                #print("Not created")
             else:
-                print("created")
+                #print("created")
                 pointCloud = self.pointCloud
-                print("created")
+                #print("created")
 
             #print(type(pointCloud))
             
@@ -2428,12 +2430,12 @@ and then input to the DVC code.")
                     )
 
             self.pointCloud_shape =  shapes[self.subvolumeShapeValue.currentIndex()]
-            print(self.pointCloud_shape)
+            #print(self.pointCloud_shape)
             
             #slice is read from the viewer
             pointCloud.SetSlice(v.GetActiveSlice())
 
-            print(v.GetActiveSlice())
+            #print(v.GetActiveSlice())
             
             pointCloud.SetInputConnection(0, reader.GetOutputPort())
 
@@ -2662,17 +2664,17 @@ and then input to the DVC code.")
                 pp = pointcloud.GetPoint(i)
                 distance = pp[0]-self.point0_loc[0] + pp[1]-self.point0_loc[1] + pp[2]-self.point0_loc[2]
                 if distance == 0:
-                    print(pp)
-                    print("Add to front of list")
+                    #print(pp)
+                    #print("Add to front of list")
                     array.insert(0,(1,*pp))
                 else:
                     array.append((count, *pp))
                     count += 1
 
-            print(array[0])
+            #print(array[0])
             np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
             self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
-            print(self.roi)
+            #print(self.roi)
             print("finished making the cloud")
 
             # for i in range (0, pointcloud.GetNumberOfPoints()):
@@ -2701,10 +2703,10 @@ and then input to the DVC code.")
         self.polydata_masker.Update()
         progress_callback.emit(80)
 
-        print(pointcloud_file)
+        #print(pointcloud_file)
         pointcloud_file = os.path.basename(pointcloud_file)
-        print(self.pointCloud_details)
-        print(pointcloud_file)
+        #print(self.pointCloud_details)
+        #print(pointcloud_file)
 
         if pointcloud_file in self.pointCloud_details:
             self.pointCloud_radius = self.pointCloud_details[pointcloud_file][0]
@@ -3317,8 +3319,9 @@ and then input to the DVC code.")
             singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['subvol_points_label'])
         
             rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
-            rdvc_widgets['subvol_points_spinbox'].setMinimum(1)
+            rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
             rdvc_widgets['subvol_points_spinbox'].setMaximum(20000)
+
             singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
             widgetno += 1
 
@@ -3745,6 +3748,7 @@ and then input to the DVC code.")
             result_widgets['subvol_label'].setText("Points in Subvolume:")
             formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
             result_widgets['subvol_entry'] = QComboBox(groupBox)
+            result_widgets['subvol_entry'].setCurrentText("1000")
             formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
             widgetno += 1
 
@@ -3804,10 +3808,10 @@ and then input to the DVC code.")
 
     def load_results(self):
 
-        print("LOAD RESULTS")
-        print("Number of results:")
+        #print("LOAD RESULTS")
+        #print("Number of results:")
         if hasattr(self, 'result_list'):
-            print(len(self.result_list))
+            #print(len(self.result_list))
             radius = int(self.result_widgets['pc_entry'].currentText())
             subvol_points = int(self.result_widgets['subvol_entry'].currentText())
 
@@ -3830,11 +3834,11 @@ and then input to the DVC code.")
                         #print(radius)
                         #print(result.subvol_radius)
                         if result.subvol_radius == radius:
-                            print("Radius match")
-                            print(result.subvol_points)
-                            print(subvol_points)
+                            #print("Radius match")
+                            #print(result.subvol_points)
+                            #print(subvol_points)
                             if result.subvol_points == subvol_points:
-                                print("SUB MATCH")
+                                #print("SUB MATCH")
                                 run_file = result.disp_file_name
                                 run_file = results_folder + "\\" + os.path.basename(run_file)
 
@@ -3946,28 +3950,30 @@ and then input to the DVC code.")
 
             if (self.roi):
                 if tempfile.tempdir in self.roi:
-                    print("pointcloud in temp dir")
+                    #print("pointcloud in temp dir")
+                    #print(self.roi)
                     self.config['roi_file'] =  self.roi[len(os.path.abspath(tempfile.tempdir))+1:]
-                    print(self.config['roi_file'])
+                    #print(self.config['roi_file'])
+                    #print(self.config['roi_file'])
                     self.config['roi_ext'] = False
                 else:
                     self.config['roi_file'] = self.roi
                     self.config['roi_ext'] = True 
             else:
                 self.config['roi_file'] = self.roi 
-
-
-
-            print("Resulting roi", self.roi)
-
             
 
-        if hasattr(self, 'mask_file'):
-            print("Mask")
-            print(self.mask_file)
-            self.config['mask_file']=self.mask_file
-            self.config['mask_details']=self.mask_details
-        
+            if hasattr(self, 'mask_file'):
+                self.config['mask_details']=self.mask_details
+                if tempfile.tempdir in self.mask_file:
+                    self.config['mask_file']=self.mask_file[len(os.path.abspath(tempfile.tempdir))+1:]
+                    self.config['mask_ext'] = False
+                else:
+                    self.config['mask_file']=self.mask_file
+                    self.config['mask_ext'] = True 
+  
+
+
         self.config['pointCloud_details']=self.pointCloud_details
 
         #save values for Run DVC panel
@@ -3975,9 +3981,8 @@ and then input to the DVC code.")
             if self.subvolume_points is not None:
                 self.config['subvol_points'] = self.subvolume_points
                 self.config['points'] = self.points
-                self.config['roi_file'] = self.roi
                 self.config['run_button_enabled'] = True
-                self.config['run_folder'] = self.run_folder
+                self.config['run_folder'] = self.run_folder[len(os.path.abspath(tempfile.tempdir))+1:]
 
         #print(len(self.results_folder))
         # if self.gg_widgets['gen_button'].isEnabled():
@@ -4031,7 +4036,7 @@ and then input to the DVC code.")
         
         suffix_text = "_" + user_string + "_" + now_string 
 
-        tempdir = shutil.move(tempfile.tempdir, 'temp/'+suffix_text)
+        tempdir = shutil.move(tempfile.tempdir, 'DVC_Sessions/'+suffix_text)
         tempfile.tempdir = tempdir
 
         fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
@@ -4056,6 +4061,41 @@ and then input to the DVC code.")
             self.show_zip_progress(tempfile.tempdir, tempfile.tempdir +'.zip', 0.7)
         else:
             self.show_zip_progress(tempfile.tempdir, tempfile.tempdir +'.zip', 1)
+
+        #give variables filepath including new name of temp folder:
+        if (self.roi and not self.config['roi_ext']):
+                    self.roi = os.path.join(os.path.abspath(tempfile.tempdir), self.config['roi_file'])
+                    print(self.roi)
+
+        if hasattr(self, 'mask_file'):
+            self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
+
+        count = 0
+        for i in self.image[0]:
+            if self.image_copied[0]:
+                print(os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) )
+                self.image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) 
+            count +=1
+        count = 0
+        for j in self.image[1]:
+            if self.image_copied[1]:
+                self.image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][1][count]) 
+            count += 1
+
+        count = 0
+        for i in self.dvc_input_image[0]:
+            if self.image_copied[0]:
+                self.dvc_input_image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][0][count]) 
+            count+=1
+
+        count=0    
+        for j in self.dvc_input_image[1]:      
+            if self.image_copied[1]:
+                self.dvc_input_image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][1][count]) 
+            count+=1
+
+        results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+        self.results_folder = results_folder
 
     
     def CloseSaveWindow(self):
@@ -4102,7 +4142,7 @@ and then input to the DVC code.")
         QMainWindow.closeEvent(self, event)
         
     def show_zip_progress(self, folder, new_file_dest,ratio):
-        print("in show zip progress")
+        #print("in show zip progress")
         
         self.progress_window.setValue(10)
 
@@ -4152,7 +4192,7 @@ and then input to the DVC code.")
                     #print(fp)
                     exp_size += os.path.getsize(fp) 
 
-        print(temp_size) 
+        #print(temp_size) 
 
 
         while temp_size != exp_size and self.progress_window.value() < 98 and self.progress_window.value() !=-1:
@@ -4166,8 +4206,8 @@ and then input to the DVC code.")
                         fp = os.path.join(dirpath, f)
                         #print(fp)
                         exp_size += os.path.getsize(fp)
-                print(exp_size)
-                print(self.progress_window.value())  
+                #print(exp_size)
+                #print(self.progress_window.value())  
 
     def export_session(self):
         #print("In select image")
@@ -4190,7 +4230,7 @@ and then input to the DVC code.")
                 
     def CreateSessionSelector(self, stage): 
         temp_folders = []
-        print ("TEMP FOLDER IS ", self.temp_folder)
+        print ("Session folder: ", self.temp_folder)
         if self.temp_folder is not None:
             for r, d, f in os.walk(self.temp_folder):
                 for _file in f:
@@ -4500,9 +4540,12 @@ Please move the file back to this location and reload the session, select a diff
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
 
+
         for r, d, f in os.walk(results_directory):
             for directory in d:
+                print(directory.split('_')[-1])
                 self.result_widgets['run_entry'].addItem(directory.split('_')[-1])
+        
 
         self.reg_load = False
         if 'point0' in self.config:
@@ -4679,7 +4722,7 @@ class CreateSaveSessionWindow(QtWidgets.QWidget):
             compress = True
         else:
             compress=False
-        print(compress)
+        #print(compress)
         self.parent.SaveSession(self.textbox.text(), compress, event)
         
 
@@ -4698,7 +4741,7 @@ class CreateSaveObjectWindow(QtWidgets.QWidget):
     def __init__(self, parent, object, save_only):
         super().__init__()
 
-        print(save_only)
+        #print(save_only)
 
         self.parent = parent
         self.object = object
@@ -4743,14 +4786,14 @@ class CreateSaveObjectWindow(QtWidgets.QWidget):
             shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks/" + filename))
             self.parent.mask_parameters['masksList'].addItem(filename)
             self.parent.mask_details[filename] = self.parent.mask_details['current']
-            print(self.parent.mask_details)
+            #print(self.parent.mask_details)
 
             self.parent.mask_parameters['loadButton'].setEnabled(True)
             self.parent.mask_parameters['masksList'].setEnabled(True)
 
 
             if not save_only:
-                print("Not save only")
+                #print("Not save only")
                 #would be better to move this elsewhere
                 self.parent.mask_worker = Worker(self.parent.extendMask)
                 self.parent.create_progress_window("Loading", "Loading Mask")
@@ -4822,7 +4865,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             self.createEmptyFrame()
             start = time.time()
             #print(image_data)
-            print("start of finish" + str(self.viewer))
+            #print("start of finish" + str(self.viewer))
             self.frame.viewer.setInput3DData(self.image_data)
             print("set input data for" + str(self.viewer))
 
@@ -4883,7 +4926,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
             
             end = time.time() - start
-            print("loaded image" + str(self.viewer) + "in " + str(end) + " seconds." )
+            #print("loaded image" + str(self.viewer) + "in " + str(end) + " seconds." )
 
     def setImageData(self, image_data):
         self.image_data = image_data
