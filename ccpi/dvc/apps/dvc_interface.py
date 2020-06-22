@@ -22,7 +22,7 @@ from os.path import isfile, join
 from os import path
 
 import vtk
-from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor #
+# from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor #
 from ccpi.viewer.QCILRenderWindowInteractor import QCILRenderWindowInteractor #
 from ccpi.viewer import viewer2D, viewer3D # 
 from ccpi.viewer.QCILViewerWidget import QCILViewerWidget #
@@ -50,8 +50,6 @@ from vtk.util import numpy_support
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.numpy_interface import algorithms as algs
 
-from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
-
 import ccpi.viewer.viewerLinker as vlink
 
 working_directory = os.getcwd()
@@ -74,75 +72,9 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-#from ccpi.dvc.apps import image_data
-from image_data import ImageDataCreator
+from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copied from dvc_configurator.py
-    '''vtkAlgorithm to read a point cloud from a NumPy array
-    '''
-    def __init__(self):
-        VTKPythonAlgorithmBase.__init__(self, nInputPorts=0, nOutputPorts=1)
-        self.__Points = vtk.vtkPoints()
-        self.__Vertices = vtk.vtkCellArray()
-        self.__Data = None
-
-
-    def GetPoints(self):
-        '''Returns the Points'''
-        return self.__Points
-    def SetData(self, value):
-        '''Sets the points from a numpy array or list'''
-        if not isinstance (value, np.ndarray) :
-            raise ValueError('Data must be a numpy array. Got', value)
-
-        if not np.array_equal(value,self.__Data):
-            self.__Data = value
-            self.Modified()
-
-    def GetData(self):
-        return self.__Data
-
-
-    def GetNumberOfPoints(self):
-        '''returns the number of points in the point cloud'''
-        return self.__Points.GetNumberOfPoints()
-
-
-    def FillInputPortInformation(self, port, info):
-        # if port == 0:
-        #    info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
-        return 1
-
-    def FillOutputPortInformation(self, port, info):
-        info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
-        return 1
-
-    def RequestData(self, request, inInfo, outInfo):
-
-        # print ("Request Data")
-        # image_data = vtk.vtkDataSet.GetData(inInfo[0])
-        pointPolyData = vtk.vtkPolyData.GetData(outInfo)
-        vtkPointCloud = self.__Points
-        for point in self.GetData():
-            # point = id, x, y, z
-            vtkPointCloud.InsertNextPoint( point[1] , point[2] , point[3])
-
-        self.FillCells()
-
-        pointPolyData.SetPoints(self.__Points)
-        pointPolyData.SetVerts(self.__Vertices)
-        return 1
-
-
-    def FillCells(self):
-        '''Fills the Vertices'''
-        vertices = self.__Vertices
-        number_of_cells = vertices.GetNumberOfCells()
-        for i in range(self.GetNumberOfPoints()):
-            if i >= number_of_cells:
-                vertices.InsertNextCell(1)
-                vertices.InsertCellPoint(i)
-
+__version__ = '1.0.0'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -152,9 +84,6 @@ class MainWindow(QMainWindow):
 
         self.temp_folder = None
 
-        self.CreateWorkingTempFolder()
-        self.CreateSessionSelector("new window")
-        
         self.setWindowTitle("DVC Interface")
         
         self.InitialiseSessionVars()
@@ -204,9 +133,11 @@ class MainWindow(QMainWindow):
         self.status = self.statusBar()
         self.status.showMessage("Ready")
              
-        # Window dimensions
+        # # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
-        self.setGeometry(100,100, geometry.width()-200, geometry.height()-200)
+
+        border = 100
+        self.setGeometry(border, border,geometry.width()-2*border, geometry.height()-2*border)
 
         self.e = ErrorObserver()
 
@@ -217,21 +148,20 @@ class MainWindow(QMainWindow):
         else:
             self.copy_files = False
 
+        self.CreateWorkingTempFolder()
+        self.CreateSessionSelector("new window")
+        
+
 
 #Setting up the session:
     def CreateWorkingTempFolder(self):
-        directories = [x for x in next(os.walk(working_directory))[1]]
+        # directories = [os.path.abspath(x) for x in next(os.walk(working_directory))[1]]
 
-        temp_folder = None
-
-        for directory in directories:
-            if 'DVC_Sessions' in directory:
-                temp_folder = directory
+        temp_folder = os.path.join(working_directory,'DVC_Sessions')
         
-        if temp_folder is None:
+        if not os.path.isdir(temp_folder):
             os.mkdir("DVC_Sessions")
             temp_folder = os.path.join(working_directory, "DVC_Sessions")
-        #print(temp_folder)
 
         self.temp_folder = os.path.abspath(temp_folder)
         tempfile.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
@@ -640,10 +570,11 @@ and then input to the DVC code.")
 
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
-            self.ref_image_data3D = vtk.vtkImageData()
+            #self.ref_image_data3D = vtk.vtkImageData()
+            self.ref_image_data3D = self.ref_image_data
             self.image_info = dict()
+            #ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
             ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
-    
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
         ImageDataCreator.createImageData(self, self.image[1], [self.corr_image_data], self.image_info, True, partial(self.save_image_info, "cor"))
@@ -3581,15 +3512,9 @@ and then input to the DVC code.")
         print("DVC in: ", self.dvc_input_image)
             
         
-        if(self.image_copied[0]):
-            self.reference_file = self.dvc_input_image[0][0]
-        else:
-            self.reference_file = self.dvc_input_image[0][0]
+        self.reference_file = self.dvc_input_image[0][0]
+        self.correlate_file = self.dvc_input_image[1][0]
 
-        if(self.image_copied[1]):
-            self.correlate_file = self.dvc_input_image[1][0]
-        else:
-            self.correlate_file = self.dvc_input_image[1][0]
 
         run_config = {}
         run_config['points'] = self.points
@@ -3631,7 +3556,7 @@ and then input to the DVC code.")
         
 
     def run_external_code(self):
-        #print("About to run dvc")
+        print("About to run dvc")
 
         self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
         self.progress_window.setValue(1)
@@ -3643,14 +3568,12 @@ and then input to the DVC code.")
         self.process.readyRead.connect(lambda: self.update_progress(exe = True))
         self.process.finished.connect(self.finished_run)
 
-        #python_file = os.path.abspath("dvc_runner.exe")
-        python_file = os.path.abspath("dvc_runner.py")
-        #self.process.start(python_file, [self.run_config_file])
-
-        pythonCommand = "python " + "dvc_runner.py" + " " + self.run_config_file
-
-        #print (pythonCommand)
-
+        # python_file = os.path.abspath("dvc_runner")
+        # self.process.start(python_file, [self.run_config_file])
+        
+        python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
+        pythonCommand = "python " + python_file + " " + self.run_config_file
+        print (pythonCommand)
         self.process.start(pythonCommand)
 
         self.cancelled = False
@@ -3661,9 +3584,13 @@ and then input to the DVC code.")
         if exe:
             line_b = self.process.readLine()
             line = str(line_b,"utf-8")
-            #print(line)
+            print(line)
             if len(line) > 4:
-                num = float(line[:3]) #weird delay means isn't correct
+                try:
+                    num = float(line.split(' ')[0]) #weird delay means isn't correct
+                except ValueError as ve:
+                    print(ve, file=sys.stderr)
+                    num = 0
                 if num > self.progress_window.value() and self.progress_window.value()<99:
                     self.progress_window.setValue(num)
         else:
@@ -3811,9 +3738,17 @@ and then input to the DVC code.")
         #print("LOAD RESULTS")
         #print("Number of results:")
         if hasattr(self, 'result_list'):
-            #print(len(self.result_list))
-            radius = int(self.result_widgets['pc_entry'].currentText())
-            subvol_points = int(self.result_widgets['subvol_entry'].currentText())
+            print(len(self.result_list))
+            try:
+                radius = int(self.result_widgets['pc_entry'].currentText())
+            except ValueError as ve:
+                self.warningDialog("Invalid input at Pointcloud Radius", "Error")
+                return
+            try:
+                subvol_points = int(self.result_widgets['subvol_entry'].currentText())
+            except ValueError as ve:
+                self.warningDialog("Invalid input at Pointcloud Radius", "Error")
+                return
 
             if(subvol_points == ""):
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
@@ -4230,7 +4165,8 @@ and then input to the DVC code.")
                 
     def CreateSessionSelector(self, stage): 
         temp_folders = []
-        print ("Session folder: ", self.temp_folder)
+        #print ("Session folder: ", self.temp_folder)
+
         if self.temp_folder is not None:
             for r, d, f in os.walk(self.temp_folder):
                 for _file in f:
@@ -4242,6 +4178,7 @@ and then input to the DVC code.")
                             temp_folders.append(name)
 
         if len(temp_folders) ==0 and stage =="new window":
+            # self.show()
             return
         elif len(temp_folders) == 0:
             self.e('', '', '')
@@ -4252,7 +4189,12 @@ and then input to the DVC code.")
 
         else:     
             self.SessionSelectionWindow = CreateSessionSelectionWindow(self, temp_folders)
-            self.SessionSelectionWindow.show()
+            self.SessionSelectionWindow.finished.connect(self.do_something)
+            self.SessionSelectionWindow.open()
+
+    def do_something(self):
+        print ("do something")
+        self.NewSession()
 
     def NewSession(self):
         self.InitialiseSessionVars()
@@ -4536,6 +4478,9 @@ Please move the file back to this location and reload the session, select a diff
 
 
         results_directory = os.path.join(tempfile.tempdir, "Results")
+        
+        for i in range(self.result_widgets['run_entry'].count()):
+            self.result_widgets['run_entry'].removeItem(i)
 
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
@@ -4624,11 +4569,11 @@ class CreateSettingsWindow(QDialog):
         self.close()
         #print(self.parent.settings.value("copy_files"))
 
-class CreateSessionSelectionWindow(QtWidgets.QWidget):
+class CreateSessionSelectionWindow(QtWidgets.QDialog):
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
     def __init__(self, parent, temp_folders):
-        super().__init__()
+        super(CreateSessionSelectionWindow, self).__init__(parent=parent)
 
         self.parent = parent
 
@@ -4953,6 +4898,7 @@ class GraphsWindow(QMainWindow):
              
         # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
+
         self.setGeometry(100,100, geometry.width()-200, geometry.height()-200)
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
   

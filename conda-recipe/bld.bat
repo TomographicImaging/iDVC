@@ -15,8 +15,7 @@ cd %SRC_DIR%\ccpi
 cmake -G "NMake Makefiles" %RECIPE_DIR%\..\..\..\ -DBUILD_PYTHON_WRAPPERS=OFF -DCONDA_BUILD=ON -DBUILD_CUDA=OFF -DCMAKE_BUILD_TYPE="Release" -DLIBRARY_LIB="%CONDA_PREFIX%\lib" -DLIBRARY_INC="%CONDA_PREFIX%" -DCMAKE_INSTALL_PREFIX="%PREFIX%\Library" 
 
 nmake install
-::%PYTHON% setup-regularisers.py build_ext
-::if errorlevel 1 exit 1
+if errorlevel 1 exit 1
 
 %PYTHON% setup.py install
 if errorlevel 1 exit 1

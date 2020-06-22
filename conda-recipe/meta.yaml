@@ -1,7 +1,7 @@
 package:
   name: ccpi-dvc-app-prototype1
-  version: 20.06
-
+  version: 20.06.9
+# conda build ... -c file://my_local_channel --override-channels
 
 build:
   preserve_egg_dir: False
@@ -9,21 +9,18 @@ build:
 
   entry_points:
     - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
-    #- DVC_Interface = ccpi.dvc.apps.dvc_interface:main
-
   number: 0
   
 requirements:
   build:
     - python 
     - setuptools
-    - cython
-    - numpy
+    
  
   run:
     - python
     - numpy
-    - ccpi-viewer
+    - ccpi-viewer ==20.06.1
     - natsort
     - docopt
     - tqdm
@@ -32,4 +29,4 @@ requirements:
 about:
   home: http://www.ccpi.ac.uk
   license:  Apache v.2.0 license
-  summary: 'CCPi Core Imaging Library (Viewer)'
+  summary: 'CCPi Digital Volume Correlation GUI'
