@@ -3572,7 +3572,7 @@ and then input to the DVC code.")
         # self.process.start(python_file, [self.run_config_file])
         
         python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
-        pythonCommand = "python " + python_file + " " + self.run_config_file
+        pythonCommand = "python " + '"' + os.path.abspath(python_file) + '" "' + os.path.abspath(self.run_config_file) + '"'
         print (pythonCommand)
         self.process.start(pythonCommand)
 
