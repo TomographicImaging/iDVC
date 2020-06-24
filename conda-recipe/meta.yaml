@@ -1,5 +1,5 @@
 package:
-  name: ccpi-dvc-app-prototype1
+  name: ccpi-dvc
   version: 20.06.1
 # conda build ... -c file://my_local_channel --override-channels
 
