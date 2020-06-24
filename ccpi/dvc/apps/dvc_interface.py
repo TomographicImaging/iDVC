@@ -2334,18 +2334,11 @@ and then input to the DVC code.")
             
             if not self.pointCloudCreated:
                 #print("Not created")
-                #self.clearPointCloud() #removes existing pointcloud from viewer if one has been loaded from a file - TODO make sure this is done outside thread, cant do in thread
                 pointCloud = cilRegularPointCloudToPolyData()
                 # save reference
                 self.pointCloud = pointCloud
-                #print("Not created")
             else:
-                #print("created")
                 pointCloud = self.pointCloud
-                #print("created")
-
-            #print(type(pointCloud))
-            
 
             v = self.vis_widget_2D.frame.viewer
             orientation = v.GetSliceOrientation()
@@ -2587,6 +2580,10 @@ and then input to the DVC code.")
             #array = np.zeros((pointcloud.GetNumberOfPoints(), 4))
             array = []
             print("Points:", pointcloud.GetNumberOfPoints())
+            if(pointcloud.GetNumberOfPoints() == 0):
+                self.pointCloud = pointcloud
+                return (False)
+
             if int(mm) == 1: #if point0 is in the mask
                 count = 2
             else:
@@ -2607,17 +2604,7 @@ and then input to the DVC code.")
             self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             #print(self.roi)
             print("finished making the cloud")
-
-            # for i in range (0, pointcloud.GetNumberOfPoints()):
-            #     current_point = pointcloud.GetPoint(i)
-            #     pointCloud_points.append(current_point)
-            #     pointCloud_distances.append((self.point0_loc[0]-current_point[0])**2+(self.point0_loc[1]-current_point[1])**2+(self.point0_loc[2]-current_point[2])**2)
-
-            # print("Point 0: ", self.point0_loc)
-
-            # lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
-
-            # print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
+            return(True)
             
 
     def loadPointCloud(self, pointcloud_file, progress_callback):
@@ -3436,7 +3423,7 @@ and then input to the DVC code.")
         self.config_worker = Worker(self.create_run_config)
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
-        self.config_worker.signals.finished.connect(self.run_external_code)
+        self.config_worker.signals.result.connect(partial (self.run_external_code))
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
         
@@ -3472,9 +3459,8 @@ and then input to the DVC code.")
                     N = (xmax-xmin)//xstep + 1
                     self.subvolume_points = [xmin + i * xstep for i in range(N)]
                 else:
-                    self.warningDialog("Points in subvolume. Min ({}) value higher than Max ({})".format(
-                            xmin, xmax) , window_title="Value Error")
-                    return
+
+                    return ("subvolume error")
             else:
                 self.subvolume_points = [xmin]
 
@@ -3486,10 +3472,8 @@ and then input to the DVC code.")
                     N = (xmax-xmin)//xstep + 1
                     self.radii = [xmin + i * xstep for i in range(N)]
                 else:
-                    self.warningDialog("Radius. Min ({}) value higher than Max ({})".format(
-                            xmin, xmax), window_title="Value Error", 
-                        )
-                    return
+                    print("radius error")
+                    return ("radius error")
             else:
                 self.radii = [xmin]
 
@@ -3501,7 +3485,8 @@ and then input to the DVC code.")
                 radius_count+=1
                 filename = "Results/" + folder_name + "/_" + str(radius) + ".roi"
                 #print(filename)
-                self.createPointCloud(filename, radius)
+                if not self.createPointCloud(filename, radius):
+                    return ("pointcloud error")
                 self.roi_files.append(os.path.join(tempfile.tempdir, filename))
                 #print("completed radius")
                 progress_callback.emit(radius_count/len(self.radii)*90)
@@ -3553,9 +3538,31 @@ and then input to the DVC code.")
             print("Saving")
 
         progress_callback.emit(100)
+
+        return(None)
+
         
 
-    def run_external_code(self):
+    def run_external_code(self, error = None):
+        if error == "subvolume error":
+            self.progress_window.setValue(100)
+            self.warningDialog("Points in subvolume. Minimum value higher than Maximum", window_title="Value Error")
+            self.cancelled = True
+            return
+        elif error == "pointcloud error":
+            self.progress_window.setValue(100) 
+            self.warningDialog(window_title="Error", 
+                    message="Failed to create point cloud.",
+                    detailed_text='A pointcloud could not be created because there were no points in the selected region. \
+                    Try modifying the subvolume radius before creating a new pointcloud.' )
+            self.cancelled = True
+            return
+        elif error == "radius error":
+            self.progress_window.setValue(100) 
+            self.warningDialog("Radius. Minimum value higher than Maximum", window_title="Value Error")
+            self.cancelled = True
+            return
+            
         print("About to run dvc")
 
         self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
