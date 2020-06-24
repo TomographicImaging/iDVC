@@ -570,8 +570,8 @@ and then input to the DVC code.")
 
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
-            #self.ref_image_data3D = vtk.vtkImageData()
-            self.ref_image_data3D = self.ref_image_data
+            self.ref_image_data3D = vtk.vtkImageData()
+            #self.ref_image_data3D = self.ref_image_data
             self.image_info = dict()
             #ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
             ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
@@ -3883,13 +3883,12 @@ and then input to the DVC code.")
                    dvc_input_image[1].append(j)
             self.config['dvc_input_image']=dvc_input_image
 
+            # print(self.roi)
+            # print("temp", tempfile.tempdir)
             if (self.roi):
-                if tempfile.tempdir in self.roi:
-                    #print("pointcloud in temp dir")
-                    #print(self.roi)
+                self.roi = os.path.abspath(self.roi)
+                if os.path.abspath(tempfile.tempdir) in self.roi:
                     self.config['roi_file'] =  self.roi[len(os.path.abspath(tempfile.tempdir))+1:]
-                    #print(self.config['roi_file'])
-                    #print(self.config['roi_file'])
                     self.config['roi_ext'] = False
                 else:
                     self.config['roi_file'] = self.roi
@@ -3972,7 +3971,7 @@ and then input to the DVC code.")
         suffix_text = "_" + user_string + "_" + now_string 
 
         tempdir = shutil.move(tempfile.tempdir, 'DVC_Sessions/'+suffix_text)
-        tempfile.tempdir = tempdir
+        tempfile.tempdir = os.path.abspath(tempdir)
 
         fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
 
@@ -3998,6 +3997,10 @@ and then input to the DVC code.")
             self.show_zip_progress(tempfile.tempdir, tempfile.tempdir +'.zip', 1)
 
         #give variables filepath including new name of temp folder:
+        # print("temp", tempfile.tempdir)
+        # print("roi ext", self.config['roi_ext'])
+        # print(self.roi)
+        # print(self.config['roi_file'])
         if (self.roi and not self.config['roi_ext']):
                     self.roi = os.path.join(os.path.abspath(tempfile.tempdir), self.config['roi_file'])
                     print(self.roi)
