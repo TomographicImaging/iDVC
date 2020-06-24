@@ -74,7 +74,7 @@ from distutils.dir_util import copy_tree
 
 from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-__version__ = '1.0.0'
+__version__ = '20.06.1'
 
 class MainWindow(QMainWindow):
     def __init__(self):
