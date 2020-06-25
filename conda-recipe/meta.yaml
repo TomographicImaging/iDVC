@@ -20,7 +20,7 @@ requirements:
   run:
     - python
     - numpy
-    - ccpi-viewer ==20.06.2
+    - ccpi-viewer ==20.06.1
     - natsort
     - docopt
     - tqdm
