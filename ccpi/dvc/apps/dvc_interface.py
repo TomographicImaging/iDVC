@@ -74,7 +74,7 @@ from distutils.dir_util import copy_tree
 
 from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-__version__ = '20.06.1'
+__version__ = '20.06.2'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -2334,18 +2334,11 @@ and then input to the DVC code.")
             
             if not self.pointCloudCreated:
                 #print("Not created")
-                #self.clearPointCloud() #removes existing pointcloud from viewer if one has been loaded from a file - TODO make sure this is done outside thread, cant do in thread
                 pointCloud = cilRegularPointCloudToPolyData()
                 # save reference
                 self.pointCloud = pointCloud
-                #print("Not created")
             else:
-                #print("created")
                 pointCloud = self.pointCloud
-                #print("created")
-
-            #print(type(pointCloud))
-            
 
             v = self.vis_widget_2D.frame.viewer
             orientation = v.GetSliceOrientation()
@@ -2523,6 +2516,7 @@ and then input to the DVC code.")
             mm = mask_data.GetScalarComponentAsDouble(int(self.point0_loc[0]),int(self.point0_loc[1]), int(self.point0_loc[2]), 0)
 
             if int(mm) == 1: #if point0 is in the mask
+                #print("POINT 0 IN MASK")
 
                 #Translate pointcloud so that point 0 is in the cloud
                 if hasattr(self, 'point0'):
@@ -2544,8 +2538,9 @@ and then input to the DVC code.")
 
                     #transform = vtk.vtkTransform()
                     transform.Translate(pointCloud_Translation)
+            #else:
+                #print("POINT 0 NOT IN MASK")
 
-            
             if self.pointCloudCreated:
                 t_filter = self.t_filter
             else:
@@ -2553,6 +2548,7 @@ and then input to the DVC code.")
                 t_filter = vtk.vtkTransformFilter()
                 # save reference
                 self.t_filter = t_filter
+            
             t_filter.SetTransform(transform)
             t_filter.SetInputConnection(pointCloud.GetOutputPort())
 
@@ -2565,8 +2561,6 @@ and then input to the DVC code.")
             # print ("polydata_masker type", type(polydata_masker.GetOutputDataObject(0)))
 
             #print("Points in mask now: ", polydata_masker)
-
-            
 
             print("Updated polydata_masker")
             
@@ -2587,6 +2581,10 @@ and then input to the DVC code.")
             #array = np.zeros((pointcloud.GetNumberOfPoints(), 4))
             array = []
             print("Points:", pointcloud.GetNumberOfPoints())
+            if(pointcloud.GetNumberOfPoints() == 0):
+                self.pointCloud = pointcloud
+                return (False)
+
             if int(mm) == 1: #if point0 is in the mask
                 count = 2
             else:
@@ -2607,17 +2605,7 @@ and then input to the DVC code.")
             self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             #print(self.roi)
             print("finished making the cloud")
-
-            # for i in range (0, pointcloud.GetNumberOfPoints()):
-            #     current_point = pointcloud.GetPoint(i)
-            #     pointCloud_points.append(current_point)
-            #     pointCloud_distances.append((self.point0_loc[0]-current_point[0])**2+(self.point0_loc[1]-current_point[1])**2+(self.point0_loc[2]-current_point[2])**2)
-
-            # print("Point 0: ", self.point0_loc)
-
-            # lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
-
-            # print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
+            return(True)
             
 
     def loadPointCloud(self, pointcloud_file, progress_callback):
@@ -2684,7 +2672,7 @@ and then input to the DVC code.")
             self.warningDialog(window_title="Error", 
                     message="Failed to create point cloud.",
                     detailed_text='A pointcloud could not be created because there were no points in the selected region. \
-                    Try modifying the subvolume radius before creating a new pointcloud.' )
+Try modifying the subvolume radius before creating a new pointcloud, and make sure it is smaller than the extent of the mask.' )
             self.pointCloudCreated = False
             self.pointCloudLoaded = False
             return
@@ -3436,7 +3424,7 @@ and then input to the DVC code.")
         self.config_worker = Worker(self.create_run_config)
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
-        self.config_worker.signals.finished.connect(self.run_external_code)
+        self.config_worker.signals.result.connect(partial (self.run_external_code))
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
         
@@ -3472,9 +3460,8 @@ and then input to the DVC code.")
                     N = (xmax-xmin)//xstep + 1
                     self.subvolume_points = [xmin + i * xstep for i in range(N)]
                 else:
-                    self.warningDialog("Points in subvolume. Min ({}) value higher than Max ({})".format(
-                            xmin, xmax) , window_title="Value Error")
-                    return
+
+                    return ("subvolume error")
             else:
                 self.subvolume_points = [xmin]
 
@@ -3486,10 +3473,8 @@ and then input to the DVC code.")
                     N = (xmax-xmin)//xstep + 1
                     self.radii = [xmin + i * xstep for i in range(N)]
                 else:
-                    self.warningDialog("Radius. Min ({}) value higher than Max ({})".format(
-                            xmin, xmax), window_title="Value Error", 
-                        )
-                    return
+                    print("radius error")
+                    return ("radius error")
             else:
                 self.radii = [xmin]
 
@@ -3501,7 +3486,8 @@ and then input to the DVC code.")
                 radius_count+=1
                 filename = "Results/" + folder_name + "/_" + str(radius) + ".roi"
                 #print(filename)
-                self.createPointCloud(filename, radius)
+                if not self.createPointCloud(filename, radius):
+                    return ("pointcloud error")
                 self.roi_files.append(os.path.join(tempfile.tempdir, filename))
                 #print("completed radius")
                 progress_callback.emit(radius_count/len(self.radii)*90)
@@ -3553,9 +3539,32 @@ and then input to the DVC code.")
             print("Saving")
 
         progress_callback.emit(100)
+
+        return(None)
+
         
 
-    def run_external_code(self):
+    def run_external_code(self, error = None):
+        if error == "subvolume error":
+            self.progress_window.setValue(100)
+            self.warningDialog("Minimum number of points in subvolume value higher than maximum", window_title="Value Error")
+            self.cancelled = True
+            return
+        elif error == "pointcloud error":
+            self.progress_window.setValue(100) 
+            self.warningDialog(window_title="Error", 
+                    message="Failed to create a point cloud.",
+                    detailed_text='A pointcloud could not be created because there were no points in the selected region. \
+Try modifying the subvolume radius before creating a new pointcloud, and make sure it is smaller than the extent of the mask.\
+The dimensionality of the pointcloud can also be changed in the Point Cloud panel.' )
+            self.cancelled = True
+            return
+        elif error == "radius error":
+            self.progress_window.setValue(100) 
+            self.warningDialog("Minimum radius value higher than maximum", window_title="Value Error")
+            self.cancelled = True
+            return
+            
         print("About to run dvc")
 
         self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
@@ -3894,12 +3903,13 @@ and then input to the DVC code.")
                     self.config['roi_file'] = self.roi
                     self.config['roi_ext'] = True 
             else:
-                self.config['roi_file'] = self.roi 
+                self.config['roi_file'] = self.roi
+                self.config['roi_ext'] = False 
             
 
             if hasattr(self, 'mask_file'):
                 self.config['mask_details']=self.mask_details
-                if tempfile.tempdir in self.mask_file:
+                if tempfile.tempdir in os.path.abspath(self.mask_file):
                     self.config['mask_file']=self.mask_file[len(os.path.abspath(tempfile.tempdir))+1:]
                     self.config['mask_ext'] = False
                 else:
@@ -4006,7 +4016,8 @@ and then input to the DVC code.")
                     print(self.roi)
 
         if hasattr(self, 'mask_file'):
-            self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
+            if 'mask_file' in self.config:
+                self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
 
         count = 0
         for i in self.image[0]:
@@ -4072,12 +4083,13 @@ and then input to the DVC code.")
         print("removed temp")
         shutil.rmtree(tempfile.tempdir)
         
-        
         if hasattr(self, 'progress_window'):
             self.progress_window.setValue(100)
-        
-        self.SaveWindow.close()
-        QMainWindow.closeEvent(self, event)
+        if hasattr(self, 'SaveWindow'):
+            self.SaveWindow.close()
+
+        if event != "new session":
+            QMainWindow.closeEvent(self, event)
         
     def show_zip_progress(self, folder, new_file_dest,ratio):
         #print("in show zip progress")
@@ -4192,14 +4204,13 @@ and then input to the DVC code.")
 
         else:     
             self.SessionSelectionWindow = CreateSessionSelectionWindow(self, temp_folders)
-            self.SessionSelectionWindow.finished.connect(self.do_something)
+            #self.SessionSelectionWindow.finished.connect(self.NewSession)
             self.SessionSelectionWindow.open()
 
-    def do_something(self):
-        print ("do something")
-        self.NewSession()
 
     def NewSession(self):
+        self.RemoveTemp("new session")
+        self.CreateWorkingTempFolder()
         self.InitialiseSessionVars()
         self.LoadSession() #Loads blank session
         self.resetRegistration()
@@ -4207,6 +4218,7 @@ and then input to the DVC code.")
         #other possibility for loading new session is closing and opening window:
         # self.close()
         # subprocess.Popen(['python', 'dvc_interface.py'], shell = True) 
+    
 
     def load_config_worker(self, selected_text, progress_callback = None): 
         date_and_time = selected_text.split(' ')[-1]
@@ -4290,8 +4302,9 @@ and then input to the DVC code.")
             self.pointCloudLoaded = self.config['pointcloud_loaded']
             if self.pointCloudLoaded:
                 self.roi = self.config['roi_file']
-                if  not self.config['roi_ext']:
-                    self.roi = os.path.abspath(os.path.join(tempfile.tempdir, self.roi))
+                if 'roi_ext' in self.config:
+                    if  not self.config['roi_ext']:
+                        self.roi = os.path.abspath(os.path.join(tempfile.tempdir, self.roi))
 
         #pointcloud files could still exist even if there wasn't a pointcloud displayed when the session was saved.
         pointcloud_files = []
@@ -4484,10 +4497,6 @@ Please move the file back to this location and reload the session, select a diff
         
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
-
-        for i in range(self.result_widgets['run_entry'].count()):
-            self.result_widgets['run_entry'].removeItem(i)
-
 
         for r, d, f in os.walk(results_directory):
             for directory in d:
@@ -5238,4 +5247,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
