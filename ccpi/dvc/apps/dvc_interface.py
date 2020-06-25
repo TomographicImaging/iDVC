@@ -3902,7 +3902,8 @@ and then input to the DVC code.")
                     self.config['roi_file'] = self.roi
                     self.config['roi_ext'] = True 
             else:
-                self.config['roi_file'] = self.roi 
+                self.config['roi_file'] = self.roi
+                self.config['roi_ext'] = False 
             
 
             if hasattr(self, 'mask_file'):
@@ -4202,7 +4203,7 @@ and then input to the DVC code.")
 
         else:     
             self.SessionSelectionWindow = CreateSessionSelectionWindow(self, temp_folders)
-            self.SessionSelectionWindow.finished.connect(self.NewSession)
+            #self.SessionSelectionWindow.finished.connect(self.NewSession)
             self.SessionSelectionWindow.open()
 
 
@@ -4300,8 +4301,9 @@ and then input to the DVC code.")
             self.pointCloudLoaded = self.config['pointcloud_loaded']
             if self.pointCloudLoaded:
                 self.roi = self.config['roi_file']
-                if  not self.config['roi_ext']:
-                    self.roi = os.path.abspath(os.path.join(tempfile.tempdir, self.roi))
+                if 'roi_ext' in self.config:
+                    if  not self.config['roi_ext']:
+                        self.roi = os.path.abspath(os.path.join(tempfile.tempdir, self.roi))
 
         #pointcloud files could still exist even if there wasn't a pointcloud displayed when the session was saved.
         pointcloud_files = []
