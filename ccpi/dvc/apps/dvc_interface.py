@@ -74,7 +74,7 @@ from distutils.dir_util import copy_tree
 
 from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-__version__ = '20.06.1'
+__version__ = '20.06.2'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -2672,7 +2672,7 @@ and then input to the DVC code.")
             self.warningDialog(window_title="Error", 
                     message="Failed to create point cloud.",
                     detailed_text='A pointcloud could not be created because there were no points in the selected region. \
-                    Try modifying the subvolume radius before creating a new pointcloud.' )
+Try modifying the subvolume radius before creating a new pointcloud, and make sure it is smaller than the extent of the mask.' )
             self.pointCloudCreated = False
             self.pointCloudLoaded = False
             return
@@ -3553,9 +3553,10 @@ and then input to the DVC code.")
         elif error == "pointcloud error":
             self.progress_window.setValue(100) 
             self.warningDialog(window_title="Error", 
-                    message="Failed to create point cloud.",
+                    message="Failed to create a point cloud.",
                     detailed_text='A pointcloud could not be created because there were no points in the selected region. \
-                    Try modifying the subvolume radius before creating a new pointcloud.' )
+Try modifying the subvolume radius before creating a new pointcloud, and make sure it is smaller than the extent of the mask.\
+The dimensionality of the pointcloud can also be changed in the Point Cloud panel.' )
             self.cancelled = True
             return
         elif error == "radius error":
