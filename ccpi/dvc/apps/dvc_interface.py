@@ -2516,6 +2516,7 @@ and then input to the DVC code.")
             mm = mask_data.GetScalarComponentAsDouble(int(self.point0_loc[0]),int(self.point0_loc[1]), int(self.point0_loc[2]), 0)
 
             if int(mm) == 1: #if point0 is in the mask
+                #print("POINT 0 IN MASK")
 
                 #Translate pointcloud so that point 0 is in the cloud
                 if hasattr(self, 'point0'):
@@ -2537,8 +2538,9 @@ and then input to the DVC code.")
 
                     #transform = vtk.vtkTransform()
                     transform.Translate(pointCloud_Translation)
+            #else:
+                #print("POINT 0 NOT IN MASK")
 
-            
             if self.pointCloudCreated:
                 t_filter = self.t_filter
             else:
@@ -2546,6 +2548,7 @@ and then input to the DVC code.")
                 t_filter = vtk.vtkTransformFilter()
                 # save reference
                 self.t_filter = t_filter
+            
             t_filter.SetTransform(transform)
             t_filter.SetInputConnection(pointCloud.GetOutputPort())
 
@@ -2558,8 +2561,6 @@ and then input to the DVC code.")
             # print ("polydata_masker type", type(polydata_masker.GetOutputDataObject(0)))
 
             #print("Points in mask now: ", polydata_masker)
-
-            
 
             print("Updated polydata_masker")
             
@@ -3546,7 +3547,7 @@ and then input to the DVC code.")
     def run_external_code(self, error = None):
         if error == "subvolume error":
             self.progress_window.setValue(100)
-            self.warningDialog("Points in subvolume. Minimum value higher than Maximum", window_title="Value Error")
+            self.warningDialog("Minimum number of points in subvolume value higher than maximum", window_title="Value Error")
             self.cancelled = True
             return
         elif error == "pointcloud error":
@@ -3559,7 +3560,7 @@ and then input to the DVC code.")
             return
         elif error == "radius error":
             self.progress_window.setValue(100) 
-            self.warningDialog("Radius. Minimum value higher than Maximum", window_title="Value Error")
+            self.warningDialog("Minimum radius value higher than maximum", window_title="Value Error")
             self.cancelled = True
             return
             
@@ -3906,7 +3907,7 @@ and then input to the DVC code.")
 
             if hasattr(self, 'mask_file'):
                 self.config['mask_details']=self.mask_details
-                if tempfile.tempdir in self.mask_file:
+                if tempfile.tempdir in os.path.abspath(self.mask_file):
                     self.config['mask_file']=self.mask_file[len(os.path.abspath(tempfile.tempdir))+1:]
                     self.config['mask_ext'] = False
                 else:
@@ -4013,7 +4014,8 @@ and then input to the DVC code.")
                     print(self.roi)
 
         if hasattr(self, 'mask_file'):
-            self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
+            if 'mask_file' in self.config:
+                self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
 
         count = 0
         for i in self.image[0]:
@@ -4079,12 +4081,13 @@ and then input to the DVC code.")
         print("removed temp")
         shutil.rmtree(tempfile.tempdir)
         
-        
         if hasattr(self, 'progress_window'):
             self.progress_window.setValue(100)
-        
-        self.SaveWindow.close()
-        QMainWindow.closeEvent(self, event)
+        if hasattr(self, 'SaveWindow'):
+            self.SaveWindow.close()
+
+        if event != "new session":
+            QMainWindow.closeEvent(self, event)
         
     def show_zip_progress(self, folder, new_file_dest,ratio):
         #print("in show zip progress")
@@ -4199,14 +4202,13 @@ and then input to the DVC code.")
 
         else:     
             self.SessionSelectionWindow = CreateSessionSelectionWindow(self, temp_folders)
-            self.SessionSelectionWindow.finished.connect(self.do_something)
+            self.SessionSelectionWindow.finished.connect(self.NewSession)
             self.SessionSelectionWindow.open()
 
-    def do_something(self):
-        print ("do something")
-        self.NewSession()
 
     def NewSession(self):
+        self.RemoveTemp("new session")
+        self.CreateWorkingTempFolder()
         self.InitialiseSessionVars()
         self.LoadSession() #Loads blank session
         self.resetRegistration()
@@ -4214,6 +4216,7 @@ and then input to the DVC code.")
         #other possibility for loading new session is closing and opening window:
         # self.close()
         # subprocess.Popen(['python', 'dvc_interface.py'], shell = True) 
+    
 
     def load_config_worker(self, selected_text, progress_callback = None): 
         date_and_time = selected_text.split(' ')[-1]
@@ -4491,10 +4494,6 @@ Please move the file back to this location and reload the session, select a diff
         
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
-
-        for i in range(self.result_widgets['run_entry'].count()):
-            self.result_widgets['run_entry'].removeItem(i)
-
 
         for r, d, f in os.walk(results_directory):
             for directory in d:
@@ -5245,4 +5244,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
