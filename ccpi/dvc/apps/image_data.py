@@ -1,15 +1,13 @@
-import sys
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import *
+from PyQt5.QtCore import QThreadPool
+from PyQt5.QtWidgets import QProgressDialog, QDialog, QLabel, QComboBox, QDialogButtonBox, QFormLayout, QWidget, QVBoxLayout, QGroupBox, QLineEdit, QMessageBox
+
 import os
 import time
-import numpy as np
+import numpy
 
 from functools import partial
-
-from os.path import isfile, join
+from os.path import isfile
 
 import vtk
 
@@ -19,7 +17,6 @@ from ccpi.viewer.utils import cilNumpyMETAImageWriter
 
 from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 
-import copy
 from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
 
 # ImageCreator class
@@ -42,11 +39,12 @@ class ImageDataCreator():
     def createImageData(self, image_array, image_data, info_var = None, convert_numpy = False, finish_fn = None):
         if len(image_array) ==1:
             image = image_array[0]
-            file_extension = image.split(".")[-1]
+            file_extension = os.path.splitext(image)[1]
+
         else:
             for image in image_array:
-                file_extension = image.split(".")[-1]
-                if file_extension != 'tif':
+                file_extension = imghdr.what(f)
+                if ftype != 'tif':
                     self.e(
                             '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
@@ -54,24 +52,24 @@ class ImageDataCreator():
                     displayFileErrorDialog(self,message=error_text, title=error_title)
                     return
 
-        if file_extension in ['mha', 'mhd']:
+        if file_extension in ['.mha', '.mhd']:
             reader = vtk.vtkMetaImageReader()
             reader.AddObserver("ErrorEvent", self.e)
             create_progress_window(self,"Converting", "Converting Image")
             image_worker = Worker(update_reader,reader, image, image_data, convert_numpy, info_var)
 
-        elif file_extension in ['npy']:
+        elif file_extension in ['.npy']:
             print("file ext in npy")
             create_progress_window(self,"Converting", "Converting Image")
             image_worker = Worker(load_npy_image,image, image_data, info_var)     
 
-        elif file_extension in ['tif', 'tiff']:
+        elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
             reader = vtk.vtkTIFFReader()
             reader.AddObserver("ErrorEvent", self.e)
             create_progress_window(self,"Converting", "Converting Image")
             image_worker = Worker(load_tif,image_array,reader, image_data, convert_numpy, info_var)
 
-        elif file_extension in ['raw']:
+        elif file_extension in ['.raw']:
             self.raw_import_dialog = createRawImportDialog(self, image, image_data, info_var, finish_fn)
             dialog = self.raw_import_dialog['dialog'].show()
             return
@@ -89,7 +87,6 @@ class ImageDataCreator():
         image_worker.signals.progress.connect(partial(progress,self.progress_window))
         if finish_fn is not None:
             image_worker.signals.finished.connect(finish_fn)
-            #image_worker.signals.result.connect(partial(save_info, info_var = info_var))
         self.threadpool = QThreadPool()
         self.threadpool.start(image_worker)
 
@@ -113,7 +110,6 @@ def progress(progress_window,value = None):
                 progress_window.setValue(value)
 
 # Display errors:
-
 def displayFileErrorDialog(self, message, title):
     msg = QMessageBox(self)
     msg.setIcon(QMessageBox.Critical)
@@ -133,8 +129,41 @@ def warningDialog(self, message='', window_title='', detailed_text=''):
     return retval
 
 # Load images:
+
+#mha and mhd:
+
+def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, progress_callback=None):
+        progress_callback.emit(20)
+        time.sleep(0.1) #required so that progress window displays
+        reader.SetFileName(image)
+        reader.Update()
+        progress_callback.emit(50)
+        for i in image_data:
+            i.DeepCopy(reader.GetOutput())
+
+        if convert_numpy:
+            print(reader.GetOutput().GetSpacing())
+            filename = os.path.abspath(image)[:-4] + ".npy"
+            numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
+            numpy.save(filename,numpy_array)
+            
+            if image_info is not None:
+                image_info['numpy_file'] = filename
+                print(type(numpy_array[0][0][0]))
+                if (isinstance(numpy_array[0][0][0],numpy.uint8)):
+                    image_info['vol_bit_depth'] = '8'
+                elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
+                    image_info['vol_bit_depth'] = '16'
+                if(numpy_array.flags["FNC"]):
+                    print("F order")
+                else:
+                    print("Not F")
+                #print(image_info['vol_bit_depth'])
+        progress_callback.emit(100)
+
+
 def load_npy_image(image, image_data, image_info = None, progress_callback=None):
-        print("Load npy")
+        #print("Load npy")
         time.sleep(0.1)
         progress_callback.emit(5)
 
@@ -142,11 +171,11 @@ def load_npy_image(image, image_data, image_info = None, progress_callback=None)
             header = f.readline()
         header_length = len(header)
 
-        numpy_array = np.load(image)
+        numpy_array = numpy.load(image)
 
-        if (isinstance(numpy_array[0][0][0],np.uint8)):
+        if (isinstance(numpy_array[0][0][0],numpy.uint8)):
             vol_bit_depth = '8'
-        elif(isinstance(numpy_array[0][0][0],np.uint16)):
+        elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
             vol_bit_depth = '16'
         else:
             vol_bit_depth = None #in this case we can't run the DVC code
@@ -217,49 +246,21 @@ def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info
             filename = os.path.abspath(filenames[0])[:-4] + ".npy"
             numpy_array =  Converter.vtk2numpy(reader.GetOutput())
             #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
-            np.save(filename,numpy_array)
+            numpy.save(filename,numpy_array)
             image_info['numpy_file'] = filename
 
             if image_info is not None:
-                if (isinstance(numpy_array[0][0][0],np.uint8)):
+                if (isinstance(numpy_array[0][0][0],numpy.uint8)):
                     image_info['vol_bit_depth'] = '8'
-                elif(isinstance(numpy_array[0][0][0],np.uint16)):
+                elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
                     image_info['vol_bit_depth'] = '16'
                 print(image_info['vol_bit_depth'])
 
 def get_tiff_progress(caller, event, progress_callback):
         progress_callback.emit(caller.GetProgress()*100)
 
-def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, progress_callback=None):
-        progress_callback.emit(20)
-        time.sleep(0.1) #required so that progress window displays
-        reader.SetFileName(image)
-        reader.Update()
-        progress_callback.emit(50)
-        for i in image_data:
-            i.DeepCopy(reader.GetOutput())
 
-        if convert_numpy:
-            print(reader.GetOutput().GetSpacing())
-            filename = os.path.abspath(image)[:-4] + ".npy"
-            numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
-            #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
-            np.save(filename,numpy_array)
-            
-            if image_info is not None:
-                image_info['numpy_file'] = filename
-                print(type(numpy_array[0][0][0]))
-                if (isinstance(numpy_array[0][0][0],np.uint8)):
-                    image_info['vol_bit_depth'] = '8'
-                elif(isinstance(numpy_array[0][0][0],np.uint16)):
-                    image_info['vol_bit_depth'] = '16'
-                if(numpy_array.flags["FNC"]):
-                    print("F order")
-                else:
-                    print("Not F")
-                #print(image_info['vol_bit_depth'])
-        progress_callback.emit(100)
-
+#raw:
 def createRawImportDialog(self, fname, image_data, info_var, finish_fn):
         dialog = QDialog(self)
         ui = generateUIFormView()
@@ -567,10 +568,6 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
         header += 'ElementDataFile = {}'.format(os.path.basename(datafname))
         return header
 
-def save_info(result, info_var = None):
-    if result is not None and info_var is not None:
-        info_var = result
-        print("Result saved: ", info_var)
 
 
 class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copied from dvc_configurator.py
@@ -588,10 +585,10 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copie
         return self.__Points
     def SetData(self, value):
         '''Sets the points from a numpy array or list'''
-        if not isinstance (value, np.ndarray) :
+        if not isinstance (value, numpy.ndarray) :
             raise ValueError('Data must be a numpy array. Got', value)
 
-        if not np.array_equal(value,self.__Data):
+        if not numpy.array_equal(value,self.__Data):
             self.__Data = value
             self.Modified()
 
