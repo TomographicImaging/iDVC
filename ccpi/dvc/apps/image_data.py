@@ -183,11 +183,14 @@ def load_npy_image(image, image_data, image_info = None, progress_callback=None)
                 i = None
             return
 
-        converted_image_data = Converter.numpy2vtkImage(numpy_array) #(3.2,3.2,1.5)
+        Converter.numpy2vtkImage(numpy_array, output=image_data[0]) #(3.2,3.2,1.5)
         progress_callback.emit(50)
 
+        count = 0
         for i in image_data:
-            i.DeepCopy(converted_image_data)
+            if count>0:
+                i.DeepCopy(image_data[0])
+            count+=1
         progress_callback.emit(100)
 
         if image_info is not None:
