@@ -292,9 +292,6 @@ class MainWindow(QMainWindow):
         self.CreateViewDVCResultsPanel()
 
         
-        
-        #self.CreateGenerateGraphsPanel()
-        
         #Tabifies dockwidgets in LeftDockWidgetArea:
         prev = None
         first_dock = None
@@ -310,7 +307,6 @@ class MainWindow(QMainWindow):
                 
         first_dock.raise_() # makes first panel the one that is open by default.
 
-        
 
         self.VisualisationWindow = VisualisationWindow(self)
 
@@ -382,7 +378,6 @@ and then input to the DVC code.")
 
         dockWidget.visibilityChanged.connect(partial(self.displayHelp,panel_no = 0))
 
-
         #Create the widgets:
 
         widgetno = 1
@@ -432,15 +427,6 @@ and then input to the DVC code.")
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1
 
-        # si_widgets['roi_label'] = QLabel(groupBox)
-        # si_widgets['roi_label'].setText("ROI:")
-        # formLayout.setWidget(widgetno, QFormLayout.LabelRole, si_widgets['roi_label'])
-
-        # si_widgets['roi_file_label'] = QLabel(groupBox)
-        # si_widgets['roi_file_label'].setText("")
-        # formLayout.setWidget(widgetno, QFormLayout.FieldRole, si_widgets['roi_file_label'])
-        # widgetno += 1
-
         si_widgets['view_button'] = QPushButton(groupBox)
         si_widgets['view_button'].setText("View Image")
         si_widgets['view_button'].setEnabled(False)
@@ -450,7 +436,6 @@ and then input to the DVC code.")
         #button functions:
         si_widgets['ref_browse'].clicked.connect(lambda: self.SelectImage(si_widgets['ref_file_label'],0,si_widgets['cor_browse']))
         si_widgets['cor_browse'].clicked.connect(lambda: self.SelectImage(si_widgets['cor_file_label'],1,si_widgets['view_button']))
-        #si_widgets['roi_browse'].clicked.connect(lambda: self.select_pointcloud(si_widgets['roi_file_label']))
         si_widgets['view_button'].clicked.connect(self.view_and_load_images)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
@@ -497,14 +482,9 @@ and then input to the DVC code.")
 
             if len(files) == 1: #@todo
                 if(self.image[image_var]):
-                    #print("Right here")
-                    #print(self.vis_widget_2D.image_file)
                     self.image[image_var]= files
-                    #print(self.vis_widget_2D.image_file)
                 else:
-                    #print(self.vis_widget_2D.image_file)
                     self.image[image_var].append(files[0])
-                    #print(self.vis_widget_2D.image_file)
                 label.setText(os.path.basename(files[0]))
                 
             else:
@@ -520,8 +500,7 @@ and then input to the DVC code.")
                         error_title = "READ ERROR"
                         error_text = "Error reading file: ({filename})".format(filename=f)
                         self.displayFileErrorDialog(message=error_text, title=error_title)
-                        #self.CreateSessionSelector()
-                        #return #prevents dialog showing for every single file by exiting the for loop
+                        return #prevents dialog showing for every single file by exiting the for loop
                 if(self.image[image_var]):
                     self.image[image_var] = filenames
                 else:
@@ -532,9 +511,9 @@ and then input to the DVC code.")
             #print(self.vis_widget_2D.image_file)
 
     def copy_file(self, start_location, end_location, progress_callback):
-        file_extension = start_location.split(".")[-1]
-        #CHECK LOCATION FOR THIS CODE
-        if file_extension == 'mhd':
+        file_extension = os.path.splitext(image)[1]
+
+        if file_extension == '.mhd':
             reader = vtk.vtkMetaImageReader()
             reader.SetFileName(start_location)
             reader.Update()
@@ -543,7 +522,6 @@ and then input to the DVC code.")
             writer.SetFileName(end_location)
             writer.SetInputData(reader.GetOutput())
             writer.Write()
-            #print("wrote")
         else:
             shutil.copyfile(start_location, end_location)
 
@@ -571,13 +549,20 @@ and then input to the DVC code.")
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
             self.ref_image_data3D = vtk.vtkImageData()
-            #self.ref_image_data3D = self.ref_image_data
             self.image_info = dict()
-            #ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
-            ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
+            deepcopy = True
+            if deepcopy:
+                ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
+            else:
+                ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data], self.image_info, True, partial(self.save_image_info, "ref"))
+                self.ref_image_data3D = self.ref_image_data
+
+            print("Created ref image")
+
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
         ImageDataCreator.createImageData(self, self.image[1], [self.corr_image_data], self.image_info, True, partial(self.save_image_info, "cor"))
+        print("Created corr")
 
     def save_image_info(self, image_type):
         if 'numpy_file' in self.image_info:
@@ -613,7 +598,8 @@ and then input to the DVC code.")
         self.progress_window.setValue(10)
 
         #print("2D")
-        self.vis_widget_2D.setImageData(self.ref_image_data) 
+        self.vis_widget_2D.setImageData(self.ref_image_data)
+        print("Set 2D image data") 
         self.vis_widget_2D.displayImageData()
         #print("3D")
         #print(50)
@@ -3124,20 +3110,6 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
             rdvc_widgets = {}
 
-            # rdvc_widgets['dir_label'] = QLabel(groupBox)
-            # rdvc_widgets['dir_label'].setText("Select a directory to save the run:")
-            # formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['dir_label'])
-
-            # rdvc_widgets['dir_name_label'] = QLabel(groupBox)
-            # rdvc_widgets['dir_name_label'].setText("")
-            # formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['dir_name_label'])
-            # widgetno += 1
-
-            # rdvc_widgets['dir_browse'] = QPushButton(groupBox)
-            # rdvc_widgets['dir_browse'].setText("Browse..")
-            # formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['dir_browse'])
-            # widgetno += 1
-
             rdvc_widgets['name_label'] = QLabel(groupBox)
             rdvc_widgets['name_label'].setText("Set a name for the run:")
             formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['name_label'])
@@ -3739,8 +3711,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         
         self.result_widgets['subvol_entry'].addItems(points_list)
-                
-
+               
 
     def load_results(self):
 

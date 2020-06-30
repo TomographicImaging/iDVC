@@ -19,6 +19,8 @@ from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 
 from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
 
+import imghdr
+
 # ImageCreator class
 class ImageDataCreator():   
 
@@ -43,8 +45,8 @@ class ImageDataCreator():
 
         else:
             for image in image_array:
-                file_extension = imghdr.what(f)
-                if ftype != 'tif':
+                file_extension = imghdr.what(image)
+                if file_extension != 'tiff':
                     self.e(
                             '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
@@ -133,23 +135,30 @@ def warningDialog(self, message='', window_title='', detailed_text=''):
 #mha and mhd:
 
 def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, progress_callback=None):
-        progress_callback.emit(20)
-        time.sleep(0.1) #required so that progress window displays
+        #progress_callback.emit(20)
+        #time.sleep(0.1) #required so that progress window displays
+        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
         reader.SetFileName(image)
         reader.Update()
-        progress_callback.emit(50)
+        #progress_callback.emit(50)
+        image_data[0]= reader.GetOutput()
+
+        count = 0
         for i in image_data:
-            i.DeepCopy(reader.GetOutput())
+            if count>0 :
+                i.DeepCopy(image_data[0])
+            count+=1
+        
+        progress_callback.emit(90)
 
         if convert_numpy:
-            print(reader.GetOutput().GetSpacing())
+            print("Converting metaimage to numpy")
             filename = os.path.abspath(image)[:-4] + ".npy"
             numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
             numpy.save(filename,numpy_array)
             
             if image_info is not None:
                 image_info['numpy_file'] = filename
-                print(type(numpy_array[0][0][0]))
                 if (isinstance(numpy_array[0][0][0],numpy.uint8)):
                     image_info['vol_bit_depth'] = '8'
                 elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
@@ -199,15 +208,15 @@ def load_npy_image(image, image_data, image_info = None, progress_callback=None)
         
         
 def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info = None, progress_callback=None):
-        time.sleep(0.1) #required so that progress window displays
-        progress_callback.emit(10)
+        #time.sleep(0.1) #required so that progress window displays
+        #progress_callback.emit(10)
 
         sa = vtk.vtkStringArray()
         for fname in filenames:
             i = sa.InsertNextValue(fname)
         print("read {} files".format(i))
 
-        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_tiff_progress, progress_callback= progress_callback))
+        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
         reader.SetFileNames(sa)
 
         dtype = vtk.VTK_UNSIGNED_CHAR
@@ -242,8 +251,18 @@ def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info
             reader = shiftScaler
         reader.Update()
 
+        progress_callback.emit(80)
+
+        print("Convert np")
+
+        image_data[0] = reader.GetOutput()
+        count = 0
         for i in image_data:
-            i.DeepCopy(reader.GetOutput())
+            if count>0:
+                i.DeepCopy(reader.GetOutput())
+            count+=1
+
+        progress_callback.emit(90)
 
         if convert_numpy:
             filename = os.path.abspath(filenames[0])[:-4] + ".npy"
@@ -258,9 +277,10 @@ def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info
                 elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
                     image_info['vol_bit_depth'] = '16'
                 print(image_info['vol_bit_depth'])
+        progress_callback.emit(100)
 
-def get_tiff_progress(caller, event, progress_callback):
-        progress_callback.emit(caller.GetProgress()*100)
+def get_progress(caller, event, progress_callback):
+        progress_callback.emit(caller.GetProgress()*80)
 
 
 #raw:
@@ -375,7 +395,6 @@ def createRawImportDialog(self, fname, image_data, info_var, finish_fn):
                 'buttonBox': buttonbox}
 
 def raw_conversion(self, fname, image_data, info_var, finish_fn):
-        #TODO: reinstate the progress window
         create_progress_window(self,"Converting", "Converting Image")
         self.progress_window.setValue(10)
         image_worker = Worker(saveRawImageData, self, fname, image_data, info_var)
@@ -505,6 +524,7 @@ def saveRawImageData(self,fname, image_data, info_var, progress_callback):
         reader.AddObserver("ErrorEvent", self.e)
         reader.SetFileName(hdrfname)
         reader.Update()
+        progress_callback.emit(80)
         if self.e.ErrorOccurred():
             errors = {"type": "hdr", "hdrfname": hdrfname}
             return (errors)
