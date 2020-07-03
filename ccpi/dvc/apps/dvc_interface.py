@@ -283,13 +283,7 @@ class MainWindow(QMainWindow):
         self.vis_widget_2D = VisualisationWidget(self, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle)#interactorStyle= CILInteractorStyle2D) #previously unliked for testing
         self.vis_widget_3D = VisualisationWidget(self, viewer=viewer3D, interactorStyle=vlink.Linked3DInteractorStyle) #interactorStyle= CILInteractorStyle3D)#previously unlinked for testing
 
-        self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
-                                           self.vis_widget_3D.frame.viewer)
-        self.link2D3D.setLinkPan(False)
-        self.link2D3D.setLinkZoom(False)
-        self.link2D3D.setLinkWindowLevel(True)
-        self.link2D3D.setLinkSlice(True)
-        self.link2D3D.enable()
+ 
 
         self.CreateHelpPanel()
 
@@ -615,11 +609,24 @@ and then input to the DVC code.")
         self.progress_window.setValue(80)
 
 
-
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
                                                 self.UpdateClippingPlanes, 1.9)
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
                                                 self.UpdateClippingPlanes, 1.9)
+
+        #Link Viewers:
+        self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
+                                           self.vis_widget_3D.frame.viewer)
+        self.link2D3D.setLinkPan(False)
+        self.link2D3D.setLinkZoom(False)
+        self.link2D3D.setLinkWindowLevel(True)
+        self.link2D3D.setLinkSlice(True)
+        self.link2D3D.setLinkOrientation(True)
+        self.link2D3D.enable()
+
+        #reset these so they aren't remembered for next image load
+        self.current_slice = None
+        self.orientation = None
 
         self.progress_window.setValue(100)
         
@@ -638,7 +645,7 @@ and then input to the DVC code.")
         if(self.reg_load):
             #Image Reg:
             
-                self.displayViewer(registration_open = True)
+                self.displayRegistrationViewer(registration_open = True)
                 #first we need to set the z slice -> go to slice self.config['point0'][2]
                 self.createPoint0(self.config['point0'])
                 rp = self.registration_parameters
@@ -653,7 +660,7 @@ and then input to the DVC code.")
                     self.registration_parameters['registration_box_size_entry'].setValue(self.config['reg_sel_size'])
                     self.registration_parameters['registration_box_size_entry'].setEnabled(True)
                     self.displayRegistrationSelection()
-                self.displayViewer(registration_open = False)
+                self.displayRegistrationViewer(registration_open = False)
                 self.reg_load = False
 
         #TODO: Need to be able to load pointcloud w/o loading mask
@@ -899,7 +906,7 @@ and then input to the DVC code.")
         sphere_actor.GetProperty().SetColor(1, 0, 0)
         sphere_actor.GetProperty().SetOpacity(1)
         sphere_actor.GetProperty().SetRepresentationToWireframe() #wireframe
-        sphere_actor.GetProperty().SetLineWidth(2.0)
+        sphere_actor.GetProperty().SetLineWidth(3.0)
         # sphere_actor.GetProperty().SetEdgeVisibility(True)
         # sphere_actor.GetProperty().SetEdgeColor(0,0,0)
 
@@ -933,7 +940,7 @@ and then input to the DVC code.")
 
         rp = {}
 
-        dockWidget.visibilityChanged.connect(self.displayViewer)
+        dockWidget.visibilityChanged.connect(self.displayRegistrationViewer)
         
         # Button select point0
         rp['select_point_zero'] = QPushButton(groupBox)
@@ -1053,13 +1060,18 @@ and then input to the DVC code.")
         # save to instance
         self.registration_parameters = rp
 
-    def displayViewer(self,registration_open):
+    def displayRegistrationViewer(self,registration_open):
         if hasattr(self, 'ref_image_data') and hasattr(self, 'corr_image_data'):
             #check for image data else do nothing
             if registration_open:
                 self.help_label.setText(self.help_text[1])
                 if not hasattr(self, 'vis_widget_reg'):
+                    #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
+                    self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+                    self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+
                     self.vis_widget_reg = VisualisationWidget(self, viewer2D)
+
                     dock_reg = QDockWidget("Image Registration",self.VisualisationWindow)
                     dock_reg.setObjectName("2DRegView")
                     dock_reg.setWidget(self.vis_widget_reg)
@@ -1072,6 +1084,10 @@ and then input to the DVC code.")
                     self.viewer2D_dock.setVisible(False)
                     self.dock_reg = dock_reg
                     windowHeight = self.size().height()
+
+                    #Clear for next image visualisation:
+                    self.orientation = None
+                    self.current_slice = None
 
                 else:
                     self.dock_reg.setVisible(True)
@@ -1125,7 +1141,7 @@ and then input to the DVC code.")
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
-            self.displayViewer(False)
+            self.displayRegistrationViewer(False)
 
             del self.vis_widget_reg
             self.translate = None
@@ -4788,18 +4804,15 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.setCentralWidget(self.frame)
         self.image_file = [""]
 
+
     def displayImageData(self):
             self.createEmptyFrame()
-            start = time.time()
-            #print(image_data)
-            #print("start of finish" + str(self.viewer))
-            self.frame.viewer.setInput3DData(self.image_data)
-            print("set input data for" + str(self.viewer))
-
+            self.frame.viewer.setInput3DData(self.image_data)  
             interactor = self.frame.viewer.getInteractor()
 
             if hasattr(self.parent, 'orientation'):
                     orientation = self.parent.orientation
+                    print("ORIENTATION", orientation)
                     if orientation == SLICE_ORIENTATION_XY:
                         axis = 'z'
                         interactor.SetKeyCode("z")
@@ -4812,21 +4825,22 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                         interactor.SetKeyCode("x")
             else:
                 interactor.SetKeyCode("z")
-
-
+                axis = 'z'
 
             if self.viewer == viewer2D:
+                self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
                 #Loads appropriate orientation
-                self.frame.viewer.setSliceOrientation(axis)
-                self.parent.orientation = self.frame.viewer.GetSliceOrientation()
+                #self.frame.viewer.setSliceOrientation(axis)
+                #self.parent.orientation = self.frame.viewer.GetSliceOrientation()
                 if self.parent.current_slice:
                     self.frame.viewer.displaySlice(self.parent.current_slice)
-                    self.parent.current_slice = None
+                    
                 
                 #self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
                 # self.frame.viewer.ren.Render()
 
             if self.viewer == viewer3D:
+                self.frame.viewer.style.keyPress(interactor, 'KeyPressEvent')
                 # Depth peeling for volumes doesn't work as we would like when we have the vtk.vtkFixedPointVolumeRayCastMapper() instead of the vtk.vtkSmartVolumeMapper()
                 # self.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
                 # self.frame.viewer.ren.SetUseDepthPeeling(True)
@@ -4834,20 +4848,14 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 # self.frame.viewer.renWin.SetMultiSamples(False)
                 # self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
 
-                #self.frame.viewer.style.keyPress(interactor, 'KeyPressEvent')
-
+        
                 if self.parent.current_slice:
                     self.frame.viewer.style.SetActiveSlice(self.parent.current_slice)
-                    #self.frame.viewer.displaySlice(self.parent.current_slice)
+                    self.frame.viewer.style.UpdatePipeline()
 
-                self.frame.viewer.ren.Render()
+                #self.frame.viewer.ren.Render()
+            print("set input data for" + str(self.viewer))
 
-
-                #self.frame.viewer.sliceOrientation = orientation #no method to set this? didn't seem to do anything
-
-            
-            end = time.time() - start
-            #print("loaded image" + str(self.viewer) + "in " + str(end) + " seconds." )
 
     def setImageData(self, image_data):
         self.image_data = image_data
