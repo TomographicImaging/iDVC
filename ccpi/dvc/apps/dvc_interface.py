@@ -198,77 +198,78 @@ class MainWindow(QMainWindow):
           
     def UpdateClippingPlanes(self, interactor, event):
         try:
-            normal = [0, 0, 0]
-            origin = [0, 0, 0]
-            norm = 1
-            v = self.vis_widget_2D.frame.viewer
-            bpcpoints = self.bpcpoints
-            bpcvolume = self.bpcvolume
-            orientation = v.GetSliceOrientation()
-            if orientation == SLICE_ORIENTATION_XY:
+            if (hasattr(self, 'bpcpoints')):
+                normal = [0, 0, 0]
+                origin = [0, 0, 0]
                 norm = 1
-            elif orientation == SLICE_ORIENTATION_XZ:
-                norm = 1
-            elif orientation == SLICE_ORIENTATION_YZ:
-                norm = 1
+                v = self.vis_widget_2D.frame.viewer
+                bpcpoints = self.bpcpoints
+                bpcvolume = self.bpcvolume
+                orientation = v.GetSliceOrientation()
+                if orientation == SLICE_ORIENTATION_XY:
+                    norm = 1
+                elif orientation == SLICE_ORIENTATION_XZ:
+                    norm = 1
+                elif orientation == SLICE_ORIENTATION_YZ:
+                    norm = 1
 
-            if event == "MouseWheelForwardEvent":
-                # this is pretty absurd but it seems the
-                # plane cuts too much in Forward...
-                # Made new adjustments for each direction
-                if orientation == SLICE_ORIENTATION_XY: #z
-                    beta = 2
-                elif orientation == SLICE_ORIENTATION_XZ: #y
-                    beta = 1
-                elif orientation == SLICE_ORIENTATION_YZ: #x
-                    beta = 1
+                if event == "MouseWheelForwardEvent":
+                    # this is pretty absurd but it seems the
+                    # plane cuts too much in Forward...
+                    # Made new adjustments for each direction
+                    if orientation == SLICE_ORIENTATION_XY: #z
+                        beta = 2
+                    elif orientation == SLICE_ORIENTATION_XZ: #y
+                        beta = 1
+                    elif orientation == SLICE_ORIENTATION_YZ: #x
+                        beta = 1
 
-            if event == "MouseWheelBackwardEvent":
-                # since modifying the camera direction in CILViewer2D,
-                # and to enable viewing in the y direction, had to update
-                # beta for MouseWheelBackward as well.
-                if orientation == SLICE_ORIENTATION_XY: #z
-                    beta = 0
-                elif orientation == SLICE_ORIENTATION_XZ: #y
-                    beta = -1
-                elif orientation == SLICE_ORIENTATION_YZ: #x
-                    beta = -1
+                if event == "MouseWheelBackwardEvent":
+                    # since modifying the camera direction in CILViewer2D,
+                    # and to enable viewing in the y direction, had to update
+                    # beta for MouseWheelBackward as well.
+                    if orientation == SLICE_ORIENTATION_XY: #z
+                        beta = 0
+                    elif orientation == SLICE_ORIENTATION_XZ: #y
+                        beta = -1
+                    elif orientation == SLICE_ORIENTATION_YZ: #x
+                        beta = -1
 
-            spac = v.img3D.GetSpacing()
-            #print("spacing")
-            #print(spac)
-            orig = v.img3D.GetOrigin()
-            slice_thickness = spac[orientation]
+                spac = v.img3D.GetSpacing()
+                #print("spacing")
+                #print(spac)
+                orig = v.img3D.GetOrigin()
+                slice_thickness = spac[orientation]
 
-            normal[orientation] = norm
-            origin [orientation] = (v.style.GetActiveSlice() + beta ) * slice_thickness - orig[orientation]
+                normal[orientation] = norm
+                origin [orientation] = (v.style.GetActiveSlice() + beta ) * slice_thickness - orig[orientation]
 
-            bpcpoints.SetPlaneOriginAbove(origin)
-            bpcpoints.SetPlaneNormalAbove(normal)
+                bpcpoints.SetPlaneOriginAbove(origin)
+                bpcpoints.SetPlaneNormalAbove(normal)
 
-            bpcvolume.SetPlaneOriginAbove(origin)
-            bpcvolume.SetPlaneNormalAbove(normal)
+                bpcvolume.SetPlaneOriginAbove(origin)
+                bpcvolume.SetPlaneNormalAbove(normal)
 
-            # update the  plane below
-            #beta += 1
-            slice_below = v.style.GetActiveSlice() -1 + beta
-            if slice_below < 0:
-                slice_below = 0
+                # update the  plane below
+                #beta += 1
+                slice_below = v.style.GetActiveSlice() -1 + beta
+                if slice_below < 0:
+                    slice_below = 0
 
-            origin_below = [i for i in origin]
-            origin_below[orientation] = ( slice_below ) * slice_thickness - orig[orientation]
+                origin_below = [i for i in origin]
+                origin_below[orientation] = ( slice_below ) * slice_thickness - orig[orientation]
 
-            bpcpoints.SetPlaneOriginBelow(origin_below)
-            bpcpoints.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
-            bpcvolume.SetPlaneOriginBelow(origin_below)
-            bpcvolume.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
+                bpcpoints.SetPlaneOriginBelow(origin_below)
+                bpcpoints.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
+                bpcvolume.SetPlaneOriginBelow(origin_below)
+                bpcvolume.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
 
-            bpcpoints.Update()
-            bpcvolume.Update()
-            #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
-            #self.vis_widget_2D.frame.viewer.sliceActor2.GetProperty().SetOpacity(0.99) #actor with mask
-            #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.1)
-            # print (">>>>>>>>>>>>>>>>>>>>>")
+                bpcpoints.Update()
+                bpcvolume.Update()
+                #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.5)
+                #self.vis_widget_2D.frame.viewer.sliceActor2.GetProperty().SetOpacity(0.99) #actor with mask
+                #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.1)
+                # print (">>>>>>>>>>>>>>>>>>>>>")
         except AttributeError as ae:
             print (ae)
             print ("Probably Point Cloud not yet created")
@@ -281,6 +282,14 @@ class MainWindow(QMainWindow):
         #Create widgets to view images in 2D and 3D and link them:
         self.vis_widget_2D = VisualisationWidget(self, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle)#interactorStyle= CILInteractorStyle2D) #previously unliked for testing
         self.vis_widget_3D = VisualisationWidget(self, viewer=viewer3D, interactorStyle=vlink.Linked3DInteractorStyle) #interactorStyle= CILInteractorStyle3D)#previously unlinked for testing
+
+        self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
+                                           self.vis_widget_3D.frame.viewer)
+        self.link2D3D.setLinkPan(False)
+        self.link2D3D.setLinkZoom(False)
+        self.link2D3D.setLinkWindowLevel(True)
+        self.link2D3D.setLinkSlice(True)
+        self.link2D3D.enable()
 
         self.CreateHelpPanel()
 
@@ -548,30 +557,20 @@ and then input to the DVC code.")
 
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
-            self.ref_image_data3D = vtk.vtkImageData()
             self.image_info = dict()
-            deepcopy = True
-            if deepcopy:
-                ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
-            else:
-                ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data], self.image_info, True, partial(self.save_image_info, "ref"))
-                self.ref_image_data3D = self.ref_image_data
-
+            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= True,)
             print("Created ref image")
 
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], [self.corr_image_data], self.image_info, True, partial(self.save_image_info, "cor"))
-        print("Created corr")
+        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= True,)
+        print("Created corr image")
 
     def save_image_info(self, image_type):
         if 'numpy_file' in self.image_info:
             image_file = [self.image_info['numpy_file']]
             if 'vol_bit_depth' in self.image_info:
                 self.vol_bit_depth = self.image_info['vol_bit_depth']
-            
-            # if not 'temp' in image_file:
-            #     image_file = image_file[len(working_directory):]
             
             if image_type == "ref":
                 self.dvc_input_image[0] = image_file
@@ -596,26 +595,26 @@ and then input to the DVC code.")
 
         self.create_progress_window("Loading", "Loading Image")
         self.progress_window.setValue(10)
+        # print(self.ref_image_data)
+        # print(self.ref_image_data3D)
+        # print(self.ref_image_data == self.ref_image_data3D)
+        # print("Are they the same?")
 
         #print("2D")
+        print(self.ref_image_data.GetExtent())
         self.vis_widget_2D.setImageData(self.ref_image_data)
         print("Set 2D image data") 
         self.vis_widget_2D.displayImageData()
         #print("3D")
         #print(50)
         self.progress_window.setValue(50)
-        self.vis_widget_3D.setImageData(self.ref_image_data3D)
+        print(self.ref_image_data.GetExtent())
+        self.vis_widget_3D.setImageData(self.ref_image_data) #3D)
         self.vis_widget_3D.displayImageData()
 
         self.progress_window.setValue(80)
 
-        self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
-                                           self.vis_widget_3D.frame.viewer)
-        self.link2D3D.setLinkPan(False)
-        self.link2D3D.setLinkZoom(False)
-        self.link2D3D.setLinkWindowLevel(True)
-        self.link2D3D.setLinkSlice(True)
-        self.link2D3D.enable()
+
 
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
                                                 self.UpdateClippingPlanes, 1.9)
@@ -898,9 +897,9 @@ and then input to the DVC code.")
         self.cubesphere_actor3D = sphere_actor
         sphere_actor.SetMapper(sphere_mapper)
         sphere_actor.GetProperty().SetColor(1, 0, 0)
-        sphere_actor.GetProperty().SetOpacity(0.5)
-        #sphere_actor.GetProperty().SetRepresentationToWireframe() #wireframe
-        # sphere_actor.GetProperty().SetLineWidth(2.0)
+        sphere_actor.GetProperty().SetOpacity(1)
+        sphere_actor.GetProperty().SetRepresentationToWireframe() #wireframe
+        sphere_actor.GetProperty().SetLineWidth(2.0)
         # sphere_actor.GetProperty().SetEdgeVisibility(True)
         # sphere_actor.GetProperty().SetEdgeColor(0,0,0)
 
@@ -4814,8 +4813,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             else:
                 interactor.SetKeyCode("z")
 
-            
-            
+
 
             if self.viewer == viewer2D:
                 #Loads appropriate orientation
@@ -4826,20 +4824,15 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                     self.parent.current_slice = None
                 
                 #self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
-                
-                #self.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
-                #self.frame.viewer.
+                # self.frame.viewer.ren.Render()
+
+            if self.viewer == viewer3D:
+                # Depth peeling for volumes doesn't work as we would like when we have the vtk.vtkFixedPointVolumeRayCastMapper() instead of the vtk.vtkSmartVolumeMapper()
+                # self.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
                 # self.frame.viewer.ren.SetUseDepthPeeling(True)
                 # self.frame.viewer.renWin.SetAlphaBitPlanes(True)
                 # self.frame.viewer.renWin.SetMultiSamples(False)
                 # self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
-                # self.frame.viewer.ren.Render()
-            if self.viewer == viewer3D:
-                self.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
-                self.frame.viewer.ren.SetUseDepthPeeling(True)
-                self.frame.viewer.renWin.SetAlphaBitPlanes(True)
-                self.frame.viewer.renWin.SetMultiSamples(False)
-                self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
 
                 #self.frame.viewer.style.keyPress(interactor, 'KeyPressEvent')
 
