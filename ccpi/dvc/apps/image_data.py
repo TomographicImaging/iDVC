@@ -169,6 +169,10 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
                 else:
                     print("Not F")
                 #print(image_info['vol_bit_depth'])
+                with open(filename, 'rb') as f:
+                    header = f.readline()
+                image_info['header_length'] = len(header)
+
         progress_callback.emit(100)
 
 
@@ -183,6 +187,9 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
             print ("Spacing ", output_image.GetSpacing())
             header_length = reader.GetFileHeaderLength() 
             vol_bit_depth = reader.GetBytesPerElement()*8
+            shape = reader.GetStoredArrayShape()
+            if reader.GetIsFortran():
+                shape = shape[::-1]
             # print("Header", header_length)
             # print("vol_bit_depth", vol_bit_depth)
         else:
@@ -195,6 +202,7 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
             header_length = len(header)
 
             numpy_array = numpy.load(image_file)
+            shape = numpy.shape(numpy_array)
 
             if (isinstance(numpy_array[0][0][0],numpy.uint8)):
                 vol_bit_depth = '8'
@@ -213,6 +221,7 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
         if image_info is not None:
             image_info["header_length"]  = header_length
             image_info["vol_bit_depth"] =  vol_bit_depth
+            image_info["shape"] = shape
         
         
 def load_tif(filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
@@ -281,6 +290,8 @@ def load_tif(filenames, reader, output_image,   convert_numpy = False,  image_in
                 elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
                     image_info['vol_bit_depth'] = '16'
                 print(image_info['vol_bit_depth'])
+
+            #TODO: save volume header length
         progress_callback.emit(100)
 
 def get_progress(caller, event, progress_callback):
@@ -514,6 +525,7 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
             errors = {"type": "size", "file_size": file_size, "expected_size": expected_size}
             return (errors)
 
+        resample = False
         if resample:
             reader = cilBaseResampleReader()
             reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
@@ -530,7 +542,7 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
             reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
             reader.Update()
             output_image.ShallowCopy(reader.GetOutput())
-            print ("Spacing ", output_image.GetSpacing())
+            #print ("Spacing ", output_image.GetSpacing())
 
         else:
 

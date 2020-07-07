@@ -1,0 +1,557 @@
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBF340C80): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Interaction\Widgets\vtkImageTracerWidget.cxx, line 234
+vtkImageTracerWidget (000001DDBF6504D0): The external prop must be set prior to enabling/disabling widget
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 87
+vtkWin32OpenGLRenderWindow (000001DDBFD4CD90): wglMakeCurrent failed in Clean(), error: 6
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 227
+vtkWin32OpenGLRenderWindow (000001DDD0F01960): wglMakeCurrent failed in MakeCurrent(), error: The handle is invalid.
+
+
+
+ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 87
+vtkWin32OpenGLRenderWindow (000001DDCB0B66D0): wglMakeCurrent failed in Clean(), error: 6
+
+
