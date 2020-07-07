@@ -72,9 +72,11 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+#from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-__version__ = '20.06.2'
+from image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+
+__version__ = '20.06.3'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -194,7 +196,8 @@ class MainWindow(QMainWindow):
         self.mask_load = False
         self.raw_import_dialog = None
         self.reg_load = False
-        self.loading_session = False 
+        self.loading_session = False
+        self.dvc_input_image_in_session_folder = False 
           
     def UpdateClippingPlanes(self, interactor, event):
         try:
@@ -574,32 +577,37 @@ and then input to the DVC code.")
             #self.ref_image_data3D = self.ref_image_data
             self.image_info = dict()
             #ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
-            ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"))
+            ImageDataCreator.createImageData(self, self.image[0], [self.ref_image_data, self.ref_image_data3D], self.image_info, True, partial(self.save_image_info, "ref"), os.path.abspath(tempfile.tempdir))
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], [self.corr_image_data], self.image_info, True, partial(self.save_image_info, "cor"))
+        ImageDataCreator.createImageData(self, self.image[1], [self.corr_image_data], self.image_info, True, partial(self.save_image_info, "cor"), os.path.abspath(tempfile.tempdir))
 
     def save_image_info(self, image_type):
+        #print("INFO: ", self.image_info)
+        if 'vol_bit_depth' in self.image_info:
+            self.vol_bit_depth = self.image_info['vol_bit_depth']
+
+        if 'header_length' in self.image_info:
+            self.vol_hdr_lngth = self.image_info['header_length']
+        else:
+            self.vol_hdr_lngth = 0
+
+        if 'shape' in self.image_info:
+            self.unsampled_image_dimensions = self.image_info['shape']
+
         if 'numpy_file' in self.image_info:
             image_file = [self.image_info['numpy_file']]
-            if 'vol_bit_depth' in self.image_info:
-                self.vol_bit_depth = self.image_info['vol_bit_depth']
-            
-            # if not 'temp' in image_file:
-            #     image_file = image_file[len(working_directory):]
-            
             if image_type == "ref":
                 self.dvc_input_image[0] = image_file
             else:
                 self.dvc_input_image[1] = image_file
+            self.dvc_input_image_in_session_folder = True
         else:
             self.dvc_input_image = self.image
+            self.dvc_input_image_in_session_folder = False
         
         if image_type == "ref":
             self.visualise()
-        # else:
-        #     print("The image files:", self.image)
-        #     print("DVC input:", self.dvc_input_image)
 
     def visualise(self):
         if self.ref_image_data is None:
@@ -640,6 +648,9 @@ and then input to the DVC code.")
         
         time.sleep(0.1)
         self.load_corr_image()
+
+        self.pointCloudCreated = False
+        self.pointCloudLoaded = False
 
         if(self.mask_load):
             self.MaskWorker("load session")
@@ -3496,10 +3507,14 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             print(self.roi_files)
 
         print("DVC in: ", self.dvc_input_image)
+
+        
             
         
         self.reference_file = self.dvc_input_image[0][0]
         self.correlate_file = self.dvc_input_image[1][0]
+
+        print("REF: ", self.reference_file)
 
 
         run_config = {}
@@ -3509,8 +3524,8 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         run_config['reference_file'] = self.reference_file
         run_config['correlate_file'] = self.correlate_file
         run_config['roi_files']= self.roi_files
-        run_config['vol_bit_depth'] = 8
-        run_config['vol_hdr_lngth'] = 96
+        run_config['vol_bit_depth'] = self.vol_bit_depth
+        run_config['vol_hdr_lngth'] = self.vol_hdr_lngth
         run_config['dims']=[self.vis_widget_2D.image_data.GetDimensions()[0],self.vis_widget_2D.image_data.GetDimensions()[1],self.vis_widget_2D.image_data.GetDimensions()[2]] #image dimensions
 
         run_config['subvol_geom'] = self.pointcloud_parameters['pointcloud_volume_shape_entry'].currentText().lower()
@@ -3881,16 +3896,17 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             #we need to do the same for the dvc input image:
             dvc_input_image = [[],[]]
             for i in self.dvc_input_image[0]:
-                if self.image_copied[0]:
+                if self.image_copied[0] or self.dvc_input_image_in_session_folder:
                     dvc_input_image[0].append(os.path.basename(i))
                 else:
                     dvc_input_image[0].append(i)
             for j in self.dvc_input_image[1]:
-                if self.image_copied[1]:
+                if self.image_copied[1] or self.dvc_input_image_in_session_folder:
                     dvc_input_image[1].append(os.path.basename(j))
                 else:
                    dvc_input_image[1].append(j)
             self.config['dvc_input_image']=dvc_input_image
+            self.config['dvc_input_image_in_session_folder'] = self.dvc_input_image_in_session_folder
 
             # print(self.roi)
             # print("temp", tempfile.tempdir)
@@ -4033,13 +4049,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         count = 0
         for i in self.dvc_input_image[0]:
-            if self.image_copied[0]:
+            if self.image_copied[0] or self.dvc_input_image_in_session_folder:
                 self.dvc_input_image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][0][count]) 
             count+=1
 
         count=0    
         for j in self.dvc_input_image[1]:      
-            if self.image_copied[1]:
+            if self.image_copied[1] or self.dvc_input_image_in_session_folder:
                 self.dvc_input_image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][1][count]) 
             count+=1
 
@@ -4357,6 +4373,8 @@ Please move the file back to this location and reload the session, select a diff
                         print("The DVC input path is")
                         print(path)
                         self.dvc_input_image[j].append(path)
+                    elif('dvc_input_image_in_session_folder' in self.config):
+                        self.dvc_input_image_in_session_folder = self.config['dvc_input_image_in_session_folder']
                     else:
                         path = i
                         self.dvc_input_image[j].append(i)

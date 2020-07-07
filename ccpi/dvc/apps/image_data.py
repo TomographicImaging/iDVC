@@ -39,7 +39,7 @@ class ImageDataCreator():
 
         '''
    
-    def createImageData(self, image_array, image_data, info_var = None, convert_numpy = False, finish_fn = None):
+    def createImageData(self, image_array, image_data, info_var = None, convert_numpy = False, finish_fn = None, tempfolder = None):
         if len(image_array) ==1:
             image = image_array[0]
             file_extension = image.split(".")[-1]
@@ -58,7 +58,7 @@ class ImageDataCreator():
             reader = vtk.vtkMetaImageReader()
             reader.AddObserver("ErrorEvent", self.e)
             create_progress_window(self,"Converting", "Converting Image")
-            image_worker = Worker(update_reader,reader, image, image_data, convert_numpy, info_var)
+            image_worker = Worker(update_reader,reader, image, image_data, convert_numpy, info_var, tempfolder)
 
         elif file_extension in ['npy']:
             print("file ext in npy")
@@ -230,7 +230,7 @@ def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info
 def get_tiff_progress(caller, event, progress_callback):
         progress_callback.emit(caller.GetProgress()*100)
 
-def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, progress_callback=None):
+def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, tempfolder = None, progress_callback=None):
         progress_callback.emit(20)
         time.sleep(0.1) #required so that progress window displays
         reader.SetFileName(image)
@@ -241,7 +241,11 @@ def update_reader(reader, image, image_data, convert_numpy = False, image_info =
 
         if convert_numpy:
             print(reader.GetOutput().GetSpacing())
-            filename = os.path.abspath(image)[:-4] + ".npy"
+            if tempfolder is None:
+                filename = os.path.abspath(image)[:-4] + ".npy"
+            else:
+                filename = os.path.join(tempfolder, os.path.basename(image)[:-4] + ".npy")
+            print(filename)
             numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
             #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
             np.save(filename,numpy_array)
@@ -258,6 +262,11 @@ def update_reader(reader, image, image_data, convert_numpy = False, image_info =
                 else:
                     print("Not F")
                 #print(image_info['vol_bit_depth'])
+
+            with open(filename, 'rb') as f:
+                header = f.readline()
+                image_info['header_length'] = len(header)
+
         progress_callback.emit(100)
 
 def createRawImportDialog(self, fname, image_data, info_var, finish_fn):
