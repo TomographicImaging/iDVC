@@ -505,6 +505,8 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
             else:
                 shape = (dimZ, dimY, dimX)
         
+        info_var["shape"] = shape
+        
         isBigEndian = True if self.raw_import_dialog['endiannes'].currentIndex() == 0 else False
         typecode = self.raw_import_dialog['dtype'].currentIndex()
 
@@ -536,7 +538,6 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
             errors = {"type": "size", "file_size": file_size, "expected_size": expected_size}
             return (errors)
 
-        resample = False
         if resample:
             reader = cilBaseResampleReader()
             reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
