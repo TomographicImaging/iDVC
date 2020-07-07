@@ -72,11 +72,9 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-#from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-from image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
-
-__version__ = '20.06.3'
+__version__ = '20.07.0'
 
 class MainWindow(QMainWindow):
     def __init__(self):
