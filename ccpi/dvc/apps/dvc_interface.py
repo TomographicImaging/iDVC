@@ -561,17 +561,28 @@ and then input to the DVC code.")
         print("Created corr image")
 
     def save_image_info(self, image_type):
+        print("INFO: ", self.image_info)
+        if 'vol_bit_depth' in self.image_info:
+            self.vol_bit_depth = self.image_info['vol_bit_depth']
+
+        if 'header_length' in self.image_info:
+            self.vol_hdr_length = self.image_info['header_length']
+        else:
+            self.vol_hdr_length = 0
+
+        if 'shape' in self.image_info:
+            self.unsampled_image_dimensions = self.image_info['shape']
+
         if 'numpy_file' in self.image_info:
             image_file = [self.image_info['numpy_file']]
-            if 'vol_bit_depth' in self.image_info:
-                self.vol_bit_depth = self.image_info['vol_bit_depth']
-            
             if image_type == "ref":
                 self.dvc_input_image[0] = image_file
             else:
                 self.dvc_input_image[1] = image_file
         else:
             self.dvc_input_image = self.image
+
+        
         
         if image_type == "ref":
             self.visualise()
@@ -732,7 +743,6 @@ and then input to the DVC code.")
         
         v = self.vis_widget_2D.frame.viewer
         spacing = v.img3D.GetSpacing()
-        #print(spacing)
         #spacing = [1.0,1.0,1.0]
 
 
@@ -2426,7 +2436,10 @@ and then input to the DVC code.")
             # the mask we need to take the half of the diagonal rather than the
             # half of the size
             if self.pointCloud_shape == 'cube':
-                ks = [round(1.41 * l) for l in ks]
+                ks = [int(np.ceil((1.41 * l)/2)) for l in ks] #have to divide by 2 as "radius" is side length of cube
+                #have to round up otherwise some of subvolume may be outside of mask if we round down
+
+            print("KS", ks)
             
             
             # the mask erosion takes a looong time. Try not do it all the 
@@ -2447,6 +2460,8 @@ and then input to the DVC code.")
                     run_erode = True
                     print("radius has changed")
                     self.erode_pars['ks'] = ks[:]
+
+            #run_erode = True
                 
             print ("Erode checked" ,self.erodeCheck.isChecked())
             if run_erode and self.erodeCheck.isChecked():
@@ -2683,7 +2698,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         if not self.pointCloudCreated:
                 # visualise polydata
                 self.setup2DPointCloudPipeline()
-                v.setInputData2(self.reader.GetOutput())
+                v.setInputData2(self.reader.GetOutput()) #TODO: fix this line - we don't have a reader
                 self.setup3DPointCloudPipeline()
                 self.pointCloudCreated = True
                 self.pointCloudLoaded = True
@@ -3496,9 +3511,10 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         run_config['reference_file'] = self.reference_file
         run_config['correlate_file'] = self.correlate_file
         run_config['roi_files']= self.roi_files
-        run_config['vol_bit_depth'] = 8
-        run_config['vol_hdr_lngth'] = 96
-        run_config['dims']=[self.vis_widget_2D.image_data.GetDimensions()[0],self.vis_widget_2D.image_data.GetDimensions()[1],self.vis_widget_2D.image_data.GetDimensions()[2]] #image dimensions
+        run_config['vol_bit_depth'] = self.vol_bit_depth #8
+        run_config['vol_hdr_lngth'] = self.vol_hdr_length #96
+        run_config['dims']= self.unsampled_image_dimensions
+        #[self.vis_widget_2D.image_data.GetDimensions()[0],self.vis_widget_2D.image_data.GetDimensions()[1],self.vis_widget_2D.image_data.GetDimensions()[2]] #image dimensions
 
         run_config['subvol_geom'] = self.pointcloud_parameters['pointcloud_volume_shape_entry'].currentText().lower()
         run_config['subvol_npts'] = self.subvolume_points
@@ -3564,9 +3580,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.process.readyRead.connect(lambda: self.update_progress(exe = True))
         self.process.finished.connect(self.finished_run)
 
-        # python_file = os.path.abspath("dvc_runner")
         # self.process.start(python_file, [self.run_config_file])
-        
         python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
         pythonCommand = "python " + '"' + os.path.abspath(python_file) + '" "' + os.path.abspath(self.run_config_file) + '"'
         print (pythonCommand)
@@ -4812,7 +4826,6 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
             if hasattr(self.parent, 'orientation'):
                     orientation = self.parent.orientation
-                    print("ORIENTATION", orientation)
                     if orientation == SLICE_ORIENTATION_XY:
                         axis = 'z'
                         interactor.SetKeyCode("z")
