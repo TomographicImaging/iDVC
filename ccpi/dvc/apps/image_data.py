@@ -40,9 +40,11 @@ class ImageDataCreator():
 
         Whether to resample the image (currently only for np and raw files): resample (bool)
 
+        Folder where to save converted image file: tempfolder (directory path)
+
         '''
    
-    def createImageData(self, image_files, output_image, info_var = None, convert_numpy = False, finish_fn = None, resample = False):
+    def createImageData(self, image_files, output_image, info_var = None, convert_numpy = False, finish_fn = None, resample = False, tempfolder = None):
         if len(image_files) ==1:
             image = image_files[0]
             file_extension = os.path.splitext(image)[1]
@@ -62,7 +64,7 @@ class ImageDataCreator():
             reader = vtk.vtkMetaImageReader()
             reader.AddObserver("ErrorEvent", self.e)
             create_progress_window(self,"Converting", "Converting Image")
-            image_worker = Worker(update_reader,reader, image, output_image, convert_numpy, info_var)
+            image_worker = Worker(update_reader,reader, image, output_image, convert_numpy, info_var, tempfolder)
 
         elif file_extension in ['.npy']:
             print("file ext in npy")
@@ -138,7 +140,7 @@ def warningDialog(self, message='', window_title='', detailed_text=''):
 
 #mha and mhd:
 
-def update_reader(reader, image, output_image, convert_numpy = False, image_info = None, progress_callback=None):
+def update_reader(reader, image, output_image, convert_numpy = False, image_info = None, tempfolder = None, progress_callback=None):
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
         reader.SetFileName(image)
         reader.Update()
@@ -154,8 +156,13 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
 
         if convert_numpy:
             print("Converting metaimage to numpy") #this is for using in the dvc code
-            filename = os.path.abspath(image)[:-4] + ".npy"
-            numpy_array =  Converter.vtk2numpy(output_image, order = "F")
+            if tempfolder is None:
+                filename = os.path.abspath(image)[:-4] + ".npy"
+            else:
+                filename = os.path.join(tempfolder, os.path.basename(image)[:-4] + ".npy")
+            print(filename)
+            numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
+            #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
             numpy.save(filename,numpy_array)
             
             if image_info is not None:
@@ -171,6 +178,10 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
                 #print(image_info['vol_bit_depth'])
                 with open(filename, 'rb') as f:
                     header = f.readline()
+                image_info['header_length'] = len(header)
+            
+            with open(filename, 'rb') as f:
+                header = f.readline()
                 image_info['header_length'] = len(header)
 
         progress_callback.emit(100)
