@@ -34,7 +34,8 @@ class ImageDataCreator():
 
         Option to convert image file to numpy format: convert_numpy (bool)
 
-        Dictionary where info about image will be stored (such as vol_bit_depth and location of npy file): info_var (dict)
+        Dictionary where info about image will be stored (such as vol_bit_depth and location of npy file). \\
+If the image is a raw file, this dictionary may be used to provide details of the image file: info_var (dict)
 
         Method to be carried out once the vtk image data creation is complete: finish_fn (method)
 
@@ -78,9 +79,13 @@ class ImageDataCreator():
             image_worker = Worker(load_tif,image_files,reader, output_image, convert_numpy, info_var)
 
         elif file_extension in ['.raw']:
-            self.raw_import_dialog = createRawImportDialog(self, image, output_image, info_var, resample, finish_fn)
-            dialog = self.raw_import_dialog['dialog'].show()
-            return
+            if 'file_type' in info_var and info_var['file_type'] == 'raw':
+                createConvertRawImageWorker(self,image, output_image, info_var, resample, finish_fn)
+                return
+            else: #if we aren't given the image dimensions etc, the user needs to enter them
+                self.raw_import_dialog = createRawImportDialog(self, image, output_image, info_var, resample, finish_fn)
+                dialog = self.raw_import_dialog['dialog'].show()
+                return
 
         else:
             self.e('', '', 'File format is not supported. Accepted formats include: .mhd, .mha, .npy, .tif, .raw')
@@ -407,7 +412,7 @@ def createRawImportDialog(self, fname, output_image, info_var, resample, finish_
 
         buttonbox = QDialogButtonBox(QDialogButtonBox.Ok |
                                     QDialogButtonBox.Cancel)
-        buttonbox.accepted.connect(lambda: raw_conversion(self,fname, output_image, info_var, resample, finish_fn))
+        buttonbox.accepted.connect(lambda: createConvertRawImageWorker(self,fname, output_image, info_var, resample, finish_fn))
         buttonbox.rejected.connect(dialog.close)
         formLayout.addWidget(buttonbox)
 
@@ -420,7 +425,7 @@ def createRawImportDialog(self, fname, output_image, info_var, resample, finish_
                 'dtype': dtypeValue, 'endiannes' : endiannes, 'isFortran' : fortranOrder,
                 'buttonBox': buttonbox}
 
-def raw_conversion(self, fname, output_image, info_var, resample, finish_fn):
+def createConvertRawImageWorker(self, fname, output_image, info_var, resample, finish_fn):
         create_progress_window(self,"Converting", "Converting Image")
         self.progress_window.setValue(10)
         image_worker = Worker(saveRawImageData, self, fname, output_image,  info_var, resample)
@@ -488,18 +493,46 @@ def generateUIFormView():
 
 def saveRawImageData(self,fname, output_image, info_var, resample, progress_callback):
         errors = {} 
-        print ("File Name", fname)
-        print ('Dimensionality', self.raw_import_dialog['dimensionality'].currentIndex())
-        dimensionality = [3,2][self.raw_import_dialog['dimensionality'].currentIndex()]
-        dimX = int ( self.raw_import_dialog['dimX'].text() )
-        dimY = int ( self.raw_import_dialog['dimY'].text() )
-        isFortran = True if self.raw_import_dialog['isFortran'].currentIndex() == 0 else False
+        #print ("File Name", fname)
+
+        if 'file_type' in info_var and info_var['file_type'] == 'raw':
+            dimensionality = len(info_var['dimensions'])
+            dimX = info_var['dimensions'][0]
+            dimY = info_var['dimensions'][1]
+            if dimensionality == 3:
+                dimZ = info_var['dimensions'][2]
+            isFortran = info_var['isFortran']
+            isBigEndian = info_var['isBigEndian']
+            typecode = info_var['typcode']
+
+        else:
+            #retrieve info about image file from interface
+            dimensionality = [3,2][self.raw_import_dialog['dimensionality'].currentIndex()]
+            dimX = int ( self.raw_import_dialog['dimX'].text() )
+            dimY = int ( self.raw_import_dialog['dimY'].text() )
+            if dimensionality == 3:
+                dimZ = int ( self.raw_import_dialog['dimZ'].text() )
+            isFortran = True if self.raw_import_dialog['isFortran'].currentIndex() == 0 else False
+            isBigEndian = True if self.raw_import_dialog['endiannes'].currentIndex() == 0 else False
+            typecode = self.raw_import_dialog['dtype'].currentIndex()
+
+            #save to info_var dictionary:
+            info_var['file_type'] = 'raw'
+            if dimensionality == 3:
+                info_var['dimensions'] = [dimX, dimY, dimZ]
+            else:
+                info_var['dimensions'] = [dimX, dimY]
+
+            info_var['isFortran'] = isFortran
+            info_var['isBigEndian'] = isBigEndian
+            info_var['typcode'] = typecode
+
+
         if isFortran:
             shape = (dimX, dimY)
         else:
             shape = (dimY, dimX)
         if dimensionality == 3:
-            dimZ = int ( self.raw_import_dialog['dimZ'].text() )
             if isFortran:
                 shape = (dimX, dimY, dimZ)
             else:
@@ -507,8 +540,6 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
         
         info_var["shape"] = shape
         
-        isBigEndian = True if self.raw_import_dialog['endiannes'].currentIndex() == 0 else False
-        typecode = self.raw_import_dialog['dtype'].currentIndex()
 
         if info_var is not None:
             if typecode == 0 or 1:
