@@ -1391,11 +1391,11 @@ and then input to the DVC code.")
             
 
     def selectPointZero(self):
-        if hasattr(self, 'ref_image_data') and hasattr(self, 'corr_image_data'):
+        if self.ref_image_data is not None:
                        
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
-            rp['register_on_selection_check'].setEnabled(True)
+            
             if rp['select_point_zero'].isChecked():
                 v.style.AddObserver('LeftButtonPressEvent', self.OnLeftButtonPressEventForPointZero, 0.5)
                 # should find a way to not show this again
@@ -1422,6 +1422,7 @@ and then input to the DVC code.")
                 #vox = v.style.display2world(position)
                 p0l = v.style.display2imageCoordinate(position)[:-1]               
                 self.createPoint0(p0l)
+                rp['register_on_selection_check'].setEnabled(True)
 
     def createPoint0(self, p0l):
         v = self.vis_widget_reg.frame.viewer
@@ -2462,7 +2463,7 @@ and then input to the DVC code.")
                     print("radius has changed")
                     self.erode_pars['ks'] = ks[:]
 
-            #run_erode = True
+            run_erode = True
                 
             print ("Erode checked" ,self.erodeCheck.isChecked())
             if run_erode and self.erodeCheck.isChecked():
@@ -4565,12 +4566,17 @@ class CreateSettingsWindow(QDialog):
         self.parent = parent
 
         self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
+        self.gpu_checkbox = QCheckBox("Use GPU for volume render. ")
+        self.gpu_checkbox.setChecked(True) #gpu is default
+        if self.parent.settings.value("volume_mapper") == "cpu":
+            self.gpu_checkbox.setChecked(False)
 
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.copy_files_checkbox)
+        self.layout.addWidget(self.gpu_checkbox)
         self.buttons = QDialogButtonBox(
            QDialogButtonBox.Save | QDialogButtonBox.Cancel,
            Qt.Horizontal, self)
@@ -4586,6 +4592,13 @@ class CreateSettingsWindow(QDialog):
         else:
             self.parent.copy_files = 0
             self.parent.settings.setValue("copy_files", 0)
+
+        if self.gpu_checkbox.isChecked():
+            self.parent.settings.setValue("volume_mapper", "gpu")
+            self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
+        else:
+            self.parent.settings.setValue("volume_mapper", "cpu")
+            
         self.close()
         #print(self.parent.settings.value("copy_files"))
 
@@ -4829,8 +4842,14 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
     def displayImageData(self):
             self.createEmptyFrame()
+            if self.viewer == viewer3D:
+                #set volume mapper according to user settings:
+                if self.parent.settings.value("volume_mapper") == "cpu":
+                    self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
+                    self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
             self.frame.viewer.setInput3DData(self.image_data)  
             interactor = self.frame.viewer.getInteractor()
+
 
             if hasattr(self.parent, 'orientation'):
                     orientation = self.parent.orientation
