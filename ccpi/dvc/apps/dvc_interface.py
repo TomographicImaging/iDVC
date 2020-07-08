@@ -8,6 +8,7 @@ from PyQt5.QtGui import QRegExpValidator, QKeySequence, QCloseEvent
 import os
 import time
 import numpy as np
+import math
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
@@ -182,6 +183,7 @@ class MainWindow(QMainWindow):
         self.results_folder = [None]
         #self.loaded_session = False
         self.pointCloudCreated = False
+        self.eroded_mask = False
         self.pointCloudLoaded = False
         self.orientation = 2 #z orientation is default
         self.mask_reader = None
@@ -644,6 +646,7 @@ and then input to the DVC code.")
 
         self.pointCloudCreated = False
         self.pointCloudLoaded = False
+        self.eroded_mask = False
 
         if(self.mask_load):
             self.MaskWorker("load session")
@@ -2172,17 +2175,31 @@ and then input to the DVC code.")
         self.erodeCheck.setText("Erode mask")
         self.erodeCheck.setEnabled(True)
         self.erodeCheck.setChecked(False)
+        
         self.erodeCheck.stateChanged.connect(lambda: 
             self.warningDialog('Erosion of mask may take long time!', 
                                 window_title='WARNING', 
                                 detailed_text='You may better leave this unchecked while experimenting with the point clouds' ) \
                                 if self.erodeCheck.isChecked() else (lambda: True) )
-
-        self.graphWidgetFL.setWidget(widgetno,QFormLayout.FieldRole, self.erodeCheck)
+        
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.erodeCheck)
         widgetno += 1
         pc['pointcloud_erode_entry'] = self.erodeCheck
-
         
+        self.erodeRatioLabel =  QLabel(self.graphParamsGroupBox)
+        self.erodeRatioLabel.setText("Erosion Multiplier")
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.erodeRatioLabel)
+        self.erodeRatioSpinBox = QDoubleSpinBox(self.graphParamsGroupBox)
+        self.erodeRatioSpinBox.setEnabled(False)
+        self.erodeRatioSpinBox.setSingleStep(0.1)
+        self.erodeRatioSpinBox.setMaximum(1.10)
+        self.erodeRatioSpinBox.setMinimum(0.1)
+        self.erodeRatioSpinBox.setValue(1.00)
+        self.erodeCheck.stateChanged.connect(lambda: self.erodeRatioSpinBox.setEnabled(True) if self.erodeCheck.isChecked() else  self.erodeRatioSpinBox.setEnabled(False))
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.erodeRatioSpinBox)
+        widgetno += 1
+        
+
         # Add submit button
         self.graphParamsSubmitButton = QPushButton(self.graphParamsGroupBox)
         self.graphParamsSubmitButton.setText("Generate Point Cloud")
@@ -2414,62 +2431,68 @@ and then input to the DVC code.")
                 self.erode = erode
                 self.erode_pars = {'selection_mtime':os.path.getmtime(
                         os.path.join(tmpdir, "Masks\\latest_selection.mha"))}
-                
             else:
                 erode = self.erode
 
-            
-            print("Orientation: " + str(orientation))
+            #Set up erosion if user has selected it:
 
-            if orientation == SLICE_ORIENTATION_XY:
-                ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
-                if pointCloud.GetDimensionality() == 3:
-                    ks[2]= pointCloud.GetSubVolumeRadiusInVoxel()
-            elif orientation == SLICE_ORIENTATION_XZ:
-                ks = [pointCloud.GetSubVolumeRadiusInVoxel(), 1, pointCloud.GetSubVolumeRadiusInVoxel()]
-                if pointCloud.GetDimensionality() == 3:
-                    ks[1]= pointCloud.GetSubVolumeRadiusInVoxel()
-            elif orientation == SLICE_ORIENTATION_YZ:
-                ks = [1, pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel()]
-                if pointCloud.GetDimensionality() == 3:
-                    ks[0]= pointCloud.GetSubVolumeRadiusInVoxel()
-
-            # if shape is box or square to be sure that the subvolume is within
-            # the mask we need to take the half of the diagonal rather than the
-            # half of the size
-            if self.pointCloud_shape == 'cube':
-                ks = [int(np.ceil((1.41 * l)/2)) for l in ks] #have to divide by 2 as "radius" is side length of cube
-                #have to round up otherwise some of subvolume may be outside of mask if we round down
-
-            print("KS", ks)
-            
-            
-            # the mask erosion takes a looong time. Try not do it all the 
-            # time if neither mask nor other values have changed
-            if not self.pointCloudCreated:
-                self.erode_pars['ks'] =  ks[:]        
-                run_erode = True
-                #run_erode = False
-            else:
-                run_erode = False
-                # test if mask is different from last one by checking the modification
-                # time
-                mtime = os.path.getmtime(os.path.join(tmpdir, "Masks\\latest_selection.mha"))
-                if mtime != self.erode_pars['selection_mtime']:
-                    print("mask has changed")
-                    run_erode = True
-                if ks != self.erode_pars['ks']:
-                    run_erode = True
-                    print("radius has changed")
-                    self.erode_pars['ks'] = ks[:]
-
-            run_erode = True
+            if( self.erodeCheck.isChecked()):
+                print ("Erode checked" ,self.erodeCheck.isChecked())
                 
-            print ("Erode checked" ,self.erodeCheck.isChecked())
-            if run_erode and self.erodeCheck.isChecked():
-                erode.SetInputConnection(0,reader.GetOutputPort())
-                erode.SetKernelSize(ks[0],ks[1],ks[2])
-                erode.Update()
+                if orientation == SLICE_ORIENTATION_XY:
+                    ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
+                    if pointCloud.GetDimensionality() == 3:
+                        ks[2]= pointCloud.GetSubVolumeRadiusInVoxel()
+                elif orientation == SLICE_ORIENTATION_XZ:
+                    ks = [pointCloud.GetSubVolumeRadiusInVoxel(), 1, pointCloud.GetSubVolumeRadiusInVoxel()]
+                    if pointCloud.GetDimensionality() == 3:
+                        ks[1]= pointCloud.GetSubVolumeRadiusInVoxel()
+                elif orientation == SLICE_ORIENTATION_YZ:
+                    ks = [1, pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel()]
+                    if pointCloud.GetDimensionality() == 3:
+                        ks[0]= pointCloud.GetSubVolumeRadiusInVoxel()
+
+                # kernel size defines size of the structuring element in the erosion.
+                # This needs to be the size of the subvolume diameter but we must add on 0.5 to account for the furthest distance a point may be offset from the centre of a pixel.
+                # have to round up to an integer otherwise some of subvolume may be outside of mask if we round down
+
+                erosion_multiplier = self.erodeRatioSpinBox.value()
+                if self.pointCloud_shape == 'cube':
+                    ks = [math.ceil(l*erosion_multiplier + 0.5 ) for l in ks] # "radius" is side length of cube
+                    
+                else:
+                    ks = [math.ceil(2*l*erosion_multiplier+ 0.5) for l in ks] 
+
+                print("KS", ks)
+                
+                # the mask erosion takes a looong time. Try not do it all the 
+                # time if neither mask nor other values have changed
+                if not self.eroded_mask:
+                    self.erode_pars['ks'] =  ks[:]        
+                    run_erode = True
+                    #run_erode = False
+                else:
+                    run_erode = False
+                    # test if mask is different from last one by checking the modification
+                    # time
+                    mtime = os.path.getmtime(os.path.join(tmpdir, "Masks\\latest_selection.mha"))
+                    if mtime != self.erode_pars['selection_mtime']:
+                        print("mask has changed")
+                        run_erode = True
+                    if ks != self.erode_pars['ks']:
+                        run_erode = True
+                        print("radius has changed")
+                        self.erode_pars['ks'] = ks[:]
+                    
+                
+                if run_erode:
+                    erode.SetInputConnection(0,reader.GetOutputPort())
+                    erode.SetKernelSize(ks[0],ks[1],ks[2])
+                    erode.Update()
+
+                self.eroded_mask = True
+            else:
+                self.eroded_mask = False
             
             
             # Mask the point cloud with the eroded mask
@@ -2692,6 +2715,7 @@ and then input to the DVC code.")
                     detailed_text='A pointcloud could not be created because there were no points in the selected region. \
 Try modifying the subvolume radius before creating a new pointcloud, and make sure it is smaller than the extent of the mask.' )
             self.pointCloudCreated = False
+            self.eroded_mask = False
             self.pointCloudLoaded = False
             return
         print("display pointcloud")
@@ -2762,6 +2786,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         self.pointCloudLoaded = False
         self.pointCloudCreated = False
+        self.eroded_mask = False
         
 
         v2D = self.vis_widget_2D.frame.viewer
