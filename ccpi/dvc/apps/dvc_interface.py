@@ -555,12 +555,12 @@ and then input to the DVC code.")
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
             self.image_info = dict()
-            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= True,tempfolder = os.path.abspath(tempfile.tempdir))
+            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
             print("Created ref image")
 
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= True,tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
         print("Created corr image")
 
     def save_image_info(self, image_type):
@@ -575,6 +575,8 @@ and then input to the DVC code.")
 
         if 'shape' in self.image_info:
             self.unsampled_image_dimensions = self.image_info['shape']
+        else:
+            self.unsampled_image_dimensions = self.vis_widget_3D.frame.viewer.img3D.GetDimensions()
 
         if 'numpy_file' in self.image_info:
             image_file = [self.image_info['numpy_file']]
@@ -3544,6 +3546,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         run_config['roi_files']= self.roi_files
         run_config['vol_bit_depth'] = self.vol_bit_depth #8
         run_config['vol_hdr_lngth'] = self.vol_hdr_lngth #96
+        run_config['vol_endian'] = "big" if self.image_info['isBigEndian'] else "little"
         run_config['dims']= self.unsampled_image_dimensions
         #[self.vis_widget_2D.image_data.GetDimensions()[0],self.vis_widget_2D.image_data.GetDimensions()[1],self.vis_widget_2D.image_data.GetDimensions()[2]] #image dimensions
 
@@ -5211,11 +5214,16 @@ class run_outcome:
 
         stat_file = open(stat_file_name,"r")
         count = 0
+        offset = 0
         for line in stat_file:
-            if count ==16:
-                self.subvol_points = int(line.split('\t')[1])
-            if count ==15:
+            if count == 9:
+                if line.split('\t')[0] == "vol_endian":
+                    offset = 1
+
+            if count ==15 + offset:
                 self.subvol_radius = round(int(line.split('\t')[1])/2)
+            if count ==16 +offset:
+                self.subvol_points = int(line.split('\t')[1])
             count+=1
 
         self.title =  str(self.subvol_points) + " Points in Subvolume," + " Radius: " + str(self.subvol_radius) # + str(self.points) + " Points, " +

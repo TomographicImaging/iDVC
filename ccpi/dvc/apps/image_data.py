@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QProgressDialog, QDialog, QLabel, QComboBox, QDialog
 import os
 import time
 import numpy
+import sys
 
 from functools import partial
 from os.path import isfile
@@ -149,9 +150,7 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
         reader.SetFileName(image)
         reader.Update()
-
-        # image_data = vtk.vtkImageData()
-        # image_data = reader.GetOutput()
+        
         output_image.ShallowCopy(reader.GetOutput())
        
         progress_callback.emit(90)
@@ -167,7 +166,6 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
                 filename = os.path.join(tempfolder, os.path.basename(image)[:-4] + ".npy")
             print(filename)
             numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
-            #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
             numpy.save(filename,numpy_array)
             
             if image_info is not None:
@@ -180,7 +178,16 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
                     print("F order")
                 else:
                     print("Not F")
-                #print(image_info['vol_bit_depth'])
+ 
+                if numpy_array.dtype.byteorder == '=': #gives order will either be '=': sys.byteorder or |: irrelevant
+                    if sys.byteorder == 'big':
+                        image_info['isBigEndian'] = True
+                    else:
+                        image_info['isBigEndian'] = False
+                else:
+                    image_info['isBigEndian'] = None #in the uint8 case its not relevant
+
+
                 with open(filename, 'rb') as f:
                     header = f.readline()
                 image_info['header_length'] = len(header)
@@ -206,10 +213,12 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
             shape = reader.GetStoredArrayShape()
             if reader.GetIsFortran():
                 shape = shape[::-1]
+
+            image_info['isBigEndian'] = reader.GetBigEndian()
             # print("Header", header_length)
             # print("vol_bit_depth", vol_bit_depth)
-        else:
-        #print("Load npy")
+
+        else: 
             time.sleep(0.1)
             progress_callback.emit(5)
 
@@ -228,10 +237,20 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
                 vol_bit_depth = None #in this case we can't run the DVC code
                 output_image = None
                 return
+            
+            if numpy_array.dtype.byteorder == '=':
+                if sys.byteorder == 'big':
+                    image_info['isBigEndian'] = True
+                else:
+                    image_info['isBigEndian'] = False
+            else:
+                image_info['isBigEndian'] = None
+
+                print(image_info['isBigEndian'])
 
             Converter.numpy2vtkImage(numpy_array, output = output_image) #(3.2,3.2,1.5)
             progress_callback.emit(80)
-
+        
         progress_callback.emit(100)
 
         if image_info is not None:
