@@ -36,6 +36,7 @@ vol_hdr_lngth		{vol_hdr_lngth}		### fixed-length header size, may be zero
 vol_wide		{vol_wide}			### width in pixels of each slice
 vol_high		{vol_high}			### height in pixels of each slice
 vol_tall		{vol_tall}			### number of slices in the stack
+vol_endian		{vol_endian}        ### big or little endian byte ordering
 
 ### parameters defining the subvolumes that will be created at each search point
 
@@ -44,9 +45,9 @@ subvol_size		{subvol_size}			### side length or diameter, in voxels
 subvol_npts		{subvol_npts}			### number of points to distribute within the subvol
 
 subvol_thresh		{subvol_thresh}			### on or off, evaluate subvolumes based on threshold
-gray_thresh_min	{gray_thresh_min}			### lower limit of a gray threshold range if subvol_thresh is on
-gray_thresh_max	{gray_thresh_max}			### upper limit of a gray threshold range if subvol_thresh is on
-min_vol_fract	{min_vol_fract}			### only search if subvol fraction is greater than
+gray_thresh_min		{gray_thresh_min}			### lower limit of a gray threshold range if subvol_thresh is on
+gray_thresh_max		{gray_thresh_max}			### upper limit of a gray threshold range if subvol_thresh is on
+min_vol_fract		{min_vol_fract}			### only search if subvol fraction is greater than
 
 ### required parameters defining the basic the search process
 
@@ -103,6 +104,9 @@ reference_file = config['reference_file']
 correlate_file = config['correlate_file']
 vol_bit_depth = int(config['vol_bit_depth'])
 vol_hdr_lngth = int(config['vol_hdr_lngth'])
+
+endian = config['vol_endian']
+
 dims= config['dims'] #image dimensions
 
 subvol_geom = config['subvol_geom']
@@ -124,7 +128,7 @@ required_runs = len(subvolume_points)*len(radii)
 
 #print("Required runs", required_runs)
 
-# exe_file = os.path.abspath("dvc.exe")
+
 exe_file = "dvc.exe"
 
 
@@ -223,6 +227,7 @@ for roi_file in roi_files:
             vol_wide= dims[0], # number of x slices
             vol_high= dims[1], # number of y slices
             vol_tall= dims[2], #number of z slices
+            vol_endian = endian,
             subvol_geom=  subvol_geom,
             subvol_size=  pointcloud_diameter, #subvolume diameter
             subvol_npts= subvolume_point,

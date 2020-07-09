@@ -74,7 +74,7 @@ from distutils.dir_util import copy_tree
 
 from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-__version__ = '20.07.0'
+__version__ = '20.07.1'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3522,8 +3522,9 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         run_config['reference_file'] = self.reference_file
         run_config['correlate_file'] = self.correlate_file
         run_config['roi_files']= self.roi_files
-        run_config['vol_bit_depth'] = self.vol_bit_depth
-        run_config['vol_hdr_lngth'] = self.vol_hdr_lngth
+        run_config['vol_bit_depth'] = self.vol_bit_depth #8
+        run_config['vol_hdr_lngth'] = self.vol_hdr_lngth #96
+        run_config['vol_endian'] = "big" if self.image_info['isBigEndian'] else "little"
         run_config['dims']=[self.vis_widget_2D.image_data.GetDimensions()[0],self.vis_widget_2D.image_data.GetDimensions()[1],self.vis_widget_2D.image_data.GetDimensions()[2]] #image dimensions
 
         run_config['subvol_geom'] = self.pointcloud_parameters['pointcloud_volume_shape_entry'].currentText().lower()
@@ -5190,11 +5191,16 @@ class run_outcome:
 
         stat_file = open(stat_file_name,"r")
         count = 0
+        offset = 0
         for line in stat_file:
-            if count ==16:
-                self.subvol_points = int(line.split('\t')[1])
-            if count ==15:
+            if count == 9:
+                if line.split('\t')[0] == "vol_endian":
+                    offset = 1
+
+            if count ==15 + offset:
                 self.subvol_radius = round(int(line.split('\t')[1])/2)
+            if count ==16 +offset:
+                self.subvol_points = int(line.split('\t')[1])
             count+=1
 
         self.title =  str(self.subvol_points) + " Points in Subvolume," + " Radius: " + str(self.subvol_radius) # + str(self.points) + " Points, " +

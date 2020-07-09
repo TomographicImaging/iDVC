@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 import os
 import time
-import numpy as np
+import numpy
+import sys
 
 from functools import partial
 
@@ -132,38 +133,102 @@ def warningDialog(self, message='', window_title='', detailed_text=''):
     retval = dialog.exec_()
     return retval
 
-# Load images:
-def load_npy_image(image, image_data, image_info = None, progress_callback=None):
-        print("Load npy")
-        time.sleep(0.1)
-        progress_callback.emit(5)
 
-        with open(image, 'rb') as f:
-            header = f.readline()
-        header_length = len(header)
+#mha and mhd:
 
-        numpy_array = np.load(image)
-
-        if (isinstance(numpy_array[0][0][0],np.uint8)):
-            vol_bit_depth = '8'
-        elif(isinstance(numpy_array[0][0][0],np.uint16)):
-            vol_bit_depth = '16'
-        else:
-            vol_bit_depth = None #in this case we can't run the DVC code
-            for i in image_data:
-                i = None
-            return
-
-        converted_image_data = Converter.numpy2vtkImage(numpy_array) #(3.2,3.2,1.5)
-        progress_callback.emit(50)
-
+def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, tempfolder = None, progress_callback=None):
+        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_tiff_progress, progress_callback= progress_callback))
+        reader.SetFileName(image)
+        reader.Update()
+        
         for i in image_data:
-            i.DeepCopy(converted_image_data)
+            i.DeepCopy(reader.GetOutput())
+       
+        progress_callback.emit(90)
+
+        if convert_numpy:
+            print("Converting metaimage to numpy") #this is for using in the dvc code
+            if tempfolder is None:
+                filename = os.path.abspath(image)[:-4] + ".npy"
+            else:
+                filename = os.path.join(tempfolder, os.path.basename(image)[:-4] + ".npy")
+            print(filename)
+            numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
+            numpy.save(filename,numpy_array)
+            
+            if image_info is not None:
+                image_info['numpy_file'] = filename
+                if (isinstance(numpy_array[0][0][0],numpy.uint8)):
+                    image_info['vol_bit_depth'] = '8'
+                elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
+                    image_info['vol_bit_depth'] = '16'
+                if(numpy_array.flags["FNC"]):
+                    print("F order")
+                else:
+                    print("Not F")
+ 
+                if numpy_array.dtype.byteorder == '=': #gives order will either be '=': sys.byteorder or |: irrelevant
+                    if sys.byteorder == 'big':
+                        image_info['isBigEndian'] = True
+                    else:
+                        image_info['isBigEndian'] = False
+                else:
+                    image_info['isBigEndian'] = None #in the uint8 case its not relevant
+
+
+                with open(filename, 'rb') as f:
+                    header = f.readline()
+                image_info['header_length'] = len(header)
+            
+            with open(filename, 'rb') as f:
+                header = f.readline()
+                image_info['header_length'] = len(header)
+
         progress_callback.emit(100)
 
-        if image_info is not None:
-            image_info["header_length"]  = header_length
-            image_info["vol_bit_depth"] =  vol_bit_depth
+
+def load_npy_image(image_file, image_data, image_info = None, progress_callback=None):
+    time.sleep(0.1)
+    progress_callback.emit(5)
+
+    with open(image_file, 'rb') as f:
+        header = f.readline()
+    header_length = len(header)
+
+    numpy_array = numpy.load(image_file)
+    shape = numpy.shape(numpy_array)
+
+    if (isinstance(numpy_array[0][0][0],numpy.uint8)):
+        vol_bit_depth = '8'
+    elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
+        vol_bit_depth = '16'
+    else:
+        vol_bit_depth = None #in this case we can't run the DVC code
+        for i in image_data:
+            i = None
+        return
+    
+    if numpy_array.dtype.byteorder == '=':
+        if sys.byteorder == 'big':
+            image_info['isBigEndian'] = True
+        else:
+            image_info['isBigEndian'] = False
+    else:
+        image_info['isBigEndian'] = None
+
+        print(image_info['isBigEndian'])
+
+    converted_image_data = Converter.numpy2vtkImage(numpy_array) #(3.2,3.2,1.5)
+    progress_callback.emit(80)
+
+    for i in image_data:
+        i.DeepCopy(converted_image_data)
+    
+    progress_callback.emit(100)
+
+    if image_info is not None:
+        image_info["header_length"]  = header_length
+        image_info["vol_bit_depth"] =  vol_bit_depth
         
         
 def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info = None, progress_callback=None):
@@ -217,57 +282,18 @@ def load_tif(filenames, reader, image_data,   convert_numpy = False,  image_info
             filename = os.path.abspath(filenames[0])[:-4] + ".npy"
             numpy_array =  Converter.vtk2numpy(reader.GetOutput())
             #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
-            np.save(filename,numpy_array)
+            numpy.save(filename,numpy_array)
             image_info['numpy_file'] = filename
 
             if image_info is not None:
-                if (isinstance(numpy_array[0][0][0],np.uint8)):
+                if (isinstance(numpy_array[0][0][0],numpy.uint8)):
                     image_info['vol_bit_depth'] = '8'
-                elif(isinstance(numpy_array[0][0][0],np.uint16)):
+                elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
                     image_info['vol_bit_depth'] = '16'
                 print(image_info['vol_bit_depth'])
 
 def get_tiff_progress(caller, event, progress_callback):
         progress_callback.emit(caller.GetProgress()*100)
-
-def update_reader(reader, image, image_data, convert_numpy = False, image_info = None, tempfolder = None, progress_callback=None):
-        progress_callback.emit(20)
-        time.sleep(0.1) #required so that progress window displays
-        reader.SetFileName(image)
-        reader.Update()
-        progress_callback.emit(50)
-        for i in image_data:
-            i.DeepCopy(reader.GetOutput())
-
-        if convert_numpy:
-            print(reader.GetOutput().GetSpacing())
-            if tempfolder is None:
-                filename = os.path.abspath(image)[:-4] + ".npy"
-            else:
-                filename = os.path.join(tempfolder, os.path.basename(image)[:-4] + ".npy")
-            print(filename)
-            numpy_array =  Converter.vtk2numpy(reader.GetOutput(), order = "F")
-            #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
-            np.save(filename,numpy_array)
-            
-            if image_info is not None:
-                image_info['numpy_file'] = filename
-                print(type(numpy_array[0][0][0]))
-                if (isinstance(numpy_array[0][0][0],np.uint8)):
-                    image_info['vol_bit_depth'] = '8'
-                elif(isinstance(numpy_array[0][0][0],np.uint16)):
-                    image_info['vol_bit_depth'] = '16'
-                if(numpy_array.flags["FNC"]):
-                    print("F order")
-                else:
-                    print("Not F")
-                #print(image_info['vol_bit_depth'])
-
-            with open(filename, 'rb') as f:
-                header = f.readline()
-                image_info['header_length'] = len(header)
-
-        progress_callback.emit(100)
 
 def createRawImportDialog(self, fname, image_data, info_var, finish_fn):
         dialog = QDialog(self)
@@ -597,10 +623,10 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copie
         return self.__Points
     def SetData(self, value):
         '''Sets the points from a numpy array or list'''
-        if not isinstance (value, np.ndarray) :
+        if not isinstance (value, numpy.ndarray) :
             raise ValueError('Data must be a numpy array. Got', value)
 
-        if not np.array_equal(value,self.__Data):
+        if not numpy.array_equal(value,self.__Data):
             self.__Data = value
             self.Modified()
 
