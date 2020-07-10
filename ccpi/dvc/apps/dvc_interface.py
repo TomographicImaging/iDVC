@@ -58,6 +58,8 @@ os.chdir(working_directory)
 
 from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 
+from ccpi.viewer.utils.plane_clipper import cilPlaneClipper
+
 import tempfile
 import json
 import shutil
@@ -199,83 +201,86 @@ class MainWindow(QMainWindow):
         self.loading_session = False
         self.dvc_input_image_in_session_folder = False 
           
-    def UpdateClippingPlanes(self, interactor, event):
-        try:
-            if (hasattr(self, 'bpcpoints')):
-                normal = [0, 0, 0]
-                origin = [0, 0, 0]
-                norm = 1
-                v = self.vis_widget_2D.frame.viewer
-                bpcpoints = self.bpcpoints
-                bpcvolume = self.bpcvolume
-                orientation = v.GetSliceOrientation()
-                if orientation == SLICE_ORIENTATION_XY:
-                    norm = 1
-                elif orientation == SLICE_ORIENTATION_XZ:
-                    norm = 1
-                elif orientation == SLICE_ORIENTATION_YZ:
-                    norm = 1
+    # def UpdateClippingPlanes(self, interactor, event):
+    #     try:
+    #         if (hasattr(self, 'bpcpoints')):
+    #             normal = [0, 0, 0]
+    #             origin = [0, 0, 0]
+    #             norm = 1
+    #             v = self.vis_widget_2D.frame.viewer
+    #             bpcpoints = self.bpcpoints
+    #             bpcvolume = self.bpcvolume
+    #             orientation = v.GetSliceOrientation()
+    #             if orientation == SLICE_ORIENTATION_XY:
+    #                 norm = 1
+    #             elif orientation == SLICE_ORIENTATION_XZ:
+    #                 norm = 1
+    #             elif orientation == SLICE_ORIENTATION_YZ:
+    #                 norm = 1
 
-                if event == "MouseWheelForwardEvent":
-                    # this is pretty absurd but it seems the
-                    # plane cuts too much in Forward...
-                    # Made new adjustments for each direction
-                    if orientation == SLICE_ORIENTATION_XY: #z
-                        beta = 2
-                    elif orientation == SLICE_ORIENTATION_XZ: #y
-                        beta = 1
-                    elif orientation == SLICE_ORIENTATION_YZ: #x
-                        beta = 1
+    #             if event == "MouseWheelForwardEvent":
+    #                 # this is pretty absurd but it seems the
+    #                 # plane cuts too much in Forward...
+    #                 # Made new adjustments for each direction
+    #                 if orientation == SLICE_ORIENTATION_XY: #z
+    #                     beta = 2
+    #                 elif orientation == SLICE_ORIENTATION_XZ: #y
+    #                     beta = 1
+    #                 elif orientation == SLICE_ORIENTATION_YZ: #x
+    #                     beta = 1
 
-                if event == "MouseWheelBackwardEvent":
-                    # since modifying the camera direction in CILViewer2D,
-                    # and to enable viewing in the y direction, had to update
-                    # beta for MouseWheelBackward as well.
-                    if orientation == SLICE_ORIENTATION_XY: #z
-                        beta = 0
-                    elif orientation == SLICE_ORIENTATION_XZ: #y
-                        beta = -1
-                    elif orientation == SLICE_ORIENTATION_YZ: #x
-                        beta = -1
+    #             if event == "MouseWheelBackwardEvent":
+    #                 # since modifying the camera direction in CILViewer2D,
+    #                 # and to enable viewing in the y direction, had to update
+    #                 # beta for MouseWheelBackward as well.
+    #                 if orientation == SLICE_ORIENTATION_XY: #z
+    #                     beta = 0
+    #                 elif orientation == SLICE_ORIENTATION_XZ: #y
+    #                     beta = -1
+    #                 elif orientation == SLICE_ORIENTATION_YZ: #x
+    #                     beta = -1
 
-                spac = v.img3D.GetSpacing()
-                #print("spacing")
-                #print(spac)
-                orig = v.img3D.GetOrigin()
-                slice_thickness = spac[orientation]
+    #             spac = v.img3D.GetSpacing()
+    #             #print("spacing")
+    #             #print(spac)
+    #             orig = v.img3D.GetOrigin()
+    #             slice_thickness = spac[orientation]
 
-                normal[orientation] = norm
-                origin [orientation] = (v.style.GetActiveSlice() + beta ) * slice_thickness - orig[orientation]
+    #             normal[orientation] = norm
+    #             origin [orientation] = (v.style.GetActiveSlice() + beta ) * slice_thickness - orig[orientation]
 
-                bpcpoints.SetPlaneOriginAbove(origin)
-                bpcpoints.SetPlaneNormalAbove(normal)
+    #             bpcpoints.SetPlaneOriginAbove(origin)
+    #             bpcpoints.SetPlaneNormalAbove(normal)
 
-                bpcvolume.SetPlaneOriginAbove(origin)
-                bpcvolume.SetPlaneNormalAbove(normal)
+    #             bpcvolume.SetPlaneOriginAbove(origin)
+    #             bpcvolume.SetPlaneNormalAbove(normal)
 
-                # update the  plane below
-                #beta += 1
-                slice_below = v.style.GetActiveSlice() -1 + beta
-                if slice_below < 0:
-                    slice_below = 0
+    #             # update the  plane below
+    #             #beta += 1
+    #             slice_below = v.style.GetActiveSlice() -1 + beta
+    #             if slice_below < 0:
+    #                 slice_below = 0
 
-                origin_below = [i for i in origin]
-                origin_below[orientation] = ( slice_below ) * slice_thickness - orig[orientation]
+    #             origin_below = [i for i in origin]
+    #             origin_below[orientation] = ( slice_below ) * slice_thickness - orig[orientation]
 
-                bpcpoints.SetPlaneOriginBelow(origin_below)
-                bpcpoints.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
-                bpcvolume.SetPlaneOriginBelow(origin_below)
-                bpcvolume.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
+    #             bpcpoints.SetPlaneOriginBelow(origin_below)
+    #             bpcpoints.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
+    #             bpcvolume.SetPlaneOriginBelow(origin_below)
+    #             bpcvolume.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
 
-                bpcpoints.Update()
-                bpcvolume.Update()
-                #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.5)
-                #self.vis_widget_2D.frame.viewer.sliceActor2.GetProperty().SetOpacity(0.99) #actor with mask
-                #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.1)
-                # print (">>>>>>>>>>>>>>>>>>>>>")
-        except AttributeError as ae:
-            print (ae)
-            print ("Probably Point Cloud not yet created")
+    #             bpcpoints.Update()
+    #             bpcvolume.Update()
+    #             #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.5)
+    #             #self.vis_widget_2D.frame.viewer.sliceActor2.GetProperty().SetOpacity(0.99) #actor with mask
+    #             #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.1)
+    #             # print (">>>>>>>>>>>>>>>>>>>>>")
+    #     except AttributeError as ae:
+    #         print (ae)
+    #         print ("Probably Point Cloud not yet created")
+
+    
+
 
 #Loading the DockWidgets:
     def CreateDockWindows(self):
@@ -610,6 +615,7 @@ and then input to the DVC code.")
         #print("2D")
         print(self.ref_image_data.GetExtent())
         self.vis_widget_2D.setImageData(self.ref_image_data)
+        
         print("Set 2D image data") 
         self.vis_widget_2D.displayImageData()
         #print("3D")
@@ -622,10 +628,16 @@ and then input to the DVC code.")
         self.progress_window.setValue(80)
 
 
+        # self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
+        #                                         self.UpdateClippingPlanes, 1.9)
+        # self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
+        #                                         self.UpdateClippingPlanes, 1.9)
+        
+
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
-                                                self.UpdateClippingPlanes, 1.9)
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 1.9)
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
-                                                self.UpdateClippingPlanes, 1.9)
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 1.9)
 
         #Link Viewers:
         self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
@@ -697,35 +709,23 @@ and then input to the DVC code.")
 
 
     def setup2DPointCloudPipeline(self):
-        bpcpoints = cilClipPolyDataBetweenPlanes()
-        # save reference
-        
-        #polydata_masker = self.polydata_masker
-        bpcpoints.SetInputConnection(self.polydata_masker.GetOutputPort()) 
-        #bpcpoints.SetInputData(self.polydata_masker.GetOutputDataObject(0))
-        bpcpoints.SetPlaneOriginAbove((0,0,3))
-        bpcpoints.SetPlaneOriginBelow((0,0,1))
-        bpcpoints.SetPlaneNormalAbove((0,0,1))
-        bpcpoints.SetPlaneNormalBelow((0,0,-1))
-        bpcpoints.Update()
-        self.bpcpoints = bpcpoints
+
+        # clipped_data = cilClipPolyDataBetweenPlanes()
+        # clipped_data.SetInputConnection(data_to_clip) 
+        # clipped_data.SetPlaneOriginAbove((0,0,3))
+        # clipped_data.SetPlaneOriginBelow((0,0,1))
+        # clipped_data.SetPlaneNormalAbove((0,0,1))
+        # clipped_data.SetPlaneNormalBelow((0,0,-1))
+        # clipped_data.Update()
+
+        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_points', self.polydata_masker.GetOutputPort())
 
         mapper = vtk.vtkPolyDataMapper()
         # save reference
         self.pointmapper = mapper
 
-        #print(type(self.polydata_masker.GetOutputPort()))
-
-        #maybe need:
-        #mapper.SetInputConnection(self.polydata_masker.GetOutputPort()) #nothing
-        #mapper.SetInputData(self.bpcpoints.GetOutputDataObject(0)) #does nothing
-        
-       # mapper.SetInputData(self.polydata_masker.GetOutputDataObject(0))
-
-
-        mapper.SetInputConnection(bpcpoints.GetOutputPort()) #does nothing
-
-        #print(type(bpcpoints.GetOutputPort()))
+        mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points').GetOutputPort())
+         
 
         # create an actor for the points as point
         actor = vtk.vtkLODActor()
@@ -741,7 +741,6 @@ and then input to the DVC code.")
         # which copies oriented and scaled glyph geometry to every input point
 
         subv_glyph = vtk.vtkGlyph3D()
-        #subv_glyph = vtk.vtkGlyph2D()
 
         # save reference
         self.cubesphere = subv_glyph
@@ -749,7 +748,6 @@ and then input to the DVC code.")
         
         v = self.vis_widget_2D.frame.viewer
         spacing = v.img3D.GetSpacing()
-        #spacing = [1.0,1.0,1.0]
 
 
         # pointCloud = self.pointCloud
@@ -766,58 +764,36 @@ and then input to the DVC code.")
         sphere_source.SetPhiResolution(12)
 
         # # Cube source
-        polygon = False
-        
-        if polygon:
-            cube_source = vtk.vtkRegularPolygonSource()
-            cube_source.SetNumberOfSides(4)
-            cube_source.GeneratePolygonOn()
-        #cube_source = vtk.vtk
-        # # save reference
-
-        else:
-            cube_source = vtk.vtkCubeSource()
-            cube_source.SetXLength(v.img3D.GetSpacing()[0]*self.pointCloud_radius)
-            cube_source.SetYLength(v.img3D.GetSpacing()[1]*self.pointCloud_radius)
-            cube_source.SetZLength(v.img3D.GetSpacing()[2]*self.pointCloud_radius)
-            self.cube_source = cube_source
-            rotate= self.pointCloud_rotation
-            print("Rotate", self.pointCloud_rotation)
-            transform = vtk.vtkTransform()
-            # save reference
-            self.transform = transform
-            # rotate around the center of the image data
-            transform.RotateX(self.pointCloud_rotation[0])
-            transform.RotateY(self.pointCloud_rotation[1])
-            transform.RotateZ(self.pointCloud_rotation[2])
-            t_filter = vtk.vtkTransformPolyDataFilter()
-            t_filter.SetTransform(self.transform)
-            t_filter.SetInputConnection(self.cube_source.GetOutputPort())
-            self.cube_transform_filter = t_filter
-
-
+        cube_source = vtk.vtkCubeSource()
+        cube_source.SetXLength(v.img3D.GetSpacing()[0]*self.pointCloud_radius)
+        cube_source.SetYLength(v.img3D.GetSpacing()[1]*self.pointCloud_radius)
+        cube_source.SetZLength(v.img3D.GetSpacing()[2]*self.pointCloud_radius)
+        self.cube_source = cube_source
+        rotate= self.pointCloud_rotation
+        print("Rotate", self.pointCloud_rotation)
+        transform = vtk.vtkTransform()
+        # save reference
+        self.transform = transform
+        # rotate around the center of the image data
+        transform.RotateX(self.pointCloud_rotation[0])
+        transform.RotateY(self.pointCloud_rotation[1])
+        transform.RotateZ(self.pointCloud_rotation[2])
+        t_filter = vtk.vtkTransformPolyDataFilter()
+        t_filter.SetTransform(self.transform)
+        t_filter.SetInputConnection(self.cube_source.GetOutputPort())
+        self.cube_transform_filter = t_filter
         #cube_source.SetRadius(spacing[0])
         
+
         self.cube_source = cube_source
-        # # clip between planes
-        bpcvolume = cilClipPolyDataBetweenPlanes()
-        # # save reference
-        self.bpcvolume = bpcvolume
-        bpcvolume.SetInputConnection(subv_glyph.GetOutputPort())
-        bpcvolume.SetPlaneOriginAbove((0,0,3))
-        bpcvolume.SetPlaneOriginBelow((0,0,1))
-        bpcvolume.SetPlaneNormalAbove((0,0,1))
-        bpcvolume.SetPlaneNormalBelow((0,0,-1))
-
-        #bpcvolume.Update()
-
+        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_volumes', subv_glyph.GetOutputPort())
 
         # # mapper for the glyphs
         sphere_mapper = vtk.vtkPolyDataMapper()
         # # save reference
         self.cubesphere_mapper = sphere_mapper
         # # sphere_mapper.SetInputConnection( subv_glyph.GetOutputPort() )
-        sphere_mapper.SetInputConnection( bpcvolume.GetOutputPort() )
+        sphere_mapper.SetInputConnection( self.vis_widget_2D.PlaneClipper.GetClippedData('pc_volumes').GetOutputPort())
         
 
         subv_glyph.SetInputConnection( self.polydata_masker.GetOutputPort() )
@@ -863,7 +839,7 @@ and then input to the DVC code.")
             self.actors_2D = {}
         
         self.actors_2D['pointcloud'] = actor
-        self.actors_2D ['pointcloud_frame'] = sphere_actor
+        self.actors_2D['pointcloud_frame'] = sphere_actor
 
     def setup3DPointCloudPipeline(self):
         #polydata_masker = self.polydata_masker
@@ -1077,16 +1053,19 @@ and then input to the DVC code.")
         self.registration_parameters = rp
 
     def displayRegistrationViewer(self,registration_open):
+        
         if hasattr(self, 'ref_image_data') and hasattr(self, 'corr_image_data'):
             #check for image data else do nothing
             if registration_open:
                 self.help_label.setText(self.help_text[1])
                 if not hasattr(self, 'vis_widget_reg'):
+                    print("Create reg viewer")
                     #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
                     self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
                     self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
 
                     self.vis_widget_reg = VisualisationWidget(self, viewer2D)
+                    
 
                     dock_reg = QDockWidget("Image Registration",self.VisualisationWindow)
                     dock_reg.setObjectName("2DRegView")
@@ -1104,6 +1083,11 @@ and then input to the DVC code.")
                     #Clear for next image visualisation:
                     self.orientation = None
                     self.current_slice = None
+
+                    self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
+                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 1.9)
+                    self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
+                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 1.9)
 
                 else:
                     self.dock_reg.setVisible(True)
@@ -1175,7 +1159,6 @@ and then input to the DVC code.")
                 del self.point0_loc
         if hasattr(self, 'vis_widget_reg'):
             print("Still exists")
-
 
 
     def registerImages(self, progress_callback = None):
@@ -1456,8 +1439,10 @@ and then input to the DVC code.")
             point0.OutlineOn()
             #point0.TranslationModeOn()
             point0.Update()
+            self.vis_widget_2D.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
+            self.vis_widget_reg.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
             point0Mapper = vtk.vtkPolyDataMapper()
-            point0Mapper.SetInputConnection(point0.GetOutputPort())
+            point0Mapper.SetInputConnection(self.vis_widget_reg.PlaneClipper.GetClippedData('Point0').GetOutputPort())
             point0Actor = vtk.vtkLODActor()
             point0Actor.SetMapper(point0Mapper)
             point0Actor.GetProperty().SetColor(1.,0.,0.)
@@ -4866,6 +4851,8 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.frame = QCILViewerWidget(viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle)
         self.setCentralWidget(self.frame)
         self.image_file = [""]
+        if self.viewer == viewer2D:
+            self.PlaneClipper = cilPlaneClipper()
 
 
     def displayImageData(self):
