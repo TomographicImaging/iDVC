@@ -58,6 +58,10 @@ os.chdir(working_directory)
 
 from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 
+#from ccpi.viewer.utils.plane_clipper import cilPlaneClipper
+
+from plane_clipper import cilPlaneClipper
+
 from ccpi.viewer.utils.plane_clipper import cilPlaneClipper
 
 import tempfile
@@ -199,87 +203,7 @@ class MainWindow(QMainWindow):
         self.raw_import_dialog = None
         self.reg_load = False
         self.loading_session = False
-        self.dvc_input_image_in_session_folder = False 
-          
-    # def UpdateClippingPlanes(self, interactor, event):
-    #     try:
-    #         if (hasattr(self, 'bpcpoints')):
-    #             normal = [0, 0, 0]
-    #             origin = [0, 0, 0]
-    #             norm = 1
-    #             v = self.vis_widget_2D.frame.viewer
-    #             bpcpoints = self.bpcpoints
-    #             bpcvolume = self.bpcvolume
-    #             orientation = v.GetSliceOrientation()
-    #             if orientation == SLICE_ORIENTATION_XY:
-    #                 norm = 1
-    #             elif orientation == SLICE_ORIENTATION_XZ:
-    #                 norm = 1
-    #             elif orientation == SLICE_ORIENTATION_YZ:
-    #                 norm = 1
-
-    #             if event == "MouseWheelForwardEvent":
-    #                 # this is pretty absurd but it seems the
-    #                 # plane cuts too much in Forward...
-    #                 # Made new adjustments for each direction
-    #                 if orientation == SLICE_ORIENTATION_XY: #z
-    #                     beta = 2
-    #                 elif orientation == SLICE_ORIENTATION_XZ: #y
-    #                     beta = 1
-    #                 elif orientation == SLICE_ORIENTATION_YZ: #x
-    #                     beta = 1
-
-    #             if event == "MouseWheelBackwardEvent":
-    #                 # since modifying the camera direction in CILViewer2D,
-    #                 # and to enable viewing in the y direction, had to update
-    #                 # beta for MouseWheelBackward as well.
-    #                 if orientation == SLICE_ORIENTATION_XY: #z
-    #                     beta = 0
-    #                 elif orientation == SLICE_ORIENTATION_XZ: #y
-    #                     beta = -1
-    #                 elif orientation == SLICE_ORIENTATION_YZ: #x
-    #                     beta = -1
-
-    #             spac = v.img3D.GetSpacing()
-    #             #print("spacing")
-    #             #print(spac)
-    #             orig = v.img3D.GetOrigin()
-    #             slice_thickness = spac[orientation]
-
-    #             normal[orientation] = norm
-    #             origin [orientation] = (v.style.GetActiveSlice() + beta ) * slice_thickness - orig[orientation]
-
-    #             bpcpoints.SetPlaneOriginAbove(origin)
-    #             bpcpoints.SetPlaneNormalAbove(normal)
-
-    #             bpcvolume.SetPlaneOriginAbove(origin)
-    #             bpcvolume.SetPlaneNormalAbove(normal)
-
-    #             # update the  plane below
-    #             #beta += 1
-    #             slice_below = v.style.GetActiveSlice() -1 + beta
-    #             if slice_below < 0:
-    #                 slice_below = 0
-
-    #             origin_below = [i for i in origin]
-    #             origin_below[orientation] = ( slice_below ) * slice_thickness - orig[orientation]
-
-    #             bpcpoints.SetPlaneOriginBelow(origin_below)
-    #             bpcpoints.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
-    #             bpcvolume.SetPlaneOriginBelow(origin_below)
-    #             bpcvolume.SetPlaneNormalBelow((-normal[0], -normal[1], -normal[2]))
-
-    #             bpcpoints.Update()
-    #             bpcvolume.Update()
-    #             #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.5)
-    #             #self.vis_widget_2D.frame.viewer.sliceActor2.GetProperty().SetOpacity(0.99) #actor with mask
-    #             #self.vis_widget_2D.frame.viewer.sliceActor.GetProperty().SetOpacity(0.1)
-    #             # print (">>>>>>>>>>>>>>>>>>>>>")
-    #     except AttributeError as ae:
-    #         print (ae)
-    #         print ("Probably Point Cloud not yet created")
-
-    
+        self.dvc_input_image_in_session_folder = False    
 
 
 #Loading the DockWidgets:
@@ -560,12 +484,12 @@ and then input to the DVC code.")
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
             self.image_info = dict()
-            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
+            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= False, tempfolder = os.path.abspath(tempfile.tempdir))
             print("Created ref image")
 
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= False, tempfolder = os.path.abspath(tempfile.tempdir))
         print("Created corr image")
 
     def save_image_info(self, image_type):
@@ -629,15 +553,20 @@ and then input to the DVC code.")
 
 
         # self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
-        #                                         self.UpdateClippingPlanes, 1.9)
+        #                                         self.UpdateClippingPlanes, 0.9)
         # self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
-        #                                         self.UpdateClippingPlanes, 1.9)
+        #                                         self.UpdateClippingPlanes, 0.9)
         
 
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
-                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 1.9)
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
-                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 1.9)
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
+
+        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
+        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
 
         #Link Viewers:
         self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
@@ -710,22 +639,13 @@ and then input to the DVC code.")
 
     def setup2DPointCloudPipeline(self):
 
-        # clipped_data = cilClipPolyDataBetweenPlanes()
-        # clipped_data.SetInputConnection(data_to_clip) 
-        # clipped_data.SetPlaneOriginAbove((0,0,3))
-        # clipped_data.SetPlaneOriginBelow((0,0,1))
-        # clipped_data.SetPlaneNormalAbove((0,0,1))
-        # clipped_data.SetPlaneNormalBelow((0,0,-1))
-        # clipped_data.Update()
-
         self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_points', self.polydata_masker.GetOutputPort())
 
         mapper = vtk.vtkPolyDataMapper()
         # save reference
         self.pointmapper = mapper
 
-        mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points').GetOutputPort())
-         
+        mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points').GetOutputPort())         
 
         # create an actor for the points as point
         actor = vtk.vtkLODActor()
@@ -1085,9 +1005,14 @@ and then input to the DVC code.")
                     self.current_slice = None
 
                     self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
-                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 1.9)
+                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
                     self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
-                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 1.9)
+                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
+                    
+                    self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
+                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
+                    self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
+                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
 
                 else:
                     self.dock_reg.setVisible(True)
@@ -1408,7 +1333,9 @@ and then input to the DVC code.")
                 print ("Shift pressed", shift)
                 position = interactor.GetEventPosition()
                 #vox = v.style.display2world(position)
-                p0l = v.style.display2imageCoordinate(position)[:-1]               
+                print("OG position, ", position)
+                p0l = v.style.display2imageCoordinate(position)[:-1]
+                print("p01, ", p0l)               
                 self.createPoint0(p0l)
                 rp['register_on_selection_check'].setEnabled(True)
 
@@ -1425,40 +1352,69 @@ and then input to the DVC code.")
         extent = [ p0[0] - int( bbox * spacing[0] / 2 ), p0[0] + int( bbox * spacing[0] / 2 ), 
                 p0[1] - int( bbox * spacing[1] / 2 ), p0[1] + int( bbox * spacing[1] / 2 ), 
                 p0[2] - int( bbox * spacing[2] / 2 ), p0[2] + int( bbox * spacing[2] / 2 )]
+
         if not point0actor:
-            #point0 = vtk.vtkSphereSource()
-            # calculate radius 
-            #point0.SetRadius(3)
-            #point0.SetCenter(*vox)
-            #point0.Update()
             point0 = vtk.vtkCursor3D()
             point0.SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
             point0.SetFocalPoint(*vox)
             point0.AllOff()
             point0.AxesOn()
             point0.OutlineOn()
-            #point0.TranslationModeOn()
+            point0.TranslationModeOn()
             point0.Update()
-            self.vis_widget_2D.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
-            self.vis_widget_reg.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
-            point0Mapper = vtk.vtkPolyDataMapper()
-            point0Mapper.SetInputConnection(self.vis_widget_reg.PlaneClipper.GetClippedData('Point0').GetOutputPort())
-            point0Actor = vtk.vtkLODActor()
-            point0Actor.SetMapper(point0Mapper)
-            point0Actor.GetProperty().SetColor(1.,0.,0.)
-            point0Actor.GetProperty().SetLineWidth(2.0)
-            v.AddActor(point0Actor, 'Point0')
-            self.vis_widget_3D.frame.viewer.getRenderer().AddActor(point0Actor)
-            self.vis_widget_2D.frame.viewer.AddActor(point0Actor)
-            self.point0 = [ point0 , point0Mapper, point0Actor ] 
+
+            self.point0 = []
+            viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
+
+            for viewer_widget in viewer_widgets:
+                point0Mapper = vtk.vtkPolyDataMapper()
+                if viewer_widget.viewer == viewer2D:
+                    viewer_widget.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
+                    point0Mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('Point0').GetOutputPort())
+                else:
+                    point0Mapper.SetInputConnection(point0.GetOutputPort())
+
+                point0Actor = vtk.vtkLODActor()
+                point0Actor.SetMapper(point0Mapper)
+                point0Actor.GetProperty().SetColor(1.,0.,0.)
+                point0Actor.GetProperty().SetLineWidth(2.0)
+
+                if viewer_widget.viewer == viewer2D:
+                    viewer_widget.frame.viewer.AddActor(point0Actor, 'Point0')
+                else:
+                    viewer_widget.frame.viewer.getRenderer().AddActor(point0Actor)
+
+                self.point0.append((point0 , point0Mapper, point0Actor)) 
+
+            
+            # point0Mapper = vtk.vtkPolyDataMapper()
+            # self.vis_widget_2D.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
+            # self.vis_widget_reg.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
+            # point0Mapper.SetInputConnection(self.vis_widget_reg.PlaneClipper.GetClippedData('Point0').GetOutputPort())
+            # point0Actor = vtk.vtkLODActor()
+            # point0Actor.SetMapper(point0Mapper)
+            # point0Actor.GetProperty().SetColor(1.,0.,0.)
+            # point0Actor.GetProperty().SetLineWidth(2.0)
+            # v.AddActor(point0Actor, 'Point0')
+            # self.vis_widget_3D.frame.viewer.getRenderer().AddActor(point0Actor)
+            # self.vis_widget_2D.frame.viewer.AddActor(point0Actor)
+            # self.point0 = [ point0 , point0Mapper, point0Actor ] 
         else:
-            self.point0[0].SetFocalPoint(*vox)
-            self.point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
-            self.point0[0].Update()
+            for point0 in self.point0:
+                point0[0].SetFocalPoint(*vox)
+                point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+                point0[0].Update()
+            # self.point0[0].SetFocalPoint(*vox)
+            # self.point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+            # self.point0[0].Update()
+
         rp = self.registration_parameters
         rp['point_zero_entry'].setText(str(p0l))
         self.point0_loc = p0
         #print("Finished")
+        print("Plane clipper info:")
+        print("reg: ", self.vis_widget_reg.PlaneClipper.GetDataListToClip())
+        print("view2D: ", self.vis_widget_2D.PlaneClipper.GetDataListToClip())
 
     def centerOnPointZero(self):
         '''Centers the viewing slice where Point 0 is'''
@@ -1477,6 +1433,7 @@ and then input to the DVC code.")
                 v.style.SetActiveSlice( gotoslice )
                 v.style.UpdatePipeline(True)
                 self.displayRegistrationSelection()
+                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
             else:
                 self.warningDialog("Choose a Point 0 first.", "Error")
 
@@ -2828,6 +2785,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                     self.actors_3D ['pointcloud_frame'].VisibilityOff()
 
         self.vis_widget_2D.frame.viewer.ren.Render()
+        self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
    
 
         
@@ -4852,7 +4810,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.setCentralWidget(self.frame)
         self.image_file = [""]
         if self.viewer == viewer2D:
-            self.PlaneClipper = cilPlaneClipper()
+            self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
 
 
     def displayImageData(self):
