@@ -484,12 +484,12 @@ and then input to the DVC code.")
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
             self.image_info = dict()
-            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= False, tempfolder = os.path.abspath(tempfile.tempdir))
+            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
             print("Created ref image")
 
     def load_corr_image(self):
         self.corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= False, tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
         print("Created corr image")
 
     def save_image_info(self, image_type):
@@ -505,7 +505,7 @@ and then input to the DVC code.")
         if 'shape' in self.image_info:
             self.unsampled_image_dimensions = self.image_info['shape']
         else:
-            self.unsampled_image_dimensions = self.vis_widget_3D.frame.viewer.img3D.GetDimensions()
+            self.unsampled_image_dimensions = self.ref_image_data.GetDimensions()
 
         if 'numpy_file' in self.image_info:
             image_file = [self.image_info['numpy_file']]
@@ -1014,6 +1014,9 @@ and then input to the DVC code.")
                     self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
                                                 self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
 
+                    self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.OnKeyPressEventForRegistration, 1.5) #Happens before viewer KeyPressEvent (higher priority)
+                    self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.AfterKeyPressEventForRegistration, 0.5) #Happens after viewer KeyPressEvent (lower priority)
+
                 else:
                     self.dock_reg.setVisible(True)
                     self.viewer2D_dock.setVisible(False)
@@ -1188,7 +1191,7 @@ and then input to the DVC code.")
         self.translate.Update()
         progress_callback.emit(45)
 
-        v.style.AddObserver('KeyPressEvent', self.OnKeyPressEventForRegistration, 0.5)
+
 
         # print ("out of the reader", reader.GetOutput())
 
@@ -1247,7 +1250,7 @@ and then input to the DVC code.")
 
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        #print('OnKeyPressEventForRegistration', key_code) #,event)
+        print('OnKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
@@ -1260,7 +1263,31 @@ and then input to the DVC code.")
             #     self.translate_worker.signals.progress.connect(self.progress)
             #self.progress_window.setValue(10)
             
-            self.threadpool.start(self.translate_worker)  
+            self.threadpool.start(self.translate_worker)
+
+        print("Checked?", rp['start_registration_button'].isChecked())
+        if key_code in ['x','y','z'] and \
+            rp['start_registration_button'].isChecked():
+                self.registration_in_progress = True
+                print("Uncheck registration")
+                rp['start_registration_button'].setChecked(False)  #trigger registration to stop
+                self.manualRegistration()
+        else:
+            self.registration_in_progress = False
+
+
+    def AfterKeyPressEventForRegistration(self, interactor, event):
+        key_code = interactor.GetKeyCode()
+        print('AfterKeyPressEventForRegistration', key_code) #,event)
+        rp = self.registration_parameters
+
+        if key_code in ['x','y','z'] and \
+            self.registration_in_progress:
+                print("Check registration")
+                rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
+                self.manualRegistration()
+                self.registration_in_progress = False
+                
         
     def translate_image_reg(self,key_code, event, progress_callback):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
