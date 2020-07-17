@@ -2921,7 +2921,12 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         arrow_source.SetTipRadius(0.2)
         arrow_source.SetShaftRadius(0.075)
         arrow_mapper = vtk.vtkPolyDataMapper()
-        arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
+        if dimensions == 2:
+            print("2D vectors")
+            self.vis_widget_2D.PlaneClipper.AddDataToClip('2D_vectors', arrow_glyph.GetOutputPort())
+            arrow_mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('2D_vectors').GetOutputPort())
+        else:
+            arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
         arrow_mapper.SetScalarModeToUsePointFieldData()
         arrow_mapper.SelectColorArray(0)
         arrow_mapper.SetScalarRange(acolor.GetRange())
