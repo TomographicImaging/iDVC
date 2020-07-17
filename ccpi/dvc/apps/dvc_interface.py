@@ -81,6 +81,8 @@ from distutils.dir_util import copy_tree
 
 from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
+from dvc_runner2 import DVC_runner
+
 __version__ = '20.07.0'
 
 class MainWindow(QMainWindow):
@@ -1250,7 +1252,9 @@ and then input to the DVC code.")
 
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
+        #key_sym = interactor.GetKeySym()
         print('OnKeyPressEventForRegistration', key_code) #,event)
+        #print("Key sym", key_sym)
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
@@ -3574,23 +3578,27 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             
         print("About to run dvc")
 
-        self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
-        self.progress_window.setValue(1)
+        # self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
+        # self.progress_window.setValue(1)
 
-        self.process = QtCore.QProcess(self)
-        self.process.setWorkingDirectory(working_directory)
-        #self.process.setStandardOutputFile("QProcess_Output.txt") #use in testing to get errors from QProcess
-        self.process.setStandardErrorFile("QProcess_Error.txt") #use in testing to get errors from QProcess
-        self.process.readyRead.connect(lambda: self.update_progress(exe = True))
-        self.process.finished.connect(self.finished_run)
+        # self.process = QtCore.QProcess(self)
+        # self.process.setWorkingDirectory(working_directory)
+        # #self.process.setStandardOutputFile("QProcess_Output.txt") #use in testing to get errors from QProcess
+        # self.process.setStandardErrorFile("QProcess_Error.txt") #use in testing to get errors from QProcess
+        # self.process.readyRead.connect(lambda: self.update_progress(exe = True))
+        # self.process.finished.connect(self.finished_run)
 
-        # self.process.start(python_file, [self.run_config_file])
+        # # self.process.start(python_file, [self.run_config_file])
         python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
         pythonCommand = "python " + '"' + os.path.abspath(python_file) + '" "' + os.path.abspath(self.run_config_file) + '"'
-        print (pythonCommand)
-        self.process.start(pythonCommand)
+        # print (pythonCommand)
+        # self.process.start(pythonCommand)
 
-        self.cancelled = False
+        # self.cancelled = False
+
+        self.run_succeeded = True
+        DVC_runner.run_dvc(self,os.path.abspath(self.run_config_file), self.finished_run, self.run_succeeded)
+
 
 
 
@@ -3616,26 +3624,20 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
     def finished_run(self):
         #print("Completed all runs")
-        if not self.cancelled:
+        if self.run_succeeded:
             #print("cancelled false")
             self.result_widgets['run_entry'].addItem(self.rdvc_widgets['name_entry'].text())
-            self.progress_window.setValue(100)
-            self.progress_window.close()
-            self.status.showMessage("Ready")
-            self.alert = QMessageBox(QMessageBox.NoIcon,"Success","The DVC code ran successfully.", QMessageBox.Ok) 
-            self.alert.show()
-        if self.cancelled:
-            #print("cancelled true")
-            self.progress_window.setValue(100)
+            # if hasattr(self, 'progress_window'):
+            #     self.progress_window.setValue(100)
+            #     self.progress_window.close()
+            # self.status.showMessage("Ready")
+            
+        # if self.cancelled:
+        #     #print("cancelled true")
+        #     self.progress_window.setValue(100)
         #self.createVectors(filename, dimensions=3)
 
-    def cancel_run(self):
-         print(self.progress_window.value())
-         self.status.showMessage("Run cancelled")
-         self.process.kill()
-         self.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
-         self.alert.show()
-         self.cancelled = True
+
 
 # DVC Results Panel:
     def CreateViewDVCResultsPanel(self):
