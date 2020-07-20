@@ -593,6 +593,7 @@ and then input to the DVC code.")
 
         if(self.mask_load):
             self.MaskWorker("load session")
+            self.mask_load = False # so it does not reload next time
 
         if hasattr(self, 'no_mask_pc_load'):        
             if(self.no_mask_pc_load):
