@@ -2164,7 +2164,7 @@ and then input to the DVC code.")
         self.erodeRatioSpinBox = QDoubleSpinBox(self.graphParamsGroupBox)
         self.erodeRatioSpinBox.setEnabled(False)
         self.erodeRatioSpinBox.setSingleStep(0.1)
-        self.erodeRatioSpinBox.setMaximum(1.10)
+        self.erodeRatioSpinBox.setMaximum(1.50)
         self.erodeRatioSpinBox.setMinimum(0.1)
         self.erodeRatioSpinBox.setValue(1.00)
         self.erodeCheck.stateChanged.connect(lambda: self.erodeRatioSpinBox.setEnabled(True) if self.erodeCheck.isChecked() else  self.erodeRatioSpinBox.setEnabled(False))
@@ -2756,6 +2756,10 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 self.actors_3D ['pointcloud_frame'].VisibilityOff()
                 self.actors_3D['pointcloud'].VisibilityOff()
 
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_points')
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_volumes')
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('2D_vectors')
+
         self.pointCloudLoaded = False
         self.pointCloudCreated = False
         self.eroded_mask = False
@@ -2914,13 +2918,19 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         pointPolyData.GetPointData().SetScalars(acolor) 
 
         # arrow
+        #arrow_glyph = vtk.vtkGlyph2D()
         arrow_glyph = vtk.vtkGlyph3D()
         #arrow_glyph.SetScaleModeToDataScalingOff()
         arrow_glyph.SetScaleModeToScaleByVector()
+        # print("Range", arrow_glyph.GetRange())
+        # arrow_glyph.SetRange([0,0.99])
+        # arrow_glyph.SetClamping(True)
+
         #arrow_glyph.SetColorModeToColorByVector()
         arrow_source = vtk.vtkArrowSource()
         arrow_source.SetTipRadius(0.2)
         arrow_source.SetShaftRadius(0.075)
+        arrow_source.Update()
         arrow_mapper = vtk.vtkPolyDataMapper()
         if dimensions == 2:
             print("2D vectors")
@@ -2947,28 +2957,32 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         #arrow_actor.GetProperty().SetColor(0, 1, 1)
 
         # vtk user guide p.95
-        conesource = vtk.vtkConeSource()
-        conesource.SetResolution(6)
-        transform = vtk.vtkTransform()
-        transform.Translate(0.5,0.,0.)
-        transformF = vtk.vtkTransformPolyDataFilter()
-        transformF.SetInputConnection(conesource.GetOutputPort())
-        transformF.SetTransform(transform)
+        # conesource = vtk.vtkConeSource()
+        # conesource.SetResolution(6)
+        # transform = vtk.vtkTransform()
+        # transform.Translate(0.5,0.,0.)
+        # transformF = vtk.vtkTransformPolyDataFilter()
+        # transformF.SetInputConnection(conesource.GetOutputPort())
+        # transformF.SetTransform(transform)
 
-        cones = vtk.vtkGlyph3D()
-        cones.SetInputData(pointPolyData)
-        cones.SetSourceConnection(transformF.GetOutputPort())
+        # cones = vtk.vtkGlyph3D()
+        # cones.SetInputData(pointPolyData)
+        # cones.SetSourceConnection(transformF.GetOutputPort())
 
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputConnection(cones.GetOutputPort())
+        # mapper = vtk.vtkPolyDataMapper()
+        # mapper.SetInputConnection(cones.GetOutputPort())
 
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-        #actor.GetProperty().SetPointSize(3)
-        actor.GetProperty().SetColor(0,1,1)
+        # actor = vtk.vtkActor()
+        # actor.SetMapper(mapper)
+        # #actor.GetProperty().SetPointSize(3)
+        # actor.GetProperty().SetColor(0,1,1)
+
+        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_points', pointPolyData)
+        
 
         pmapper = vtk.vtkPolyDataMapper()
-        pmapper.SetInputData(pointPolyData)
+        #pmapper.SetInputData(pointPolyData)
+        pmapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points').GetOutputPort())
 
         pactor = vtk.vtkActor()
         pactor.SetMapper(pmapper)
