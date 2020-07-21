@@ -379,7 +379,6 @@ and then input to the DVC code.")
     
     def view_and_load_images(self):
         self.view_image()
-        #self.load_corr_image()
         self.resetRegistration()
         #del self.vis_widget_reg.frame.viewer
 
@@ -484,13 +483,10 @@ and then input to the DVC code.")
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
             self.image_info = dict()
-            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, self.image_info, True,  partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
+            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
             print("Created ref image")
 
-    def load_corr_image(self):
-        self.corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.corr_image_data, self.image_info, True,  partial(self.save_image_info, "cor"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
-        print("Created corr image")
+    
 
     def save_image_info(self, image_type):
         #print("INFO: ", self.image_info)
@@ -585,7 +581,7 @@ and then input to the DVC code.")
         self.progress_window.setValue(100)
         
         time.sleep(0.1)
-        self.load_corr_image()
+        #self.LoadCorrImageForReg()
 
         self.pointCloudCreated = False
         self.pointCloudLoaded = False
@@ -894,7 +890,7 @@ and then input to the DVC code.")
         rp['register_on_selection_check'] = QCheckBox(groupBox)
         rp['register_on_selection_check'].setText("Register on Selection")
         rp['register_on_selection_check'].setEnabled(False)
-        rp['register_on_selection_check'].setChecked(False)
+        rp['register_on_selection_check'].setChecked(True)
         rp['register_on_selection_check'].stateChanged.connect( self.displayRegistrationSelection )
 
         formLayout.setWidget(widgetno,QFormLayout.FieldRole, rp['register_on_selection_check'])
@@ -911,7 +907,7 @@ and then input to the DVC code.")
         rp['registration_box_size_entry'] = QSpinBox(groupBox)
         rp['registration_box_size_entry'].setSingleStep(1)
         rp['registration_box_size_entry'].setValue(10)
-        rp['registration_box_size_entry'].setMaximum(2000)
+        rp['registration_box_size_entry'].setMaximum(100)
         rp['registration_box_size_entry'].setEnabled(False)
         rp['registration_box_size_entry'].valueChanged.connect(self.displayRegistrationSelection)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['registration_box_size_entry'])
@@ -975,7 +971,7 @@ and then input to the DVC code.")
 
     def displayRegistrationViewer(self,registration_open):
         
-        if hasattr(self, 'ref_image_data') and hasattr(self, 'corr_image_data'):
+        if hasattr(self, 'ref_image_data'):
             #check for image data else do nothing
             if registration_open:
                 self.help_label.setText(self.help_text[1])
@@ -1035,7 +1031,7 @@ and then input to the DVC code.")
             if rp['start_registration_button'].isChecked():
                 print ("Start Registration Checked")
                 self.centerOnPointZero()
-                rp['register_on_selection_check'].setEnabled(True)
+                #rp['register_on_selection_check'].setEnabled(True)
                 rp['start_registration_button'].setText("Stop Registration")
 
                 # setup the appropriate stuff to run the registration
@@ -1049,12 +1045,10 @@ and then input to the DVC code.")
                     translate.SetTranslation(0,0,0)
                     self.translate = translate
 
-                self.reg_worker = Worker(self.registerImages)
-                self.reg_worker.signals.finished.connect(self.reg_viewer_update) 
-                self.create_progress_window("Loading", "Registering Image")
-                self.reg_worker.signals.progress.connect(self.progress)
-                self.progress_window.setValue(5)
-                self.threadpool.start(self.reg_worker)  
+                if not (hasattr(self, 'reg_ref_image') and hasattr(self, 'reg_corr_image')):
+                    self.LoadImagesAndCompleteRegistration()
+                else:
+                    self.completeRegistration()
             
             else:
                 print ("Start Registration Unchecked")
@@ -1067,12 +1061,32 @@ and then input to the DVC code.")
                 v.setInput3DData(self.ref_image_data) #may need to make copy
                 v.style.UpdatePipeline()
 
+    def LoadImagesAndCompleteRegistration(self):
+        if self.image_info['sampled']:
+                self.reg_ref_image = vtk.vtkImageData()
+                ImageDataCreator.createImageData(self, self.image[0], self.reg_ref_image, convert_numpy = True, resample= False, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, resample_corr_image = True)
+                    
+        else:
+            self.reg_ref_image = self.ref_image_data #vtk.vtkImageData()
+            self.LoadCorrImageForReg(resample_corr_image = False)
+
+
+    def LoadCorrImageForReg(self,resample_corr_image= False):
+        self.reg_corr_image = vtk.vtkImageData()
+        ImageDataCreator.createImageData(self, self.image[1], self.reg_corr_image, resample= resample_corr_image, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
+
+    def completeRegistration(self):
+        self.registerImages()
+        self.reg_viewer_update() 
+
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
             self.displayRegistrationViewer(False)
 
             del self.vis_widget_reg
+            del self.reg_ref_image
+            del self.reg_corr_image
             self.translate = None
 
             rp = self.registration_parameters
@@ -1091,17 +1105,17 @@ and then input to the DVC code.")
 
 
     def registerImages(self, progress_callback = None):
-        progress_callback.emit(10)
+        #progress_callback.emit(10)
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         if rp['register_on_selection_check'].isChecked():
+
                 print ("Extracting selection")
                 # get the selected ROI
                 voi = vtk.vtkExtractVOI()
-                ref_copy = self.ref_image_data #vtk.vtkImageData()
+                
                 #ref_copy.DeepCopy(self.ref_image_data)
-                print ("image 1", self.ref_image_data.GetDimensions())
-                voi.SetInputData(ref_copy) #ref image data
+                voi.SetInputData(self.reg_ref_image) #ref image data
                 # box around the point0
                 p0 = eval(rp['point_zero_entry'].text())
                 bbox = rp['registration_box_size_entry'].value()
@@ -1126,31 +1140,31 @@ and then input to the DVC code.")
                 # copy the data to be registered if selection 
                 data1 = vtk.vtkImageData()
                 data1.DeepCopy(voi.GetOutput())
-                progress_callback.emit(15)
+                #progress_callback.emit(15)
 
                 # voi_2 = vtk.vtkExtractVOI()
                 # voi_2.SetVOI(*extent)
                 
                 print ("Reading image 2")
-                print ("image 2", self.corr_image_data.GetDimensions())
-                corr_copy = self.corr_image_data #vtk.vtkImageData()
+                #print ("image 2", reg_cor_image.GetDimensions())
+                
                 #corr_copy.DeepCopy(self.corr_image_data)
-                progress_callback.emit(20)
+                #progress_callback.emit(20)
                 
                 # copy the data to be registered if selection 
                 #voi.SetInputConnection(self.correlate_reader.GetOutputPort())
-                voi.SetInputData(corr_copy)
+                voi.SetInputData(self.reg_corr_image)
                 
                 print ("Extracting selection")
                 voi.Update()
-                progress_callback.emit(30)
+                #progress_callback.emit(30)
                 data2 = vtk.vtkImageData()
                 data2.DeepCopy(voi.GetOutput())
-                progress_callback.emit(35)
+                #progress_callback.emit(35)
 
                 #self.translate.SetInputData(data2)
                 self.translate.SetInputData(data2)
-                progress_callback.emit(40)
+                #progress_callback.emit(40)
             
                 print ("clearing memory")
                 del voi
@@ -1190,7 +1204,7 @@ and then input to the DVC code.")
         
         #voi = reader
         self.translate.Update()
-        progress_callback.emit(45)
+        #progress_callback.emit(45)
 
 
 
@@ -1202,27 +1216,27 @@ and then input to the DVC code.")
         cast1.SetOutputScalarTypeToFloat()
         cast2.SetInputConnection(self.translate.GetOutputPort())
         cast2.SetOutputScalarTypeToFloat()
-        progress_callback.emit(50)
+        #progress_callback.emit(50)
         
         subtract = vtk.vtkImageMathematics()
         subtract.SetOperationToSubtract()
         subtract.SetInputConnection(1,cast1.GetOutputPort())
         subtract.SetInputConnection(0,cast2.GetOutputPort())
-        progress_callback.emit(70)
+        #progress_callback.emit(70)
         
         subtract.Update()
-        progress_callback.emit(80)
+        #progress_callback.emit(80)
         
         print ("subtract type", subtract.GetOutput().GetScalarTypeAsString(), subtract.GetOutput().GetDimensions())
         
         stats = vtk.vtkImageHistogramStatistics()
         stats.SetInputConnection(subtract.GetOutputPort())
         stats.Update()
-        progress_callback.emit(90)
+        #progress_callback.emit(90)
         print ("stats ", stats.GetMinimum(), stats.GetMaximum(), stats.GetMean(), stats.GetMedian())
         self.subtract = subtract
         self.cast = [cast1, cast2]
-        progress_callback.emit(95)
+        #progress_callback.emit(95)
 
     def reg_viewer_update(self, type = None):
         #print("Reg viewer update")
@@ -1365,7 +1379,7 @@ and then input to the DVC code.")
                 p0l = v.style.display2imageCoordinate(position)[:-1]
                 print("p01, ", p0l)               
                 self.createPoint0(p0l)
-                rp['register_on_selection_check'].setEnabled(True)
+                #rp['register_on_selection_check'].setEnabled(True)
 
     def createPoint0(self, p0l):
         v = self.vis_widget_reg.frame.viewer

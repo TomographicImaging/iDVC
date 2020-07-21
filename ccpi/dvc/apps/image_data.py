@@ -44,9 +44,12 @@ If the image is a raw file, this dictionary may be used to provide details of th
 
         Folder where to save converted image file: tempfolder (directory path)
 
+        Arguments for the finish_fn: *finish_fn_args, **finish_fn_kwargs
+
         '''
    
-    def createImageData(self, image_files, output_image, info_var = None, convert_numpy = False, finish_fn = None, resample = False, tempfolder = None):
+    def createImageData(main_window, image_files, output_image, *finish_fn_args, info_var = None, convert_numpy = False,  resample = False, tempfolder = None, finish_fn = None,  **finish_fn_kwargs):
+        print("Create image data")
         if len(image_files) ==1:
             image = image_files[0]
             file_extension = os.path.splitext(image)[1]
@@ -55,68 +58,70 @@ If the image is a raw file, this dictionary may be used to provide details of th
             for image in image_files:
                 file_extension = imghdr.what(image)
                 if file_extension != 'tiff':
-                    self.e(
+                    main_window.e(
                             '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
                     error_text = "Error reading file: ({filename})".format(filename=image)
-                    displayFileErrorDialog(self,message=error_text, title=error_title)
+                    displayFileErrorDialog(main_window,message=error_text, title=error_title)
                     return
 
         if file_extension in ['.mha', '.mhd']:
             reader = vtk.vtkMetaImageReader()
-            reader.AddObserver("ErrorEvent", self.e)
-            create_progress_window(self,"Converting", "Converting Image")
+            reader.AddObserver("ErrorEvent", main_window.e)
+            create_progress_window(main_window,"Converting", "Converting Image")
             image_worker = Worker(update_reader,reader, image, output_image, convert_numpy, info_var, tempfolder)
 
         elif file_extension in ['.npy']:
             print("file ext in npy")
-            create_progress_window(self,"Converting", "Converting Image")
+            print("yay")
+            create_progress_window(main_window,"Converting", "Converting Image")
             image_worker = Worker(load_npy_image,image, output_image, info_var, resample)     
 
         elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
             reader = vtk.vtkTIFFReader()
-            reader.AddObserver("ErrorEvent", self.e)
-            create_progress_window(self,"Converting", "Converting Image")
+            reader.AddObserver("ErrorEvent", main_window.e)
+            create_progress_window(main_window,"Converting", "Converting Image")
             image_worker = Worker(load_tif,image_files,reader, output_image, convert_numpy, info_var)
 
         elif file_extension in ['.raw']:
             if 'file_type' in info_var and info_var['file_type'] == 'raw':
-                createConvertRawImageWorker(self,image, output_image, info_var, resample, finish_fn)
+                createConvertRawImageWorker(main_window,image, output_image, info_var, resample, finish_fn)
                 return
             else: #if we aren't given the image dimensions etc, the user needs to enter them
-                self.raw_import_dialog = createRawImportDialog(self, image, output_image, info_var, resample, finish_fn)
-                dialog = self.raw_import_dialog['dialog'].show()
+                main_window.raw_import_dialog = createRawImportDialog(main_window, image, output_image, info_var, resample, finish_fn)
+                dialog = main_window.raw_import_dialog['dialog'].show()
                 return
 
         else:
-            self.e('', '', 'File format is not supported. Accepted formats include: .mhd, .mha, .npy, .tif, .raw')
+            main_window.e('', '', 'File format is not supported. Accepted formats include: .mhd, .mha, .npy, .tif, .raw')
             error_title = "Error"
             error_text = "Error reading file: ({filename})".format(filename=image)
-            displayFileErrorDialog(self,message=error_text, title=error_title)
+            displayFileErrorDialog(main_window,message=error_text, title=error_title)
             return
 
         
-        self.progress_window.setValue(10)
+        main_window.progress_window.setValue(10)
 
-        image_worker.signals.progress.connect(partial(progress,self.progress_window))
+        image_worker.signals.progress.connect(partial(progress,main_window.progress_window))
         if finish_fn is not None:
-            image_worker.signals.finished.connect(finish_fn)
-        self.threadpool = QThreadPool()
-        self.threadpool.start(image_worker)
+            image_worker.signals.finished.connect(lambda: finish_fn(*finish_fn_args, **finish_fn_kwargs))
+        main_window.threadpool = QThreadPool()
+        main_window.threadpool.start(image_worker)
+        print("Started worker")
 
    
 #For progress bars:
-def create_progress_window(self, title, text, max = 100, cancel = None):
-        self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
-        self.progress_window.setWindowTitle(title)
-        self.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        self.progress_window.setMinimumDuration(0.1)
-        self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
-        self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
+def create_progress_window(main_window, title, text, max = 100, cancel = None):
+        main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
+        main_window.progress_window.setWindowTitle(title)
+        main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
+        main_window.progress_window.setMinimumDuration(0.1)
+        main_window.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
+        main_window.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         if cancel is None:
-            self.progress_window.setCancelButton(None)
+            main_window.progress_window.setCancelButton(None)
         else:
-            self.progress_window.canceled.connect(cancel)
+            main_window.progress_window.canceled.connect(cancel)
 
 def progress(progress_window,value = None):
         if value is not None:
@@ -124,16 +129,16 @@ def progress(progress_window,value = None):
                 progress_window.setValue(value)
 
 # Display errors:
-def displayFileErrorDialog(self, message, title):
-    msg = QMessageBox(self)
+def displayFileErrorDialog(main_window, message, title):
+    msg = QMessageBox(main_window)
     msg.setIcon(QMessageBox.Critical)
     msg.setWindowTitle(title)
     msg.setText(message)
-    msg.setDetailedText(self.e.ErrorMessage())
+    msg.setDetailedText(main_window.e.ErrorMessage())
     msg.exec_()
 
-def warningDialog(self, message='', window_title='', detailed_text=''):
-    dialog = QMessageBox(self)
+def warningDialog(main_window, message='', window_title='', detailed_text=''):
+    dialog = QMessageBox(main_window)
     dialog.setIcon(QMessageBox.Information)
     dialog.setText(message)
     dialog.setWindowTitle(window_title)
@@ -156,6 +161,8 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
         progress_callback.emit(90)
 
         convert_numpy = True
+
+        image_info['sampled'] = False
        
 
         if convert_numpy:
@@ -203,7 +210,7 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
         if resample:
             reader = cilNumpyResampleReader()
             reader.SetFileName(image_file)
-            reader.SetTargetShape((512,512,512))
+            reader.SetTargetShape((512,512,512)) #TODO: change to set target size
             reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
             reader.Update()
             output_image.ShallowCopy(reader.GetOutput())
@@ -213,129 +220,167 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
             shape = reader.GetStoredArrayShape()
             if reader.GetIsFortran():
                 shape = shape[::-1]
-
-            image_info['isBigEndian'] = reader.GetBigEndian()
+            if image_info is not None:
+                image_info['isBigEndian'] = reader.GetBigEndian()
+                
+                image_size = reader.GetStoredArrayShape()[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
+                target_size = reader.GetTargetShape()[0] * reader.GetTargetShape()[1] * reader.GetTargetShape()[2]
+                print("array shape", image_size)
+                print("target", target_size)
+                if image_size <= target_size:
+                    image_info['sampled'] = False
+                else:
+                    image_info['sampled'] = True
             # print("Header", header_length)
             # print("vol_bit_depth", vol_bit_depth)
 
         else: 
-            time.sleep(0.1)
-            progress_callback.emit(5)
+                time.sleep(0.1)
+                progress_callback.emit(5)
 
-            with open(image_file, 'rb') as f:
-                header = f.readline()
-            header_length = len(header)
+                with open(image_file, 'rb') as f:
+                    header = f.readline()
+                header_length = len(header)
 
-            numpy_array = numpy.load(image_file)
-            shape = numpy.shape(numpy_array)
 
-            if (isinstance(numpy_array[0][0][0],numpy.uint8)):
-                vol_bit_depth = '8'
-            elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
-                vol_bit_depth = '16'
-            else:
-                vol_bit_depth = None #in this case we can't run the DVC code
-                output_image = None
-                return
-            
-            if numpy_array.dtype.byteorder == '=':
-                if sys.byteorder == 'big':
-                    image_info['isBigEndian'] = True
+                numpy_array = numpy.load(image_file)
+                shape = numpy.shape(numpy_array)
+
+                if (isinstance(numpy_array[0][0][0],numpy.uint8)):
+                    vol_bit_depth = '8'
+                elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
+                    vol_bit_depth = '16'
                 else:
-                    image_info['isBigEndian'] = False
-            else:
-                image_info['isBigEndian'] = None
+                    vol_bit_depth = None #in this case we can't run the DVC code
+                    output_image = None
+                    return
+                
+                if image_info is not None:
+                    image_info['sampled'] = False
+                    if numpy_array.dtype.byteorder == '=':
+                        if sys.byteorder == 'big':
+                            image_info['isBigEndian'] = True
+                        else:
+                            image_info['isBigEndian'] = False
+                    else:
+                        image_info['isBigEndian'] = None
 
-                print(image_info['isBigEndian'])
+                        print(image_info['isBigEndian'])
 
-            Converter.numpy2vtkImage(numpy_array, output = output_image) #(3.2,3.2,1.5)
-            progress_callback.emit(80)
-        
+                Converter.numpy2vtkImage(numpy_array, output = output_image) #(3.2,3.2,1.5)
+                progress_callback.emit(80)
+            
         progress_callback.emit(100)
 
         if image_info is not None:
             image_info["header_length"]  = header_length
             image_info["vol_bit_depth"] =  vol_bit_depth
             image_info["shape"] = shape
+
+        #print("Loaded npy")
+        
+
         
         
 def load_tif(filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
         #time.sleep(0.1) #required so that progress window displays
         #progress_callback.emit(10)
+        resample = False
 
-        sa = vtk.vtkStringArray()
-        for fname in filenames:
-            i = sa.InsertNextValue(fname)
-        print("read {} files".format(i))
+        if resample:
+            reader = Converter.tiffStack2numpyEnforceBounds(filenames = filenames, bounds = (12,12,12)) 
+            #reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            #reader.Update()
+            #output_image.ShallowCopy(reader.GetOutput())
+            #print ("Spacing ", output_image.GetSpacing())
+            #header_length = reader.GetFileHeaderLength() 
+            #vol_bit_depth = reader.GetBytesPerElement()*8
+            #shape = reader.GetStoredArrayShape()
+            # if reader.GetIsFortran():
+            #     shape = shape[::-1]
 
-        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
-        reader.SetFileNames(sa)
+            # image_info['isBigEndian'] = reader.GetBigEndian()
+            # print("Header", header_length)
+            # print("vol_bit_depth", vol_bit_depth)
 
-        dtype = vtk.VTK_UNSIGNED_CHAR
 
-        if reader.GetOutput().GetScalarType() != dtype and False:
-            # need to cast to 8 bits unsigned
-            print("The if statement is true")
+        else:
 
-            stats = vtk.vtkImageAccumulate()
-            stats.SetInputConnection(reader.GetOutputPort())
-            stats.Update()
-            iMin = stats.GetMin()[0]
-            iMax = stats.GetMax()[0]
-            if (iMax - iMin == 0):
-                scale = 1
-            else:
-                scale = vtk.VTK_UNSIGNED_CHAR_MAX / (iMax - iMin)
+            sa = vtk.vtkStringArray()
+            for fname in filenames:
+                i = sa.InsertNextValue(fname)
+            print("read {} files".format(i))
 
-            shiftScaler = vtk.vtkImageShiftScale()
-            shiftScaler.SetInputConnection(reader.GetOutputPort())
-            shiftScaler.SetScale(scale)
-            shiftScaler.SetShift(-iMin)
-            shiftScaler.SetOutputScalarType(dtype)
-            shiftScaler.Update()
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            reader.SetFileNames(sa)
 
-            tmpdir = tempfile.gettempdir()
-            writer = vtk.vtkMetaImageWriter()
-            writer.SetInputConnection(shiftScaler.GetOutputPort())
-            writer.SetFileName(os.path.join(tmpdir, 'input8bit.mhd'))
-            writer.Write()
+            dtype = vtk.VTK_UNSIGNED_CHAR
 
-            reader = shiftScaler
-        reader.Update()
+            if reader.GetOutput().GetScalarType() != dtype and False:
+                # need to cast to 8 bits unsigned
+                print("The if statement is true")
 
-        progress_callback.emit(80)
+                stats = vtk.vtkImageAccumulate()
+                stats.SetInputConnection(reader.GetOutputPort())
+                stats.Update()
+                iMin = stats.GetMin()[0]
+                iMax = stats.GetMax()[0]
+                if (iMax - iMin == 0):
+                    scale = 1
+                else:
+                    scale = vtk.VTK_UNSIGNED_CHAR_MAX / (iMax - iMin)
 
-        print("Convert np")
+                shiftScaler = vtk.vtkImageShiftScale()
+                shiftScaler.SetInputConnection(reader.GetOutputPort())
+                shiftScaler.SetScale(scale)
+                shiftScaler.SetShift(-iMin)
+                shiftScaler.SetOutputScalarType(dtype)
+                shiftScaler.Update()
 
-        image_data = reader.GetOutput()
-        output_image.ShallowCopy(image_data)
+                tmpdir = tempfile.gettempdir()
+                writer = vtk.vtkMetaImageWriter()
+                writer.SetInputConnection(shiftScaler.GetOutputPort())
+                writer.SetFileName(os.path.join(tmpdir, 'input8bit.mhd'))
+                writer.Write()
 
-        progress_callback.emit(90)
+                reader = shiftScaler
+            reader.Update()
 
-        if convert_numpy:
-            filename = os.path.abspath(filenames[0])[:-4] + ".npy"
-            numpy_array =  Converter.vtk2numpy(reader.GetOutput())
-            #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
-            numpy.save(filename,numpy_array)
-            image_info['numpy_file'] = filename
+            progress_callback.emit(80)
 
-            if image_info is not None:
-                if (isinstance(numpy_array[0][0][0],numpy.uint8)):
-                    image_info['vol_bit_depth'] = '8'
-                elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
-                    image_info['vol_bit_depth'] = '16'
-                print(image_info['vol_bit_depth'])
+            print("Convert np")
 
-            #TODO: save volume header length
-        progress_callback.emit(100)
+            image_data = reader.GetOutput()
+            output_image.ShallowCopy(image_data)
+
+            progress_callback.emit(90)
+
+            if convert_numpy:
+                filename = os.path.abspath(filenames[0])[:-4] + ".npy"
+                numpy_array =  Converter.vtk2numpy(reader.GetOutput())
+                #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
+                numpy.save(filename,numpy_array)
+                image_info['numpy_file'] = filename
+
+                if image_info is not None:
+                    if (isinstance(numpy_array[0][0][0],numpy.uint8)):
+                        image_info['vol_bit_depth'] = '8'
+                    elif(isinstance(numpy_array[0][0][0],numpy.uint16)):
+                        image_info['vol_bit_depth'] = '16'
+                    print(image_info['vol_bit_depth'])
+
+            image_info['sampled'] = False
+
+                #TODO: save volume header length
+            progress_callback.emit(100)
 
 def get_progress(caller, event, progress_callback):
         progress_callback.emit(caller.GetProgress()*80)
 
 
 #raw:
-def createRawImportDialog(self, fname, output_image, info_var, resample, finish_fn):
-        dialog = QDialog(self)
+def createRawImportDialog(main_window, fname, output_image, info_var, resample, finish_fn):
+        dialog = QDialog(main_window)
         ui = generateUIFormView()
         groupBox = ui['groupBox']
         formLayout = ui['groupBoxFormLayout']
@@ -353,9 +398,9 @@ def createRawImportDialog(self, fname, output_image, info_var, resample, finish_
         dimensionalityValue.addItem("2D")
         dimensionalityValue.setCurrentIndex(0)
         # dimensionalityValue.currentIndexChanged.connect(lambda: \
-        #             self.overlapZValueEntry.setEnabled(True) \
-        #             if self.dimensionalityValue.currentIndex() == 0 else \
-        #             self.overlapZValueEntry.setEnabled(False))
+        #             main_window.overlapZValueEntry.setEnabled(True) \
+        #             if main_window.dimensionalityValue.currentIndex() == 0 else \
+        #             main_window.overlapZValueEntry.setEnabled(False))
         
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimensionalityValue)
         widgetno += 1
@@ -422,16 +467,16 @@ def createRawImportDialog(self, fname, output_image, info_var, resample, finish_
         fortranOrder.addItem("C Order: ZYX")
         fortranOrder.setCurrentIndex(1)
         # dimensionalityValue.currentIndexChanged.connect(lambda: \
-        #             self.overlapZValueEntry.setEnabled(True) \
-        #             if self.dimensionalityValue.currentIndex() == 0 else \
-        #             self.overlapZValueEntry.setEnabled(False))
+        #             main_window.overlapZValueEntry.setEnabled(True) \
+        #             if main_window.dimensionalityValue.currentIndex() == 0 else \
+        #             main_window.overlapZValueEntry.setEnabled(False))
         
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, fortranOrder)
         widgetno += 1
 
         buttonbox = QDialogButtonBox(QDialogButtonBox.Ok |
                                     QDialogButtonBox.Cancel)
-        buttonbox.accepted.connect(lambda: createConvertRawImageWorker(self,fname, output_image, info_var, resample, finish_fn))
+        buttonbox.accepted.connect(lambda: createConvertRawImageWorker(main_window,fname, output_image, info_var, resample, finish_fn))
         buttonbox.rejected.connect(dialog.close)
         formLayout.addWidget(buttonbox)
 
@@ -444,20 +489,20 @@ def createRawImportDialog(self, fname, output_image, info_var, resample, finish_
                 'dtype': dtypeValue, 'endiannes' : endiannes, 'isFortran' : fortranOrder,
                 'buttonBox': buttonbox}
 
-def createConvertRawImageWorker(self, fname, output_image, info_var, resample, finish_fn):
-        create_progress_window(self,"Converting", "Converting Image")
-        self.progress_window.setValue(10)
-        image_worker = Worker(saveRawImageData, self, fname, output_image,  info_var, resample)
-        image_worker.signals.progress.connect(partial(progress, self.progress_window))
-        image_worker.signals.result.connect(partial(finish_raw_conversion,self,finish_fn))
-        self.threadpool.start(image_worker)
+def createConvertRawImageWorker(main_window, fname, output_image, info_var, resample, finish_fn):
+        create_progress_window(main_window,"Converting", "Converting Image")
+        main_window.progress_window.setValue(10)
+        image_worker = Worker(saveRawImageData, main_window, fname, output_image,  info_var, resample)
+        image_worker.signals.progress.connect(partial(progress, main_window.progress_window))
+        image_worker.signals.result.connect(partial(finish_raw_conversion,main_window,finish_fn))
+        main_window.threadpool.start(image_worker)
               
-def finish_raw_conversion(self,finish_fn, error = None):
-        self.raw_import_dialog['dialog'].close()
-        self.progress_window.setValue(100)
+def finish_raw_conversion(main_window,finish_fn, error = None):
+        main_window.raw_import_dialog['dialog'].close()
+        main_window.progress_window.setValue(100)
         if error is not None:
             if error['type'] == 'size':
-                self.warningDialog(
+                main_window.warningDialog(
                     detailed_text='Expected Data size: {}b\nFile Data size:     {}b\n'.format(error['expected_size'], error['file_size']),
                     window_title='File Size Error',
                     message='Expected Data Size does not match File size.')
@@ -465,7 +510,7 @@ def finish_raw_conversion(self,finish_fn, error = None):
             elif error['type'] == 'hdr':
                 error_title = "Write Error"
                 error_text = "Error writing to file: ({filename})".format(filename=error['hdrfname'])
-                displayFileErrorDialog(self,message=error_text, title=error_title)
+                displayFileErrorDialog(main_window,message=error_text, title=error_title)
                 return
 
         if finish_fn is not None:
@@ -476,7 +521,7 @@ def generateUIFormView():
 
         basically you can add widget to the returned groupBoxFormLayout and paramsGroupBox
         The returned dockWidget must be added with
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+        main_window.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
         '''
         dockWidgetContents = QWidget()
 
@@ -510,7 +555,7 @@ def generateUIFormView():
                 'groupBox' : paramsGroupBox,
                 'groupBoxFormLayout': groupBoxFormLayout}
 
-def saveRawImageData(self,fname, output_image, info_var, resample, progress_callback):
+def saveRawImageData(main_window,fname, output_image, info_var, resample, progress_callback):
         errors = {} 
         #print ("File Name", fname)
 
@@ -526,14 +571,14 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
 
         else:
             #retrieve info about image file from interface
-            dimensionality = [3,2][self.raw_import_dialog['dimensionality'].currentIndex()]
-            dimX = int ( self.raw_import_dialog['dimX'].text() )
-            dimY = int ( self.raw_import_dialog['dimY'].text() )
+            dimensionality = [3,2][main_window.raw_import_dialog['dimensionality'].currentIndex()]
+            dimX = int ( main_window.raw_import_dialog['dimX'].text() )
+            dimY = int ( main_window.raw_import_dialog['dimY'].text() )
             if dimensionality == 3:
-                dimZ = int ( self.raw_import_dialog['dimZ'].text() )
-            isFortran = True if self.raw_import_dialog['isFortran'].currentIndex() == 0 else False
-            isBigEndian = True if self.raw_import_dialog['endiannes'].currentIndex() == 0 else False
-            typecode = self.raw_import_dialog['dtype'].currentIndex()
+                dimZ = int ( main_window.raw_import_dialog['dimZ'].text() )
+            isFortran = True if main_window.raw_import_dialog['isFortran'].currentIndex() == 0 else False
+            isBigEndian = True if main_window.raw_import_dialog['endiannes'].currentIndex() == 0 else False
+            typecode = main_window.raw_import_dialog['dtype'].currentIndex()
 
             #save to info_var dictionary:
             info_var['file_type'] = 'raw'
@@ -596,7 +641,7 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
             reader.SetBytesPerElement(bytes_per_element)
             reader.SetBigEndian(isBigEndian)
             reader.SetIsFortran(isFortran)
-            typecode = numpy.dtype(self.raw_import_dialog['dtype'].currentText()).char
+            typecode = numpy.dtype(main_window.raw_import_dialog['dtype'].currentText()).char
             reader.SetNumpyTypeCode(typecode)
             reader.SetOutputVTKType(Converter.numpy_dtype_char_to_vtkType[typecode])
             reader.SetStoredArrayShape(shape)
@@ -605,9 +650,17 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
             reader.Update()
             output_image.ShallowCopy(reader.GetOutput())
             #print ("Spacing ", output_image.GetSpacing())
+            image_size = reader.GetStoredArrayShape()[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
+            target_size = reader.GetTargetShape()[0] * reader.GetTargetShape()[1] * reader.GetTargetShape()[2]
+            print("array shape", image_size)
+            print("target", target_size)
+            if image_size <= target_size:
+                image_info['sampled'] = False
+            else:
+                image_info['sampled'] = True
 
         else:
-
+            image_info['sampled'] = False
             header = generateMetaImageHeader(fname, typecode, shape, isFortran, isBigEndian, header_size=0, spacing=(1,1,1), origin=(0,0,0))
 
             #print (header)
@@ -618,15 +671,15 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
 
             progress_callback.emit(50)
 
-            #self.raw_import_dialog['dialog'].reject()
+            #main_window.raw_import_dialog['dialog'].reject()
             # expects to read a MetaImage File
             reader = vtk.vtkMetaImageReader()
-            reader.AddObserver("ErrorEvent", self.e)
+            reader.AddObserver("ErrorEvent", main_window.e)
             reader.SetFileName(hdrfname)
             reader.Update()
             progress_callback.emit(80)
 
-        if self.e.ErrorOccurred():
+        if main_window.e.ErrorOccurred():
             errors = {"type": "hdr", "hdrfname": hdrfname}
             return (errors)
         else:
@@ -639,7 +692,7 @@ def saveRawImageData(self,fname, output_image, info_var, resample, progress_call
 
         return(None)
 
-        #self.setStatusTip('Ready')
+        #main_window.setStatusTip('Ready')
 
 def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, header_size=0, spacing=(1,1,1), origin=(0,0,0)):
         '''create MetaImageHeader for datafname based on the specifications in parameters'''
@@ -699,65 +752,65 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
 class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copied from dvc_configurator.py
     '''vtkAlgorithm to read a point cloud from a NumPy array
     '''
-    def __init__(self):
-        VTKPythonAlgorithmBase.__init__(self, nInputPorts=0, nOutputPorts=1)
-        self.__Points = vtk.vtkPoints()
-        self.__Vertices = vtk.vtkCellArray()
-        self.__Data = None
+    def __init__(main_window):
+        VTKPythonAlgorithmBase.__init__(main_window, nInputPorts=0, nOutputPorts=1)
+        main_window.__Points = vtk.vtkPoints()
+        main_window.__Vertices = vtk.vtkCellArray()
+        main_window.__Data = None
 
 
-    def GetPoints(self):
+    def GetPoints(main_window):
         '''Returns the Points'''
-        return self.__Points
-    def SetData(self, value):
+        return main_window.__Points
+    def SetData(main_window, value):
         '''Sets the points from a numpy array or list'''
         if not isinstance (value, numpy.ndarray) :
             raise ValueError('Data must be a numpy array. Got', value)
 
-        if not numpy.array_equal(value,self.__Data):
-            self.__Data = value
-            self.Modified()
+        if not numpy.array_equal(value,main_window.__Data):
+            main_window.__Data = value
+            main_window.Modified()
 
-    def GetData(self):
-        return self.__Data
+    def GetData(main_window):
+        return main_window.__Data
 
 
-    def GetNumberOfPoints(self):
+    def GetNumberOfPoints(main_window):
         '''returns the number of points in the point cloud'''
-        return self.__Points.GetNumberOfPoints()
+        return main_window.__Points.GetNumberOfPoints()
 
 
-    def FillInputPortInformation(self, port, info):
+    def FillInputPortInformation(main_window, port, info):
         # if port == 0:
         #    info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
         return 1
 
-    def FillOutputPortInformation(self, port, info):
+    def FillOutputPortInformation(main_window, port, info):
         info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
         return 1
 
-    def RequestData(self, request, inInfo, outInfo):
+    def RequestData(main_window, request, inInfo, outInfo):
 
         # print ("Request Data")
         # output_image = vtk.vtkDataSet.GetData(inInfo[0])
         pointPolyData = vtk.vtkPolyData.GetData(outInfo)
-        vtkPointCloud = self.__Points
-        for point in self.GetData():
+        vtkPointCloud = main_window.__Points
+        for point in main_window.GetData():
             # point = id, x, y, z
             vtkPointCloud.InsertNextPoint( point[1] , point[2] , point[3])
 
-        self.FillCells()
+        main_window.FillCells()
 
-        pointPolyData.SetPoints(self.__Points)
-        pointPolyData.SetVerts(self.__Vertices)
+        pointPolyData.SetPoints(main_window.__Points)
+        pointPolyData.SetVerts(main_window.__Vertices)
         return 1
 
 
-    def FillCells(self):
+    def FillCells(main_window):
         '''Fills the Vertices'''
-        vertices = self.__Vertices
+        vertices = main_window.__Vertices
         number_of_cells = vertices.GetNumberOfCells()
-        for i in range(self.GetNumberOfPoints()):
+        for i in range(main_window.GetNumberOfPoints()):
             if i >= number_of_cells:
                 vertices.InsertNextCell(1)
                 vertices.InsertCellPoint(i)
