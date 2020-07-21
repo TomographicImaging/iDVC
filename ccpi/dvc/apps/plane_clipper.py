@@ -4,6 +4,8 @@ from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
 
 from ccpi.viewer.utils import cilClipPolyDataBetweenPlanes
 
+from vtk import vtkPolyData, vtkAlgorithmOutput
+
 
 class cilPlaneClipper(object):
 
@@ -21,9 +23,19 @@ class cilPlaneClipper(object):
         self.DataListToClip[str(key)] = self.MakeClippableData(data_to_clip)
         self.UpdateClippingPlanes()
 
+    def RemoveDataToClip(self, key):
+        if key in self.DataListToClip.keys():
+            self.DataListToClip.pop(key)
+
     def MakeClippableData(self, data_to_clip):
         clippable_data = cilClipPolyDataBetweenPlanes()
-        clippable_data.SetInputConnection(data_to_clip)
+        print("Type", type(data_to_clip))
+        if isinstance(data_to_clip, vtkPolyData):
+            print("Polydata output")
+            clippable_data.SetInputDataObject(data_to_clip)
+        elif isinstance(data_to_clip, vtkAlgorithmOutput):
+            print("Algorithm output")
+            clippable_data.SetInputConnection(data_to_clip)
         return clippable_data
 
     def GetDataListToClip(self):
@@ -40,17 +52,17 @@ class cilPlaneClipper(object):
 
     def UpdateClippingPlanes(self, interactor = None, event = "ClipData"):
         try:
+            if len(self.DataListToClip) > 0:
                 if interactor is None:
                     interactor = self.Interactor
-                print(self.DataListToClip)
+                print("Update Clipping Planes", self.DataListToClip)
                 
-                print("Update Clipping Planes")
                 print("Orientation", interactor.GetSliceOrientation())
                 #print("Interactor", interactor)
                 normal = [0, 0, 0]
                 origin = [0, 0, 0]
                 norm = 1
-                # orientation = self.GetViewer().GetSliceOrientation()
+
                 orientation = interactor.GetSliceOrientation()
 
                 beta = 0
@@ -60,11 +72,20 @@ class cilPlaneClipper(object):
                 orig = interactor.GetInputData().GetOrigin()
                 slice_thickness = spac[orientation]
 
+                rounding = True
+
+                if rounding == True:
+                    beta_up = 0.5 - 1e-9
+                    beta_down = 0.5
+                else:
+                    beta_up = 1 - 1e-9
+                    beta_down = 0
+
                 normal[orientation] = norm
-                origin [orientation] = (interactor.GetActiveSlice() + beta +1 - 1e-9 ) * slice_thickness - orig[orientation]
+                origin [orientation] = (interactor.GetActiveSlice() + beta_up) * slice_thickness - orig[orientation]
 
                 # update the  plane below
-                slice_below = interactor.GetActiveSlice() + beta 
+                slice_below = interactor.GetActiveSlice() - beta_down
 
                 # if slice_below < 0:
                 #     slice_below = 0
