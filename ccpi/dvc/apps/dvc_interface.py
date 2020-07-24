@@ -988,9 +988,9 @@ and then input to the DVC code.")
                     dock_reg.setObjectName("2DRegView")
                     dock_reg.setWidget(self.vis_widget_reg)
                     self.VisualisationWindow.addDockWidget(Qt.TopDockWidgetArea,dock_reg)
-                    ref_image_copy = vtk.vtkImageData()
-                    ref_image_copy.DeepCopy(self.ref_image_data)
-                    self.vis_widget_reg.setImageData(ref_image_copy)
+                    #ref_image_copy = vtk.vtkImageData()
+                    #ref_image_copy.DeepCopy(self.ref_image_data)
+                    self.vis_widget_reg.setImageData(self.ref_image_data)
                     self.vis_widget_reg.displayImageData()
                     #self.tabifyDockWidget(self.viewer2D_dock,dock_reg) #breaks
                     self.viewer2D_dock.setVisible(False)
@@ -1045,7 +1045,7 @@ and then input to the DVC code.")
                     translate.SetTranslation(0,0,0)
                     self.translate = translate
 
-                if not (hasattr(self, 'reg_ref_image') and hasattr(self, 'reg_corr_image')):
+                if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                     self.LoadImagesAndCompleteRegistration()
                 else:
                     self.completeRegistration()
@@ -1053,31 +1053,33 @@ and then input to the DVC code.")
             else:
                 print ("Start Registration Unchecked")
                 rp['start_registration_button'].setText("Start Registration")
-                self.centerOnPointZero()
+                
                 # hide registration box
                 #if hasattr(self, 'registration_box'):
                     #self.registration_box['actor'].VisibilityOff()
                 #v.setInput3DData(self.reader.GetOutput())
                 v.setInput3DData(self.ref_image_data) #may need to make copy
                 v.style.UpdatePipeline()
+                self.centerOnPointZero()
 
     def LoadImagesAndCompleteRegistration(self):
         if self.image_info['sampled']:
-                self.reg_ref_image = vtk.vtkImageData()
-                ImageDataCreator.createImageData(self, self.image[0], self.reg_ref_image, convert_numpy = True, resample= False, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, resample_corr_image = True)
+                self.unsampled_ref_image_data = vtk.vtkImageData()
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, convert_numpy = True, resample= False, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, resample_corr_image = False)
                     
         else:
-            self.reg_ref_image = self.ref_image_data #vtk.vtkImageData()
+            self.unsampled_ref_image_data = self.ref_image_data #vtk.vtkImageData()
             self.LoadCorrImageForReg(resample_corr_image = False)
 
 
     def LoadCorrImageForReg(self,resample_corr_image= False):
-        self.reg_corr_image = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.reg_corr_image, resample= resample_corr_image, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
+        self.unsampled_corr_image_data = vtk.vtkImageData()
+        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, resample= resample_corr_image, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
         self.registerImages()
-        self.reg_viewer_update() 
+        self.reg_viewer_update()
+        self.centerOnPointZero() 
 
 
     def resetRegistration(self):
@@ -1085,8 +1087,10 @@ and then input to the DVC code.")
             self.displayRegistrationViewer(False)
 
             del self.vis_widget_reg
-            del self.reg_ref_image
-            del self.reg_corr_image
+            if hasattr(self, 'unsampled_ref_image_data'):
+                del self.unsampled_ref_image_data
+                del self.unsampled_corr_image_data
+
             self.translate = None
 
             rp = self.registration_parameters
@@ -1115,7 +1119,7 @@ and then input to the DVC code.")
                 voi = vtk.vtkExtractVOI()
                 
                 #ref_copy.DeepCopy(self.ref_image_data)
-                voi.SetInputData(self.reg_ref_image) #ref image data
+                voi.SetInputData(self.unsampled_ref_image_data) #ref image data
                 # box around the point0
                 p0 = eval(rp['point_zero_entry'].text())
                 bbox = rp['registration_box_size_entry'].value()
@@ -1124,13 +1128,7 @@ and then input to the DVC code.")
                            p0[2] - bbox//2, p0[2] + bbox//2]
 
                 extent = [ el if el > 0 else 0 for i,el in enumerate(extent) ]
-                # spacing = self.reader.GetOutput().GetSpacing()
-                # extent[0] /= spacing[0]
-                # extent[1] /= spacing[0]
-                # extent[2] /= spacing[1]
-                # extent[3] /= spacing[1]
-                # extent[4] /= spacing[2]
-                # extent[5] /= spacing[2]
+
                 print ("Current roi", extent)
                 
                 voi.SetVOI(*extent)
@@ -1142,18 +1140,11 @@ and then input to the DVC code.")
                 data1.DeepCopy(voi.GetOutput())
                 #progress_callback.emit(15)
 
-                # voi_2 = vtk.vtkExtractVOI()
-                # voi_2.SetVOI(*extent)
                 
                 print ("Reading image 2")
-                #print ("image 2", reg_cor_image.GetDimensions())
+                #print ("image 2", self.unsampled_corr_image_data.GetDimensions())
                 
-                #corr_copy.DeepCopy(self.corr_image_data)
-                #progress_callback.emit(20)
-                
-                # copy the data to be registered if selection 
-                #voi.SetInputConnection(self.correlate_reader.GetOutputPort())
-                voi.SetInputData(self.reg_corr_image)
+                voi.SetInputData(self.unsampled_corr_image_data)
                 
                 print ("Extracting selection")
                 voi.Update()
@@ -1181,10 +1172,10 @@ and then input to the DVC code.")
                 print ("Registration on whole image")
                 #data1 = vtk.vtkImageData()
                 #data1.DeepCopy(self.ref_image_data)
-                data1 = self.ref_image_data
+                data1 = self.unsampled_ref_image_data
                 #data2 = vtk.vtkImageData()
                 #data2.DeepCopy(self.corr_image_data)
-                data2 = self.corr_image_data
+                data2 = self.unsampled_corr_image_data
                 #self.translate.SetInputData(data2)
                 self.translate.SetInputData(data2)
                 print ("clearing memory")
@@ -1249,12 +1240,14 @@ and then input to the DVC code.")
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         v.setInputData(self.subtract.GetOutput())
+        
         # trigger visualisation by programmatically click 'z'
         # interactor = v.getInteractor()
         # interactor.SetKeyCode("z")
         # v.style.OnKeyPress(interactor, 'KeyPressEvent')
         v.style.UpdatePipeline()
-        #v.startRenderLoop()
+        v.startRenderLoop()
+        self.centerOnPointZero()
 
         if not rp['register_on_selection_check'].isChecked():
             rp['registration_box_size_entry'].setValue(rp['registration_box_size_entry'].maximum())
@@ -1262,6 +1255,7 @@ and then input to the DVC code.")
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
             self.progress_window.close()
+        
 
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
@@ -1427,6 +1421,7 @@ and then input to the DVC code.")
                     viewer_widget.frame.viewer.getRenderer().AddActor(point0Actor)
 
                 self.point0.append((point0 , point0Mapper, point0Actor)) 
+        
 
             
             # point0Mapper = vtk.vtkPolyDataMapper()
@@ -1451,23 +1446,32 @@ and then input to the DVC code.")
             # self.point0[0].Update()
 
         rp = self.registration_parameters
-        rp['point_zero_entry'].setText(str(p0l))
+
+        p0_world_coords = v.style.image2world(p0l)
+        p0_world_coords = [round(p0_world_coords[i]) for i in range(3)]
+        rp['point_zero_entry'].setText(str(p0_world_coords))
         self.point0_loc = p0
         #print("Finished")
         print("Plane clipper info:")
         print("reg: ", self.vis_widget_reg.PlaneClipper.GetDataListToClip())
         print("view2D: ", self.vis_widget_2D.PlaneClipper.GetDataListToClip())
+        self.centerOnPointZero()
 
     def centerOnPointZero(self):
+        print("Center on point0")
         '''Centers the viewing slice where Point 0 is'''
         if hasattr(self, 'vis_widget_reg'):
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
-            #v3 = 
+
             point0 = rp['point_zero_entry'].text()
-            #point0 = tuple(map(int, point0.split(', '))) 
             if point0 !="": 
                 point0= eval(point0)
+            if not rp['start_registration_button'].isChecked():
+                point0 = v.style.world2imageCoordinate(point0)
+                print("Not reg")
+                print(point0)
+            
             if isinstance (point0, tuple) or isinstance(point0, list):
                 #print("Tuple")
                 orientation = v.style.GetSliceOrientation()
@@ -1490,7 +1494,12 @@ and then input to the DVC code.")
             if rp['register_on_selection_check'].isChecked():
                 spacing = v.img3D.GetSpacing()
                 origin = v.img3D.GetOrigin()
-                p0 = [ el * spacing[i] + origin[i] for i,el in enumerate(eval(rp['point_zero_entry'].text())) ]
+                if rp['start_registration_button'].isChecked():
+                    point0 = eval(rp['point_zero_entry'].text())
+                else:
+                    point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
+
+                p0 = [ el * spacing[i] + origin[i] for i,el in enumerate(point0) ]
                 bbox = rp['registration_box_size_entry'].value()
                 extent = [ p0[0] - int( bbox * spacing[0] / 2 ), p0[0] + int( bbox * spacing[0] / 2 ), 
                         p0[1] - int( bbox * spacing[1] / 2 ), p0[1] + int( bbox * spacing[1] / 2 ), 
