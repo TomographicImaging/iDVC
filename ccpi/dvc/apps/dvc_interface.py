@@ -1121,6 +1121,7 @@ and then input to the DVC code.")
                 #ref_copy.DeepCopy(self.ref_image_data)
                 voi.SetInputData(self.unsampled_ref_image_data) #ref image data
                 # box around the point0
+                #TODO: if() #sampled else get from 
                 p0 = eval(rp['point_zero_entry'].text())
                 bbox = rp['registration_box_size_entry'].value()
                 extent = [ p0[0] - bbox//2, p0[0] + bbox//2, 
@@ -5209,23 +5210,6 @@ class run_outcome:
 
         disp_file_name = file_name + ".disp"
         stat_file_name = file_name + ".stat"
-        disp_file = open(disp_file_name,"r")
-        self.disp_file_name = disp_file_name
-
-        self.points = 0
-        for line in disp_file:
-            if self.points>0:
-                line_array = line.split()
-                self.obj_mins.append(float(line_array[5]))
-                self.u_disp.append(float(line_array[6]))
-                self.v_disp.append(float(line_array[7]))
-                self.w_disp.append(float(line_array[8]))
-                self.phi_disp.append(float(line_array[9]))
-                self.theta_disp.append(float(line_array[10]))
-                self.psi_disp.append(float(line_array[11]))
-            self.points+=1
-
-        self.points-=1
 
         stat_file = open(stat_file_name,"r")
         count = 0
@@ -5239,7 +5223,31 @@ class run_outcome:
                 self.subvol_radius = round(int(line.split('\t')[1])/2)
             if count ==16 +offset:
                 self.subvol_points = int(line.split('\t')[1])
+            if count == 25 + offset:
+                self.rigid_trans = [int(line.split('\t')[1]),int(line.split('\t')[2], int(line.split('\t')[3]))]
             count+=1
+
+        
+
+        disp_file = open(disp_file_name,"r")
+        self.disp_file_name = disp_file_name
+
+        self.points = 0
+        for line in disp_file:
+            if self.points>0:
+                line_array = line.split()
+                self.obj_mins.append(float(line_array[5]))
+                self.u_disp.append(float(line_array[6])) #- self.rigid_trans[0])
+                self.v_disp.append(float(line_array[7])) #- self.rigid_trans[1])
+                self.w_disp.append(float(line_array[8]))#- self.rigid_trans[2])
+                self.phi_disp.append(float(line_array[9]))
+                self.theta_disp.append(float(line_array[10]))
+                self.psi_disp.append(float(line_array[11]))
+            self.points+=1
+
+        self.points-=1
+
+        #self.rigid_trans.append(0)
 
         self.title =  str(self.subvol_points) + " Points in Subvolume," + " Radius: " + str(self.subvol_radius) # + str(self.points) + " Points, " +
 
