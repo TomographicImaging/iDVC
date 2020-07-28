@@ -4956,16 +4956,20 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
             if hasattr(self.parent, 'orientation'):
                     orientation = self.parent.orientation
-                    if orientation == SLICE_ORIENTATION_XY:
-                        axis = 'z'
-                        interactor.SetKeyCode("z")
-                        
-                    elif orientation == SLICE_ORIENTATION_XZ:
-                        axis = 'y'
-                        interactor.SetKeyCode("y")
-                    elif orientation == SLICE_ORIENTATION_YZ:
-                        axis = 'x'
-                        interactor.SetKeyCode("x")
+            else:
+                orientation = self.frame.viewer.GetOrientation()
+            
+            
+            if orientation == SLICE_ORIENTATION_XY:
+                axis = 'z'
+                interactor.SetKeyCode("z")
+                
+            elif orientation == SLICE_ORIENTATION_XZ:
+                axis = 'y'
+                interactor.SetKeyCode("y")
+            elif orientation == SLICE_ORIENTATION_YZ:
+                axis = 'x'
+                interactor.SetKeyCode("x")
             else:
                 interactor.SetKeyCode("z")
                 axis = 'z'
