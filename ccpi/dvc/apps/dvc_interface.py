@@ -602,7 +602,8 @@ and then input to the DVC code.")
             
                 self.displayRegistrationViewer(registration_open = True)
                 #first we need to set the z slice -> go to slice self.config['point0'][2]
-                self.createPoint0(self.config['point0'])
+                v = self.vis_widget_2D.frame.viewer
+                self.createPoint0(v.style.world2imageCoordinate(self.config['point0']))
                 rp = self.registration_parameters
                 if self.config['reg_translation'] is not None:
                     rp['translate_X_entry'].setText(str(self.config['reg_translation'][0]*-1))
@@ -617,8 +618,6 @@ and then input to the DVC code.")
                     self.displayRegistrationSelection()
                 self.displayRegistrationViewer(registration_open = False)
                 self.reg_load = False
-
-        #TODO: Need to be able to load pointcloud w/o loading mask
 
     def create_progress_window(self, title, text, max = 100, cancel = None):
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
@@ -1030,7 +1029,7 @@ and then input to the DVC code.")
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
                 print ("Start Registration Checked")
-                self.centerOnPointZero()
+                #self.centerOnPointZero()
                 #rp['register_on_selection_check'].setEnabled(True)
                 rp['start_registration_button'].setText("Stop Registration")
 
@@ -1045,10 +1044,7 @@ and then input to the DVC code.")
                     translate.SetTranslation(0,0,0)
                     self.translate = translate
 
-                if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
-                    self.LoadImagesAndCompleteRegistration()
-                else:
-                    self.completeRegistration()
+                self.LoadImagesAndCompleteRegistration()
             
             else:
                 print ("Start Registration Unchecked")
@@ -1062,22 +1058,95 @@ and then input to the DVC code.")
                 v.style.UpdatePipeline()
                 self.centerOnPointZero()
 
+    def getRegistrationBoxExtent(self):
+        rp = self.registration_parameters
+        p0 = eval(rp['point_zero_entry'].text())
+        bbox = rp['registration_box_size_entry'].value()
+        extent = [ p0[0] - bbox//2, p0[0] + bbox//2, 
+                    p0[1] - bbox//2, p0[1] + bbox//2, 
+                    p0[2] - bbox//2, p0[2] + bbox//2]
+
+        extent = [ round(el) if el > 0 else 0 for i,el in enumerate(extent) ]
+        p0 = [round(i) for i in p0]
+        self.registration_box_extent = extent
+        self.registration_box_origin = p0
+
+        return [self.registration_box_extent, self.registration_box_origin]
+
+
     def LoadImagesAndCompleteRegistration(self):
+        rp = self.registration_parameters
+        v = self.vis_widget_reg.frame.viewer
+        if rp['register_on_selection_check'].isChecked():
+
+                reg_box_size = self.getRegistrationBoxExtent()
+                extent = reg_box_size[0]
+                origin = reg_box_size[1]
+                
+
         if self.image_info['sampled']:
-                self.unsampled_ref_image_data = vtk.vtkImageData()
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, convert_numpy = True, resample= False, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, resample_corr_image = False)
-                    
+            
+            if rp['register_on_selection_check'].isChecked():
+
+                print("Extent", extent)
+                z_extent = (extent[4], extent[5]) 
+                z_range = extent[5]-extent[4]
+                lower_z_bound = extent[4]-z_range
+                upper_z_bound = extent[5]+z_range
+                if lower_z_bound < 0:
+                    lower_z_bound = 0
+                target_z_extent = (lower_z_bound, upper_z_bound)
+                print("Current z extent") 
+                origin[2] = round(z_range*1.5)
+                self.target_origin = origin
+                self.target_z_extent = target_z_extent
+
+                if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
+                        print("About to create image")
+                        self.unsampled_ref_image_data = vtk.vtkImageData()
+                        ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                        #TODO: move to doing both image data creators simultaneously
+                        return
+
+                current_image_extent = self.unsampled_ref_image_data.GetExtent()
+
+                print("Origin", origin)
+                current_origin = [round (i) for i in self.unsampled_ref_image_data.GetOrigin()]
+                print("Existing origin", current_origin)
+                current_z_range = current_image_extent[5] - current_image_extent[4]
+                target_z_range = target_z_extent[1]- target_z_extent[0]
+                print("Target z range ", target_z_range)
+                print("Current z range ", current_z_range)
+
+
+                if origin != current_origin or current_z_range != target_z_range:
+                    ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                else:
+                    self.completeRegistration()
+            else:
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg)
+
+
         else:
-            self.unsampled_ref_image_data = self.ref_image_data #vtk.vtkImageData()
-            self.LoadCorrImageForReg(resample_corr_image = False)
+            #if rp['register_on_selection_check'].isChecked(): # TODO
+            if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
+                self.unsampled_ref_image_data = self.ref_image_data 
+                self.LoadCorrImageForReg()
+            else:
+                self.completeRegistration()
 
 
-    def LoadCorrImageForReg(self,resample_corr_image= False):
+    def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
+        origin = self.target_origin 
+        z_extent = self.target_z_extent
+
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, resample= resample_corr_image, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, resample= resample_corr_image, crop_image = crop_corr_image, origin = origin , target_z_extent = z_extent, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        self.registerImages()
+        if self.image_info['sampled'] and self.registration_parameters['register_on_selection_check'].isChecked():
+            self.adjustRegistrationBoxForCroppedImage()
+        self.translateImages()
         self.reg_viewer_update()
         self.centerOnPointZero() 
 
@@ -1108,97 +1177,21 @@ and then input to the DVC code.")
             print("Still exists")
 
 
-    def registerImages(self, progress_callback = None):
+    def translateImages(self, progress_callback = None):
         #progress_callback.emit(10)
-        rp = self.registration_parameters
-        v = self.vis_widget_reg.frame.viewer
-        if rp['register_on_selection_check'].isChecked():
 
-                print ("Extracting selection")
-                # get the selected ROI
-                voi = vtk.vtkExtractVOI()
-                
-                #ref_copy.DeepCopy(self.ref_image_data)
-                voi.SetInputData(self.unsampled_ref_image_data) #ref image data
-                # box around the point0
-                #TODO: if() #sampled else get from 
-                p0 = eval(rp['point_zero_entry'].text())
-                bbox = rp['registration_box_size_entry'].value()
-                extent = [ p0[0] - bbox//2, p0[0] + bbox//2, 
-                           p0[1] - bbox//2, p0[1] + bbox//2, 
-                           p0[2] - bbox//2, p0[2] + bbox//2]
-
-                extent = [ el if el > 0 else 0 for i,el in enumerate(extent) ]
-
-                print ("Current roi", extent)
-                
-                voi.SetVOI(*extent)
-                voi.Update()
-                print ("Done")
-
-                # copy the data to be registered if selection 
-                data1 = vtk.vtkImageData()
-                data1.DeepCopy(voi.GetOutput())
-                #progress_callback.emit(15)
-
-                
-                print ("Reading image 2")
-                #print ("image 2", self.unsampled_corr_image_data.GetDimensions())
-                
-                voi.SetInputData(self.unsampled_corr_image_data)
-                
-                print ("Extracting selection")
-                voi.Update()
-                #progress_callback.emit(30)
-                data2 = vtk.vtkImageData()
-                data2.DeepCopy(voi.GetOutput())
-                #progress_callback.emit(35)
-
-                #self.translate.SetInputData(data2)
-                self.translate.SetInputData(data2)
-                #progress_callback.emit(40)
-            
-                print ("clearing memory")
-                del voi
-                #del voi_2
-                # fname = self.correlate_reader.GetFileName() #filename of corr image
-                # print ("filename", fname, type(self.correlate_reader))
-                # cr = type(self.correlate_reader)()
-                # cr.SetFileName(fname)
-                # self.correlate_reader = cr
-                print ("clearing memory done")
-
+        if self.registration_parameters['register_on_selection_check'].isChecked():
+            data = self.getRegistrationVOIs()
+            data1 = data[0]
+            data2 = data[1]
         else:
-                
-                print ("Registration on whole image")
-                #data1 = vtk.vtkImageData()
-                #data1.DeepCopy(self.ref_image_data)
-                data1 = self.unsampled_ref_image_data
-                #data2 = vtk.vtkImageData()
-                #data2.DeepCopy(self.corr_image_data)
-                data2 = self.unsampled_corr_image_data
-                #self.translate.SetInputData(data2)
-                self.translate.SetInputData(data2)
-                print ("clearing memory")
-                # fname = self.correlate_reader.GetFileName()
-                # print ("filename", fname, type(self.correlate_reader))
-                # cr = type(self.correlate_reader)()
-                # cr.SetFileName(fname)
-                # self.correlate_reader = cr
-                print ("clearing memory done")
+            data1 = self.unsampled_ref_image_data 
+            data2 = self.unsampled_corr_image_data
 
-                #data2 = self.correlate_reader.GetOutput()
-                #translate.SetInputConnection(self.correlate_reader.GetOutputPort())
-                print ("Reading image 2")
-
-        print ("Done")
-
-        
-        #voi = reader
+            
+        self.translate.SetInputData(data2)
         self.translate.Update()
         #progress_callback.emit(45)
-
-
 
         # print ("out of the reader", reader.GetOutput())
 
@@ -1230,8 +1223,69 @@ and then input to the DVC code.")
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
 
+    def adjustRegistrationBoxForCroppedImage(self):
+        print("Original set extent for box ", self.registration_box_extent)
+        print("Origial origin ", self.registration_box_origin)
+
+        z_range = self.unsampled_ref_image_data.GetExtent()[5] - self.unsampled_ref_image_data.GetExtent()[4]
+
+
+
+        self.registration_box_extent[4] = round(self.unsampled_ref_image_data.GetExtent()[4] + z_range/3)
+        self.registration_box_extent[5] = round(self.unsampled_ref_image_data.GetExtent()[5] -z_range/3)
+        self.registration_box_origin = self.unsampled_ref_image_data.GetOrigin()
+        self.registration_box_origin = [ round(el) if el > 0 else 0 for i,el in enumerate(self.registration_box_origin) ]
+
+        print("Adjusted extent for box ", self.registration_box_extent)
+        print("Adjusted origin ", self.registration_box_origin)
+
+        vox = self.registration_box_origin
+        print("New point0 loc", self.registration_box_origin)
+        for point0 in self.point0:
+            point0[0].SetFocalPoint(*vox)
+            point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+            point0[0].Update()
+
+        self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+
+    def getRegistrationVOIs(self):
+
+            extent = self.registration_box_extent
+
+
+            # get the selected ROI
+            voi = vtk.vtkExtractVOI()
+            
+            voi.SetInputData(self.unsampled_ref_image_data) 
+
+            voi.SetVOI(*extent)
+            voi.Update()
+
+            # copy the data to be registered if selection 
+            data1 = vtk.vtkImageData()
+            data1.DeepCopy(voi.GetOutput())
+            
+            print ("Reading image 2")
+            
+            voi.SetInputData(self.unsampled_corr_image_data)
+            
+            print ("Extracting selection")
+            voi.Update()
+            #progress_callback.emit(30)
+            data2 = vtk.vtkImageData()
+            data2.DeepCopy(voi.GetOutput())
+            #progress_callback.emit(35)
+
+            
+            #progress_callback.emit(40)
+            print ("clearing memory")
+            del voi
+
+            return [data1, data2]
+
+
     def reg_viewer_update(self, type = None):
-        #print("Reg viewer update")
+        print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
@@ -1240,7 +1294,9 @@ and then input to the DVC code.")
 
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
+        print("About to set the input data")
         v.setInputData(self.subtract.GetOutput())
+        print("Set the input data")
         
         # trigger visualisation by programmatically click 'z'
         # interactor = v.getInteractor()
@@ -1248,6 +1304,7 @@ and then input to the DVC code.")
         # v.style.OnKeyPress(interactor, 'KeyPressEvent')
         v.style.UpdatePipeline()
         v.startRenderLoop()
+        print("About to center on point0")
         self.centerOnPointZero()
 
         if not rp['register_on_selection_check'].isChecked():
@@ -1468,11 +1525,13 @@ and then input to the DVC code.")
             point0 = rp['point_zero_entry'].text()
             if point0 !="": 
                 point0= eval(point0)
-            if not rp['start_registration_button'].isChecked():
+            if rp['start_registration_button'].isChecked():
+                point0 = self.registration_box_origin
+            else:
                 point0 = v.style.world2imageCoordinate(point0)
                 print("Not reg")
                 print(point0)
-            
+
             if isinstance (point0, tuple) or isinstance(point0, list):
                 #print("Tuple")
                 orientation = v.style.GetSliceOrientation()
@@ -1496,7 +1555,7 @@ and then input to the DVC code.")
                 spacing = v.img3D.GetSpacing()
                 origin = v.img3D.GetOrigin()
                 if rp['start_registration_button'].isChecked():
-                    point0 = eval(rp['point_zero_entry'].text())
+                    point0 = self.registration_box_origin
                 else:
                     point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
 
