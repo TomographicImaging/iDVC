@@ -20,7 +20,7 @@ from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 
 from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
 
-from ccpi.viewer.utils.conversion import cilNumpyResampleReader, cilBaseResampleReader
+from ccpi.viewer.utils.conversion import cilNumpyResampleReader, cilBaseResampleReader, cilNumpyCroppedReader
 
 import imghdr
 
@@ -48,7 +48,7 @@ If the image is a raw file, this dictionary may be used to provide details of th
 
         '''
    
-    def createImageData(main_window, image_files, output_image, *finish_fn_args, info_var = None, convert_numpy = False,  resample = False, tempfolder = None, finish_fn = None,  **finish_fn_kwargs):
+    def createImageData(main_window, image_files, output_image, *finish_fn_args, info_var = None, convert_numpy = False,  resample = False, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), tempfolder = None, finish_fn = None,  **finish_fn_kwargs):
         print("Create image data")
         if len(image_files) ==1:
             image = image_files[0]
@@ -75,7 +75,7 @@ If the image is a raw file, this dictionary may be used to provide details of th
             print("file ext in npy")
             print("yay")
             create_progress_window(main_window,"Converting", "Converting Image")
-            image_worker = Worker(load_npy_image,image, output_image, info_var, resample)     
+            image_worker = Worker(load_npy_image,image, output_image, info_var, resample, crop_image, origin, target_z_extent)     
 
         elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
             reader = vtk.vtkTIFFReader()
@@ -206,7 +206,7 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
         progress_callback.emit(100)
 
 
-def load_npy_image(image_file, output_image, image_info = None, resample = False, progress_callback=None):
+def load_npy_image(image_file, output_image, image_info = None, resample = False, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), progress_callback=None):
         if resample:
             reader = cilNumpyResampleReader()
             reader.SetFileName(image_file)
@@ -234,6 +234,26 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
             # print("Header", header_length)
             # print("vol_bit_depth", vol_bit_depth)
 
+        elif crop_image:
+            print("Target z extent", target_z_extent)
+            print("Origin", origin)
+            reader = cilNumpyCroppedReader()
+            reader.SetFileName(image_file)
+            reader.SetOrigin(tuple(origin))
+            reader.SetTargetZExtent(target_z_extent)
+            reader.Update()
+            output_image.ShallowCopy(reader.GetOutput())
+            print ("Spacing ", output_image.GetSpacing())
+            header_length = reader.GetFileHeaderLength() 
+            vol_bit_depth = reader.GetBytesPerElement()*8
+            shape = reader.GetStoredArrayShape()
+            if reader.GetIsFortran():
+                shape = shape[::-1]
+            if image_info is not None:
+                image_info['isBigEndian'] = reader.GetBigEndian()
+                
+                image_info['cropped'] = True
+            
         else: 
                 time.sleep(0.1)
                 progress_callback.emit(5)
