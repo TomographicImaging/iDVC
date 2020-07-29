@@ -1071,6 +1071,8 @@ and then input to the DVC code.")
         self.registration_box_extent = extent
         self.registration_box_origin = p0
 
+        print("Reg orig", p0)
+
         return [self.registration_box_extent, self.registration_box_origin]
 
 
@@ -1082,11 +1084,6 @@ and then input to the DVC code.")
                 reg_box_size = self.getRegistrationBoxExtent()
                 extent = reg_box_size[0]
                 origin = reg_box_size[1]
-                
-
-        if self.image_info['sampled']:
-            
-            if rp['register_on_selection_check'].isChecked():
 
                 print("Extent", extent)
                 z_extent = (extent[4], extent[5]) 
@@ -1096,10 +1093,16 @@ and then input to the DVC code.")
                 if lower_z_bound < 0:
                     lower_z_bound = 0
                 target_z_extent = (lower_z_bound, upper_z_bound)
-                print("Current z extent") 
-                origin[2] = round(z_range*1.5)
+
                 self.target_origin = origin
                 self.target_z_extent = target_z_extent
+                
+
+        if self.image_info['sampled']:
+            origin[2] = round(z_range*1.5)
+            self.target_origin = origin
+            
+            if rp['register_on_selection_check'].isChecked():
 
                 if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                         print("About to create image")
@@ -1256,6 +1259,7 @@ and then input to the DVC code.")
     def getRegistrationVOIs(self):
 
             extent = self.registration_box_extent
+            print("Registration box extent", self.registration_box_extent )
 
 
             # get the selected ROI
@@ -1541,10 +1545,14 @@ and then input to the DVC code.")
                 print("Not reg")
                 print(point0)
 
+            print("Point0 is ", point0)
+            print("Reg orig is ", self.registration_box_origin)
+
             if isinstance (point0, tuple) or isinstance(point0, list):
                 #print("Tuple")
                 orientation = v.style.GetSliceOrientation()
                 gotoslice = point0[orientation]
+                print("Going to slice", gotoslice)
                 v.style.SetActiveSlice( gotoslice )
                 v.style.UpdatePipeline(True)
                 self.displayRegistrationSelection()
