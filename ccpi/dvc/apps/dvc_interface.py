@@ -1238,9 +1238,14 @@ and then input to the DVC code.")
 
         print("Adjusted extent for box ", self.registration_box_extent)
         print("Adjusted origin ", self.registration_box_origin)
+        v = self.vis_widget_reg.frame.viewer
 
-        vox = self.registration_box_origin
-        print("New point0 loc", self.registration_box_origin)
+        spacing = v.img3D.GetSpacing()
+        origin = v.img3D.GetOrigin()
+
+
+        vox =  [ el * spacing[i] + origin[i] for i,el in enumerate(self.registration_box_origin) ] #TODO: Fix loc of point0
+        print("New point0 loc", vox)
         for point0 in self.point0:
             point0[0].SetFocalPoint(*vox)
             point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
@@ -1332,28 +1337,32 @@ and then input to the DVC code.")
             
             self.threadpool.start(self.translate_worker)
 
-        print("Checked?", rp['start_registration_button'].isChecked())
-        if key_code in ['x','y','z'] and \
-            rp['start_registration_button'].isChecked():
-                self.registration_in_progress = True
-                print("Uncheck registration")
-                rp['start_registration_button'].setChecked(False)  #trigger registration to stop
-                self.manualRegistration()
-        else:
-            self.registration_in_progress = False
+        #print("Checked?", rp['start_registration_button'].isChecked())
+        # if key_code in ['x','y','z'] and \
+        #      rp['start_registration_button'].isChecked():
+        #         self.registration_in_progress = True
+        # #         print("Uncheck registration")
+        # #         rp['start_registration_button'].setChecked(False)  #trigger registration to stop
+        # #         self.manualRegistration()
+        # else:
+        #      self.registration_in_progress = False
 
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
+        #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
+        
         key_code = interactor.GetKeyCode()
         print('AfterKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
 
-        if key_code in ['x','y','z'] and \
-            self.registration_in_progress:
+        if key_code in ['x','y','z']: #and \
+            #self.registration_in_progress:
                 print("Check registration")
                 rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
-                self.manualRegistration()
-                self.registration_in_progress = False
+                #self.centerOnPointZero() #TODO: maybe remove - adding this did not help
+                #self.manualRegistration()
+                self.completeRegistration()
+                #self.registration_in_progress = False
                 
         
     def translate_image_reg(self,key_code, event, progress_callback):
