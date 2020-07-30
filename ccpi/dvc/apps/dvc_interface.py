@@ -79,9 +79,9 @@ from distutils.dir_util import copy_tree
 
 
 #TODO: switch this line for dev/release
-from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+#from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
-#from image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+from image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
 __version__ = '20.07.0'
 
@@ -994,6 +994,7 @@ and then input to the DVC code.")
                     self.vis_widget_reg.displayImageData()
                     #self.tabifyDockWidget(self.viewer2D_dock,dock_reg) #breaks
                     self.viewer2D_dock.setVisible(False)
+                    self.viewer3D_dock.setVisible(False)
                     self.dock_reg = dock_reg
                     windowHeight = self.size().height()
 
@@ -1017,11 +1018,15 @@ and then input to the DVC code.")
                 else:
                     self.dock_reg.setVisible(True)
                     self.viewer2D_dock.setVisible(False)
+                    self.viewer3D_dock.setVisible(False)
 
             else:
                 if (hasattr(self, 'dock_reg')):
+                    self.registration_parameters['start_registration_button'].setChecked(False)
+                    self.manualRegistration()
                     self.dock_reg.setVisible(False)
                     self.viewer2D_dock.setVisible(True)
+                    self.viewer3D_dock.setVisible(True)
 
 
     def manualRegistration(self):
@@ -1050,18 +1055,24 @@ and then input to the DVC code.")
             else:
                 print ("Start Registration Unchecked")
                 rp['start_registration_button'].setText("Start Registration")
-                
                 # hide registration box
                 #if hasattr(self, 'registration_box'):
                     #self.registration_box['actor'].VisibilityOff()
                 #v.setInput3DData(self.reader.GetOutput())
                 v.setInput3DData(self.ref_image_data) #may need to make copy
                 v.style.UpdatePipeline()
+                if rp['point_zero_entry'].text() != "":
+                    self.adjustPoint0ForWholeImage()
                 self.centerOnPointZero()
 
     def getRegistrationBoxExtent(self):
+        v = self.vis_widget_reg.frame.viewer
         rp = self.registration_parameters
         p0 = eval(rp['point_zero_entry'].text())
+        p0_world_coords = v.style.image2world(p0)
+        p0_world_coords = [round(p0_world_coords[i]) for i in range(3)]
+        p0 = p0_world_coords
+        
         bbox = rp['registration_box_size_entry'].value()
         extent = [ p0[0] - bbox//2, p0[0] + bbox//2, 
                     p0[1] - bbox//2, p0[1] + bbox//2, 
@@ -1249,6 +1260,22 @@ and then input to the DVC code.")
 
 
         vox =  [ el * spacing[i] + origin[i] for i,el in enumerate(self.registration_box_origin) ] #TODO: Fix loc of point0
+        print("New point0 loc", vox)
+        for point0 in self.point0:
+            point0[0].SetFocalPoint(*vox)
+            point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+            point0[0].Update()
+
+        self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+
+    def adjustPoint0ForWholeImage(self):
+        print("Adjust")
+        v = self.vis_widget_2D.frame.viewer
+        point0 = self.registration_parameters['point_zero_entry'].text()
+        print("Text point0:", point0)
+        point0= eval(point0)
+        spacing = v.img3D.GetSpacing()
+        vox = [ round(el * spacing[i]) for i,el in enumerate(point0) ]
         print("New point0 loc", vox)
         for point0 in self.point0:
             point0[0].SetFocalPoint(*vox)
@@ -1472,7 +1499,7 @@ and then input to the DVC code.")
             point0.Update()
 
             self.point0 = []
-            viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
+            viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg] #, self.vis_widget_3D]
 
             for viewer_widget in viewer_widgets:
                 point0Mapper = vtk.vtkPolyDataMapper()
@@ -1519,9 +1546,10 @@ and then input to the DVC code.")
 
         rp = self.registration_parameters
 
-        p0_world_coords = v.style.image2world(p0l)
-        p0_world_coords = [round(p0_world_coords[i]) for i in range(3)]
-        rp['point_zero_entry'].setText(str(p0_world_coords))
+        # p0_world_coords = v.style.image2world(p0l)
+        # p0_world_coords = [round(p0_world_coords[i]) for i in range(3)]
+        # rp['point_zero_entry'].setText(str(p0_world_coords))
+        rp['point_zero_entry'].setText(str(p0l)) 
         self.point0_loc = p0
         #print("Finished")
         print("Plane clipper info:")
@@ -1539,10 +1567,11 @@ and then input to the DVC code.")
             point0 = rp['point_zero_entry'].text()
             if point0 !="": 
                 point0= eval(point0)
+
             if rp['start_registration_button'].isChecked():
                 point0 = self.registration_box_origin
             else:
-                point0 = v.style.world2imageCoordinate(point0)
+                #point0 = v.style.world2imageCoordinate(point0)
                 print("Not reg")
                 print(point0)
 
@@ -1575,7 +1604,9 @@ and then input to the DVC code.")
                 if rp['start_registration_button'].isChecked():
                     point0 = self.registration_box_origin
                 else:
-                    point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
+                    #point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
+                    point0 =eval(rp['point_zero_entry'].text())
+                    
 
                 p0 = [ el * spacing[i] + origin[i] for i,el in enumerate(point0) ]
                 bbox = rp['registration_box_size_entry'].value()
@@ -1591,6 +1622,8 @@ and then input to the DVC code.")
                     point0.OutlineOn()
                     #point0.TranslationModeOn()
                     point0.Update()
+
+                    
                     point0Mapper = vtk.vtkPolyDataMapper()
                     point0Mapper.SetInputConnection(point0.GetOutputPort())
                     point0Actor = vtk.vtkLODActor()
@@ -1600,6 +1633,7 @@ and then input to the DVC code.")
                     v.AddActor(point0Actor, 'RegistrationBox')
                     self.vis_widget_3D.frame.viewer.getRenderer().AddActor(point0Actor)
                     self.vis_widget_2D.frame.viewer.AddActor(point0Actor)
+                    
                     self.registration_box = {'source': point0 , 'mapper': point0Mapper, 
                                             'actor': point0Actor }
                     v.style.UpdatePipeline()
@@ -1614,6 +1648,8 @@ and then input to the DVC code.")
                     # hide actor
                     self.registration_box['actor'].VisibilityOff()
                     v.style.UpdatePipeline()
+
+
 
 
 #Mask Panel:
