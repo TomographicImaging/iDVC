@@ -1,5 +1,8 @@
 # ChangeLog
 
+## v20.07.1
+*  Endianness is set and input to DVC code. This allows uint16 images to be worked with.
+
 ## v20.07.0
 * Fixed problem with image header length automatically being set instead of being read from the image file - this caused the dvc run to fail.
 * mha/mhd files can be used. In this case, a copy of the file is converted to numpy format and saved in the session folder. 
