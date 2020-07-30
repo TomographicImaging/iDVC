@@ -58,9 +58,7 @@ os.chdir(working_directory)
 
 from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 
-#from ccpi.viewer.utils.plane_clipper import cilPlaneClipper
-
-from plane_clipper import cilPlaneClipper
+#from plane_clipper import cilPlaneClipper
 
 from ccpi.viewer.utils.plane_clipper import cilPlaneClipper
 
@@ -79,7 +77,11 @@ import copy
 
 from distutils.dir_util import copy_tree
 
+
+#TODO: switch this line for dev/release
 from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+
+#from image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
 
 __version__ = '20.07.0'
 
@@ -486,7 +488,6 @@ and then input to the DVC code.")
             ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
             print("Created ref image")
 
-    
 
     def save_image_info(self, image_type):
         #print("INFO: ", self.image_info)
@@ -1546,7 +1547,7 @@ and then input to the DVC code.")
                 print(point0)
 
             print("Point0 is ", point0)
-            print("Reg orig is ", self.registration_box_origin)
+            #print("Reg orig is ", self.registration_box_origin)
 
             if isinstance (point0, tuple) or isinstance(point0, list):
                 #print("Tuple")
