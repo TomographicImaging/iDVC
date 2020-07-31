@@ -31,8 +31,7 @@ from ccpi.viewer.QCILViewerWidget import QCILViewerWidget #
 from ccpi.viewer.utils import Converter
 from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XY
 from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XZ
-from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ 
-from ccpi.viewer.utils import cilRegularPointCloudToPolyData
+from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
 
 from ccpi.viewer.CILViewer2D import CILInteractorStyle as CILInteractorStyle2D
 from ccpi.viewer.CILViewer import CILInteractorStyle as CILInteractorStyle3D
@@ -76,10 +75,14 @@ import copy
 from distutils.dir_util import copy_tree
 
 
-#TODO: switch this line for dev/release
-#from ccpi.dvc.apps.image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+#TODO: switch to these lines for dev/release
+#from ccpi.dvc.apps.image_data import ImageDataCreator
 
-from image_data import ImageDataCreator, cilNumpyPointCloudToPolyData
+#from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
+
+from image_data import ImageDataCreator
+
+from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
 
 __version__ = '20.07.0'
 
