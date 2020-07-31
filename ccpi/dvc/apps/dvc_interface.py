@@ -680,6 +680,7 @@ and then input to the DVC code.")
 
         # # Cube source
         cube_source = vtk.vtkCubeSource()
+        print("IMAGE SPACING", v.img3D.GetSpacing())
         cube_source.SetXLength(self.pointCloud_radius)
         cube_source.SetYLength(self.pointCloud_radius)
         cube_source.SetZLength(self.pointCloud_radius)
@@ -2661,6 +2662,7 @@ and then input to the DVC code.")
             self.transform = transform
             # rotate around the center of the image data
 
+
             if orientation == SLICE_ORIENTATION_XY:
                 transform.Translate(dimensions[0]/2*spacing[0], dimensions[1]/2*spacing[1],0)
             elif orientation == SLICE_ORIENTATION_XZ:
@@ -2871,9 +2873,9 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             if self.pointCloud_shape == cilRegularPointCloudToPolyData.CUBE:
             #cube
                 #self.glyph_source = self.cube_source
-                self.cube_source.SetXLength(spacing[0]*radius)
-                self.cube_source.SetYLength(spacing[1]*radius)
-                self.cube_source.SetZLength(spacing[2]*radius)
+                self.cube_source.SetXLength(radius)
+                self.cube_source.SetYLength(radius)
+                self.cube_source.SetZLength(radius)
                 self.cube_source.Update()
                 self.transform.RotateX(rotate[0])
                 self.transform.RotateY(rotate[1])
@@ -2882,7 +2884,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 self.cubesphere.SetSourceConnection(self.cube_transform_filter.GetOutputPort())
             else:
                 #self.glyph_source = self.sphere_source
-                self.sphere_source.SetRadius(radius * spacing[0]) # ??? should this change with orientation?
+                self.sphere_source.SetRadius(radius)
                 self.cubesphere.SetSourceConnection(self.sphere_source.GetOutputPort())
             
             self.cubesphere.Update()
