@@ -58,9 +58,7 @@ os.chdir(working_directory)
 
 from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
 
-#from plane_clipper import cilPlaneClipper
-
-from ccpi.viewer.utils.plane_clipper import cilPlaneClipper
+from ccpi.viewer.utils import cilPlaneClipper
 
 import tempfile
 import json
@@ -676,15 +674,15 @@ and then input to the DVC code.")
         sphere_source = vtk.vtkSphereSource()
         # # save reference
         self.sphere_source = sphere_source
-        sphere_source.SetRadius(self.pointCloud_radius * v.img3D.GetSpacing()[0])
+        sphere_source.SetRadius(self.pointCloud_radius) # * v.img3D.GetSpacing()[0])
         sphere_source.SetThetaResolution(12)
         sphere_source.SetPhiResolution(12)
 
         # # Cube source
         cube_source = vtk.vtkCubeSource()
-        cube_source.SetXLength(v.img3D.GetSpacing()[0]*self.pointCloud_radius)
-        cube_source.SetYLength(v.img3D.GetSpacing()[1]*self.pointCloud_radius)
-        cube_source.SetZLength(v.img3D.GetSpacing()[2]*self.pointCloud_radius)
+        cube_source.SetXLength(self.pointCloud_radius)
+        cube_source.SetYLength(self.pointCloud_radius)
+        cube_source.SetZLength(self.pointCloud_radius)
         self.cube_source = cube_source
         rotate= self.pointCloud_rotation
         print("Rotate", self.pointCloud_rotation)
