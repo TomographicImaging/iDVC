@@ -1617,13 +1617,14 @@ and then input to the DVC code.")
 
                 #Attempt to clip box:
                 if not rbdisplay:
-                    point0 = vtk.vtkCursor3D()
-                    point0.SetModelBounds(*extent)
-                    point0.SetFocalPoint(*p0)
-                    point0.AllOff()
-                    point0.OutlineOn()
-                    #point0.TranslationModeOn()
-                    point0.Update()
+
+                    cube_source = vtk.vtkCubeSource()
+                    cube_source.SetXLength(extent[1]- extent[0])
+                    cube_source.SetYLength(extent[1]- extent[0])
+                    cube_source.SetZLength(extent[1]- extent[0])
+                    cube_source.SetCenter(*p0)
+                    cube_source.Update()
+                    
                         
 
                     self.registration_box = []
@@ -1632,75 +1633,46 @@ and then input to the DVC code.")
                     for viewer_widget in viewer_widgets:
                         point0Mapper = vtk.vtkPolyDataMapper()
                         if viewer_widget.viewer == viewer2D:
-                            viewer_widget.PlaneClipper.AddDataToClip('RegistrationBox', point0.GetOutputPort())
+                            viewer_widget.PlaneClipper.AddDataToClip('RegistrationBox', cube_source.GetOutputPort())
                             point0Mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('RegistrationBox').GetOutputPort())
                         else:
-                            point0Mapper.SetInputConnection(point0.GetOutputPort())
+                            point0Mapper.SetInputConnection(cube_source.GetOutputPort())
+
+                        
                     
                         point0Actor = vtk.vtkLODActor()
                         point0Actor.SetMapper(point0Mapper)
                         point0Actor.GetProperty().SetColor(0.,.5,.5)
                         point0Actor.GetProperty().SetLineWidth(2.0)
-                        #point0Actor.GetProperty().SetOpacity(0.5)
-                        #sphere_actor.GetProperty().SetRepresentationToWireframe()
-                        #sphere_actor.GetProperty().SetLineWidth(2.0)
-                        point0Actor.GetProperty().SetEdgeVisibility(True)
+                        point0Actor.GetProperty().SetEdgeColor(0.,.5,.5)
+                        
 
                         if viewer_widget.viewer == viewer2D:
+                            point0Actor.GetProperty().SetOpacity(0.5)
+                            point0Actor.GetProperty().SetLineWidth(4.0)
+                            point0Actor.GetProperty().SetEdgeVisibility(True)
                             viewer_widget.frame.viewer.AddActor(point0Actor, 'RegistrationBox')
                         else:
+                            point0Actor.GetProperty().SetRepresentationToWireframe()
                             viewer_widget.frame.viewer.getRenderer().AddActor(point0Actor)
                         
-                        self.registration_box.append({'source': point0 , 'mapper': point0Mapper,
+                        self.registration_box.append({'source': cube_source , 'mapper': point0Mapper,
                                                 'actor': point0Actor , 'viewer': viewer_widget.frame.viewer})
                         v.style.UpdatePipeline()
                 else:
                     for i, viewer_box_info in enumerate(self.registration_box):
                         viewer_box_info['actor'].VisibilityOn()
-                        bb = viewer_box_info['source']
-                        bb.SetModelBounds(*extent)
-                        bb.SetFocalPoint(*p0)
+                        cube_source = viewer_box_info['source']
+                        cube_source.SetXLength(extent[1]- extent[0])
+                        cube_source.SetYLength(extent[1]- extent[0])
+                        cube_source.SetZLength(extent[1]- extent[0])
+                        cube_source.SetCenter(p0)
                         viewer_box_info['viewer'].style.UpdatePipeline()
             else:
                 if rbdisplay:
                     # hide actor
                     self.registration_box['actor'].VisibilityOff()
                     v.style.UpdatePipeline()
-            #     if not rbdisplay:
-            #         point0 = vtk.vtkCursor3D()
-            #         point0.SetModelBounds(*extent)
-            #         point0.SetFocalPoint(*p0)
-            #         point0.AllOff()
-            #         point0.OutlineOn()
-            #         #point0.TranslationModeOn()
-            #         point0.Update()
-
-                    
-            #         point0Mapper = vtk.vtkPolyDataMapper()
-            #         point0Mapper.SetInputConnection(point0.GetOutputPort())
-            #         point0Actor = vtk.vtkLODActor()
-            #         point0Actor.SetMapper(point0Mapper)
-            #         point0Actor.GetProperty().SetColor(0.,.5,.5)
-            #         point0Actor.GetProperty().SetLineWidth(2.0)
-            #         v.AddActor(point0Actor, 'RegistrationBox')
-            #         self.vis_widget_3D.frame.viewer.getRenderer().AddActor(point0Actor)
-            #         self.vis_widget_2D.frame.viewer.AddActor(point0Actor)
-                    
-            #         self.registration_box = {'source': point0 , 'mapper': point0Mapper, 
-            #                                 'actor': point0Actor }
-            #         v.style.UpdatePipeline()
-            #     else:
-            #         self.registration_box['actor'].VisibilityOn()
-            #         bb = self.registration_box['source']
-            #         bb.SetModelBounds(*extent)
-            #         bb.SetFocalPoint(*p0)
-            #         v.style.UpdatePipeline()
-            # else:
-            #     if rbdisplay:
-            #         # hide actor
-            #         self.registration_box['actor'].VisibilityOff()
-            #         v.style.UpdatePipeline()
-
 
 
 
