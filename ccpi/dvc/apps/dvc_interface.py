@@ -605,7 +605,7 @@ and then input to the DVC code.")
                 self.displayRegistrationViewer(registration_open = True)
                 #first we need to set the z slice -> go to slice self.config['point0'][2]
                 v = self.vis_widget_2D.frame.viewer
-                self.createPoint0(v.style.world2imageCoordinate(self.config['point0']))
+                self.createPoint0(self.config['point0'])
                 rp = self.registration_parameters
                 if self.config['reg_translation'] is not None:
                     rp['translate_X_entry'].setText(str(self.config['reg_translation'][0]*-1))
@@ -1031,6 +1031,70 @@ and then input to the DVC code.")
                     self.viewer3D_dock.setVisible(True)
 
 
+
+
+
+    def getRegistrationBoxSizeInWorldCoords(self):
+        # The value the user sets is in the world coords.
+        rp = self.registration_parameters
+        reg_box_size = rp['registration_box_size_entry'].value()
+        return reg_box_size
+
+    
+    def getRegistrationBoxSizeInImageCoords(self):
+        v = self.vis_widget_2D.frame.viewer 
+        reg_box_size = v.style.world2imageCoordinates((0,0,self.getRegistrationBoxSizeInWorldCoords()))[2]
+        return reg_box_size
+
+    def getRegistrationBoxExtentInWorldCoords(self):
+        p0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+
+        extent = [ p0[0] - reg_box_size//2, p0[0] + reg_box_size//2, 
+                    p0[1] - reg_box_size//2, p0[1] + reg_box_size//2, 
+                    p0[2] - reg_box_size//2, p0[2] + reg_box_size//2]
+        extent = [ round(el) if el > 0 else 0 for i,el in enumerate(extent) ] #TODO: add correction for upper bound as well
+
+        self.registration_box_extent = extent
+
+        return extent
+
+
+    def getPoint0WorldCoords(self):
+        v = self.vis_widget_reg.frame.viewer
+        rp = self.registration_parameters
+        p0 = eval(rp['point_zero_entry'].text())
+        self.registration_box_origin = p0
+
+        print("Reg orig world coords", p0)
+
+        if rp['start_registration_button'].isChecked():
+            if self.image_info['sampled']: # this means reg image will have been cropped
+                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+                p0[2] = round(reg_box_size*1.5) #[2]
+
+        return p0
+
+
+    def getPoint0ImageCoords(self):
+        # The 2D viewer has image coordinates of the sampled image
+        # Its world coordinates are the world coordinates of the unsampled image.
+        # The point 0 text is in the image coords of the 2D viewer (sampled image coords).
+        # Before registration, the coord system of the reg_viewer is identical to the 2D viewer.
+        # During registration the reg_viewer has the coord system of the unsampled image. The image coords take into account any spacing
+        # The world coordinates of the reg_viewer are the same before and during registration and are the same as the 2D viewer's
+
+        rp = self.registration_parameters
+        p0_world = self.getPoint0WorldCoords()
+        p0 =  self.vis_widget_reg.frame.viewer.style.world2imageCoordinate(p0_world)       
+
+        p0 = [round(i) for i in p0]
+
+        print("Reg orig image coords", p0)
+
+        return p0
+
+
     def OnStartStopRegistrationPushed(self):
         if hasattr(self, 'vis_widget_reg'):
             rp = self.registration_parameters
@@ -1060,57 +1124,26 @@ and then input to the DVC code.")
                 v.setInput3DData(self.ref_image_data)
                 v.style.UpdatePipeline()
                 if rp['point_zero_entry'].text() != "":
-                    self.adjustPoint0ForWholeImage()
-                self.centerOnPointZero()
-
-    def getRegistrationBoxExtent(self): #In coords of world of 2D image
-        v = self.vis_widget_reg.frame.viewer
-        rp = self.registration_parameters
-        p0 = eval(rp['point_zero_entry'].text())
-        p0_world_coords = v.style.image2world(p0)
-        p0_world_coords = [round(p0_world_coords[i]) for i in range(3)]
-        p0 = p0_world_coords
-        
-        bbox = rp['registration_box_size_entry'].value()
-        extent = [ p0[0] - bbox//2, p0[0] + bbox//2, 
-                    p0[1] - bbox//2, p0[1] + bbox//2, 
-                    p0[2] - bbox//2, p0[2] + bbox//2]
-
-        extent = [ round(el) if el > 0 else 0 for i,el in enumerate(extent) ]
-        p0 = [round(i) for i in p0]
-        self.registration_box_extent = extent
-        self.registration_box_origin = p0
-        z_range = extent[5]-extent[4]
-        if self.image_info['sampled']:
-            self.registration_box_origin[2] = round(z_range*1.5)
-
-        print("Reg orig", p0)
-
-        return [self.registration_box_extent, self.registration_box_origin]
-
+                    self.createPoint0(self.getPoint0WorldCoords())
 
     def LoadImagesAndCompleteRegistration(self):
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         if rp['register_on_selection_check'].isChecked():
 
-                reg_box_size = self.getRegistrationBoxExtent()
-                extent = reg_box_size[0]
-                origin = reg_box_size[1]
+                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+                point0 = self.getPoint0WorldCoords()
+                reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
 
-                print("Extent", extent)
-                z_range = extent[5]-extent[4]
-                lower_z_bound = extent[4]-z_range
-                upper_z_bound = extent[5]+z_range
-                if lower_z_bound < 0:
-                    lower_z_bound = 0
-                target_z_extent = (lower_z_bound, upper_z_bound)
+                target_z_extent = [reg_box_extent[4] - reg_box_size, reg_box_extent[5] + reg_box_size]
+                if target_z_extent[0] <0:
+                    target_z_extent[0] = 0
+                target_z_extent = tuple(target_z_extent)
+                print("Target z extent", target_z_extent)
 
-                self.target_cropped_image_origin = origin
                 self.target_cropped_image_z_extent = target_z_extent
 
-                self.target_cropped_image_origin = [0,0,0]
-                origin = self.target_cropped_image_origin
+                origin = [0,0,0] #TODO: set appropriately based on input image
                 
 
         if self.image_info['sampled']:
@@ -1153,7 +1186,6 @@ and then input to the DVC code.")
             else:
                 self.completeRegistration()
 
-
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
         origin = self.target_cropped_image_origin 
         z_extent = self.target_cropped_image_z_extent
@@ -1163,7 +1195,7 @@ and then input to the DVC code.")
 
     def completeRegistration(self):
         if self.image_info['sampled'] and self.registration_parameters['register_on_selection_check'].isChecked():
-            self.adjustRegistrationBoxForCroppedImage()
+            self.updatePoint0Display()
         self.translateImages()
         self.reg_viewer_update(type = 'starting registration')
         self.centerOnPointZero() 
@@ -1241,43 +1273,8 @@ and then input to the DVC code.")
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
 
-    def adjustRegistrationBoxForCroppedImage(self):
-        print("Original set extent for box ", self.registration_box_extent)
-        print("Origial origin ", self.registration_box_origin)
-
-        z_range = self.unsampled_ref_image_data.GetExtent()[5] - self.unsampled_ref_image_data.GetExtent()[4]
-
-
-        self.registration_box_extent[4] = round(self.unsampled_ref_image_data.GetExtent()[4] + z_range/3)
-        self.registration_box_extent[5] = round(self.unsampled_ref_image_data.GetExtent()[5] -z_range/3)
-        self.registration_box_origin = [ round(el) if el > 0 else 0 for i,el in enumerate(self.registration_box_origin) ]
-        self.registration_box_origin[2] = round(self.unsampled_ref_image_data.GetExtent()[5]/2)
-
-        print("Adjusted extent for box ", self.registration_box_extent)
-        print("Adjusted origin ", self.registration_box_origin)
-        v = self.vis_widget_reg.frame.viewer
-
-        spacing = v.img3D.GetSpacing()
-        origin = v.img3D.GetOrigin()
-
-        print(origin)
-
-
-        #vox =  [ el * spacing[i] + origin[i] for i,el in enumerate(self.registration_box_origin) ] #TODO: Fix loc of point0
-        vox = []
-        orientation = v.GetSliceOrientation()
-
-        for i, el in enumerate(self.registration_box_origin):
-            # if i != orientation:
-            #     vox.append(el * spacing[i] + origin[i])
-            # else:
-                vox.append(el)
-
-
-
-        # print("New point0 loc", vox)
-        # self.registration_box_origin = vox
-        #vox = self.registration_box_origin
+    def updatePoint0Display(self):
+        vox = self.getPoint0WorldCoords()
         for point0 in self.point0:
             point0[0].SetFocalPoint(*vox)
             point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
@@ -1285,27 +1282,11 @@ and then input to the DVC code.")
 
         self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
 
-    def adjustPoint0ForWholeImage(self):
-        print("Adjust")
-        v = self.vis_widget_2D.frame.viewer
-        point0 = self.registration_parameters['point_zero_entry'].text()
-        print("Text point0:", point0)
-        point0= eval(point0)
-        spacing = v.img3D.GetSpacing()
-        vox = [ round(el * spacing[i]) for i,el in enumerate(point0) ]
-        print("New point0 loc", vox)
-        for point0 in self.point0:
-            point0[0].SetFocalPoint(*vox)
-            point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
-            point0[0].Update()
+    def getRegistrationVOIs(self):            
 
-        self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+            extent = self.getRegistrationBoxExtentInWorldCoords()
 
-    def getRegistrationVOIs(self):
-
-            extent = self.registration_box_extent
-            print("Registration box extent", self.registration_box_extent )
-
+            print("Registration box extent", extent )
 
             # get the selected ROI
             voi = vtk.vtkExtractVOI()
@@ -1403,20 +1384,14 @@ and then input to the DVC code.")
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
-        
         key_code = interactor.GetKeyCode()
         print('AfterKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
 
-        if key_code in ['x','y','z']: #and \
-            #self.registration_in_progress:
-                print("Check registration")
-                rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
-                #self.centerOnPointZero() #TODO: maybe remove - adding this did not help
-                #self.OnStartStopRegistrationPushed()
-                self.completeRegistration()
-                #self.registration_in_progress = False
-                
+        if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
+            rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
+            self.completeRegistration()
+
         
     def translate_image_reg(self,key_code, event, progress_callback):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
@@ -1488,28 +1463,24 @@ and then input to the DVC code.")
             rp = self.registration_parameters
             
             if shift and rp['select_point_zero'].isChecked():
-                print ("Shift pressed", shift)
                 position = interactor.GetEventPosition()
-                #vox = v.style.display2world(position)
-                print("OG position, ", position)
-                p0l = v.style.display2imageCoordinate(position)[:-1]
+                p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
                 print("p0l, ", p0l)               
                 self.createPoint0(p0l)
-                #rp['register_on_selection_check'].setEnabled(True)
 
-    def createPoint0(self, p0l):
+    def createPoint0(self, p0):
         v = self.vis_widget_reg.frame.viewer
         spacing = v.img3D.GetSpacing()
         origin = v.img3D.GetOrigin()
-        p0 = [ el * spacing[i] + origin[i] for i,el in enumerate(p0l) ]
+        p0 = [round(p0[i]) for i in range(3)]
         point0actor = 'Point0' in v.actors
         rp = self.registration_parameters
         vox = p0
         print ("vox ", vox, 'p0', p0)
-        bbox = rp['registration_box_size_entry'].value()
-        extent = [ p0[0] - int( bbox * spacing[0] / 2 ), p0[0] + int( bbox * spacing[0] / 2 ), 
-                p0[1] - int( bbox * spacing[1] / 2 ), p0[1] + int( bbox * spacing[1] / 2 ), 
-                p0[2] - int( bbox * spacing[2] / 2 ), p0[2] + int( bbox * spacing[2] / 2 )]
+
+        rp = self.registration_parameters
+        rp['point_zero_entry'].setText(str(p0))
+        self.point0_loc = p0
 
         if not point0actor:
             point0 = vtk.vtkCursor3D()
@@ -1544,40 +1515,10 @@ and then input to the DVC code.")
 
                 self.point0.append((point0 , point0Mapper, point0Actor)) 
         
-
-            
-            # point0Mapper = vtk.vtkPolyDataMapper()
-            # self.vis_widget_2D.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
-            # self.vis_widget_reg.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
-            # point0Mapper.SetInputConnection(self.vis_widget_reg.PlaneClipper.GetClippedData('Point0').GetOutputPort())
-            # point0Actor = vtk.vtkLODActor()
-            # point0Actor.SetMapper(point0Mapper)
-            # point0Actor.GetProperty().SetColor(1.,0.,0.)
-            # point0Actor.GetProperty().SetLineWidth(2.0)
-            # v.AddActor(point0Actor, 'Point0')
-            # self.vis_widget_3D.frame.viewer.getRenderer().AddActor(point0Actor)
-            # self.vis_widget_2D.frame.viewer.AddActor(point0Actor)
-            # self.point0 = [ point0 , point0Mapper, point0Actor ] 
         else:
-            for point0 in self.point0:
-                point0[0].SetFocalPoint(*vox)
-                point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
-                point0[0].Update()
-            # self.point0[0].SetFocalPoint(*vox)
-            # self.point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
-            # self.point0[0].Update()
+            self.updatePoint0Display()
 
-        rp = self.registration_parameters
-
-        # p0_world_coords = v.style.image2world(p0l)
-        # p0_world_coords = [round(p0_world_coords[i]) for i in range(3)]
-        # rp['point_zero_entry'].setText(str(p0_world_coords))
-        rp['point_zero_entry'].setText(str(p0l)) 
-        self.point0_loc = p0
-        #print("Finished")
-        print("Plane clipper info:")
-        print("reg: ", self.vis_widget_reg.PlaneClipper.GetDataListToClip())
-        print("view2D: ", self.vis_widget_2D.PlaneClipper.GetDataListToClip())
+        
         self.centerOnPointZero()
 
     def centerOnPointZero(self):
@@ -1587,26 +1528,9 @@ and then input to the DVC code.")
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
 
-            point0 = rp['point_zero_entry'].text()
-            if point0 !="": 
-                point0= eval(point0)
+            point0 = self.getPoint0ImageCoords()
 
-            if rp['start_registration_button'].isChecked():
-                point0 = self.registration_box_origin
-                v = self.vis_widget_reg.frame.viewer
-                spacing = v.img3D.GetSpacing()
-                origin = v.img3D.GetOrigin()
-
-                point0 = [ el * spacing[i] + origin[i] for i,el in enumerate(point0) ]
-            else:
-                #point0 = v.style.world2imageCoordinate(point0)
-                print("Not reg")
-                print(point0)
-
- 
-
-            print("Point0 is ", point0)
-            #print("Reg orig is ", self.registration_box_origin)
+            print("center on Point0 is ", point0)
 
             if isinstance (point0, tuple) or isinstance(point0, list):
                 #print("Tuple")
@@ -1628,50 +1552,42 @@ and then input to the DVC code.")
             v = self.vis_widget_reg.frame.viewer
             rbdisplay = 'RegistrationBox' in v.actors
             if rp['register_on_selection_check'].isChecked():
-                spacing = v.img3D.GetSpacing()
-                origin = v.img3D.GetOrigin()
-                if rp['start_registration_button'].isChecked():
-                    point0 = self.registration_box_origin
-                    # print("Point0 is", self.registration_box_origin)
-                    # for i,coord in enumerate(point0):
-                    #     if i != v.GetSliceOrientation():
-                    #         print(i)
-                    #         point0[i] = v.img3D.GetOrigin()[i]
 
-                    # print("Point0 for reg", point0)
+            #     if rp['start_registration_button'].isChecked():
+            #         point0 = self.registration_box_origin
+            #         # print("Point0 is", self.registration_box_origin)
+            #         # for i,coord in enumerate(point0):
+            #         #     if i != v.GetSliceOrientation():
+            #         #         print(i)
+            #         #         point0[i] = v.img3D.GetOrigin()[i]
+
+            #         # print("Point0 for reg", point0)
                     
 
-                else:
-                    #point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
-                    point0 =eval(rp['point_zero_entry'].text())
+            #     else:
+            #         #point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
+            #         point0 =eval(rp['point_zero_entry'].text())
 
-                print("Untouched p0", point0)
+            #     print("Untouched p0", point0)
                 
-                point0 = [ el * spacing[i] + origin[i] for i,el in enumerate(point0) ]
+            #     point0 = [ el * spacing[i] + origin[i] for i,el in enumerate(point0) ]
 
-                print("T", point0)
-                print("origin", origin)
-                print("spacing", spacing)
-                    
-                bbox = rp['registration_box_size_entry'].value()
-                extent = [ point0[0] - int( bbox * spacing[0] / 2 ), point0[0] + int( bbox * spacing[0] / 2 ), 
-                        point0[1] - int( bbox * spacing[1] / 2 ), point0[1] + int( bbox * spacing[1] / 2 ), 
-                        point0[2] - int( bbox * spacing[2] / 2 ), point0[2] + int( bbox * spacing[2] / 2 )]
-                print ("registration_box_extent", extent)
-                if hasattr(self, 'registration_box_extent'):
-                    print("Reg box extent saved", self.registration_box_extent)
+                point0 = self.getPoint0WorldCoords()
+
+                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+
+
+                #TODO: make length var here then change it to getting the world or image value
 
                 #Attempt to clip box:
                 if not rbdisplay:
                     
                     cube_source = vtk.vtkCubeSource()
-                    cube_source.SetXLength(extent[1]- extent[0])
-                    cube_source.SetYLength(extent[1]- extent[0])
-                    cube_source.SetZLength(extent[1]- extent[0])
+                    cube_source.SetXLength(reg_box_size)
+                    cube_source.SetYLength(reg_box_size)
+                    cube_source.SetZLength(reg_box_size)
                     cube_source.SetCenter(point0)
                     cube_source.Update()
-                    
-                        
 
                     self.registration_box = []
                     viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
@@ -1709,9 +1625,9 @@ and then input to the DVC code.")
                     for i, viewer_box_info in enumerate(self.registration_box):
                         viewer_box_info['actor'].VisibilityOn()
                         cube_source = viewer_box_info['source']
-                        cube_source.SetXLength(extent[1]- extent[0])
-                        cube_source.SetYLength(extent[1]- extent[0])
-                        cube_source.SetZLength(extent[1]- extent[0])
+                        cube_source.SetXLength(reg_box_size)
+                        cube_source.SetYLength(reg_box_size)
+                        cube_source.SetZLength(reg_box_size)
                         cube_source.SetCenter(point0)
                         viewer_box_info['viewer'].style.UpdatePipeline()
             else:
