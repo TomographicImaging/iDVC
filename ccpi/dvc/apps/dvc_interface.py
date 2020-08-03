@@ -1030,8 +1030,189 @@ and then input to the DVC code.")
                     self.viewer2D_dock.setVisible(True)
                     self.viewer3D_dock.setVisible(True)
 
+    def selectPointZero(self):
+        if self.ref_image_data is not None:
+                       
+            rp = self.registration_parameters
+            v = self.vis_widget_reg.frame.viewer
+            
+            if rp['select_point_zero'].isChecked():
+                v.style.AddObserver('LeftButtonPressEvent', self.OnLeftButtonPressEventForPointZero, 0.5)
+                # should find a way to not show this again
+                self.warningDialog(
+                    window_title='Select Point 0',
+                    message='Select point 0 by SHIFT-Left Click on the Image'
+                )
+                rp['select_point_zero'].setText('Selecting point 0')
+            else:
+                rp['select_point_zero'].setText('Select Point 0')
+        
+        else:
+            self.warningDialog("Load an image on the viewer first.", "Error")
+        
+    def OnLeftButtonPressEventForPointZero(self, interactor, event):
+            print('OnLeftButtonPressEventForPointZero', event)
+            v = self.vis_widget_reg.frame.viewer
+            shift = interactor.GetShiftKey()          
+            rp = self.registration_parameters
+            
+            if shift and rp['select_point_zero'].isChecked():
+                position = interactor.GetEventPosition()
+                p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
+                print("p0l, ", p0l)               
+                self.createPoint0(p0l)
+
+    def updatePoint0Display(self):
+        vox = self.getPoint0WorldCoords()
+        for point0 in self.point0:
+            point0[0].SetFocalPoint(*vox)
+            point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+            point0[0].Update()
+
+        self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+
+    def createPoint0(self, p0):
+        v = self.vis_widget_reg.frame.viewer
+        spacing = v.img3D.GetSpacing()
+        origin = v.img3D.GetOrigin()
+        p0 = [round(p0[i]) for i in range(3)]
+        point0actor = 'Point0' in v.actors
+        rp = self.registration_parameters
+        vox = p0
+        print ("vox ", vox, 'p0', p0)
+
+        rp = self.registration_parameters
+        rp['point_zero_entry'].setText(str(p0))
+        self.point0_world_coords = p0
+
+        if not point0actor:
+            point0 = vtk.vtkCursor3D()
+            point0.SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
+            point0.SetFocalPoint(*vox)
+            point0.AllOff()
+            point0.AxesOn()
+            point0.OutlineOn()
+            point0.TranslationModeOn()
+            point0.Update()
+
+            self.point0 = []
+            viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
+
+            for viewer_widget in viewer_widgets:
+                point0Mapper = vtk.vtkPolyDataMapper()
+                if viewer_widget.viewer == viewer2D:
+                    viewer_widget.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
+                    point0Mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('Point0').GetOutputPort())
+                else:
+                    point0Mapper.SetInputConnection(point0.GetOutputPort())
+
+                point0Actor = vtk.vtkLODActor()
+                point0Actor.SetMapper(point0Mapper)
+                point0Actor.GetProperty().SetColor(1.,0.,0.)
+                point0Actor.GetProperty().SetLineWidth(2.0)
+
+                if viewer_widget.viewer == viewer2D:
+                    viewer_widget.frame.viewer.AddActor(point0Actor, 'Point0')
+                else:
+                    viewer_widget.frame.viewer.getRenderer().AddActor(point0Actor)
+
+                self.point0.append((point0 , point0Mapper, point0Actor)) 
+        
+        else:
+            self.updatePoint0Display()
+
+        
+        self.centerOnPointZero()
+
+    def centerOnPointZero(self):
+        print("Center on point0")
+        '''Centers the viewing slice where Point 0 is'''
+        if hasattr(self, 'vis_widget_reg'):
+            rp = self.registration_parameters
+            v = self.vis_widget_reg.frame.viewer
+
+            point0 = self.getPoint0ImageCoords()
+
+            print("center on Point0 is ", point0)
+
+            if isinstance (point0, tuple) or isinstance(point0, list):
+                #print("Tuple")
+                orientation = v.style.GetSliceOrientation()
+                gotoslice = point0[orientation]
+                v.style.SetActiveSlice( round(gotoslice) )
+                v.style.UpdatePipeline(True)
+                self.displayRegistrationSelection()
+                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+            else:
+                self.warningDialog("Choose a Point 0 first.", "Error")
 
 
+    def displayRegistrationSelection(self):
+        if hasattr(self, 'vis_widget_reg'):
+            #print ("displayRegistrationSelection")
+            rp = self.registration_parameters
+            rp['registration_box_size_entry'].setEnabled( rp['register_on_selection_check'].isChecked() )
+            v = self.vis_widget_reg.frame.viewer
+            rbdisplay = 'RegistrationBox' in v.actors
+            if rp['register_on_selection_check'].isChecked():
+
+                point0 = self.getPoint0WorldCoords()
+
+                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+
+                if not rbdisplay:
+                    
+                    cube_source = vtk.vtkCubeSource()
+                    cube_source.SetXLength(reg_box_size)
+                    cube_source.SetYLength(reg_box_size)
+                    cube_source.SetZLength(reg_box_size)
+                    cube_source.SetCenter(point0)
+                    cube_source.Update()
+
+                    self.registration_box = []
+                    viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
+
+                    for viewer_widget in viewer_widgets:
+                        RegistrationBoxMapper = vtk.vtkPolyDataMapper()
+                        if viewer_widget.viewer == viewer2D:
+                            viewer_widget.PlaneClipper.AddDataToClip('RegistrationBox', cube_source.GetOutputPort())
+                            RegistrationBoxMapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('RegistrationBox').GetOutputPort())
+                        else:
+                            RegistrationBoxMapper.SetInputConnection(cube_source.GetOutputPort())
+                    
+                        RegistrationBoxActor = vtk.vtkLODActor()
+                        RegistrationBoxActor.SetMapper(RegistrationBoxMapper)
+                        RegistrationBoxActor.GetProperty().SetColor(0.,.5,.5)
+                        RegistrationBoxActor.GetProperty().SetLineWidth(2.0)
+                        RegistrationBoxActor.GetProperty().SetEdgeColor(0.,.5,.5)
+
+                        if viewer_widget.viewer == viewer2D:
+                            RegistrationBoxActor.GetProperty().SetOpacity(0.5)
+                            RegistrationBoxActor.GetProperty().SetLineWidth(4.0)
+                            RegistrationBoxActor.GetProperty().SetEdgeVisibility(True)
+                            viewer_widget.frame.viewer.AddActor(RegistrationBoxActor, 'RegistrationBox')
+                        else:
+                            RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
+                            viewer_widget.frame.viewer.getRenderer().AddActor(RegistrationBoxActor)
+                        
+                        self.registration_box.append({'source': cube_source , 'mapper': RegistrationBoxMapper,
+                                                'actor': RegistrationBoxActor , 'viewer': viewer_widget.frame.viewer})
+                        v.style.UpdatePipeline()
+                else:
+                    for i, viewer_box_info in enumerate(self.registration_box):
+                        viewer_box_info['actor'].VisibilityOn()
+                        cube_source = viewer_box_info['source']
+                        cube_source.SetXLength(reg_box_size)
+                        cube_source.SetYLength(reg_box_size)
+                        cube_source.SetZLength(reg_box_size)
+                        cube_source.SetCenter(point0)
+                        viewer_box_info['viewer'].style.UpdatePipeline()
+            else:
+                if rbdisplay:
+                    # hide actor
+                    for i, viewer_box_info in enumerate(self.registration_box):
+                        viewer_box_info['actor'].VisibilityOff()
+                    v.style.UpdatePipeline()
 
 
     def getRegistrationBoxSizeInWorldCoords(self):
@@ -1064,14 +1245,15 @@ and then input to the DVC code.")
         v = self.vis_widget_reg.frame.viewer
         rp = self.registration_parameters
         p0 = eval(rp['point_zero_entry'].text())
-        self.registration_box_origin = p0
-
-        print("Reg orig world coords", p0)
+        self.point_0_world_coords = p0
+        
+        #print("p0 world coords", p0)
 
         if rp['start_registration_button'].isChecked():
             if self.image_info['sampled']: # this means reg image will have been cropped
                 reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-                p0[2] = round(reg_box_size*1.5) #[2]
+                p0[2] = round(reg_box_size*1.5)
+        
 
         return p0
 
@@ -1129,6 +1311,14 @@ and then input to the DVC code.")
     def LoadImagesAndCompleteRegistration(self):
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
+
+        if hasattr(self, 'registration_box_extent'):
+            previous_reg_box_extent = copy.deepcopy(self.registration_box_extent)
+            print("Prev", previous_reg_box_extent)
+        else:
+            previous_reg_box_extent = None
+
+
         if rp['register_on_selection_check'].isChecked():
 
                 reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
@@ -1159,18 +1349,7 @@ and then input to the DVC code.")
                         #TODO: move to doing both image data creators simultaneously
                         return
 
-                current_image_extent = self.unsampled_ref_image_data.GetExtent()
-
-                print("Origin", origin)
-                current_origin = [round (i) for i in self.unsampled_ref_image_data.GetOrigin()]
-                print("Existing origin", current_origin)
-                current_z_range = current_image_extent[5] - current_image_extent[4]
-                target_z_range = target_z_extent[1]- target_z_extent[0]
-                print("Target z range ", target_z_range)
-                print("Current z range ", current_z_range)
-
-
-                if origin != current_origin or current_z_range != target_z_range:
+                if previous_reg_box_extent != reg_box_extent:
                     ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
                 else:
                     self.completeRegistration()
@@ -1222,7 +1401,7 @@ and then input to the DVC code.")
             rp['point_zero_entry'].setText("")
 
             if hasattr(self, 'point0_loc'):
-                del self.point0_loc
+                del self.point0_world_coords
         if hasattr(self, 'vis_widget_reg'):
             print("Still exists")
 
@@ -1273,14 +1452,6 @@ and then input to the DVC code.")
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
 
-    def updatePoint0Display(self):
-        vox = self.getPoint0WorldCoords()
-        for point0 in self.point0:
-            point0[0].SetFocalPoint(*vox)
-            point0[0].SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
-            point0[0].Update()
-
-        self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
 
     def getRegistrationVOIs(self):            
 
@@ -1371,16 +1542,6 @@ and then input to the DVC code.")
             
             self.threadpool.start(self.translate_worker)
 
-        #print("Checked?", rp['start_registration_button'].isChecked())
-        # if key_code in ['x','y','z'] and \
-        #      rp['start_registration_button'].isChecked():
-        #         self.registration_in_progress = True
-        # #         print("Uncheck registration")
-        # #         rp['start_registration_button'].setChecked(False)  #trigger registration to stop
-        # #         self.OnStartStopRegistrationPushed()
-        # else:
-        #      self.registration_in_progress = False
-
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
@@ -1435,208 +1596,6 @@ and then input to the DVC code.")
         # interactor.SetKeyCode("z")
         # v.style.OnKeyPress(interactor, 'KeyPressEvent')
             
-
-    def selectPointZero(self):
-        if self.ref_image_data is not None:
-                       
-            rp = self.registration_parameters
-            v = self.vis_widget_reg.frame.viewer
-            
-            if rp['select_point_zero'].isChecked():
-                v.style.AddObserver('LeftButtonPressEvent', self.OnLeftButtonPressEventForPointZero, 0.5)
-                # should find a way to not show this again
-                self.warningDialog(
-                    window_title='Select Point 0',
-                    message='Select point 0 by SHIFT-Left Click on the Image'
-                )
-                rp['select_point_zero'].setText('Selecting point 0')
-            else:
-                rp['select_point_zero'].setText('Select Point 0')
-        
-        else:
-            self.warningDialog("Load an image on the viewer first.", "Error")
-        
-    def OnLeftButtonPressEventForPointZero(self, interactor, event):
-            print('OnLeftButtonPressEventForPointZero', event)
-            v = self.vis_widget_reg.frame.viewer
-            shift = interactor.GetShiftKey()          
-            rp = self.registration_parameters
-            
-            if shift and rp['select_point_zero'].isChecked():
-                position = interactor.GetEventPosition()
-                p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
-                print("p0l, ", p0l)               
-                self.createPoint0(p0l)
-
-    def createPoint0(self, p0):
-        v = self.vis_widget_reg.frame.viewer
-        spacing = v.img3D.GetSpacing()
-        origin = v.img3D.GetOrigin()
-        p0 = [round(p0[i]) for i in range(3)]
-        point0actor = 'Point0' in v.actors
-        rp = self.registration_parameters
-        vox = p0
-        print ("vox ", vox, 'p0', p0)
-
-        rp = self.registration_parameters
-        rp['point_zero_entry'].setText(str(p0))
-        self.point0_loc = p0
-
-        if not point0actor:
-            point0 = vtk.vtkCursor3D()
-            point0.SetModelBounds(-10 + vox[0], 10 + vox[0], -10 + vox[1], 10 + vox[1], -10 + vox[2], 10 + vox[2])
-            point0.SetFocalPoint(*vox)
-            point0.AllOff()
-            point0.AxesOn()
-            point0.OutlineOn()
-            point0.TranslationModeOn()
-            point0.Update()
-
-            self.point0 = []
-            viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
-
-            for viewer_widget in viewer_widgets:
-                point0Mapper = vtk.vtkPolyDataMapper()
-                if viewer_widget.viewer == viewer2D:
-                    viewer_widget.PlaneClipper.AddDataToClip('Point0', point0.GetOutputPort())
-                    point0Mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('Point0').GetOutputPort())
-                else:
-                    point0Mapper.SetInputConnection(point0.GetOutputPort())
-
-                point0Actor = vtk.vtkLODActor()
-                point0Actor.SetMapper(point0Mapper)
-                point0Actor.GetProperty().SetColor(1.,0.,0.)
-                point0Actor.GetProperty().SetLineWidth(2.0)
-
-                if viewer_widget.viewer == viewer2D:
-                    viewer_widget.frame.viewer.AddActor(point0Actor, 'Point0')
-                else:
-                    viewer_widget.frame.viewer.getRenderer().AddActor(point0Actor)
-
-                self.point0.append((point0 , point0Mapper, point0Actor)) 
-        
-        else:
-            self.updatePoint0Display()
-
-        
-        self.centerOnPointZero()
-
-    def centerOnPointZero(self):
-        print("Center on point0")
-        '''Centers the viewing slice where Point 0 is'''
-        if hasattr(self, 'vis_widget_reg'):
-            rp = self.registration_parameters
-            v = self.vis_widget_reg.frame.viewer
-
-            point0 = self.getPoint0ImageCoords()
-
-            print("center on Point0 is ", point0)
-
-            if isinstance (point0, tuple) or isinstance(point0, list):
-                #print("Tuple")
-                orientation = v.style.GetSliceOrientation()
-                gotoslice = point0[orientation]
-                v.style.SetActiveSlice( round(gotoslice) )
-                v.style.UpdatePipeline(True)
-                self.displayRegistrationSelection()
-                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
-            else:
-                self.warningDialog("Choose a Point 0 first.", "Error")
-
-
-    def displayRegistrationSelection(self):
-        if hasattr(self, 'vis_widget_reg'):
-            #print ("displayRegistrationSelection")
-            rp = self.registration_parameters
-            rp['registration_box_size_entry'].setEnabled( rp['register_on_selection_check'].isChecked() )
-            v = self.vis_widget_reg.frame.viewer
-            rbdisplay = 'RegistrationBox' in v.actors
-            if rp['register_on_selection_check'].isChecked():
-
-            #     if rp['start_registration_button'].isChecked():
-            #         point0 = self.registration_box_origin
-            #         # print("Point0 is", self.registration_box_origin)
-            #         # for i,coord in enumerate(point0):
-            #         #     if i != v.GetSliceOrientation():
-            #         #         print(i)
-            #         #         point0[i] = v.img3D.GetOrigin()[i]
-
-            #         # print("Point0 for reg", point0)
-                    
-
-            #     else:
-            #         #point0 = v.style.world2imageCoordinate(eval(rp['point_zero_entry'].text()))
-            #         point0 =eval(rp['point_zero_entry'].text())
-
-            #     print("Untouched p0", point0)
-                
-            #     point0 = [ el * spacing[i] + origin[i] for i,el in enumerate(point0) ]
-
-                point0 = self.getPoint0WorldCoords()
-
-                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-
-
-                #TODO: make length var here then change it to getting the world or image value
-
-                #Attempt to clip box:
-                if not rbdisplay:
-                    
-                    cube_source = vtk.vtkCubeSource()
-                    cube_source.SetXLength(reg_box_size)
-                    cube_source.SetYLength(reg_box_size)
-                    cube_source.SetZLength(reg_box_size)
-                    cube_source.SetCenter(point0)
-                    cube_source.Update()
-
-                    self.registration_box = []
-                    viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
-
-                    for viewer_widget in viewer_widgets:
-                        point0Mapper = vtk.vtkPolyDataMapper()
-                        if viewer_widget.viewer == viewer2D:
-                            viewer_widget.PlaneClipper.AddDataToClip('RegistrationBox', cube_source.GetOutputPort())
-                            point0Mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('RegistrationBox').GetOutputPort())
-                        else:
-                            point0Mapper.SetInputConnection(cube_source.GetOutputPort())
-
-                        
-                    
-                        point0Actor = vtk.vtkLODActor()
-                        point0Actor.SetMapper(point0Mapper)
-                        point0Actor.GetProperty().SetColor(0.,.5,.5)
-                        point0Actor.GetProperty().SetLineWidth(2.0)
-                        point0Actor.GetProperty().SetEdgeColor(0.,.5,.5)
-                        
-
-                        if viewer_widget.viewer == viewer2D:
-                            point0Actor.GetProperty().SetOpacity(0.5)
-                            point0Actor.GetProperty().SetLineWidth(4.0)
-                            point0Actor.GetProperty().SetEdgeVisibility(True)
-                            viewer_widget.frame.viewer.AddActor(point0Actor, 'RegistrationBox')
-                        else:
-                            point0Actor.GetProperty().SetRepresentationToWireframe()
-                            viewer_widget.frame.viewer.getRenderer().AddActor(point0Actor)
-                        
-                        self.registration_box.append({'source': cube_source , 'mapper': point0Mapper,
-                                                'actor': point0Actor , 'viewer': viewer_widget.frame.viewer})
-                        v.style.UpdatePipeline()
-                else:
-                    for i, viewer_box_info in enumerate(self.registration_box):
-                        viewer_box_info['actor'].VisibilityOn()
-                        cube_source = viewer_box_info['source']
-                        cube_source.SetXLength(reg_box_size)
-                        cube_source.SetYLength(reg_box_size)
-                        cube_source.SetZLength(reg_box_size)
-                        cube_source.SetCenter(point0)
-                        viewer_box_info['viewer'].style.UpdatePipeline()
-            else:
-                if rbdisplay:
-                    # hide actor
-                    for i, viewer_box_info in enumerate(self.registration_box):
-                        viewer_box_info['actor'].VisibilityOff()
-                    v.style.UpdatePipeline()
-
 
 
 #Mask Panel:
@@ -2651,7 +2610,7 @@ and then input to the DVC code.")
 
 
             #print(type(mask_data))
-            mm = mask_data.GetScalarComponentAsDouble(int(self.point0_loc[0]),int(self.point0_loc[1]), int(self.point0_loc[2]), 0)
+            mm = mask_data.GetScalarComponentAsDouble(int(self.point0_world_coords[0]),int(self.point0_world_coords[1]), int(self.point0_world_coords[2]), 0)
 
             if int(mm) == 1: #if point0 is in the mask
                 #print("POINT 0 IN MASK")
@@ -2660,17 +2619,17 @@ and then input to the DVC code.")
                 if hasattr(self, 'point0'):
                     pointCloud_points = []
                     pointCloud_distances = []
-                    print("Point 0: ", self.point0_loc)
+                    print("Point 0: ", self.point0_world_coords)
                     for i in range (0, pointCloud.GetNumberOfPoints()):
                         current_point = pointCloud.GetPoints().GetPoint(i)
                         pointCloud_points.append(current_point)
-                        pointCloud_distances.append((self.point0_loc[0]-current_point[0])**2+(self.point0_loc[1]-current_point[1])**2+(self.point0_loc[2]-current_point[2])**2)
+                        pointCloud_distances.append((self.point0_world_coords[0]-current_point[0])**2+(self.point0_world_coords[1]-current_point[1])**2+(self.point0_world_coords[2]-current_point[2])**2)
 
                     lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
 
                     print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
 
-                    pointCloud_Translation = (self.point0_loc[0]-pointCloud_points[lowest_distance_index][0],self.point0_loc[1]-pointCloud_points[lowest_distance_index][1],self.point0_loc[2]-pointCloud_points[lowest_distance_index][2])
+                    pointCloud_Translation = (self.point0_world_coords[0]-pointCloud_points[lowest_distance_index][0],self.point0_world_coords[1]-pointCloud_points[lowest_distance_index][1],self.point0_world_coords[2]-pointCloud_points[lowest_distance_index][2])
 
                     print("Translation from it is:", pointCloud_Translation)
 
@@ -2729,7 +2688,7 @@ and then input to the DVC code.")
                 count = 1
             for i in range(pointcloud.GetNumberOfPoints()):
                 pp = pointcloud.GetPoint(i)
-                distance = pp[0]-self.point0_loc[0] + pp[1]-self.point0_loc[1] + pp[2]-self.point0_loc[2]
+                distance = pp[0]-self.point0_world_coords[0] + pp[1]-self.point0_world_coords[1] + pp[2]-self.point0_world_coords[2]
                 if distance == 0:
                     #print(pp)
                     #print("Add to front of list")
@@ -4684,7 +4643,7 @@ Please move the file back to this location and reload the session, select a diff
                 #self.config['reg_translation'] = None
 
             # if hasattr(self, 'point0_loc'):
-            #     self.config['point0'] = self.point0_loc
+            #     self.config['point0'] = self.point0_world_coords
             # else:
             #     self.config['point0'] = None
 
