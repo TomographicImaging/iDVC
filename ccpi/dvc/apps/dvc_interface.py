@@ -610,8 +610,6 @@ and then input to the DVC code.")
                     rp['translate_Z_entry'].setText(str(self.config['reg_translation'][2]*-1))
                     self.translate = vtk.vtkImageTranslateExtent()
                     self.translate.SetTranslation(self.config['reg_translation'])
-                    self.registration_parameters['register_on_selection_check'].setChecked(self.config['reg_sel'] )
-                    self.registration_parameters['register_on_selection_check'].setEnabled(True )
                     self.registration_parameters['registration_box_size_entry'].setValue(self.config['reg_sel_size'])
                     self.registration_parameters['registration_box_size_entry'].setEnabled(True)
                     self.displayRegistrationSelection()
@@ -885,15 +883,7 @@ and then input to the DVC code.")
         separators[-1].setFrameShadow(QFrame.Raised)
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1
-        # Add should extend checkbox
-        rp['register_on_selection_check'] = QCheckBox(groupBox)
-        rp['register_on_selection_check'].setText("Register on Selection")
-        rp['register_on_selection_check'].setEnabled(False)
-        rp['register_on_selection_check'].setChecked(True)
-        rp['register_on_selection_check'].stateChanged.connect( self.displayRegistrationSelection )
 
-        formLayout.setWidget(widgetno,QFormLayout.FieldRole, rp['register_on_selection_check'])
-        widgetno += 1
         # Registration Box
         rp['registration_box_size_label'] = QLabel(groupBox)
         rp['registration_box_size_label'].setText("Registration Box Size")
@@ -907,7 +897,7 @@ and then input to the DVC code.")
         rp['registration_box_size_entry'].setSingleStep(1)
         rp['registration_box_size_entry'].setValue(20)
         rp['registration_box_size_entry'].setMaximum(200)
-        rp['registration_box_size_entry'].setEnabled(False)
+        rp['registration_box_size_entry'].setEnabled(True)
         rp['registration_box_size_entry'].valueChanged.connect(self.displayRegistrationSelection)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['registration_box_size_entry'])
         widgetno += 1
@@ -1148,68 +1138,62 @@ and then input to the DVC code.")
         if hasattr(self, 'vis_widget_reg'):
             #print ("displayRegistrationSelection")
             rp = self.registration_parameters
-            rp['registration_box_size_entry'].setEnabled( rp['register_on_selection_check'].isChecked() )
             v = self.vis_widget_reg.frame.viewer
             rbdisplay = 'RegistrationBox' in v.actors
-            if rp['register_on_selection_check'].isChecked():
 
-                point0 = self.getPoint0WorldCoords()
 
-                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        point0 = self.getPoint0WorldCoords()
 
-                if not rbdisplay:
-                    
-                    cube_source = vtk.vtkCubeSource()
-                    cube_source.SetXLength(reg_box_size)
-                    cube_source.SetYLength(reg_box_size)
-                    cube_source.SetZLength(reg_box_size)
-                    cube_source.SetCenter(point0)
-                    cube_source.Update()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
 
-                    self.registration_box = []
-                    viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
+        if not rbdisplay:
+            
+            cube_source = vtk.vtkCubeSource()
+            cube_source.SetXLength(reg_box_size)
+            cube_source.SetYLength(reg_box_size)
+            cube_source.SetZLength(reg_box_size)
+            cube_source.SetCenter(point0)
+            cube_source.Update()
 
-                    for viewer_widget in viewer_widgets:
-                        RegistrationBoxMapper = vtk.vtkPolyDataMapper()
-                        if viewer_widget.viewer == viewer2D:
-                            viewer_widget.PlaneClipper.AddDataToClip('RegistrationBox', cube_source.GetOutputPort())
-                            RegistrationBoxMapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('RegistrationBox').GetOutputPort())
-                        else:
-                            RegistrationBoxMapper.SetInputConnection(cube_source.GetOutputPort())
-                    
-                        RegistrationBoxActor = vtk.vtkLODActor()
-                        RegistrationBoxActor.SetMapper(RegistrationBoxMapper)
-                        RegistrationBoxActor.GetProperty().SetColor(0.,.5,.5)
-                        RegistrationBoxActor.GetProperty().SetLineWidth(2.0)
-                        RegistrationBoxActor.GetProperty().SetEdgeColor(0.,.5,.5)
+            self.registration_box = []
+            viewer_widgets = [self.vis_widget_2D, self.vis_widget_reg, self.vis_widget_3D]
 
-                        if viewer_widget.viewer == viewer2D:
-                            RegistrationBoxActor.GetProperty().SetOpacity(0.5)
-                            RegistrationBoxActor.GetProperty().SetLineWidth(4.0)
-                            RegistrationBoxActor.GetProperty().SetEdgeVisibility(True)
-                            viewer_widget.frame.viewer.AddActor(RegistrationBoxActor, 'RegistrationBox')
-                        else:
-                            RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
-                            viewer_widget.frame.viewer.getRenderer().AddActor(RegistrationBoxActor)
-                        
-                        self.registration_box.append({'source': cube_source , 'mapper': RegistrationBoxMapper,
-                                                'actor': RegistrationBoxActor , 'viewer': viewer_widget.frame.viewer})
-                        v.style.UpdatePipeline()
+            for viewer_widget in viewer_widgets:
+                RegistrationBoxMapper = vtk.vtkPolyDataMapper()
+                if viewer_widget.viewer == viewer2D:
+                    viewer_widget.PlaneClipper.AddDataToClip('RegistrationBox', cube_source.GetOutputPort())
+                    RegistrationBoxMapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('RegistrationBox').GetOutputPort())
                 else:
-                    for i, viewer_box_info in enumerate(self.registration_box):
-                        viewer_box_info['actor'].VisibilityOn()
-                        cube_source = viewer_box_info['source']
-                        cube_source.SetXLength(reg_box_size)
-                        cube_source.SetYLength(reg_box_size)
-                        cube_source.SetZLength(reg_box_size)
-                        cube_source.SetCenter(point0)
-                        viewer_box_info['viewer'].style.UpdatePipeline()
-            else:
-                if rbdisplay:
-                    # hide actor
-                    for i, viewer_box_info in enumerate(self.registration_box):
-                        viewer_box_info['actor'].VisibilityOff()
-                    v.style.UpdatePipeline()
+                    RegistrationBoxMapper.SetInputConnection(cube_source.GetOutputPort())
+            
+                RegistrationBoxActor = vtk.vtkLODActor()
+                RegistrationBoxActor.SetMapper(RegistrationBoxMapper)
+                RegistrationBoxActor.GetProperty().SetColor(0.,.5,.5)
+                RegistrationBoxActor.GetProperty().SetLineWidth(2.0)
+                RegistrationBoxActor.GetProperty().SetEdgeColor(0.,.5,.5)
+
+                if viewer_widget.viewer == viewer2D:
+                    RegistrationBoxActor.GetProperty().SetOpacity(0.5)
+                    RegistrationBoxActor.GetProperty().SetLineWidth(4.0)
+                    RegistrationBoxActor.GetProperty().SetEdgeVisibility(True)
+                    viewer_widget.frame.viewer.AddActor(RegistrationBoxActor, 'RegistrationBox')
+                else:
+                    RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
+                    viewer_widget.frame.viewer.getRenderer().AddActor(RegistrationBoxActor)
+                
+                self.registration_box.append({'source': cube_source , 'mapper': RegistrationBoxMapper,
+                                        'actor': RegistrationBoxActor , 'viewer': viewer_widget.frame.viewer})
+                v.style.UpdatePipeline()
+        else:
+            for i, viewer_box_info in enumerate(self.registration_box):
+                viewer_box_info['actor'].VisibilityOn()
+                cube_source = viewer_box_info['source']
+                cube_source.SetXLength(reg_box_size)
+                cube_source.SetYLength(reg_box_size)
+                cube_source.SetZLength(reg_box_size)
+                cube_source.SetCenter(point0)
+                viewer_box_info['viewer'].style.UpdatePipeline()
+  
 
 
     def getRegistrationBoxSizeInWorldCoords(self):
@@ -1315,47 +1299,39 @@ and then input to the DVC code.")
         else:
             previous_reg_box_extent = None
 
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        point0 = self.getPoint0WorldCoords()
+        reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
 
-        if rp['register_on_selection_check'].isChecked():
+        target_z_extent = [reg_box_extent[4] - reg_box_size, reg_box_extent[5] + reg_box_size]
+        if target_z_extent[0] <0:
+            target_z_extent[0] = 0
+        target_z_extent = tuple(target_z_extent)
+        print("Target z extent", target_z_extent)
 
-                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-                point0 = self.getPoint0WorldCoords()
-                reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
+        self.target_cropped_image_z_extent = target_z_extent
 
-                target_z_extent = [reg_box_extent[4] - reg_box_size, reg_box_extent[5] + reg_box_size]
-                if target_z_extent[0] <0:
-                    target_z_extent[0] = 0
-                target_z_extent = tuple(target_z_extent)
-                print("Target z extent", target_z_extent)
-
-                self.target_cropped_image_z_extent = target_z_extent
-
-                origin = [0,0,0] #TODO: set appropriately based on input image
+        origin = [0,0,0] #TODO: set appropriately based on input image
                 
 
         if self.image_info['sampled']:
             #origin[2] = round(z_range*1.5)
             self.target_cropped_image_origin = origin
             
-            if rp['register_on_selection_check'].isChecked():
-
-                if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
-                        print("About to create image")
-                        self.unsampled_ref_image_data = vtk.vtkImageData()
-                        ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
-                        #TODO: move to doing both image data creators simultaneously
-                        return
-
-                if previous_reg_box_extent != reg_box_extent:
+            if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
+                    print("About to create image")
+                    self.unsampled_ref_image_data = vtk.vtkImageData()
                     ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
-                else:
-                    self.completeRegistration()
-            else:
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg)
+                    #TODO: move to doing both image data creators simultaneously
+                    return
 
+            if previous_reg_box_extent != reg_box_extent:
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+            else:
+                self.completeRegistration()
+            
 
         else:
-            #if rp['register_on_selection_check'].isChecked(): # TODO
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 self.unsampled_ref_image_data = self.ref_image_data 
                 self.LoadCorrImageForReg()
@@ -1370,8 +1346,8 @@ and then input to the DVC code.")
         ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, resample= resample_corr_image, crop_image = crop_corr_image, origin = origin , target_z_extent = z_extent, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        if self.image_info['sampled'] and self.registration_parameters['register_on_selection_check'].isChecked():
-            self.updatePoint0Display()
+        #if self.image_info['sampled']:
+        self.updatePoint0Display()
         self.translateImages()
         self.reg_viewer_update(type = 'starting registration')
         self.centerOnPointZero() 
@@ -1405,15 +1381,9 @@ and then input to the DVC code.")
 
     def translateImages(self, progress_callback = None):
         #progress_callback.emit(10)
-
-        if self.registration_parameters['register_on_selection_check'].isChecked():
-            data = self.getRegistrationVOIs()
-            data1 = data[0]
-            data2 = data[1]
-        else:
-            data1 = self.unsampled_ref_image_data 
-            data2 = self.unsampled_corr_image_data
-
+        data = self.getRegistrationVOIs()
+        data1 = data[0]
+        data2 = data[1]
             
         self.translate.SetInputData(data2)
         self.translate.Update()
@@ -1512,10 +1482,6 @@ and then input to the DVC code.")
             v.style.SetActiveSlice(round(current_slice))
             v.style.UpdatePipeline()
             v.startRenderLoop()
-
-
-        if not rp['register_on_selection_check'].isChecked():
-            rp['registration_box_size_entry'].setValue(rp['registration_box_size_entry'].maximum())
 
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
@@ -4059,7 +4025,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         else:
             self.config['point0'] = None
 
-        self.config['reg_sel'] = self.registration_parameters['register_on_selection_check'].isChecked()
         self.config['reg_sel_size'] = self.registration_parameters['registration_box_size_entry'].value()
         # size of reg box
         # if tickbox checked
