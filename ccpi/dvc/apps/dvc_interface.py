@@ -549,11 +549,6 @@ and then input to the DVC code.")
 
         self.progress_window.setValue(80)
 
-
-        # self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
-        #                                         self.UpdateClippingPlanes, 0.9)
-        # self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
-        #                                         self.UpdateClippingPlanes, 0.9)
         
 
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
@@ -561,10 +556,12 @@ and then input to the DVC code.")
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
 
-        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
-                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
-        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
-                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
+
+
+        # self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
+        #                                         self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
+
+
 
         #Link Viewers:
         self.link2D3D = vlink.ViewerLinker(self.vis_widget_2D.frame.viewer,
@@ -4934,14 +4931,59 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
         self.show()
         self.threadpool = QThreadPool()
+
+    def getViewer(self):
+        return self.frame.viewer
+
+    def getInteractor(self):
+        return self.getViewer().getInteractor()
+
+    def getInteractorStyle(self):
+        return self.getViewer().style
+
+    def getViewerType(self):
+        return self.viewer
+
         
     def createEmptyFrame(self):
         #print("empty")
         self.frame = QCILViewerWidget(viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle)
         self.setCentralWidget(self.frame)
         self.image_file = [""]
-        if self.viewer == viewer2D:
-            self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
+
+
+    def updateCornerAnnotationToWorldCoords(self, interactor =None, event = None):
+        print("Event", event)
+        #Pick event:
+        if hasattr(self.getViewer(), 'img3D'):
+            if event == "LeftButtonReleaseEvent" or event == "LeftButtonPressEvent":
+                alt = self.getInteractor().GetAltKey()
+                shift = self.getInteractor().GetShiftKey()
+                ctrl = self.getInteractor().GetControlKey()
+
+                if not (ctrl and alt and shift):
+                    position = self.getInteractor().GetEventPosition()
+                    vox = self.getInteractorStyle().display2imageCoordinate(position)
+                    vox_world_coords = self.getInteractorStyle().image2world(vox)
+                    vox_world_coords = [round(i) for i in vox_world_coords]
+                    vox_world_coords.append(0) #needs list of 4 values but 4th value isn't used.
+                    vox_world_coords = tuple(vox_world_coords)
+                    print("Vox world coords", vox_world_coords)
+                    # print ("Pixel %d,%d,%d Value %f" % vox )
+                    self.getInteractorStyle().UpdateCornerAnnotation("[%d,%d,%d] : %.2g" % vox_world_coords , 0)
+                    #self.getInteractorStyle().Render()
+
+            elif event is not None:
+                print("About to update corner annotation")
+                slice_coords = [0,0,0]
+                slice_coords[self.getViewer().sliceOrientation] = self.getViewer().sliceno
+                slice_no = self.getInteractorStyle().image2world(slice_coords)[self.getViewer().sliceOrientation]
+                max_slice = self.getInteractorStyle().image2world(self.getViewer().img3D.GetDimensions())[self.getViewer().sliceOrientation]-1
+                print("Slice %d/%d" % (slice_no, max_slice))
+                self.getViewer().updateCornerAnnotation("Slice %d/%d" % (slice_no, max_slice))
+
+
+        
 
 
     def displayImageData(self):
@@ -5003,6 +5045,24 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
                 #self.frame.viewer.ren.Render()
             print("set input data for" + str(self.viewer))
+
+            if self.viewer == viewer2D:
+                self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
+
+                #0.2 priority means happens after all other events:
+                self.getInteractorStyle().AddObserver("MouseWheelForwardEvent",
+                                                    self.updateCornerAnnotationToWorldCoords, 0.2)
+                self.getInteractorStyle().AddObserver("MouseWheelBackwardEvent",
+                                                    self.updateCornerAnnotationToWorldCoords, 0.2)
+
+                self.getInteractorStyle().AddObserver("KeyPressEvent",
+                                                    self.updateCornerAnnotationToWorldCoords, 0.2)
+
+                self.getInteractorStyle().AddObserver('LeftButtonReleaseEvent',self.updateCornerAnnotationToWorldCoords,0.2)
+
+                self.getInteractorStyle().AddObserver('LeftButtonPressEvent',self.updateCornerAnnotationToWorldCoords,0.2)
+
+                self.updateCornerAnnotationToWorldCoords(event = "MouseWheelForwardEvent")
 
 
     def setImageData(self, image_data):
