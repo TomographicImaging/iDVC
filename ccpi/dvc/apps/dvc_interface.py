@@ -1062,15 +1062,17 @@ and then input to the DVC code.")
         v = self.vis_widget_reg.frame.viewer
         spacing = v.img3D.GetSpacing()
         origin = v.img3D.GetOrigin()
-        p0 = [round(p0[i]) for i in range(3)]
+        print("Point0 WORLD: ", p0)
+        self.point0_world_coords = copy.deepcopy(p0)
+        #p0 = [round(p0[i]) for i in range(3)]
         point0actor = 'Point0' in v.actors
         rp = self.registration_parameters
         vox = p0
         print ("vox ", vox, 'p0', p0)
 
         rp = self.registration_parameters
-        rp['point_zero_entry'].setText(str(p0))
-        self.point0_world_coords = p0
+        rp['point_zero_entry'].setText(str([round(p0[i]) for i in range(3)]))
+        
 
         if not point0actor:
             point0 = vtk.vtkCursor3D()
@@ -1225,16 +1227,15 @@ and then input to the DVC code.")
     def getPoint0WorldCoords(self):
         v = self.vis_widget_reg.frame.viewer
         rp = self.registration_parameters
-        p0 = eval(rp['point_zero_entry'].text())
-        self.point_0_world_coords = p0
+        p0 = copy.deepcopy(self.point0_world_coords)
+        
         
         #print("p0 world coords", p0)
 
         if rp['start_registration_button'].isChecked():
             if self.image_info['sampled']: # this means reg image will have been cropped
                 reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-                p0[2] = round(reg_box_size*1.5)
-        
+                p0[2] = round(reg_box_size*1.5)        
 
         return p0
 
@@ -1373,7 +1374,7 @@ and then input to the DVC code.")
             rp['goto_point_zero'].setChecked(False)
             rp['point_zero_entry'].setText("")
 
-            if hasattr(self, 'point0_loc'):
+            if hasattr(self, 'point0_world_coords'):
                 del self.point0_world_coords
         if hasattr(self, 'vis_widget_reg'):
             print("Still exists")
@@ -2352,7 +2353,7 @@ and then input to the DVC code.")
                 self.warningDialog(window_title="Error", 
                                message="Load a mask on the viewer first" )
                 return
-        elif not hasattr(self, 'point0_loc'):
+        elif not hasattr(self, 'point0_world_coords'):
             self.warningDialog(window_title="Error", 
                                message="Select a point 0 in image registration first." )
             return
@@ -4020,7 +4021,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         else:
             self.config['reg_translation'] = None
-        if hasattr(self, 'point0_loc'):
+        if hasattr(self, 'point0_world_coords'):
             self.config['point0'] = eval(self.registration_parameters['point_zero_entry'].text())
         else:
             self.config['point0'] = None
@@ -4604,7 +4605,7 @@ Please move the file back to this location and reload the session, select a diff
             #else:
                 #self.config['reg_translation'] = None
 
-            # if hasattr(self, 'point0_loc'):
+            # if hasattr(self, 'point0_world_coords'):
             #     self.config['point0'] = self.point0_world_coords
             # else:
             #     self.config['point0'] = None
