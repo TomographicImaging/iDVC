@@ -219,7 +219,7 @@ class MainWindow(QMainWindow):
         self.vis_widget_3D = VisualisationWidget(self, viewer=viewer3D, interactorStyle=vlink.Linked3DInteractorStyle) #interactorStyle= CILInteractorStyle3D)#previously unlinked for testing
 
  
-
+        self.CreateViewerSettingsPanel()
         self.CreateHelpPanel()
 
         self.CreateSelectImagePanel()
@@ -264,6 +264,65 @@ class MainWindow(QMainWindow):
 
         self.VisualisationWindow.addDockWidget(QtCore.Qt.TopDockWidgetArea,dock4)
         self.VisualisationWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,dock5)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,self.viewer_settings_dock)
+
+    def CreateViewerSettingsPanel(self):
+        self.viewer_settings_panel = generateUIDockParameters(self, "Viewer Settings")
+        dockWidget = self.viewer_settings_panel[0]
+        dockWidget.setObjectName("ViewerSettingsPanel")
+        groupBox = self.viewer_settings_panel[5]
+        formLayout = self.viewer_settings_panel[6]
+        self.viewer_settings_dock = dockWidget
+
+        vs_widgets = {}
+
+
+        widgetno = 0
+
+        vs_widgets['sample_level_label'] = QLabel(groupBox)
+        vs_widgets['sample_level_label'].setText("Sample Level:")
+        #vs_widgets['sample_level_label'].setVisible(False)
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['sample_level_label'])
+
+        vs_widgets['sample_level_value'] = QLabel(groupBox)
+        vs_widgets['sample_level_value'].setText("None")
+        #vs_widgets['sample_level_value'].setVisible(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['sample_level_value'])
+
+        widgetno += 1
+
+        vs_widgets['coords_label'] = QLabel(groupBox)
+        vs_widgets['coords_label'].setText("Show: ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['coords_label'])
+
+        vs_widgets['coords_combobox'] = QComboBox(groupBox)
+        vs_widgets['coords_combobox'].addItems(["Original Coordinates", "Sampled Coordinates"])
+        vs_widgets['coords_combobox'].setEnabled(False)
+        vs_widgets['coords_combobox'].currentIndexChanged.connect(self.update2DCornerAnnotation)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_combobox'])
+        self.visualisation_setting_widgets = vs_widgets
+        
+
+    def update2DCornerAnnotation(self):
+        viewers_2D = [self.vis_widget_2D.frame.viewer]
+        if hasattr(self, 'vis_widget_reg'):
+            viewers_2D.append(self.vis_widget_reg.frame.viewer)
+
+        for viewer in viewers_2D:
+            if hasattr(viewer, 'img3D'):
+                if self.visualisation_setting_widgets['coords_combobox'].currentIndex() == 0:
+                    shown_resample_rate = self.resample_rate
+                else:
+                    shown_resample_rate =[1,1,1]
+
+                if hasattr(self, 'point0_world_coords'):
+                    self.SetPoint0Text()
+                
+
+                viewer.setImageResampleRate(shown_resample_rate)
+                viewer.updatePipeline()
+
+
 
     def CreateHelpPanel(self):
         self.help_panel = generateUIDockParameters(self, "Help")
@@ -500,8 +559,23 @@ and then input to the DVC code.")
         else:
             self.vol_hdr_lngth = 0
 
+        self.resample_rate = [1,1,1]
+
         if 'shape' in self.image_info:
-            self.unsampled_image_dimensions = self.image_info['shape']
+            self.unsampled_image_dimensions = self.image_info['shape'] #ZYX
+
+            flip = True
+            if flip:
+                new_unsampled_image_dimensions = [self.unsampled_image_dimensions[2], self.unsampled_image_dimensions[1], self.unsampled_image_dimensions[0]]
+                self.unsampled_image_dimensions = new_unsampled_image_dimensions
+
+            print("Unsampled dims: ", self.unsampled_image_dimensions)
+            print("current dims: ", self.ref_image_data.GetDimensions() ) #XYZ
+            
+            for i, value in enumerate(self.resample_rate):
+                self.resample_rate[i] = self.unsampled_image_dimensions[i]/(self.ref_image_data.GetDimensions()[i]-1)
+
+
         else:
             self.unsampled_image_dimensions = self.ref_image_data.GetDimensions()
 
@@ -534,12 +608,18 @@ and then input to the DVC code.")
         # print(self.ref_image_data == self.ref_image_data3D)
         # print("Are they the same?")
 
+
+
         #print("2D")
         print(self.ref_image_data.GetExtent())
         self.vis_widget_2D.setImageData(self.ref_image_data)
         
         print("Set 2D image data") 
         self.vis_widget_2D.displayImageData()
+
+
+
+
         #print("3D")
         #print(50)
         self.progress_window.setValue(50)
@@ -1064,6 +1144,7 @@ and then input to the DVC code.")
         origin = v.img3D.GetOrigin()
         print("Point0 WORLD: ", p0)
         self.point0_world_coords = copy.deepcopy(p0)
+        self.point0_sampled_image_coords = copy.deepcopy(self.getPoint0ImageCoords())
         #p0 = [round(p0[i]) for i in range(3)]
         point0actor = 'Point0' in v.actors
         rp = self.registration_parameters
@@ -1071,8 +1152,8 @@ and then input to the DVC code.")
         print ("vox ", vox, 'p0', p0)
 
         rp = self.registration_parameters
-        rp['point_zero_entry'].setText(str([round(p0[i]) for i in range(3)]))
-        
+        self.SetPoint0Text()
+
 
         if not point0actor:
             point0 = vtk.vtkCursor3D()
@@ -1112,6 +1193,15 @@ and then input to the DVC code.")
 
         
         self.centerOnPointZero()
+
+    def SetPoint0Text(self):
+        if self.visualisation_setting_widgets['coords_combobox'].currentIndex() == 0:
+            self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_world_coords[i]) for i in range(3)]))
+        else:
+            self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
+
+        
+
 
     def centerOnPointZero(self):
         print("Center on point0")
@@ -1261,6 +1351,7 @@ and then input to the DVC code.")
 
     def OnStartStopRegistrationPushed(self):
         if hasattr(self, 'vis_widget_reg'):
+            self.UpdateViewerSettingsPanelForRegistration()
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
@@ -1289,6 +1380,29 @@ and then input to the DVC code.")
                 v.style.UpdatePipeline()
                 if rp['point_zero_entry'].text() != "":
                     self.createPoint0(self.getPoint0WorldCoords())
+
+    def UpdateViewerSettingsPanelForRegistration(self):
+        print("UpdateViewerSettings")
+        vs_widgets = self.visualisation_setting_widgets
+        rp = self.registration_parameters
+        if rp['start_registration_button'].isChecked():
+            self.current_coord_choice = copy.deepcopy(vs_widgets['coords_combobox'].currentIndex())
+            vs_widgets['coords_combobox'].setCurrentIndex(0)
+            vs_widgets['coords_combobox'].setEnabled(False)
+            vs_widgets['sample_level_value'].setText(str([1,1,1]))
+            self.vis_widget_reg.frame.viewer.setImageResampleRate((1,1,1))
+            self.SetPoint0Text()
+        else:
+            if hasattr(self, 'current_coord_choice'):
+                vs_widgets['coords_combobox'].setCurrentIndex(self.current_coord_choice)
+                vs_widgets['sample_level_value'].setText(str([round(self.resample_rate[i], 2) for i in range(3)]))
+                self.vis_widget_reg.frame.viewer.setImageResampleRate(self.resample_rate)
+                if self.resample_rate != [1,1,1]:
+                    vs_widgets['coords_combobox'].setEnabled(True)
+                self.SetPoint0Text()
+        
+
+    
 
     def LoadImagesAndCompleteRegistration(self):
         rp = self.registration_parameters
@@ -4916,40 +5030,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.frame = QCILViewerWidget(viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle)
         self.setCentralWidget(self.frame)
         self.image_file = [""]
-
-
-    def updateCornerAnnotationToWorldCoords(self, interactor =None, event = None):
-        print("Event", event)
-        #Pick event:
-        if hasattr(self.getViewer(), 'img3D'):
-            if event == "LeftButtonReleaseEvent" or event == "LeftButtonPressEvent":
-                alt = self.getInteractor().GetAltKey()
-                shift = self.getInteractor().GetShiftKey()
-                ctrl = self.getInteractor().GetControlKey()
-
-                if not (ctrl and alt and shift):
-                    position = self.getInteractor().GetEventPosition()
-                    vox = self.getInteractorStyle().display2imageCoordinate(position)
-                    vox_world_coords = self.getInteractorStyle().image2world(vox)
-                    vox_world_coords = [round(i) for i in vox_world_coords]
-                    vox_world_coords.append(0) #needs list of 4 values but 4th value isn't used.
-                    vox_world_coords = tuple(vox_world_coords)
-                    print("Vox world coords", vox_world_coords)
-                    # print ("Pixel %d,%d,%d Value %f" % vox )
-                    self.getInteractorStyle().UpdateCornerAnnotation("[%d,%d,%d] : %.2g" % vox_world_coords , 0)
-                    #self.getInteractorStyle().Render()
-
-            elif event is not None:
-                print("About to update corner annotation")
-                slice_coords = [0,0,0]
-                slice_coords[self.getViewer().sliceOrientation] = self.getViewer().sliceno
-                slice_no = self.getInteractorStyle().image2world(slice_coords)[self.getViewer().sliceOrientation]
-                max_slice = self.getInteractorStyle().image2world(self.getViewer().img3D.GetDimensions())[self.getViewer().sliceOrientation]-1
-                print("Slice %d/%d" % (slice_no, max_slice))
-                self.getViewer().updateCornerAnnotation("Slice %d/%d" % (slice_no, max_slice))
-
-
-        
+       
 
 
     def displayImageData(self):
@@ -4959,6 +5040,20 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 if self.parent.settings.value("volume_mapper") == "cpu":
                     self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
                     self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
+            else:
+                self.frame.viewer.setImageResampleRate(self.parent.resample_rate)
+
+                if self.parent.resample_rate != [1,1,1]:
+                    self.parent.visualisation_setting_widgets['sample_level_value'].setText(str([round(self.parent.resample_rate[i], 2) for i in range(3)]))
+                    self.parent.visualisation_setting_widgets['coords_combobox'].setEnabled(True)
+                    self.parent.visualisation_setting_widgets['coords_combobox'].setCurrentIndex(0)
+
+                else:
+                    self.parent.visualisation_setting_widgets['sample_level_value'].setText("None")
+
+                    self.parent.visualisation_setting_widgets['coords_combobox'].setEnabled(False)
+                    self.parent.visualisation_setting_widgets['coords_combobox'].setCurrentIndex(0)
+
             self.frame.viewer.setInput3DData(self.image_data)  
             interactor = self.frame.viewer.getInteractor()
 
@@ -5014,21 +5109,6 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
             if self.viewer == viewer2D:
                 self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
-
-                #0.2 priority means happens after all other events:
-                self.getInteractorStyle().AddObserver("MouseWheelForwardEvent",
-                                                    self.updateCornerAnnotationToWorldCoords, 0.2)
-                self.getInteractorStyle().AddObserver("MouseWheelBackwardEvent",
-                                                    self.updateCornerAnnotationToWorldCoords, 0.2)
-
-                self.getInteractorStyle().AddObserver("KeyPressEvent",
-                                                    self.updateCornerAnnotationToWorldCoords, 0.2)
-
-                self.getInteractorStyle().AddObserver('LeftButtonReleaseEvent',self.updateCornerAnnotationToWorldCoords,0.2)
-
-                self.getInteractorStyle().AddObserver('LeftButtonPressEvent',self.updateCornerAnnotationToWorldCoords,0.2)
-
-                self.updateCornerAnnotationToWorldCoords(event = "MouseWheelForwardEvent")
 
 
     def setImageData(self, image_data):
