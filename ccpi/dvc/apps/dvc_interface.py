@@ -279,8 +279,27 @@ class MainWindow(QMainWindow):
 
         widgetno = 0
 
+        vs_widgets['coords_info_label'] = QLabel(groupBox)
+        vs_widgets['coords_info_label'].setText("The image has been downsampled for visualisation purposes. ")
+        vs_widgets['coords_info_label'].setVisible(False)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, vs_widgets['coords_info_label'])
+
+        widgetno+=1
+
+        vs_widgets['og_image_dims_label'] = QLabel(groupBox)
+        vs_widgets['og_image_dims_label'].setText("Original image size:")
+        vs_widgets['og_image_dims_label'].setVisible(False)
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['og_image_dims_label'])
+
+        vs_widgets['og_image_dims_value'] = QLabel(groupBox)
+        vs_widgets['og_image_dims_value'].setText("")
+        vs_widgets['og_image_dims_value'].setVisible(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['og_image_dims_value'])
+
+        widgetno+=1
+
         vs_widgets['sample_level_label'] = QLabel(groupBox)
-        vs_widgets['sample_level_label'].setText("Sample Level:")
+        vs_widgets['sample_level_label'].setText("Level of downsampling:")
         #vs_widgets['sample_level_label'].setVisible(False)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['sample_level_label'])
 
@@ -296,31 +315,51 @@ class MainWindow(QMainWindow):
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['coords_label'])
 
         vs_widgets['coords_combobox'] = QComboBox(groupBox)
-        vs_widgets['coords_combobox'].addItems(["Original Coordinates", "Sampled Coordinates"])
+        vs_widgets['coords_combobox'].addItems(["Original Coordinates", "Downsampled Coordinates"])
         vs_widgets['coords_combobox'].setEnabled(False)
-        vs_widgets['coords_combobox'].currentIndexChanged.connect(self.update2DCornerAnnotation)
+        vs_widgets['coords_combobox'].currentIndexChanged.connect(self.updateCoordinates)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_combobox'])
+
+        widgetno +=1
+
+        vs_widgets['coords_warning_label'] = QLabel(groupBox)
+        vs_widgets['coords_warning_label'].setText("Warning: These coordinates are approximate.")
+        vs_widgets['coords_warning_label'].setVisible(False)
+
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_warning_label'])
+
         self.visualisation_setting_widgets = vs_widgets
         
 
-    def update2DCornerAnnotation(self):
+    def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
+        vs_widgets = self.visualisation_setting_widgets
         if hasattr(self, 'vis_widget_reg'):
             viewers_2D.append(self.vis_widget_reg.frame.viewer)
 
         for viewer in viewers_2D:
             if hasattr(viewer, 'img3D'):
-                if self.visualisation_setting_widgets['coords_combobox'].currentIndex() == 0:
-                    shown_resample_rate = self.resample_rate
-                else:
-                    shown_resample_rate =[1,1,1]
+                if viewer.img3D is not None:
+                    vs_widgets['og_image_dims_label'].setVisible(True)
+                    vs_widgets['og_image_dims_value'].setVisible(True)
 
-                if hasattr(self, 'point0_world_coords'):
-                    self.SetPoint0Text()
-                
+                    if vs_widgets['coords_combobox'].currentIndex() == 0:
+                        shown_resample_rate = self.resample_rate
+                        if shown_resample_rate != [1,1,1]:
+                            vs_widgets['coords_warning_label'].setVisible(True)
+                        else:
+                            vs_widgets['coords_warning_label'].setVisible(False)
 
-                viewer.setImageResampleRate(shown_resample_rate)
-                viewer.updatePipeline()
+                    else:
+                        shown_resample_rate =[1,1,1]
+                        vs_widgets['coords_warning_label'].setVisible(False)
+
+                    if hasattr(self, 'point0_world_coords'):
+                        self.SetPoint0Text()
+                    
+
+                    viewer.setVisualisationDownsampling(shown_resample_rate)
+                    viewer.updatePipeline()
 
 
 
@@ -575,9 +614,12 @@ and then input to the DVC code.")
             for i, value in enumerate(self.resample_rate):
                 self.resample_rate[i] = self.unsampled_image_dimensions[i]/(self.ref_image_data.GetDimensions()[i]-1)
 
+            self.visualisation_setting_widgets['coords_warning_label'].setVisible(True)
+
 
         else:
             self.unsampled_image_dimensions = self.ref_image_data.GetDimensions()
+            self.visualisation_setting_widgets['coords_warning_label'].setVisible(False)
 
         if 'numpy_file' in self.image_info:
             image_file = [self.image_info['numpy_file']]
@@ -1195,10 +1237,11 @@ and then input to the DVC code.")
         self.centerOnPointZero()
 
     def SetPoint0Text(self):
-        if self.visualisation_setting_widgets['coords_combobox'].currentIndex() == 0:
-            self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_world_coords[i]) for i in range(3)]))
-        else:
-            self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
+        if hasattr(self, 'point0_world_coords'):
+            if self.visualisation_setting_widgets['coords_combobox'].currentIndex() == 0:
+                self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_world_coords[i]) for i in range(3)]))
+            else:
+                self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
         
 
@@ -1353,6 +1396,7 @@ and then input to the DVC code.")
         if hasattr(self, 'vis_widget_reg'):
             self.UpdateViewerSettingsPanelForRegistration()
             rp = self.registration_parameters
+            vs_widgets = self.visualisation_setting_widgets
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
                 print ("Start Registration Checked")
@@ -1370,6 +1414,7 @@ and then input to the DVC code.")
                     self.translate = translate
 
                 self.LoadImagesAndCompleteRegistration()
+                
             
             else:
                 print ("Start Registration Unchecked")
@@ -1381,6 +1426,8 @@ and then input to the DVC code.")
                 if rp['point_zero_entry'].text() != "":
                     self.createPoint0(self.getPoint0WorldCoords())
 
+                
+
     def UpdateViewerSettingsPanelForRegistration(self):
         print("UpdateViewerSettings")
         vs_widgets = self.visualisation_setting_widgets
@@ -1389,17 +1436,28 @@ and then input to the DVC code.")
             self.current_coord_choice = copy.deepcopy(vs_widgets['coords_combobox'].currentIndex())
             vs_widgets['coords_combobox'].setCurrentIndex(0)
             vs_widgets['coords_combobox'].setEnabled(False)
-            vs_widgets['sample_level_value'].setText(str([1,1,1]))
-            self.vis_widget_reg.frame.viewer.setImageResampleRate((1,1,1))
+            vs_widgets['coords_warning_label'].setVisible(False)
+            vs_widgets['sample_level_value'].setText("None")
+            self.vis_widget_reg.frame.viewer.setVisualisationDownsampling((1,1,1))
+            vs_widgets['coords_info_label'].setVisible(False)
+            vs_widgets['og_image_dims_label'].setText("Image Size: ")
+            
             self.SetPoint0Text()
         else:
             if hasattr(self, 'current_coord_choice'):
                 vs_widgets['coords_combobox'].setCurrentIndex(self.current_coord_choice)
-                vs_widgets['sample_level_value'].setText(str([round(self.resample_rate[i], 2) for i in range(3)]))
-                self.vis_widget_reg.frame.viewer.setImageResampleRate(self.resample_rate)
+                
+                self.vis_widget_reg.frame.viewer.setVisualisationDownsampling(self.resample_rate)
                 if self.resample_rate != [1,1,1]:
                     vs_widgets['coords_combobox'].setEnabled(True)
+                    vs_widgets['sample_level_value'].setText(str([round(self.resample_rate[i], 2) for i in range(3)]))
+                else:
+                    vs_widgets['sample_level_value'].setText("None")
+                    
                 self.SetPoint0Text()
+                self.updateCoordinates()
+                vs_widgets['coords_info_label'].setVisible(True)
+                vs_widgets['og_image_dims_label'].setText("Original Image Size: ")
         
 
     
@@ -1427,11 +1485,13 @@ and then input to the DVC code.")
         self.target_cropped_image_z_extent = target_z_extent
 
         origin = [0,0,0] #TODO: set appropriately based on input image
+
+        self.target_cropped_image_origin = origin
                 
 
         if self.image_info['sampled']:
             #origin[2] = round(z_range*1.5)
-            self.target_cropped_image_origin = origin
+            
             
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                     print("About to create image")
@@ -5041,18 +5101,29 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                     self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
                     self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
             else:
-                self.frame.viewer.setImageResampleRate(self.parent.resample_rate)
+                self.frame.viewer.setVisualisationDownsampling(self.parent.resample_rate)
+
+                vs_widgets = self.parent.visualisation_setting_widgets
+
+                vs_widgets['og_image_dims_label'].setVisible(True)
+                vs_widgets['og_image_dims_value'].setVisible(True)
+                vs_widgets['og_image_dims_value'].setText(str(self.parent.unsampled_image_dimensions))
 
                 if self.parent.resample_rate != [1,1,1]:
-                    self.parent.visualisation_setting_widgets['sample_level_value'].setText(str([round(self.parent.resample_rate[i], 2) for i in range(3)]))
-                    self.parent.visualisation_setting_widgets['coords_combobox'].setEnabled(True)
-                    self.parent.visualisation_setting_widgets['coords_combobox'].setCurrentIndex(0)
+                    vs_widgets['sample_level_value'].setText(str([round(self.parent.resample_rate[i], 2) for i in range(3)]))
+                    vs_widgets['coords_combobox'].setEnabled(True)
+                    vs_widgets['coords_combobox'].setCurrentIndex(0)
+                    vs_widgets['coords_warning_label'].setVisible(True)
+                    vs_widgets['coords_info_label'].setVisible(True)
+                    vs_widgets['og_image_dims_label'].setText("Original Image Size: ")
+                    
 
                 else:
-                    self.parent.visualisation_setting_widgets['sample_level_value'].setText("None")
+                    vs_widgets['sample_level_value'].setText("None")
 
-                    self.parent.visualisation_setting_widgets['coords_combobox'].setEnabled(False)
-                    self.parent.visualisation_setting_widgets['coords_combobox'].setCurrentIndex(0)
+                    vs_widgets['coords_combobox'].setEnabled(False)
+                    vs_widgets['coords_combobox'].setCurrentIndex(0)
+                    vs_widgets['og_image_dims_label'].setText("Image Size: ")
 
             self.frame.viewer.setInput3DData(self.image_data)  
             interactor = self.frame.viewer.getInteractor()
