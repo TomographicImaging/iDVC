@@ -613,15 +613,10 @@ and then input to the DVC code.")
         self.resample_rate = [1,1,1]
 
         if 'shape' in self.image_info:
-            self.unsampled_image_dimensions = self.image_info['shape'] #ZYX
-
-            flip = True
-            if flip:
-                new_unsampled_image_dimensions = [self.unsampled_image_dimensions[2], self.unsampled_image_dimensions[1], self.unsampled_image_dimensions[0]]
-                self.unsampled_image_dimensions = new_unsampled_image_dimensions
+            self.unsampled_image_dimensions = self.image_info['shape'] 
 
             print("Unsampled dims: ", self.unsampled_image_dimensions)
-            print("current dims: ", self.ref_image_data.GetDimensions() ) #XYZ
+            print("current dims: ", self.ref_image_data.GetDimensions())
             
             for i, value in enumerate(self.resample_rate):
                 self.resample_rate[i] = self.unsampled_image_dimensions[i]/(self.ref_image_data.GetDimensions()[i])
@@ -630,7 +625,7 @@ and then input to the DVC code.")
 
 
         else:
-            self.unsampled_image_dimensions = self.ref_image_data.GetDimensions()
+            self.unsampled_image_dimensions = list(self.ref_image_data.GetDimensions())
             self.visualisation_setting_widgets['coords_warning_label'].setVisible(False)
 
         if 'numpy_file' in self.image_info:
@@ -1179,6 +1174,7 @@ and then input to the DVC code.")
             
             if shift and rp['select_point_zero'].isChecked():
                 position = interactor.GetEventPosition()
+                print(position)
                 p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
                 print("p0l, ", p0l)               
                 self.createPoint0(p0l)
@@ -1365,23 +1361,13 @@ and then input to the DVC code.")
         extent = [ round(el) if el > 0 else 0 for i,el in enumerate(extent) ] #TODO: add correction for upper bound as well
 
         self.registration_box_extent = extent
+        print("Full reg box extent: ", extent)
 
         return extent
 
 
     def getPoint0WorldCoords(self):
-        v = self.vis_widget_reg.frame.viewer
-        rp = self.registration_parameters
-        p0 = copy.deepcopy(self.point0_world_coords)
-        
-        
-        #print("p0 world coords", p0)
-
-        if rp['start_registration_button'].isChecked():
-            if self.image_info['sampled']: # this means reg image will have been cropped
-                reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-                p0[2] = round(reg_box_size*1.5)        
-
+        p0 = self.point0_world_coords
         return p0
 
 
@@ -1399,7 +1385,7 @@ and then input to the DVC code.")
 
         p0 = [round(i) for i in p0]
 
-        print("Reg orig image coords", p0)
+        print("Point0 orig image coords", p0)
 
         return p0
 
@@ -1495,7 +1481,7 @@ and then input to the DVC code.")
         point0 = self.getPoint0WorldCoords()
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
 
-        target_z_extent = [reg_box_extent[4] - reg_box_size, reg_box_extent[5] + reg_box_size]
+        target_z_extent = [reg_box_extent[4], reg_box_extent[5]]
         if target_z_extent[0] <0:
             target_z_extent[0] = 0
         target_z_extent = tuple(target_z_extent)
@@ -1511,8 +1497,6 @@ and then input to the DVC code.")
                 
 
         if self.image_info['sampled']:
-            #origin[2] = round(z_range*1.5)
-            
             
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                     print("About to create image")
@@ -1522,7 +1506,7 @@ and then input to the DVC code.")
                     return
 
             if previous_reg_box_extent != reg_box_extent:
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
             else:
                 self.completeRegistration()
             
@@ -5134,7 +5118,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 if self.parent.resample_rate != [1,1,1]:
                     vs_widgets['displayed_image_dims_value'].setVisible(True)
                     vs_widgets['displayed_image_dims_label'].setVisible(True)
-                    vs_widgets['displayed_image_dims_value'].setText(str([round(self.parent.ref_image_data.GetDimensions()[i], 2) for i in range(3)]))
+                    vs_widgets['displayed_image_dims_value'].setText(str([round(self.parent.ref_image_data.GetDimensions()[i]) for i in range(3)]))
                     vs_widgets['coords_combobox'].setEnabled(True)
                     vs_widgets['coords_combobox'].setCurrentIndex(0)
                     vs_widgets['coords_warning_label'].setVisible(True)

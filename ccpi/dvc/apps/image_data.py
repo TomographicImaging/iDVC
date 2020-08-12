@@ -190,7 +190,7 @@ def loadMetaImage(main_window, image, output_image,  image_info = None, resample
         if resample or crop_image:
             loaded_shape = reader.GetStoredArrayShape()
 
-            if reader.GetIsFortran():
+            if not reader.GetIsFortran():
                 loaded_shape = loaded_shape[::-1]
         else:
             loaded_shape = output_image.GetDimensions()
@@ -254,7 +254,7 @@ def loadNpyImage(image_file, output_image, image_info = None, resample = False, 
             header_length = reader.GetFileHeaderLength() 
             vol_bit_depth = reader.GetBytesPerElement()*8
             shape = reader.GetStoredArrayShape()
-            if reader.GetIsFortran():
+            if not reader.GetIsFortran():
                 shape = shape[::-1]
             if image_info is not None:
                 image_info['isBigEndian'] = reader.GetBigEndian()
@@ -283,7 +283,7 @@ def loadNpyImage(image_file, output_image, image_info = None, resample = False, 
             header_length = reader.GetFileHeaderLength() 
             vol_bit_depth = reader.GetBytesPerElement()*8
             shape = reader.GetStoredArrayShape()
-            if reader.GetIsFortran():
+            if not reader.GetIsFortran():
                 shape = shape[::-1]
             if image_info is not None:
                 image_info['isBigEndian'] = reader.GetBigEndian()
@@ -352,7 +352,7 @@ def loadTif(filenames, reader, output_image,   convert_numpy = False,  image_inf
             #header_length = reader.GetFileHeaderLength() 
             #vol_bit_depth = reader.GetBytesPerElement()*8
             #shape = reader.GetStoredArrayShape()
-            # if reader.GetIsFortran():
+            # if not reader.GetIsFortran():
             #     shape = shape[::-1]
 
             # image_info['isBigEndian'] = reader.GetBigEndian()
