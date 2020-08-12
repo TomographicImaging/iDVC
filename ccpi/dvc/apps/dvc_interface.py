@@ -1506,6 +1506,8 @@ and then input to the DVC code.")
         origin = [0,0,0] #TODO: set appropriately based on input image
 
         self.target_cropped_image_origin = origin
+
+        self.unsampled_image_info = copy.deepcopy(self.image_info)
                 
 
         if self.image_info['sampled']:
@@ -1515,7 +1517,7 @@ and then input to the DVC code.")
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                     print("About to create image")
                     self.unsampled_ref_image_data = vtk.vtkImageData()
-                    ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                    ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
                     #TODO: move to doing both image data creators simultaneously - would this work?
                     return
 
@@ -1537,7 +1539,7 @@ and then input to the DVC code.")
         z_extent = self.target_cropped_image_z_extent
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, resample= resample_corr_image, crop_image = crop_corr_image, origin = origin , target_z_extent = z_extent, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var = self.unsampled_image_info, resample= resample_corr_image, crop_image = crop_corr_image, origin = origin , target_z_extent = z_extent, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
         #if self.image_info['sampled']:

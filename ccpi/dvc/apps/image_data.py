@@ -20,7 +20,7 @@ from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 
 from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
 
-from ccpi.viewer.utils.conversion import cilNumpyResampleReader, cilBaseResampleReader, cilNumpyCroppedReader
+from ccpi.viewer.utils.conversion import cilNumpyResampleReader, cilBaseResampleReader, cilNumpyCroppedReader, cilMetaImageResampleReader, cilMetaImageCroppedReader, cilBaseCroppedReader
 
 import imghdr
 
@@ -66,29 +66,25 @@ If the image is a raw file, this dictionary may be used to provide details of th
                     return
 
         if file_extension in ['.mha', '.mhd']:
-            reader = vtk.vtkMetaImageReader()
-            reader.AddObserver("ErrorEvent", main_window.e)
-            create_progress_window(main_window,"Converting", "Converting Image")
-            image_worker = Worker(update_reader,reader, image, output_image, convert_numpy, info_var, tempfolder)
+            createProgressWindow(main_window,"Converting", "Converting Image")
+            image_worker = Worker(loadMetaImage, main_window, image, output_image,  info_var,  resample, crop_image, origin, target_z_extent, convert_numpy, tempfolder)
 
         elif file_extension in ['.npy']:
-            print("file ext in npy")
-            print("yay")
-            create_progress_window(main_window,"Converting", "Converting Image")
-            image_worker = Worker(load_npy_image,image, output_image, info_var, resample, crop_image, origin, target_z_extent)     
+            createProgressWindow(main_window,"Converting", "Converting Image")
+            image_worker = Worker(loadNpyImage,image, output_image, info_var, resample, crop_image, origin, target_z_extent)     
 
         elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
             reader = vtk.vtkTIFFReader()
             reader.AddObserver("ErrorEvent", main_window.e)
-            create_progress_window(main_window,"Converting", "Converting Image")
-            image_worker = Worker(load_tif,image_files,reader, output_image, convert_numpy, info_var)
+            createProgressWindow(main_window,"Converting", "Converting Image")
+            image_worker = Worker(loadTif,image_files,reader, output_image, convert_numpy, info_var)
 
         elif file_extension in ['.raw']:
             if 'file_type' in info_var and info_var['file_type'] == 'raw':
-                createConvertRawImageWorker(main_window,image, output_image, info_var, resample, finish_fn)
+                createConvertRawImageWorker(main_window,image, output_image, info_var, resample, crop_image, origin, target_z_extent, finish_fn)
                 return
             else: #if we aren't given the image dimensions etc, the user needs to enter them
-                main_window.raw_import_dialog = createRawImportDialog(main_window, image, output_image, info_var, resample, finish_fn)
+                main_window.raw_import_dialog = createRawImportDialog(main_window, image, output_image, info_var, resample, crop_image, origin, target_z_extent, finish_fn)
                 dialog = main_window.raw_import_dialog['dialog'].show()
                 return
 
@@ -111,7 +107,7 @@ If the image is a raw file, this dictionary may be used to provide details of th
 
    
 #For progress bars:
-def create_progress_window(main_window, title, text, max = 100, cancel = None):
+def createProgressWindow(main_window, title, text, max = 100, cancel = None):
         main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
         main_window.progress_window.setWindowTitle(title)
         main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
@@ -151,19 +147,59 @@ def warningDialog(main_window, message='', window_title='', detailed_text=''):
 
 #mha and mhd:
 
-def update_reader(reader, image, output_image, convert_numpy = False, image_info = None, tempfolder = None, progress_callback=None):
-        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+def loadMetaImage(main_window, image, output_image,  image_info = None, resample = False, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), convert_numpy = True, tempfolder = None, progress_callback=None):
+        if resample:
+            reader = cilMetaImageResampleReader()
+            reader.SetTargetSize(512*512*512) #TODO: change to set by user
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
+
+        elif crop_image:
+            reader = cilMetaImageCroppedReader()
+            reader.SetOrigin(tuple(origin))
+            reader.SetTargetZExtent(target_z_extent)
+            if image_info is not None:
+                image_info['sampled'] = False
+                image_info['cropped'] = True
+            
+        
+        else:
+            reader = vtk.vtkMetaImageReader()
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
+            if image_info is not None:
+                image_info['sampled'] = False
+        
+        
+        reader.AddObserver("ErrorEvent", main_window.e)
+        
         reader.SetFileName(image)
         reader.Update()
         
         output_image.ShallowCopy(reader.GetOutput())
-       
+    
         progress_callback.emit(90)
 
-        convert_numpy = True
+        if resample:
+            loaded_image_size = reader.GetStoredArrayShape()[0] * reader.GetStoredArrayShape()[1] * reader.GetStoredArrayShape()[2]
+            resampled_image_size = reader.GetTargetSize()
+            if image_info is not None:
+                if loaded_image_size <= resampled_image_size:
+                    image_info['sampled'] = False
+                else:
+                    image_info['sampled'] = True
 
-        image_info['sampled'] = False
-       
+        if resample or crop_image:
+            loaded_shape = reader.GetStoredArrayShape()
+
+            if reader.GetIsFortran():
+                loaded_shape = loaded_shape[::-1]
+        else:
+            loaded_shape = output_image.GetDimensions()
+
+        print("Loaded shape: ", loaded_shape)
+
+        if image_info is not None:
+            image_info['shape'] = loaded_shape
+
 
         if convert_numpy:
             print("Converting metaimage to numpy") #this is for using in the dvc code
@@ -206,12 +242,12 @@ def update_reader(reader, image, output_image, convert_numpy = False, image_info
         progress_callback.emit(100)
 
 
-def load_npy_image(image_file, output_image, image_info = None, resample = False, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), progress_callback=None):
+def loadNpyImage(image_file, output_image, image_info = None, resample = False, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), progress_callback=None):
         if resample:
             reader = cilNumpyResampleReader()
             reader.SetFileName(image_file)
-            reader.SetTargetShape((512,512,512)) #TODO: change to set target size
-            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            reader.SetTargetSize(512*512*512) #TODO: change to set by user
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
             reader.Update()
             output_image.ShallowCopy(reader.GetOutput())
             print ("Spacing ", output_image.GetSpacing())
@@ -224,7 +260,7 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
                 image_info['isBigEndian'] = reader.GetBigEndian()
                 
                 image_size = reader.GetStoredArrayShape()[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
-                target_size = reader.GetTargetShape()[0] * reader.GetTargetShape()[1] * reader.GetTargetShape()[2]
+                target_size = reader.GetTargetSize()
                 print("array shape", image_size)
                 print("target", target_size)
                 if image_size <= target_size:
@@ -302,14 +338,14 @@ def load_npy_image(image_file, output_image, image_info = None, resample = False
 
         
         
-def load_tif(filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
+def loadTif(filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
         #time.sleep(0.1) #required so that progress window displays
         #progress_callback.emit(10)
         resample = False
 
         if resample:
             reader = Converter.tiffStack2numpyEnforceBounds(filenames = filenames, bounds = (12,12,12)) 
-            #reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            #reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
             #reader.Update()
             #output_image.ShallowCopy(reader.GetOutput())
             #print ("Spacing ", output_image.GetSpacing())
@@ -331,7 +367,7 @@ def load_tif(filenames, reader, output_image,   convert_numpy = False,  image_in
                 i = sa.InsertNextValue(fname)
             print("read {} files".format(i))
 
-            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
             reader.SetFileNames(sa)
 
             dtype = vtk.VTK_UNSIGNED_CHAR
@@ -394,12 +430,12 @@ def load_tif(filenames, reader, output_image,   convert_numpy = False,  image_in
                 #TODO: save volume header length
             progress_callback.emit(100)
 
-def get_progress(caller, event, progress_callback):
+def getProgress(caller, event, progress_callback):
         progress_callback.emit(caller.GetProgress()*80)
 
 
 #raw:
-def createRawImportDialog(main_window, fname, output_image, info_var, resample, finish_fn):
+def createRawImportDialog(main_window, fname, output_image, info_var, resample, crop_image, origin, target_z_extent, finish_fn):
         dialog = QDialog(main_window)
         ui = generateUIFormView()
         groupBox = ui['groupBox']
@@ -496,7 +532,7 @@ def createRawImportDialog(main_window, fname, output_image, info_var, resample, 
 
         buttonbox = QDialogButtonBox(QDialogButtonBox.Ok |
                                     QDialogButtonBox.Cancel)
-        buttonbox.accepted.connect(lambda: createConvertRawImageWorker(main_window,fname, output_image, info_var, resample, finish_fn))
+        buttonbox.accepted.connect(lambda: createConvertRawImageWorker(main_window,fname, output_image, info_var, resample, crop_image, origin, target_z_extent, finish_fn))
         buttonbox.rejected.connect(dialog.close)
         formLayout.addWidget(buttonbox)
 
@@ -509,15 +545,15 @@ def createRawImportDialog(main_window, fname, output_image, info_var, resample, 
                 'dtype': dtypeValue, 'endiannes' : endiannes, 'isFortran' : fortranOrder,
                 'buttonBox': buttonbox}
 
-def createConvertRawImageWorker(main_window, fname, output_image, info_var, resample, finish_fn):
-        create_progress_window(main_window,"Converting", "Converting Image")
+def createConvertRawImageWorker(main_window, fname, output_image, info_var, resample, crop_image, origin, target_z_extent, finish_fn):
+        createProgressWindow(main_window,"Converting", "Converting Image")
         main_window.progress_window.setValue(10)
-        image_worker = Worker(saveRawImageData, main_window, fname, output_image,  info_var, resample)
+        image_worker = Worker(saveRawImageData, main_window, fname, output_image,  info_var, resample, crop_image, origin, target_z_extent)
         image_worker.signals.progress.connect(partial(progress, main_window.progress_window))
-        image_worker.signals.result.connect(partial(finish_raw_conversion,main_window,finish_fn))
+        image_worker.signals.result.connect(partial(finishRawConversion,main_window,finish_fn))
         main_window.threadpool.start(image_worker)
               
-def finish_raw_conversion(main_window,finish_fn, error = None):
+def finishRawConversion(main_window,finish_fn, error = None):
         main_window.raw_import_dialog['dialog'].close()
         main_window.progress_window.setValue(100)
         if error is not None:
@@ -575,7 +611,7 @@ def generateUIFormView():
                 'groupBox' : paramsGroupBox,
                 'groupBoxFormLayout': groupBoxFormLayout}
 
-def saveRawImageData(main_window,fname, output_image, info_var, resample, progress_callback):
+def saveRawImageData(main_window,fname, output_image, info_var, resample, crop_image, origin, target_z_extent, progress_callback):
         errors = {} 
         #print ("File Name", fname)
 
@@ -655,9 +691,9 @@ def saveRawImageData(main_window,fname, output_image, info_var, resample, progre
 
         if resample:
             reader = cilBaseResampleReader()
-            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
             reader.SetFileName(fname)
-            reader.SetTargetShape((512,512,512))
+            reader.SetTargetSize(512*512*512)
             reader.SetBytesPerElement(bytes_per_element)
             reader.SetBigEndian(isBigEndian)
             reader.SetIsFortran(isFortran)
@@ -666,21 +702,47 @@ def saveRawImageData(main_window,fname, output_image, info_var, resample, progre
             reader.SetOutputVTKType(Converter.numpy_dtype_char_to_vtkType[typecode])
             reader.SetStoredArrayShape(shape)
             #We have not set spacing or origin
-            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(get_progress, progress_callback= progress_callback))
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
             reader.Update()
             output_image.ShallowCopy(reader.GetOutput())
             #print ("Spacing ", output_image.GetSpacing())
             image_size = reader.GetStoredArrayShape()[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
-            target_size = reader.GetTargetShape()[0] * reader.GetTargetShape()[1] * reader.GetTargetShape()[2]
+            target_size = reader.GetTargetSize()
             print("array shape", image_size)
             print("target", target_size)
-            if image_size <= target_size:
-                image_info['sampled'] = False
-            else:
-                image_info['sampled'] = True
+            if info_var is not None:
+                if image_size <= target_size:
+                    info_var['sampled'] = False
+                else:
+                    info_var['sampled'] = True
+        elif crop_image:
+            reader = cilBaseCroppedReader()
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
+            reader.SetFileName(fname)
+            reader.SetTargetZExtent(target_z_extent)
+            reader.SetOrigin(tuple(origin))
+            reader.SetBytesPerElement(bytes_per_element)
+            reader.SetBigEndian(isBigEndian)
+            reader.SetIsFortran(isFortran)
+            typecode = numpy.dtype(main_window.raw_import_dialog['dtype'].currentText()).char
+            reader.SetNumpyTypeCode(typecode)
+            reader.SetOutputVTKType(Converter.numpy_dtype_char_to_vtkType[typecode])
+            reader.SetStoredArrayShape(shape)
+            #We have not set spacing or origin
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
+            reader.Update()
+            output_image.ShallowCopy(reader.GetOutput())
+            #print ("Spacing ", output_image.GetSpacing())
+            image_size = reader.GetStoredArrayShape()[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
+            # target_size = reader.GetTargetSize()
+            # print("array shape", image_size)
+            # print("target", target_size)
+            if info_var is not None:
+                info_var['cropped'] = True
 
         else:
-            image_info['sampled'] = False
+            if info_var is not None:
+                info_var['sampled'] = False
             header = generateMetaImageHeader(fname, typecode, shape, isFortran, isBigEndian, header_size=0, spacing=(1,1,1), origin=(0,0,0))
 
             #print (header)
