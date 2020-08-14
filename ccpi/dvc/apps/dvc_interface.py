@@ -151,17 +151,24 @@ class MainWindow(QMainWindow):
 
         self.e = ErrorObserver()
 
+        self.CreateWorkingTempFolder()
+
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface")
+        self.settings = QSettings("CCPi", "DVC Interface 3")
+
         if self.settings.value("copy_files"):
             self.copy_files = True
         else:
             self.copy_files = False
 
-        self.CreateWorkingTempFolder()
-        self.CreateSessionSelector("new window")
-        
+        if self.settings.value("first_app_load") != "False":
+            self.OpenSettings()
+            # self.settings.setValue("first_app_load", False)
 
+        else:
+            self.CreateSessionSelector("new window")
+
+        
 
 #Setting up the session:
     def CreateWorkingTempFolder(self):
@@ -596,7 +603,20 @@ and then input to the DVC code.")
     def view_image(self):
             self.ref_image_data = vtk.vtkImageData()
             self.image_info = dict()
-            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, tempfolder = os.path.abspath(tempfile.tempdir))
+            if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
+                if self.settings.value("vis_size"):
+                    if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
+                        target_size = self.settings.value("vis_size")
+                    else:
+                        target_size = (float(self.settings.value("gpu_size")))
+                else:
+                    target_size = (float(self.settings.value("gpu_size")))
+            else:
+                if self.settings.value("vis_size"):
+                    target_size = float(self.settings.value("vis_size"))
+                else:
+                    target_size = 0.125
+            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
             print("Created ref image")
 
 
@@ -4809,8 +4829,44 @@ class CreateSettingsWindow(QDialog):
 
         self.parent = parent
 
+        self.setWindowTitle("Settings")
+
         self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
-        self.gpu_checkbox = QCheckBox("Use GPU for volume render. ")
+        self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
+        self.vis_size_entry = QDoubleSpinBox()
+
+        self.vis_size_entry.setMaximum(64.0)
+        self.vis_size_entry.setMinimum(0.01)
+        self.vis_size_entry.setSingleStep(0.01)
+
+        if self.parent.settings.value("vis_size") is not None:
+            self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
+
+        else:
+            self.vis_size_entry.setValue(1.0)
+
+
+        separator = QFrame()
+        separator.setFrameShape(QFrame.HLine)
+        separator.setFrameShadow(QFrame.Raised)
+        self.adv_settings_label = QLabel("Advanced")
+
+
+        self.gpu_label = QLabel("Please set the size of your GPU memory.")
+        self.gpu_size_label = QLabel("GPU Memory (GB): ")
+        self.gpu_size_entry = QDoubleSpinBox()
+
+
+        if self.parent.settings.value("gpu_size") is not None:
+            self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
+
+        else:
+            self.gpu_size_entry.setValue(1.0)
+
+        self.gpu_size_entry.setMaximum(64.0)
+        self.gpu_size_entry.setMinimum(0.00)
+        self.gpu_size_entry.setSingleStep(0.01)
+        self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
         self.gpu_checkbox.setChecked(True) #gpu is default
         if self.parent.settings.value("volume_mapper") == "cpu":
             self.gpu_checkbox.setChecked(False)
@@ -4820,13 +4876,20 @@ class CreateSettingsWindow(QDialog):
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.copy_files_checkbox)
+        self.layout.addWidget(self.vis_size_label)
+        self.layout.addWidget(self.vis_size_entry)
+        self.layout.addWidget(separator)
+        self.layout.addWidget(self.adv_settings_label)
         self.layout.addWidget(self.gpu_checkbox)
+        self.layout.addWidget(self.gpu_label)
+        self.layout.addWidget(self.gpu_size_label)
+        self.layout.addWidget(self.gpu_size_entry)
         self.buttons = QDialogButtonBox(
            QDialogButtonBox.Save | QDialogButtonBox.Cancel,
            Qt.Horizontal, self)
         self.layout.addWidget(self.buttons)
         self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.reject)
+        self.buttons.rejected.connect(self.quit)
 
     def accept(self):
         #self.parent.settings.setValue("settings_chosen", 1)
@@ -4842,9 +4905,28 @@ class CreateSettingsWindow(QDialog):
             self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
         else:
             self.parent.settings.setValue("volume_mapper", "cpu")
+
+        self.parent.settings.setValue("gpu_size", float(self.gpu_size_entry.value()))
+        self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
+
+        if self.parent.settings.value("first_app_load") != "False":
+            print("Not false")
+            self.parent.CreateSessionSelector("new window")
+            self.parent.settings.setValue("first_app_load", "False")
             
         self.close()
+
+
         #print(self.parent.settings.value("copy_files"))
+    def quit(self):
+        print("QUIT")
+        print(self.parent.settings.value("first_app_load"))
+        if self.parent.settings.value("first_app_load") != "False":
+            print("Not false")
+            self.parent.CreateSessionSelector("new window")
+            self.parent.settings.setValue("first_app_load", "False")
+        self.close()
+        
 
 class CreateSessionSelectionWindow(QtWidgets.QDialog):
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
