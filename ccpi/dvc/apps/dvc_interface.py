@@ -95,6 +95,7 @@ class MainWindow(QMainWindow):
         self.temp_folder = None
 
         self.setWindowTitle("DVC Interface")
+        self.setWindowIcon(QtGui.QIcon("C:/Users/lhe97136/OneDrive - Science and Technology Facilities Council/Pictures/DVCLogo.png"))
         
         self.InitialiseSessionVars()
 
@@ -748,7 +749,7 @@ and then input to the DVC code.")
         if(self.reg_load):
             #Image Reg:
             
-                self.displayRegistrationViewer(registration_open = True)
+                self.createRegistrationViewer()
                 #first we need to set the z slice -> go to slice self.config['point0'][2]
                 v = self.vis_widget_2D.frame.viewer
                 self.createPoint0(self.config['point0'])
@@ -1107,6 +1108,46 @@ and then input to the DVC code.")
         # save to instance
         self.registration_parameters = rp
 
+    def createRegistrationViewer(self):
+        print("Create reg viewer")
+        #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
+        self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+        self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+
+        self.vis_widget_reg = VisualisationWidget(self, viewer2D)
+        
+
+        dock_reg = QDockWidget("Image Registration",self.VisualisationWindow)
+        dock_reg.setObjectName("2DRegView")
+        dock_reg.setWidget(self.vis_widget_reg)
+        self.VisualisationWindow.addDockWidget(Qt.TopDockWidgetArea,dock_reg)
+        #ref_image_copy = vtk.vtkImageData()
+        #ref_image_copy.DeepCopy(self.ref_image_data)
+        self.vis_widget_reg.setImageData(self.ref_image_data)
+        self.vis_widget_reg.displayImageData()
+        #self.tabifyDockWidget(self.viewer2D_dock,dock_reg) #breaks
+        self.viewer2D_dock.setVisible(False)
+        self.viewer3D_dock.setVisible(False)
+        self.dock_reg = dock_reg
+        windowHeight = self.size().height()
+
+        #Clear for next image visualisation:
+        self.orientation = None
+        self.current_slice = None
+
+        self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
+                                    self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
+        self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
+                                    self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
+        
+        self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
+                                    self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
+        self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
+                                    self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
+
+        self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.OnKeyPressEventForRegistration, 1.5) #Happens before viewer KeyPressEvent (higher priority)
+        self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.AfterKeyPressEventForRegistration, 0.5) #Happens after viewer KeyPressEvent (lower priority)
+
     def displayRegistrationViewer(self,registration_open):
         
         if hasattr(self, 'ref_image_data'):
@@ -1114,45 +1155,8 @@ and then input to the DVC code.")
             if registration_open:
                 self.help_label.setText(self.help_text[1])
                 if not hasattr(self, 'vis_widget_reg'):
-                    print("Create reg viewer")
-                    #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
-                    self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-                    self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
-
-                    self.vis_widget_reg = VisualisationWidget(self, viewer2D)
+                    self.createRegistrationViewer()
                     
-
-                    dock_reg = QDockWidget("Image Registration",self.VisualisationWindow)
-                    dock_reg.setObjectName("2DRegView")
-                    dock_reg.setWidget(self.vis_widget_reg)
-                    self.VisualisationWindow.addDockWidget(Qt.TopDockWidgetArea,dock_reg)
-                    #ref_image_copy = vtk.vtkImageData()
-                    #ref_image_copy.DeepCopy(self.ref_image_data)
-                    self.vis_widget_reg.setImageData(self.ref_image_data)
-                    self.vis_widget_reg.displayImageData()
-                    #self.tabifyDockWidget(self.viewer2D_dock,dock_reg) #breaks
-                    self.viewer2D_dock.setVisible(False)
-                    self.viewer3D_dock.setVisible(False)
-                    self.dock_reg = dock_reg
-                    windowHeight = self.size().height()
-
-                    #Clear for next image visualisation:
-                    self.orientation = None
-                    self.current_slice = None
-
-                    self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
-                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
-                    self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
-                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
-                    
-                    self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
-                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
-                    self.vis_widget_reg.frame.viewer.style.AddObserver("KeyPressEvent",
-                                                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
-
-                    self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.OnKeyPressEventForRegistration, 1.5) #Happens before viewer KeyPressEvent (higher priority)
-                    self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.AfterKeyPressEventForRegistration, 0.5) #Happens after viewer KeyPressEvent (lower priority)
-
                 else:
                     self.dock_reg.setVisible(True)
                     self.viewer2D_dock.setVisible(False)
@@ -4189,7 +4193,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     self.config['mask_ext'] = True 
   
 
-
         self.config['pointCloud_details']=self.pointCloud_details
 
         #save values for Run DVC panel
@@ -4584,6 +4587,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             for _file in f:
                 if '.roi' in _file:
                     pointcloud_files.append(_file)
+
         if len(pointcloud_files) >0:
             self.pointcloud_parameters['pointcloudList'].addItems(pointcloud_files)
             self.pointcloud_parameters['pointcloudList'].setEnabled(True)
@@ -5245,12 +5249,12 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 #Loads appropriate orientation
                 #self.frame.viewer.setSliceOrientation(axis)
                 #self.parent.orientation = self.frame.viewer.GetSliceOrientation()
+                print("Target slice: ", self.parent.current_slice)
+                print("extent: ", self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1])
                 if self.parent.current_slice:
-                    self.frame.viewer.displaySlice(self.parent.current_slice)
-                    
-                
-                #self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
-                # self.frame.viewer.ren.Render()
+                    if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
+                        self.frame.viewer.displaySlice(self.parent.current_slice)
+
 
             if self.viewer == viewer3D:
                 self.frame.viewer.style.keyPress(interactor, 'KeyPressEvent')
@@ -5263,11 +5267,11 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
         
                 if self.parent.current_slice:
-                    self.frame.viewer.style.SetActiveSlice(self.parent.current_slice)
-                    self.frame.viewer.style.UpdatePipeline()
+                    if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
+                        self.frame.viewer.style.SetActiveSlice(self.parent.current_slice)
+                        self.frame.viewer.style.UpdatePipeline()
 
-                #self.frame.viewer.ren.Render()
-            print("set input data for" + str(self.viewer))
+            # print("set input data for" + str(self.viewer))
 
             if self.viewer == viewer2D:
                 self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
