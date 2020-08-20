@@ -2531,7 +2531,7 @@ and then input to the DVC code.")
                 self.clearPointCloud()
             self.pointcloud_worker = Worker(self.createPointCloud, filename = filename)
             self.pointcloud_worker.signals.finished.connect(self.progress_complete)
-        elif type == "load vectors":
+        elif type == "load vectors": #TODO: delete as not needed
             self.clearPointCloud()
             self.pointcloud_worker = Worker(self.loadPointCloud, filename)
             self.pointcloud_worker.signals.finished.connect(lambda: self.displayVectors(disp_file, vector_dim))
@@ -2543,8 +2543,10 @@ and then input to the DVC code.")
 
     def displayVectors(self,disp_file, vector_dim):
         self.DisplayLoadedPointCloud()
-        self.createVectors(disp_file, vector_dim)
+        #self.createVectors(disp_file, vector_dim)
+        self.createVectors(disp_file, 2)
         self.createVectors3D(disp_file)
+
 
     def progress_complete(self):
         #print("FINISHED")
@@ -3118,9 +3120,14 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         acolor = vtk.vtkDoubleArray()
 
         pc = vtk.vtkPoints()
+
+        point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+
+        print("Point0 disp vectors: ", point0_disp)
+
         for count in range(len(displ)):
             p = pc.InsertNextPoint(displ[count][1],
-                                displ[count][2], 
+                                    displ[count][2],
                                 displ[count][3]) #xyz coords
             vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
             vertices.InsertCellPoint(p)
@@ -3130,31 +3137,32 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
             #print("Sum of square of points:")
             #print(displ[count][6:9])
+            dimensions = 2
 
             if dimensions ==2:
                 if orientation == SLICE_ORIENTATION_XY:
-                    arrow.InsertNextTuple3(displ[count][6],displ[count][7],0) #u and v are set for x and y
-                    new_points = displ[count][6:8]
+                    arrow.InsertNextTuple3(displ[count][6]-point0_disp[0],displ[count][7]-point0_disp[1],0) #u and v are set for x and y
+                    new_points = [displ[count][6]-point0_disp[0],displ[count][7]-point0_disp[1]]
 
                 elif orientation == SLICE_ORIENTATION_XZ:
-                    arrow.InsertNextTuple3(displ[count][6],0,displ[count][8]) #u and v are set for x and y
-                    new_points = [displ[count][6], displ[count][8]]
+                    arrow.InsertNextTuple3(displ[count][6]-point0_disp[0],0,displ[count][8]-point0_disp[2]) #u and v are set for x and y
+                    new_points = [displ[count][6]-point0_disp[0], displ[count][8]-point0_disp[2]]
 
                 elif orientation == SLICE_ORIENTATION_YZ:
-                    arrow.InsertNextTuple3(0,displ[count][7],displ[count][8]) #u and v are set for x and y
-                    new_points = [displ[count][7], displ[count][8]]
+                    arrow.InsertNextTuple3(0,displ[count][7]-point0_disp[1],displ[count][8]-point0_disp[2]) #u and v are set for x and y
+                    new_points = [displ[count][7]-point0_disp[1],displ[count][8]-point0_disp[2]]
                 
                 #print(reduce(lambda x,y: x + y**2, (*new_points,0), 0))
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*new_points,0), 0)) #inserts u^2 + v^2 + w^2
 
-            else:
-                arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                new_points = displ[count][6:9]
-                #print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
-                acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
+            # else:
+            #     arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
+            #     new_points = displ[count][6:9]
+            #     # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
+            #     acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
             
         lut = vtk.vtkLookupTable()
-        print ("lut table range" , acolor.GetRange())
+        print ("lut table range 2D" , acolor.GetRange())
         lut.SetTableRange(acolor.GetRange())
         lut.SetNumberOfTableValues( 256 )
         lut.SetHueRange( 240/360., 0. )
@@ -3165,76 +3173,55 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         #2. Add the points to a vtkPolyData.
         pointPolyData.SetPoints( pc ) 
         pointPolyData.SetVerts( vertices ) 
+
+
         pointPolyData.GetPointData().SetVectors(arrow) #(u,v,w) vector in 2D
         pointPolyData.GetPointData().SetScalars(acolor) 
 
-        # arrow
-        #arrow_glyph = vtk.vtkGlyph2D()
-        arrow_glyph = vtk.vtkGlyph3D()
-        #arrow_glyph.SetScaleModeToDataScalingOff()
-        arrow_glyph.SetScaleModeToScaleByVector()
-        # print("Range", arrow_glyph.GetRange())
-        # arrow_glyph.SetRange([0,0.99])
-        # arrow_glyph.SetClamping(True)
-
-        #arrow_glyph.SetColorModeToColorByVector()
         arrow_source = vtk.vtkArrowSource()
         arrow_source.SetTipRadius(0.2)
-        arrow_source.SetShaftRadius(0.075)
+        arrow_source.SetShaftRadius(0.05)
         arrow_source.Update()
+
+        # creates arrows at every point:
+        arrow_glyph = vtk.vtkGlyph3D()
+        arrow_glyph.SetInputData(pointPolyData)
+        arrow_glyph.SetSourceConnection(arrow_source.GetOutputPort())
+        arrow_glyph.SetScaleModeToScaleByVector()
+        arrow_glyph.SetVectorModeToUseVector()
+        arrow_glyph.ScalingOn()
+        arrow_glyph.OrientOn()
+        arrow_glyph.Update()
+
         arrow_mapper = vtk.vtkPolyDataMapper()
-        if dimensions == 2:
-            print("2D vectors")
-            self.vis_widget_2D.PlaneClipper.AddDataToClip('2D_vectors', arrow_glyph.GetOutputPort())
-            arrow_mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('2D_vectors').GetOutputPort())
-        else:
-            arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
+        self.vis_widget_2D.PlaneClipper.AddDataToClip('2D_vectors', arrow_glyph.GetOutputPort())
+        arrow_mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('2D_vectors').GetOutputPort())
+        #arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
+        #arrow_mapper.SetInputConnection(cutter.GetOutputPort())
         arrow_mapper.SetScalarModeToUsePointFieldData()
         arrow_mapper.SelectColorArray(0)
         arrow_mapper.SetScalarRange(acolor.GetRange())
         arrow_mapper.SetLookupTable(lut)
 
-        arrow_glyph.SetInputData(pointPolyData)
-        arrow_glyph.SetSourceConnection(arrow_source.GetOutputPort())
-        #arrow_glyph.SetScaleFactor(5)
-        arrow_glyph.SetScaleModeToScaleByVector()
-        arrow_glyph.SetVectorModeToUseVector()
-        arrow_glyph.ScalingOn()
-        arrow_glyph.OrientOn()
 
         # Usual actor
         arrow_actor = vtk.vtkActor()
         arrow_actor.SetMapper(arrow_mapper)
-        #arrow_actor.GetProperty().SetColor(0, 1, 1)
+        arrow_actor.GetProperty().SetOpacity(0.5)
+        arrow_actor.GetProperty().SetLineWidth(10)
 
-        # vtk user guide p.95
-        # conesource = vtk.vtkConeSource()
-        # conesource.SetResolution(6)
-        # transform = vtk.vtkTransform()
-        # transform.Translate(0.5,0.,0.)
-        # transformF = vtk.vtkTransformPolyDataFilter()
-        # transformF.SetInputConnection(conesource.GetOutputPort())
-        # transformF.SetTransform(transform)
+        # Usual actor
+        arrow_actor = vtk.vtkActor()
+        arrow_actor.SetMapper(arrow_mapper)
 
-        # cones = vtk.vtkGlyph3D()
-        # cones.SetInputData(pointPolyData)
-        # cones.SetSourceConnection(transformF.GetOutputPort())
-
-        # mapper = vtk.vtkPolyDataMapper()
-        # mapper.SetInputConnection(cones.GetOutputPort())
-
-        # actor = vtk.vtkActor()
-        # actor.SetMapper(mapper)
-        # #actor.GetProperty().SetPointSize(3)
-        # actor.GetProperty().SetColor(0,1,1)
-
-        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_points', pointPolyData)
+        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_points2', pointPolyData)
         
 
         pmapper = vtk.vtkPolyDataMapper()
         #pmapper.SetInputData(pointPolyData)
-        pmapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points').GetOutputPort())
-
+        pmapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points2').GetOutputPort())
+        #TODO: add if statement in above ^
+        #TODO: remove pc_points from clipping first so we can give it same name
         pactor = vtk.vtkActor()
         pactor.SetMapper(pmapper)
         pactor.GetProperty().SetPointSize(3)
@@ -3242,7 +3229,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         #v = CILViewer()
         v = self.vis_widget_2D.frame.viewer
-        v.ren.AddActor(pactor)
+        #v.ren.AddActor(pactor)
         #v.ren.AddActor(actor)
         v.ren.AddActor(arrow_actor)
         self.actors_2D ['pactor'] = pactor
@@ -3261,7 +3248,10 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             
         v.startRenderLoop()
 
+        print("End of 2D vectors")
+
     def createVectors3D(self, filename):
+
         displ = np.asarray(
         self.loadPointCloudFromCSV(filename,'\t')[:]
         )
@@ -3288,6 +3278,13 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         acolor = vtk.vtkDoubleArray()
 
         pc = vtk.vtkPoints()
+
+        point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+
+        print("Point0 disp vectors: ", point0_disp)
+
+
+
         for count in range(len(displ)):
             p = pc.InsertNextPoint(displ[count][1],
                                 displ[count][2], 
@@ -3296,10 +3293,10 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             vertices.InsertCellPoint(p)
             #arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8])
 
-        arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-        new_points = displ[count][6:9]
-        #print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
-        acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
+            arrow.InsertNextTuple3(displ[count][6]-point0_disp[0],displ[count][7]-point0_disp[1],displ[count][8]- point0_disp[2]) #u and v are set for x and y
+            new_points = displ[count][6:9]
+            # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
+            acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
             
         lut = vtk.vtkLookupTable()
         print ("lut table range" , acolor.GetRange())
@@ -3316,21 +3313,15 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         pointPolyData.GetPointData().SetVectors(arrow) #(u,v,w) vector in 2D
         pointPolyData.GetPointData().SetScalars(acolor) 
 
+        arrow_source = vtk.vtkArrowSource()
+        arrow_source.SetTipRadius(0.2)
+        arrow_source.SetShaftRadius(0.075)
+
         # arrow
         arrow_glyph = vtk.vtkGlyph3D()
         #arrow_glyph.SetScaleModeToDataScalingOff()
         arrow_glyph.SetScaleModeToScaleByVector()
         #arrow_glyph.SetColorModeToColorByVector()
-        arrow_source = vtk.vtkArrowSource()
-        arrow_source.SetTipRadius(0.2)
-        arrow_source.SetShaftRadius(0.075)
-        arrow_mapper = vtk.vtkPolyDataMapper()
-        arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
-        arrow_mapper.SetScalarModeToUsePointFieldData()
-        arrow_mapper.SelectColorArray(0)
-        arrow_mapper.SetScalarRange(acolor.GetRange())
-        arrow_mapper.SetLookupTable(lut)
-
         arrow_glyph.SetInputData(pointPolyData)
         arrow_glyph.SetSourceConnection(arrow_source.GetOutputPort())
         #arrow_glyph.SetScaleFactor(5)
@@ -3339,31 +3330,42 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         arrow_glyph.ScalingOn()
         arrow_glyph.OrientOn()
 
+
+        arrow_mapper = vtk.vtkPolyDataMapper()
+        arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
+        arrow_mapper.SetScalarModeToUsePointFieldData()
+        arrow_mapper.SelectColorArray(0)
+        arrow_mapper.SetScalarRange(acolor.GetRange())
+        arrow_mapper.SetLookupTable(lut)
+
+
+
         # Usual actor
         arrow_actor = vtk.vtkActor()
         arrow_actor.SetMapper(arrow_mapper)
+
         #arrow_actor.GetProperty().SetColor(0, 1, 1)
 
-        # vtk user guide p.95
-        conesource = vtk.vtkConeSource()
-        conesource.SetResolution(6)
-        transform = vtk.vtkTransform()
-        transform.Translate(0.5,0.,0.)
-        transformF = vtk.vtkTransformPolyDataFilter()
-        transformF.SetInputConnection(conesource.GetOutputPort())
-        transformF.SetTransform(transform)
+        # # vtk user guide p.95
+        # conesource = vtk.vtkConeSource()
+        # conesource.SetResolution(6)
+        # transform = vtk.vtkTransform()
+        # transform.Translate(0.5,0.,0.)
+        # transformF = vtk.vtkTransformPolyDataFilter()
+        # transformF.SetInputConnection(conesource.GetOutputPort())
+        # transformF.SetTransform(transform)
 
-        cones = vtk.vtkGlyph3D()
-        cones.SetInputData(pointPolyData)
-        cones.SetSourceConnection(transformF.GetOutputPort())
+        # # cones = vtk.vtkGlyph3D()
+        # # cones.SetInputData(pointPolyData)
+        # # cones.SetSourceConnection(transformF.GetOutputPort())
 
-        mapper = vtk.vtkPolyDataMapper()
-        mapper.SetInputConnection(cones.GetOutputPort())
+        # # mapper = vtk.vtkPolyDataMapper()
+        # # mapper.SetInputConnection(cones.GetOutputPort())
 
-        actor = vtk.vtkActor()
-        actor.SetMapper(mapper)
-        #actor.GetProperty().SetPointSize(3)
-        actor.GetProperty().SetColor(0,1,1)
+        # # actor = vtk.vtkActor()
+        # # actor.SetMapper(mapper)
+        # # #actor.GetProperty().SetPointSize(3)
+        # # actor.GetProperty().SetColor(0,1,1)
 
         pmapper = vtk.vtkPolyDataMapper()
         pmapper.SetInputData(pointPolyData)
@@ -3375,7 +3377,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         #v = CILViewer()
         v = self.vis_widget_3D.frame.viewer
-        v.ren.AddActor(pactor)
+        #v.ren.AddActor(pactor)
         #v.ren.AddActor(actor)
         v.ren.AddActor(arrow_actor)
 
@@ -4062,9 +4064,12 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                                 run_file = results_folder + "\\" + os.path.basename(run_file)
 
                     if(self.result_widgets['vec_entry'].currentText() == "2D"):
-                        self.PointCloudWorker("load vectors", filename = self.roi, disp_file = run_file, vector_dim = 2)
+                        #self.PointCloudWorker("load vectors", filename = self.roi, disp_file = run_file, vector_dim = 2)
+                        self.displayVectors(run_file, 2)
+
                     elif(self.result_widgets['vec_entry'].currentText() == "3D"):
                         self.PointCloudWorker("load vectors", filename = None, disp_file = run_file, vector_dim = 3)
+                        self.displayVectors(run_file, 2)
 
 
     def create_graphs_window(self):
@@ -4168,7 +4173,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.config['dvc_input_image']=dvc_input_image
             self.config['dvc_input_image_in_session_folder'] = self.dvc_input_image_in_session_folder
 
-            # print(self.roi)
+            print("ROI: ", self.roi)
             # print("temp", tempfile.tempdir)
             if (self.roi):
                 self.roi = os.path.abspath(self.roi)
@@ -4179,7 +4184,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     self.config['roi_file'] = self.roi
                     self.config['roi_ext'] = True 
             else:
-                self.config['roi_file'] = self.roi
+                self.config['roi_file'] = None
                 self.config['roi_ext'] = False 
             
 
@@ -5264,7 +5269,6 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 # self.frame.viewer.renWin.SetAlphaBitPlanes(True)
                 # self.frame.viewer.renWin.SetMultiSamples(False)
                 # self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
-
         
                 if self.parent.current_slice:
                     if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
