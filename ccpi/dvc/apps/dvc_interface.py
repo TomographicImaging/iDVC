@@ -3070,7 +3070,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
    
 
         
-    def loadPointCloudFromCSV(self,filename, delimiter=','):
+    def loadPointCloudFromCSV(self,filename, delimiter=','): #TODO: move into pointcloud_conversion.py
         print ("loadPointCloudFromCSV")
         pointcloud = []
         with open(filename, 'r') as csvfile:
@@ -3091,283 +3091,289 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
 
     def displayVectors(self,disp_file, vector_dim):
-        #self.DisplayLoadedPointCloud()
         self.clearPointCloud()
-        #self.createVectors(disp_file, vector_dim)
-        self.createVectors(disp_file, 2)
-        self.createVectors3D(disp_file)
-
-    def createVectors(self, filename, dimensions = 2):
         displ = np.asarray(
-        self.loadPointCloudFromCSV(filename,'\t')[:]
+        self.loadPointCloudFromCSV(disp_file,'\t')[:]
         )
+        relative_displacement = True
+        if relative_displacement:
+            point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+            for count in range(len(displ)):
+                for i in range(3):
+                    displ[count][i+6] = displ[count][i+6] - point0_disp[i]
 
-        #displ[10][6] = 20.
-        #displ[10][7] = 0.
-        #displ[10][8] = 0.
-        #displ[11][6] = 0.
-        #displ[11][7] = 20.
-        #displ[11][8] = 0.
-        #displ[12][6] = 0.
-        #displ[12][7] = 0.
-        #displ[12][8] = 20.
-
-        #dist = (displ.T[6]**2 + displ.T[7]**2 + displ.T[8]**2)
-        #m = dist.min()
-        #M = dist.max()
-        #%%
-
-        grid = vtk.vtkUnstructuredGrid()
-        vertices = vtk.vtkCellArray()
-        arrow = vtk.vtkDoubleArray()
-        arrow.SetNumberOfComponents(3)
-        acolor = vtk.vtkDoubleArray()
-
-        pc = vtk.vtkPoints()
-
-        point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-
-        print("Point0 disp vectors: ", point0_disp)
-
-        for count in range(len(displ)):
-            p = pc.InsertNextPoint(displ[count][1],
-                                    displ[count][2],
-                                displ[count][3]) #xyz coords
-            vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
-            vertices.InsertCellPoint(p)
-            #arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8])
-
-            orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-
-            #print("Sum of square of points:")
-            #print(displ[count][6:9])
-            dimensions = 2
-
-            if dimensions ==2:
-                if orientation == SLICE_ORIENTATION_XY:
-                    arrow.InsertNextTuple3(displ[count][6]-point0_disp[0],displ[count][7]-point0_disp[1],0) #u and v are set for x and y
-                    new_points = [displ[count][6]-point0_disp[0],displ[count][7]-point0_disp[1]]
-
-                elif orientation == SLICE_ORIENTATION_XZ:
-                    arrow.InsertNextTuple3(displ[count][6]-point0_disp[0],0,displ[count][8]-point0_disp[2]) #u and v are set for x and y
-                    new_points = [displ[count][6]-point0_disp[0], displ[count][8]-point0_disp[2]]
-
-                elif orientation == SLICE_ORIENTATION_YZ:
-                    arrow.InsertNextTuple3(0,displ[count][7]-point0_disp[1],displ[count][8]-point0_disp[2]) #u and v are set for x and y
-                    new_points = [displ[count][7]-point0_disp[1],displ[count][8]-point0_disp[2]]
-                
-                #print(reduce(lambda x,y: x + y**2, (*new_points,0), 0))
-                acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*new_points,0), 0)) #inserts u^2 + v^2 + w^2
-
-            # else:
-            #     arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-            #     new_points = displ[count][6:9]
-            #     # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
-            #     acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
-            
-        lut = vtk.vtkLookupTable()
-        print ("lut table range 2D" , acolor.GetRange())
-        lut.SetTableRange(acolor.GetRange())
-        lut.SetNumberOfTableValues( 256 )
-        lut.SetHueRange(240/360., 0.)
-        #lut.SetSaturationRange( 1, 1 )
-        lut.Build()
-
-        pointPolyData = vtk.vtkPolyData()
-        #2. Add the points to a vtkPolyData.
-        pointPolyData.SetPoints( pc ) 
-        pointPolyData.SetVerts( vertices ) 
-        pointPolyData.GetPointData().SetVectors(arrow) #(u,v,w) vector in 2D
-        pointPolyData.GetPointData().SetScalars(acolor) 
-
-        arrow_source = vtk.vtkArrowSource()
-        arrow_source.SetTipRadius(0.2)
-        arrow_source.SetShaftRadius(0.05)
-        arrow_source.Update()
-
-        # creates arrows at every point:
-        arrow_glyph = vtk.vtkGlyph3D()
-        arrow_glyph.SetInputData(pointPolyData)
-        arrow_glyph.SetSourceConnection(arrow_source.GetOutputPort())
-        arrow_glyph.SetScaleModeToScaleByVector()
-        arrow_glyph.SetVectorModeToUseVector()
-        arrow_glyph.ScalingOn()
-        arrow_glyph.OrientOn()
-        #arrow_glyph.Update()
-
-        arrow_mapper = vtk.vtkPolyDataMapper()
-        self.vis_widget_2D.PlaneClipper.AddDataToClip('2D_vectors', arrow_glyph.GetOutputPort())
-        arrow_mapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('2D_vectors').GetOutputPort())
-        #arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
-        #arrow_mapper.SetInputConnection(cutter.GetOutputPort())
-        arrow_mapper.SetScalarModeToUsePointFieldData()
-        arrow_mapper.SelectColorArray(0)
-        arrow_mapper.SetScalarRange(acolor.GetRange())
-        arrow_mapper.SetLookupTable(lut)
-
-
-        # Usual actor
-        arrow_actor = vtk.vtkActor()
-        arrow_actor.SetMapper(arrow_mapper)
-        arrow_actor.GetProperty().SetOpacity(0.5)
-        #arrow_actor.GetProperty().SetLineWidth(10)
-
-        # Usual actor
-        arrow_actor = vtk.vtkActor()
-        arrow_actor.SetMapper(arrow_mapper)
-
-        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_points2', pointPolyData)
+        self.createVectors2D(displ, self.vis_widget_2D, self.actors_2D)
+        self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
         
+        #self.createVectors3D(disp_file)
 
-        pmapper = vtk.vtkPolyDataMapper()
-        #pmapper.SetInputData(pointPolyData)
-        pmapper.SetInputConnection(self.vis_widget_2D.PlaneClipper.GetClippedData('pc_points2').GetOutputPort())
-        pmapper.SelectColorArray(0)
-        pmapper.SetScalarRange(acolor.GetRange())
-        pmapper.SetLookupTable(lut)
-        #TODO: add if statement in above ^
-        #TODO: remove pc_points from clipping first so we can give it same name
-        pactor = vtk.vtkActor()
-        pactor.SetMapper(pmapper)
-        pactor.GetProperty().SetPointSize(3)
-                
-        #pactor.GetProperty().SetColor(1,0,1)
+    def createVectors2D(self, displ, viewer_widget, actor_list):
+        viewer = viewer_widget.frame.viewer
+        if isinstance(viewer, viewer2D):
+            grid = vtk.vtkUnstructuredGrid()
 
-        #v = CILViewer()
-        v = self.vis_widget_2D.frame.viewer
-        v.ren.AddActor(pactor)
-        #v.ren.AddActor(actor)
-        v.ren.AddActor(arrow_actor)
-        self.actors_2D ['pactor'] = pactor
-        self.actors_2D['arrow_actor'] = arrow_actor
+            arrow_start_vertices = vtk.vtkCellArray()    
+            arrow_shaft_centres = vtk.vtkCellArray()
+            arrowhead_centres = vtk.vtkCellArray()
+
+            arrow_vectors = vtk.vtkDoubleArray()
+            arrow_vectors.SetNumberOfComponents(3)
+        
+            arrow_shaft_vectors = vtk.vtkDoubleArray()
+            arrow_shaft_vectors.SetNumberOfComponents(3)
+
+            arrowhead_vectors = vtk.vtkDoubleArray()
+            arrowhead_vectors.SetNumberOfComponents(3)
+
+            pc = vtk.vtkPoints()
+            arrow_shaft_centres_pc = vtk.vtkPoints()
+            arrowhead_centres_pc = vtk.vtkPoints()
             
-        v.startRenderLoop()
+            acolor = vtk.vtkDoubleArray()
 
-        print("End of 2D vectors")
+            for count in range(len(displ)):
+                p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
+                arrow_start_vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
+                arrow_start_vertices.InsertCellPoint(p)
 
-    def createVectors3D(self, filename):
+                orientation = viewer.GetSliceOrientation()
+                arrow_vector = [0,0,0]
+                arrow_shaft_centre = [displ[count][1],displ[count][2], displ[count][3]]
+                arrow_shaft_vector = [0,0,0]
+                arrowhead_centre = [displ[count][1],displ[count][2], displ[count][3]]
+                arrowhead_vector = [0,0,0]
 
-        displ = np.asarray(
-        self.loadPointCloudFromCSV(filename,'\t')[:]
-        )
+                for i, value in enumerate(arrow_shaft_centre):
+                    if i != orientation:
+                        arrow_vector[i] = displ[count][i+6] 
+                        arrowhead_vector[i] = (displ[count][i+6]*0.3) # Vector for arrowhead - determines height of triangle that forms arrowhead
+                        arrow_shaft_vector[i] = displ[count][i+6]*0.8 # Vector for arrow shaft - determines length of arrow shaft
+                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.4
+                        arrowhead_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.3 + displ[count][i+6]*0.15
 
-        #displ[10][6] = 20.
-        #displ[10][7] = 0.
-        #displ[10][8] = 0.
-        #displ[11][6] = 0.
-        #displ[11][7] = 20.
-        #displ[11][8] = 0.
-        #displ[12][6] = 0.
-        #displ[12][7] = 0.
-        #displ[12][8] = 20.
+                p = arrow_shaft_centres_pc.InsertNextPoint(arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2])
+                arrow_shaft_centres.InsertNextCell(1) 
+                arrow_shaft_centres.InsertCellPoint(p)
 
-        #dist = (displ.T[6]**2 + displ.T[7]**2 + displ.T[8]**2)
-        #m = dist.min()
-        #M = dist.max()
-        #%%
+                arrow_vectors.InsertNextTuple3(arrow_vector[0], arrow_vector[1], arrow_vector[2]) 
+                arrow_shaft_vectors.InsertNextTuple3(arrow_shaft_vector[0], arrow_shaft_vector[1], arrow_shaft_vector[2])
+                arrowhead_vectors.InsertNextTuple3(arrowhead_vector[0], arrowhead_vector[1], arrowhead_vector[2])        
 
-        grid = vtk.vtkUnstructuredGrid()
-        vertices = vtk.vtkCellArray()
-        arrow = vtk.vtkDoubleArray()
-        arrow.SetNumberOfComponents(3)
-        acolor = vtk.vtkDoubleArray()
+                p = arrowhead_centres_pc.InsertNextPoint(arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2])
+                arrowhead_centres.InsertNextCell(1)
+                arrowhead_centres.InsertCellPoint(p)
 
-        pc = vtk.vtkPoints()
 
-        point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+                arrow_vector.pop(orientation)
 
-        print("Point0 disp vectors: ", point0_disp)
+                # print("Arrow start loc: ", [displ[count][1],displ[count][2],displ[count][3]])
+                # print("Arrow end loc: ", [displ[count][1] + displ[count][6],displ[count][2]+ displ[count][7],displ[count][3]+ displ[count][8]])
+                # print("Arrow shaft centre: ", [arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2]])
+                # print("Arrow head loc: ", [arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2]])
+                # print("Arrow head size: ", arrowhead_vector) 
+                #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
 
-        for count in range(len(displ)):
-            p = pc.InsertNextPoint(displ[count][1],
+                acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
+                
+            lut = vtk.vtkLookupTable()
+            print ("lut table range" , acolor.GetRange())
+            lut.SetTableRange(acolor.GetRange())
+            lut.SetNumberOfTableValues( 256 )
+            lut.SetHueRange( 240/360., 0. )
+            #lut.SetSaturationRange( 1, 1 )
+            lut.Build()
+
+            pointPolyData = vtk.vtkPolyData()
+            pointPolyData.SetPoints( pc ) # (x,y,z)
+            pointPolyData.SetVerts( arrow_start_vertices ) # (x,y,z)
+            pointPolyData.GetPointData().SetVectors(arrow_vectors) #(u,v,w) vector in 2D
+            pointPolyData.GetPointData().SetScalars(acolor)
+
+            viewer_widget.PlaneClipper.AddDataToClip('pc_points2', pointPolyData)
+
+            pmapper = vtk.vtkPolyDataMapper()
+            pmapper.SetInputData(pointPolyData)
+            pmapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('pc_points2').GetOutputPort())
+            pmapper.SetScalarRange(acolor.GetRange())
+            pmapper.SetLookupTable(lut)
+
+            point_actor = vtk.vtkActor()
+            point_actor.SetMapper(pmapper)
+            point_actor.GetProperty().SetPointSize(5)
+            point_actor.GetProperty().SetColor(1,0,1)
+
+            linesPolyData = vtk.vtkPolyData()
+            linesPolyData.SetPoints( arrow_shaft_centres_pc ) 
+            linesPolyData.SetVerts( arrow_shaft_centres ) 
+            linesPolyData.GetPointData().SetVectors(arrow_shaft_vectors) 
+            linesPolyData.GetPointData().SetScalars(acolor)
+
+            line_source = vtk.vtkLineSource()
+
+            line_glyph = vtk.vtkGlyph3D()
+            line_glyph.SetInputData(linesPolyData)
+            line_glyph.SetSourceConnection(line_source.GetOutputPort())
+            line_glyph.SetScaleModeToScaleByVector()
+            line_glyph.SetVectorModeToUseVector()
+            line_glyph.ScalingOn()
+            line_glyph.OrientOn()
+            line_glyph.Update()
+
+            viewer_widget.PlaneClipper.AddDataToClip('arrow_shafts', line_glyph.GetOutputPort())
+
+            line_mapper = vtk.vtkPolyDataMapper()
+            line_mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('arrow_shafts').GetOutputPort())
+            line_mapper.SetScalarModeToUsePointFieldData()
+            line_mapper.SelectColorArray(0)
+            line_mapper.SetScalarRange(acolor.GetRange())
+            line_mapper.SetLookupTable(lut)
+
+            line_actor = vtk.vtkActor()
+            line_actor.SetMapper(line_mapper)
+            line_actor.GetProperty().SetOpacity(1)
+            line_actor.GetProperty().SetLineWidth(4)
+
+            arrowheadsPolyData = vtk.vtkPolyData()
+            arrowheadsPolyData.SetPoints( arrowhead_centres_pc ) 
+            arrowheadsPolyData.SetVerts( arrowhead_centres ) # 0.8 * (u,v,w) vector in 2D
+            arrowheadsPolyData.GetPointData().SetVectors(arrowhead_vectors) #(u,v,w) vector in 2D
+            arrowheadsPolyData.GetPointData().SetScalars(acolor) 
+
+            arrowhead_source = vtk.vtkRegularPolygonSource()
+            arrowhead_source.SetNumberOfSides(3)
+
+            transform = vtk.vtkTransform()
+            transform.RotateZ(270)
+            if orientation == 0:
+                transform.RotateY(90)
+            if orientation == 1:
+                transform.RotateY(90)
+
+            transformF = vtk.vtkTransformPolyDataFilter()
+            transformF.SetInputConnection(arrowhead_source.GetOutputPort())
+            transformF.SetTransform(transform) 
+
+            arrowhead_glyph = vtk.vtkGlyph3D()
+            arrowhead_glyph.SetInputData(arrowheadsPolyData)
+            arrowhead_glyph.SetSourceConnection(transformF.GetOutputPort())
+            arrowhead_glyph.SetScaleModeToScaleByVector()
+            arrowhead_glyph.SetVectorModeToUseVector()
+            arrowhead_glyph.ScalingOn()
+            arrowhead_glyph.OrientOn()
+            arrowhead_glyph.Update()
+
+            viewer_widget.PlaneClipper.AddDataToClip('arrowheads', arrowhead_glyph.GetOutputPort())
+
+            arrowhead_mapper = vtk.vtkPolyDataMapper()
+            #arrowhead_mapper.SetInputConnection(arrowhead_glyph.GetOutputPort())
+            arrowhead_mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('arrowheads').GetOutputPort())
+            arrowhead_mapper.SetScalarModeToUsePointFieldData()
+            arrowhead_mapper.SelectColorArray(0)
+            arrowhead_mapper.SetScalarRange(acolor.GetRange())
+            arrowhead_mapper.SetLookupTable(lut)
+
+            arrowhead_actor = vtk.vtkActor()
+            arrowhead_actor.SetMapper(arrowhead_mapper)
+            arrowhead_actor.GetProperty().SetOpacity(1)
+            arrowhead_actor.GetProperty().SetLineWidth(4)
+            
+            viewer.ren.AddActor(point_actor)
+            viewer.ren.AddActor(line_actor)
+            viewer.ren.AddActor(arrowhead_actor)
+
+            self.actors_2D['point_actor'] = point_actor
+            self.actors_2D['line_actor'] = line_actor
+            self.actors_2D['arrowhead_actor'] = arrowhead_actor
+            
+            viewer.startRenderLoop()
+            viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 1.1) #handles vectors updating when switching orientation
+    
+    def OnKeyPressEventForVectors(self, interactor, event):
+        key_code = interactor.GetKeyCode()
+        print("OnKeyPressEventForVectors", key_code)
+        if 'line_actor' in self.actors_2D and 'arrowhead_actor' in self.actors_2D:
+            if key_code in ['x','y','z'] and \
+                self.actors_2D['line_actor'].GetVisibility() and self.actors_2D['arrowhead_actor'].GetVisibility():
+                    self.createVectors2D(displ, self.vis_widget_2D, self.actors_2D)
+
+    def createVectors3D(self, displ, viewer_widget, actor_list):
+        viewer = viewer_widget.frame.viewer
+        if isinstance(viewer, viewer3D):
+            v = viewer
+            grid = vtk.vtkUnstructuredGrid()
+            arrow = vtk.vtkDoubleArray()
+            arrow.SetNumberOfComponents(3)
+            acolor = vtk.vtkDoubleArray()
+            pc = vtk.vtkPoints()
+            vertices = vtk.vtkCellArray()
+
+            for count in range(len(displ)):
+                p = pc.InsertNextPoint(displ[count][1],
                                 displ[count][2], 
                                 displ[count][3]) #xyz coords
-            vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
-            vertices.InsertCellPoint(p)
-            #arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8])
+                vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
+                vertices.InsertCellPoint(p)
+                arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
+                new_points = displ[count][6:9]
+                # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
+                acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
+                
+            lut = vtk.vtkLookupTable()
+            print ("lut table range" , acolor.GetRange())
+            lut.SetTableRange(acolor.GetRange())
+            lut.SetNumberOfTableValues( 256 )
+            lut.SetHueRange( 240/360., 0. )
+            #lut.SetSaturationRange( 1, 1 )
+            lut.Build()
 
-            arrow.InsertNextTuple3(displ[count][6]-point0_disp[0],displ[count][7]-point0_disp[1],displ[count][8]- point0_disp[2]) #u and v are set for x and y
-            new_points = displ[count][6:9]
-            # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
-            acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
-            
-        lut = vtk.vtkLookupTable()
-        print ("lut table range" , acolor.GetRange())
-        lut.SetTableRange(acolor.GetRange())
-        lut.SetNumberOfTableValues( 256 )
-        #lut.SetHueRange( 240/360., 0. )
-        lut.SetHueRange( 0., 240/360. ) #unclear why we had to flip compared to in 2D
-        #lut.SetSaturationRange( 1, 1 )
-        lut.Build()
-
-        pointPolyData = vtk.vtkPolyData()
-        #2. Add the points to a vtkPolyData.
-        pointPolyData.SetPoints( pc ) 
-        pointPolyData.SetVerts( vertices ) 
-        pointPolyData.GetPointData().SetVectors(arrow) #(u,v,w) vector in 2D
-        pointPolyData.GetPointData().SetScalars(acolor) 
-
-        arrow_source = vtk.vtkArrowSource()
-        arrow_source.SetTipRadius(0.2)
-        arrow_source.SetShaftRadius(0.05)
-
-        # arrow
-        arrow_glyph = vtk.vtkGlyph3D()
-        #arrow_glyph.SetScaleModeToDataScalingOff()
-        #arrow_glyph.SetColorModeToColorByVector()
-        arrow_glyph.SetInputData(pointPolyData)
-        arrow_glyph.SetSourceConnection(arrow_source.GetOutputPort())
-        #arrow_glyph.SetScaleFactor(5)
-        arrow_glyph.SetScaleModeToScaleByVector()
-        arrow_glyph.SetVectorModeToUseVector()
-        arrow_glyph.ScalingOn()
-        arrow_glyph.OrientOn()
-
-        arrow_mapper = vtk.vtkPolyDataMapper()
-        arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
-        arrow_mapper.SetScalarModeToUsePointFieldData()
-        arrow_mapper.SelectColorArray(0)
-        arrow_mapper.SetScalarRange(acolor.GetRange())
-        arrow_mapper.SetLookupTable(lut)
-
-        # Usual actor
-        arrow_actor = vtk.vtkActor()
-        arrow_actor.SetMapper(arrow_mapper)
-        arrow_actor.GetProperty().SetOpacity(1)
-
-        #arrow_actor.GetProperty().SetColor(0, 1, 1)
-
-        pmapper = vtk.vtkPolyDataMapper()
-        pmapper.SetInputData(pointPolyData)
-        pmapper.SelectColorArray(0)
-        pmapper.SetScalarRange(acolor.GetRange())
-        pmapper.SetLookupTable(lut)
         
+            #2. Add the points to a vtkPolyData.
+            pointPolyData = vtk.vtkPolyData()
+            pointPolyData.SetPoints( pc ) 
+            pointPolyData.SetVerts( vertices ) 
+            pointPolyData.GetPointData().SetVectors(arrow) #(u,v,w) vector in 2D
+            pointPolyData.GetPointData().SetScalars(acolor) 
 
-        pactor = vtk.vtkActor()
-        pactor.SetMapper(pmapper)
-        pactor.GetProperty().SetPointSize(3)
-        
-        #pactor.GetProperty().SetColor(1,0,1)
+            arrow_source = vtk.vtkArrowSource()
+            arrow_source.SetTipRadius(0.2)
+            arrow_source.SetShaftRadius(0.05)
 
-        v = self.vis_widget_3D.frame.viewer
-        v.ren.AddActor(pactor)
-        v.ren.AddActor(arrow_actor)
-        self.actors_3D ['pactor'] = pactor
-        self.actors_3D['arrow_actor'] = arrow_actor
+            # arrow
+            arrow_glyph = vtk.vtkGlyph3D()
+            arrow_glyph.SetInputData(pointPolyData)
+            arrow_glyph.SetSourceConnection(arrow_source.GetOutputPort())
+            arrow_glyph.SetScaleModeToScaleByVector()
+            arrow_glyph.SetVectorModeToUseVector()
+            arrow_glyph.ScalingOn()
+            arrow_glyph.OrientOn()
 
+            arrow_mapper = vtk.vtkPolyDataMapper()
+            arrow_mapper.SetInputConnection(arrow_glyph.GetOutputPort())
+            arrow_mapper.SetScalarModeToUsePointFieldData()
+            arrow_mapper.SelectColorArray(0)
+            arrow_mapper.SetScalarRange(acolor.GetRange())
+            arrow_mapper.SetLookupTable(lut)
 
-        ## add volume
-        # if True:
-        #     runconfig = json.load(open("dvc_kalpani.json", "r"))
-        #     dataset = numpy.load(os.path.abspath(runconfig['correlate_filename']))
-        #     conv = Converter.numpy2vtkImporter(numpy.transpose(dataset, [0,1,2]))
-        #     conv.Update()
-        #     v.setInput3DData(conv.GetOutput())
-        #     v.style.SetActiveSlice(255)
-        #     v.style.UpdatePipeline()
+            # Usual actor
+            arrow_actor = vtk.vtkActor()
+            arrow_actor.SetMapper(arrow_mapper)
+            arrow_actor.GetProperty().SetOpacity(1)
+
+            pmapper = vtk.vtkPolyDataMapper()
+            pmapper.SetInputData(pointPolyData)
+            pmapper.SelectColorArray(0)
+            pmapper.SetScalarRange(acolor.GetRange())
+            pmapper.SetLookupTable(lut)
+
+            pactor = vtk.vtkActor()
+            pactor.SetMapper(pmapper)
+            pactor.GetProperty().SetPointSize(3)
             
-        v.startRenderLoop()
+            v.ren.AddActor(pactor)
+            v.ren.AddActor(arrow_actor)
+            actor_list['pactor'] = pactor
+            actor_list['arrow_actor'] = arrow_actor
+            v.startRenderLoop()
 
 
 #Run DVC  Panel:
@@ -5207,7 +5213,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             if hasattr(self.parent, 'orientation'):
                     orientation = self.parent.orientation
             else:
-                orientation = self.frame.viewer.GetOrientation()
+                orientation = self.frame.viewer.GetSliceOrientation()
             
             
             if orientation == SLICE_ORIENTATION_XY:
