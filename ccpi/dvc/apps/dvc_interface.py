@@ -2990,34 +2990,45 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_radius, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
 
     def clearPointCloud(self):
+        self.clearPointCloud2D()
+        self.clearPointCloud3D()
+
+    def clearPointCloud2D(self):
         if hasattr(self, 'actors_2D'):
             if 'pointcloud' in self.actors_2D:
                 self.actors_2D ['pointcloud_frame'].VisibilityOff()
                 self.actors_2D['pointcloud'].VisibilityOff()
 
-            if 'pactor' in self.actors_2D:
-                self.actors_2D ['pactor'].VisibilityOff()
-                self.actors_2D['arrow_actor'].VisibilityOff()
+            if 'point_actor' in self.actors_2D:
+                self.actors_2D ['point_actor'].VisibilityOff()
+                self.actors_2D['arrowhead_actor'].VisibilityOff()
+                self.actors_2D['line_actor'].VisibilityOff()
 
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_points')
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_volumes')
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc2_points')
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('arrow_shafts')
+        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('arrowheads')
 
+        v2D = self.vis_widget_2D.frame.viewer
+        v2D.GetRenderWindow().Render()
+
+        self.pointCloudLoaded = False
+        self.pointCloudCreated = False
+        self.eroded_mask = False
+
+    def clearPointCloud3D(self):
         if hasattr(self, 'actors_3D'):
             if 'pointcloud' in self.actors_3D:
                 self.actors_3D ['pointcloud_frame'].VisibilityOff()
                 self.actors_3D['pointcloud'].VisibilityOff()
 
-        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_points')
-        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_volumes')
-        self.vis_widget_2D.PlaneClipper.RemoveDataToClip('2D_vectors')
+            if 'pactor' in self.actors_3D:
+                self.actors_3D ['pactor'].VisibilityOff()
+                self.actors_3D['arrow_actor'].VisibilityOff()
 
-        self.pointCloudLoaded = False
-        self.pointCloudCreated = False
-        self.eroded_mask = False
-        
-
-        v2D = self.vis_widget_2D.frame.viewer
         v3D = self.vis_widget_3D.frame.viewer
 
-        v2D.GetRenderWindow().Render()
         v3D.getRenderWindow().Render()
 
         print("Cleared pc")
@@ -3095,19 +3106,21 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         displ = np.asarray(
         self.loadPointCloudFromCSV(disp_file,'\t')[:]
         )
-        relative_displacement = True
+        relative_displacement = False
         if relative_displacement:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
             for count in range(len(displ)):
                 for i in range(3):
                     displ[count][i+6] = displ[count][i+6] - point0_disp[i]
+        self.displ = displ
 
-        self.createVectors2D(displ, self.vis_widget_2D, self.actors_2D)
+        self.createVectors2D(self.displ, self.vis_widget_2D)
         self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
         
         #self.createVectors3D(disp_file)
 
-    def createVectors2D(self, displ, viewer_widget, actor_list):
+    def createVectors2D(self, displ, viewer_widget):
+        print("CREATE VECTORS")
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer2D):
             grid = vtk.vtkUnstructuredGrid()
@@ -3247,8 +3260,8 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             if orientation == 0:
                 transform.RotateY(90)
             if orientation == 1:
-                transform.RotateY(90)
-
+                transform.RotateY(90) 
+                
             transformF = vtk.vtkTransformPolyDataFilter()
             transformF.SetInputConnection(arrowhead_source.GetOutputPort())
             transformF.SetTransform(transform) 
@@ -3281,12 +3294,20 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             viewer.ren.AddActor(line_actor)
             viewer.ren.AddActor(arrowhead_actor)
 
+            # v = self.vis_widget_3D.frame.viewer
+            # v.ren.AddActor(point_actor)
+            # v.ren.AddActor(line_actor)
+            # v.ren.AddActor(arrowhead_actor)
+
+            if not hasattr(self, 'actors_2D'):
+                self.actors_2D = {}
+
             self.actors_2D['point_actor'] = point_actor
             self.actors_2D['line_actor'] = line_actor
             self.actors_2D['arrowhead_actor'] = arrowhead_actor
             
             viewer.startRenderLoop()
-            viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 1.1) #handles vectors updating when switching orientation
+            viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 0.9) #handles vectors updating when switching orientation
     
     def OnKeyPressEventForVectors(self, interactor, event):
         key_code = interactor.GetKeyCode()
@@ -3294,7 +3315,9 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         if 'line_actor' in self.actors_2D and 'arrowhead_actor' in self.actors_2D:
             if key_code in ['x','y','z'] and \
                 self.actors_2D['line_actor'].GetVisibility() and self.actors_2D['arrowhead_actor'].GetVisibility():
-                    self.createVectors2D(displ, self.vis_widget_2D, self.actors_2D)
+                    print("About to clear and create vectors")
+                    self.clearPointCloud2D()
+                    self.createVectors2D(self.displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
         viewer = viewer_widget.frame.viewer
