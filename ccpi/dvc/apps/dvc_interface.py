@@ -705,11 +705,8 @@ and then input to the DVC code.")
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
-
-
-
-        # self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
-        #                                         self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
+        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
+                                                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
 
 
 
@@ -804,6 +801,7 @@ and then input to the DVC code.")
         # which copies oriented and scaled glyph geometry to every input point
 
         subv_glyph = vtk.vtkGlyph3D()
+        subv_glyph.OrientOn()
 
         # save reference
         self.cubesphere = subv_glyph
@@ -839,6 +837,7 @@ and then input to the DVC code.")
         # save reference
         self.transform = transform
         # rotate around the center of the image data
+        print("ROTATE: ", self.pointCloud_rotation[2])
         transform.RotateX(self.pointCloud_rotation[0])
         transform.RotateY(self.pointCloud_rotation[1])
         transform.RotateZ(self.pointCloud_rotation[2])
@@ -850,14 +849,14 @@ and then input to the DVC code.")
         
 
         self.cube_source = cube_source
-        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_volumes', subv_glyph.GetOutputPort())
+        
 
         # # mapper for the glyphs
         sphere_mapper = vtk.vtkPolyDataMapper()
         # # save reference
         self.cubesphere_mapper = sphere_mapper
         # # sphere_mapper.SetInputConnection( subv_glyph.GetOutputPort() )
-        sphere_mapper.SetInputConnection( self.vis_widget_2D.PlaneClipper.GetClippedData('pc_volumes').GetOutputPort())
+        
         
 
         subv_glyph.SetInputConnection( self.polydata_masker.GetOutputPort() )
@@ -871,6 +870,8 @@ and then input to the DVC code.")
             self.glyph_source = self.sphere_source
         
         subv_glyph.SetSourceConnection( self.glyph_source.GetOutputPort() )
+        self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_volumes', subv_glyph.GetOutputPort())
+        sphere_mapper.SetInputConnection( self.vis_widget_2D.PlaneClipper.GetClippedData('pc_volumes').GetOutputPort())
         
         # # subv_glyph.SetSourceConnection( sphere_source.GetOutputPort() )
         # # subv_glyph.SetSourceConnection( cube_source.GetOutputPort() )
@@ -896,14 +897,10 @@ and then input to the DVC code.")
 
         #actor = 'PointCloud' in self.vis_widget_2D.frame.viewer.actors
         #actor = 'PointCloud' in self.vis_widget_2D.frame.viewer.actors
-        self.vis_widget_2D.frame.viewer.AddActor(actor, 'PointCloud')
-        self.vis_widget_2D.frame.viewer.AddActor(sphere_actor, 'PointCloudFrame')
+
+        self.vis_widget_2D.frame.viewer.AddActor(actor, 'pc_actor')
+        self.vis_widget_2D.frame.viewer.AddActor(sphere_actor, 'subvolume_actor')
         
-        if not hasattr(self, 'actors2D'):
-            self.actors_2D = {}
-        
-        self.actors_2D['pointcloud'] = actor
-        self.actors_2D['pointcloud_frame'] = sphere_actor
 
     def setup3DPointCloudPipeline(self):
         #polydata_masker = self.polydata_masker
@@ -2994,23 +2991,31 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         self.clearPointCloud3D()
 
     def clearPointCloud2D(self):
-        if hasattr(self, 'actors_2D'):
-            if 'pointcloud' in self.actors_2D:
-                self.actors_2D ['pointcloud_frame'].VisibilityOff()
-                self.actors_2D['pointcloud'].VisibilityOff()
+        v2D = self.vis_widget_2D.frame.viewer
+        
 
-            if 'point_actor' in self.actors_2D:
-                self.actors_2D ['point_actor'].VisibilityOff()
-                self.actors_2D['arrowhead_actor'].VisibilityOff()
-                self.actors_2D['line_actor'].VisibilityOff()
+        if v2D.GetActor('pc_actor'):
+            v2D.GetActor('pc_actor').VisibilityOff()
 
+        if v2D.GetActor('subvolume_actor'):
+            v2D.GetActor('subvolume_actor').VisibilityOff()
+        
+        if v2D.GetActor('arrow_pc_actor'):
+            v2D.GetActor('arrow_pc_actor').VisibilityOff()
+
+        if v2D.GetActor('arrowhead_actor'):
+            v2D.GetActor('arrowhead_actor').VisibilityOff()
+
+        if v2D.GetActor('arrow_shaft_actor'):
+            v2D.GetActor('arrow_shaft_actor').VisibilityOff()
+
+    
         self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_points')
         self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc_volumes')
         self.vis_widget_2D.PlaneClipper.RemoveDataToClip('pc2_points')
         self.vis_widget_2D.PlaneClipper.RemoveDataToClip('arrow_shafts')
         self.vis_widget_2D.PlaneClipper.RemoveDataToClip('arrowheads')
 
-        v2D = self.vis_widget_2D.frame.viewer
         v2D.GetRenderWindow().Render()
 
         self.pointCloudLoaded = False
@@ -3062,12 +3067,14 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         # #print("Rendered")
 
     def showSubvolumeRegions(self, show):
-        if hasattr(self, 'actors_2D'):
-            if 'pointcloud' in self.actors_2D:
-                if show:
-                    self.actors_2D ['pointcloud_frame'].VisibilityOn()
-                else:
-                    self.actors_2D ['pointcloud_frame'].VisibilityOff()
+        v2D = self.vis_widget_2D.frame.viewer
+        if show:
+            if v2D.GetActor('subvolume_actor'):
+                v2D.GetActor('subvolume_actor').VisibilityOn()
+
+        else:
+            if v2D.GetActor('subvolume_actor'):
+                v2D.GetActor('subvolume_actor').VisibilityOff()
 
         if hasattr(self, 'actors_3D'):
             if 'pointcloud' in self.actors_3D:
@@ -3106,8 +3113,8 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         displ = np.asarray(
         self.loadPointCloudFromCSV(disp_file,'\t')[:]
         )
-        relative_displacement = False
-        if relative_displacement:
+
+        if self.result_widgets['vec_entry'].currentIndex() == 2:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
             for count in range(len(displ)):
                 for i in range(3):
@@ -3115,13 +3122,13 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         self.displ = displ
 
         self.createVectors2D(self.displ, self.vis_widget_2D)
-        self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
+        self.createVectors3D(self.displ, self.vis_widget_3D, self.actors_3D)
         
         #self.createVectors3D(disp_file)
 
     def createVectors2D(self, displ, viewer_widget):
-        print("CREATE VECTORS")
         viewer = viewer_widget.frame.viewer
+        # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
             grid = vtk.vtkUnstructuredGrid()
 
@@ -3144,12 +3151,14 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             
             acolor = vtk.vtkDoubleArray()
 
+            orientation = viewer.GetSliceOrientation()
+
             for count in range(len(displ)):
                 p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
                 arrow_start_vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 arrow_start_vertices.InsertCellPoint(p)
 
-                orientation = viewer.GetSliceOrientation()
+                
                 arrow_vector = [0,0,0]
                 arrow_shaft_centre = [displ[count][1],displ[count][2], displ[count][3]]
                 arrow_shaft_vector = [0,0,0]
@@ -3183,7 +3192,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 # print("Arrow end loc: ", [displ[count][1] + displ[count][6],displ[count][2]+ displ[count][7],displ[count][3]+ displ[count][8]])
                 # print("Arrow shaft centre: ", [arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2]])
                 # print("Arrow head loc: ", [arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2]])
-                # print("Arrow head size: ", arrowhead_vector) 
+                print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
 
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
@@ -3235,6 +3244,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             viewer_widget.PlaneClipper.AddDataToClip('arrow_shafts', line_glyph.GetOutputPort())
 
             line_mapper = vtk.vtkPolyDataMapper()
+            #line_mapper.SetInputConnection(line_glyph.GetOutputPort())
             line_mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('arrow_shafts').GetOutputPort())
             line_mapper.SetScalarModeToUsePointFieldData()
             line_mapper.SelectColorArray(0)
@@ -3258,10 +3268,11 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             transform = vtk.vtkTransform()
             transform.RotateZ(270)
             if orientation == 0:
+                #transform.RotateX(90)
                 transform.RotateY(90)
             if orientation == 1:
                 transform.RotateY(90) 
-                
+
             transformF = vtk.vtkTransformPolyDataFilter()
             transformF.SetInputConnection(arrowhead_source.GetOutputPort())
             transformF.SetTransform(transform) 
@@ -3290,34 +3301,25 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             arrowhead_actor.GetProperty().SetOpacity(1)
             arrowhead_actor.GetProperty().SetLineWidth(4)
             
-            viewer.ren.AddActor(point_actor)
-            viewer.ren.AddActor(line_actor)
-            viewer.ren.AddActor(arrowhead_actor)
+            viewer.AddActor(point_actor, 'arrow_pc_actor')
+            viewer.AddActor(line_actor, 'arrow_shaft_actor')
+            viewer.AddActor(arrowhead_actor, 'arrowhead_actor')
 
             # v = self.vis_widget_3D.frame.viewer
             # v.ren.AddActor(point_actor)
             # v.ren.AddActor(line_actor)
             # v.ren.AddActor(arrowhead_actor)
-
-            if not hasattr(self, 'actors_2D'):
-                self.actors_2D = {}
-
-            self.actors_2D['point_actor'] = point_actor
-            self.actors_2D['line_actor'] = line_actor
-            self.actors_2D['arrowhead_actor'] = arrowhead_actor
             
             viewer.startRenderLoop()
             viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 0.9) #handles vectors updating when switching orientation
     
     def OnKeyPressEventForVectors(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        print("OnKeyPressEventForVectors", key_code)
-        if 'line_actor' in self.actors_2D and 'arrowhead_actor' in self.actors_2D:
-            if key_code in ['x','y','z'] and \
-                self.actors_2D['line_actor'].GetVisibility() and self.actors_2D['arrowhead_actor'].GetVisibility():
-                    print("About to clear and create vectors")
-                    self.clearPointCloud2D()
-                    self.createVectors2D(self.displ, self.vis_widget_2D)
+        #print("OnKeyPressEventForVectors", key_code)
+        if key_code in ['x','y','z'] and \
+            interactor._viewer.GetActor('arrow_shaft_actor').GetVisibility() and interactor._viewer.GetActor('arrowhead_actor').GetVisibility():
+                self.clearPointCloud2D()
+                self.createVectors2D(self.displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
         viewer = viewer_widget.frame.viewer
@@ -3975,7 +3977,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
             result_widgets['vec_entry'] = QComboBox(groupBox)
-            result_widgets['vec_entry'].addItems(['None', '2D', '3D'])
+            result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
             formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
             widgetno += 1
 
@@ -4067,12 +4069,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                                 run_file = result.disp_file_name
                                 run_file = results_folder + "\\" + os.path.basename(run_file)
 
-                    if(self.result_widgets['vec_entry'].currentText() == "2D"):
-                        #self.PointCloudWorker("load vectors", filename = self.roi, disp_file = run_file, vector_dim = 2)
-                        self.displayVectors(run_file, 2)
-
-                    elif(self.result_widgets['vec_entry'].currentText() == "3D"):
-                        self.PointCloudWorker("load vectors", filename = None, disp_file = run_file, vector_dim = 3)
                         self.displayVectors(run_file, 2)
 
 
