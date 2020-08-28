@@ -23,7 +23,6 @@ from os.path import isfile, join
 from os import path
 
 import vtk
-# from vtk.qt.QVTKRenderWindowInteractor import QVTKRenderWindowInteractor #
 from ccpi.viewer.QCILRenderWindowInteractor import QCILRenderWindowInteractor #
 from ccpi.viewer import viewer2D, viewer3D # 
 from ccpi.viewer.QCILViewerWidget import QCILViewerWidget #
@@ -82,7 +81,7 @@ from distutils.dir_util import copy_tree
 
 from image_data import ImageDataCreator
 
-from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
+from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
 __version__ = '20.07.0'
 
@@ -131,7 +130,7 @@ class MainWindow(QMainWindow):
 
         #Export Session
         export_action = QAction("Export Session", self)
-        export_action.triggered.connect(self.export_session)
+        export_action.triggered.connect(self.ExportSession)
         self.file_menu.addAction(export_action)
 
         # Exit QAction
@@ -170,7 +169,6 @@ class MainWindow(QMainWindow):
             self.CreateSessionSelector("new window")
 
         
-
 #Setting up the session:
     def CreateWorkingTempFolder(self):
         # directories = [os.path.abspath(x) for x in next(os.walk(working_directory))[1]]
@@ -188,7 +186,7 @@ class MainWindow(QMainWindow):
         os.mkdir(os.path.join(tempfile.tempdir, "Results"))
 
     def OpenSettings(self):
-        self.settings_window = CreateSettingsWindow(self)
+        self.settings_window = SettingsWindow(self)
         self.settings_window.show()
 
     def InitialiseSessionVars(self):
@@ -380,7 +378,6 @@ class MainWindow(QMainWindow):
 
                     viewer.setVisualisationDownsampling(shown_resample_rate)
                     viewer.updatePipeline()
-
 
 
     def CreateHelpPanel(self):
@@ -1272,8 +1269,6 @@ and then input to the DVC code.")
             else:
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
-        
-
 
     def centerOnPointZero(self):
         print("Center on point0")
@@ -1486,7 +1481,6 @@ and then input to the DVC code.")
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
         
 
-    
 
     def LoadImagesAndCompleteRegistration(self):
         rp = self.registration_parameters
@@ -1764,101 +1758,101 @@ and then input to the DVC code.")
 
 #Mask Panel:
     def CreateMaskPanel(self):
-            self.mask_panel = generateUIDockParameters(self,'3 - Mask')
-            dockWidget = self.mask_panel[0]
-            dockWidget.setObjectName("CreateMaskPanel")
-            groupBox = self.mask_panel[5]
-            groupBox.setTitle('Mask Parameters')
-            formLayout = self.mask_panel[6]
+        self.mask_panel = generateUIDockParameters(self,'3 - Mask')
+        dockWidget = self.mask_panel[0]
+        dockWidget.setObjectName("CreateMaskPanel")
+        groupBox = self.mask_panel[5]
+        groupBox.setTitle('Mask Parameters')
+        formLayout = self.mask_panel[6]
 
-            # Create validation rule for text entry
-            validator = QtGui.QDoubleValidator()
-            validator.setDecimals(2)
-            validatorint = QtGui.QIntValidator()
+        # Create validation rule for text entry
+        validator = QtGui.QDoubleValidator()
+        validator.setDecimals(2)
+        validatorint = QtGui.QIntValidator()
 
-            #Need to move this to when loading session bc here the sesh hasn't been loaded.
+        #Need to move this to when loading session bc here the sesh hasn't been loaded.
 
-            #So create empty dropdwon in this section
+        #So create empty dropdwon in this section
 
-            dockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 2))
+        dockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 2))
 
-            mp_widgets = {}
-            self.mask_parameters = mp_widgets
+        mp_widgets = {}
+        self.mask_parameters = mp_widgets
 
-            widgetno = 1
+        widgetno = 1
 
-            mp_widgets['masksList'] = QComboBox(groupBox)
-            mp_widgets['masksList'].setEnabled(False)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['masksList'])
-            widgetno += 1
+        mp_widgets['masksList'] = QComboBox(groupBox)
+        mp_widgets['masksList'].setEnabled(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['masksList'])
+        widgetno += 1
 
-            mp_widgets['loadButton'] = QPushButton(groupBox)
-            mp_widgets['loadButton'].setText("Load Saved Mask")
-            mp_widgets['loadButton'].clicked.connect(lambda: self.MaskWorker("load mask"))
-            mp_widgets['loadButton'].setEnabled(False)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['loadButton'])
-            widgetno += 1
+        mp_widgets['loadButton'] = QPushButton(groupBox)
+        mp_widgets['loadButton'].setText("Load Saved Mask")
+        mp_widgets['loadButton'].clicked.connect(lambda: self.MaskWorker("load mask"))
+        mp_widgets['loadButton'].setEnabled(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['loadButton'])
+        widgetno += 1
 
-            mp_widgets['mask_browse'] = QPushButton(groupBox)
-            mp_widgets['mask_browse'].setText("Load Mask from File")
-            mp_widgets['mask_browse'].clicked.connect(self.select_mask)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_browse'])
-            widgetno += 1
+        mp_widgets['mask_browse'] = QPushButton(groupBox)
+        mp_widgets['mask_browse'].setText("Load Mask from File")
+        mp_widgets['mask_browse'].clicked.connect(self.select_mask)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_browse'])
+        widgetno += 1
 
-            mp_widgets['mask_extend_above_label'] = QLabel(groupBox)
-            mp_widgets['mask_extend_above_label'].setText("Extend Above ")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp_widgets['mask_extend_above_label'])
-            mp_widgets['mask_extend_above_entry'] = QSpinBox(groupBox)
-            mp_widgets['mask_extend_above_entry'].setSingleStep(1)
-            mp_widgets['mask_extend_above_entry'].setValue(10)
-            mp_widgets['mask_extend_above_entry'].setEnabled(True)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_extend_above_entry'])
-            widgetno += 1
+        mp_widgets['mask_extend_above_label'] = QLabel(groupBox)
+        mp_widgets['mask_extend_above_label'].setText("Extend Above ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp_widgets['mask_extend_above_label'])
+        mp_widgets['mask_extend_above_entry'] = QSpinBox(groupBox)
+        mp_widgets['mask_extend_above_entry'].setSingleStep(1)
+        mp_widgets['mask_extend_above_entry'].setValue(10)
+        mp_widgets['mask_extend_above_entry'].setEnabled(True)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_extend_above_entry'])
+        widgetno += 1
 
-            mp_widgets['mask_extend_below_label'] = QLabel(groupBox)
-            mp_widgets['mask_extend_below_label'].setText("Extend Below ")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp_widgets['mask_extend_below_label'])
-            mp_widgets['mask_extend_below_entry'] = QSpinBox(groupBox)
-            mp_widgets['mask_extend_below_entry'].setSingleStep(1)
-            mp_widgets['mask_extend_below_entry'].setValue(10)
-            mp_widgets['mask_extend_below_entry'].setEnabled(True)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_extend_below_entry'])
-            widgetno += 1
+        mp_widgets['mask_extend_below_label'] = QLabel(groupBox)
+        mp_widgets['mask_extend_below_label'].setText("Extend Below ")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp_widgets['mask_extend_below_label'])
+        mp_widgets['mask_extend_below_entry'] = QSpinBox(groupBox)
+        mp_widgets['mask_extend_below_entry'].setSingleStep(1)
+        mp_widgets['mask_extend_below_entry'].setValue(10)
+        mp_widgets['mask_extend_below_entry'].setEnabled(True)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_extend_below_entry'])
+        widgetno += 1
 
-            # Add should extend checkbox
-            mp_widgets['extendMaskCheck'] = QCheckBox(groupBox)
-            mp_widgets['extendMaskCheck'].setText("Extend mask")
-            #mp_widgets['extendMaskCheck'].setEnabled(False)
+        # Add should extend checkbox
+        mp_widgets['extendMaskCheck'] = QCheckBox(groupBox)
+        mp_widgets['extendMaskCheck'].setText("Extend mask")
+        #mp_widgets['extendMaskCheck'].setEnabled(False)
 
-            formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
-            widgetno += 1
+        formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
+        widgetno += 1
 
-            # Add submit button
-            mp_widgets['submitButton'] = QPushButton(groupBox)
-            mp_widgets['submitButton'].setText("Create Mask")
-            mp_widgets['submitButton'].clicked.connect(lambda: self.MaskWorker("extend"))
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['submitButton'])
-            widgetno += 1
+        # Add submit button
+        mp_widgets['submitButton'] = QPushButton(groupBox)
+        mp_widgets['submitButton'].setText("Create Mask")
+        mp_widgets['submitButton'].clicked.connect(lambda: self.MaskWorker("extend"))
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['submitButton'])
+        widgetno += 1
 
-            mp_widgets['saveButton'] = QPushButton(groupBox)
-            mp_widgets['saveButton'].setText("Save Mask")
-            mp_widgets['saveButton'].clicked.connect(lambda: self.ShowSaveMaskWindow(save_only = True))
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['saveButton'])
-            widgetno += 1
+        mp_widgets['saveButton'] = QPushButton(groupBox)
+        mp_widgets['saveButton'].setText("Save Mask")
+        mp_widgets['saveButton'].clicked.connect(lambda: self.ShowSaveMaskWindow(save_only = True))
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['saveButton'])
+        widgetno += 1
 
-            mp_widgets['clear_button'] = QPushButton(groupBox)
-            mp_widgets['clear_button'].setText("Clear Mask")
-            mp_widgets['clear_button'].clicked.connect(self.clearMask)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['clear_button'])
-            widgetno += 1
+        mp_widgets['clear_button'] = QPushButton(groupBox)
+        mp_widgets['clear_button'].setText("Clear Mask")
+        mp_widgets['clear_button'].clicked.connect(self.clearMask)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['clear_button'])
+        widgetno += 1
 
-            mp_widgets['extendMaskCheck'].stateChanged.connect(lambda: mp_widgets['submitButton'].setText("Extend Mask") \
-                                                     if mp_widgets['extendMaskCheck'].isChecked() \
-                                                     else mp_widgets['submitButton'].setText("Create Mask"))
+        mp_widgets['extendMaskCheck'].stateChanged.connect(lambda: mp_widgets['submitButton'].setText("Extend Mask") \
+                                                    if mp_widgets['extendMaskCheck'].isChecked() \
+                                                    else mp_widgets['submitButton'].setText("Create Mask"))
 
 
-            # Add elements to layout
-            self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
+        # Add elements to layout
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -1895,7 +1889,7 @@ and then input to the DVC code.")
                 self.warningDialog(window_title="Error", 
                                message="Create or load a mask on the viewer first." )
                 return
-        self.SaveWindow = CreateSaveObjectWindow(self, "mask", save_only)
+        self.SaveWindow = SaveObjectWindow(self, "mask", save_only)
         self.SaveWindow.show()
 
     def extendMask(self, progress_callback=None):
@@ -1933,7 +1927,7 @@ and then input to the DVC code.")
             #print(self.mask_details)
 
             #Appropriate modification to Point Cloud Panel
-            self.updatePointCloudPanel()
+            #self.updatePointCloudPanel()
             
             # create a blank image
             dims = image_data.GetDimensions()
@@ -2127,6 +2121,7 @@ and then input to the DVC code.")
     def clearMask(self):
         self.vis_widget_2D.frame.viewer.setInputData2(vtk.vtkImageData()) #deletes mask
         self.mask_reader = None
+
 
         #how to clear the tracer? ...
         #self.vis_widget_2D.frame.viewer.imageTracer =  vtk.vtkImageTracerWidget() #this line causes problems
@@ -2528,17 +2523,11 @@ and then input to the DVC code.")
                 self.clearPointCloud()
             self.pointcloud_worker = Worker(self.createPointCloud, filename = filename)
             self.pointcloud_worker.signals.finished.connect(self.progress_complete)
-        elif type == "load vectors": #TODO: delete as not needed
-            self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.loadPointCloud, filename)
-            self.pointcloud_worker.signals.finished.connect(lambda: self.displayVectors(disp_file, vector_dim))
             
         self.create_progress_window("Loading", "Loading Pointcloud")
         self.pointcloud_worker.signals.progress.connect(self.progress)
         self.progress_window.setValue(10)
         self.threadpool.start(self.pointcloud_worker)  
-
-
 
 
     def progress_complete(self):
@@ -2559,7 +2548,7 @@ and then input to the DVC code.")
         else:
             if(self.pointCloudCreated or self.pointCloudLoaded): 
                 print("pointcloud created")
-                self.SavePointCloudWindow = CreateSaveObjectWindow(self, "pointcloud", save_only)
+                self.SavePointCloudWindow = SaveObjectWindow(self, "pointcloud", save_only)
                 self.SavePointCloudWindow.show()
             else:
                 self.PointCloudWorker("create")
@@ -2700,8 +2689,7 @@ and then input to the DVC code.")
                         run_erode = True
                         print("radius has changed")
                         self.erode_pars['ks'] = ks[:]
-                    
-                
+                                   
                 if run_erode:
                     erode.SetInputConnection(0,reader.GetOutputPort())
                     erode.SetKernelSize(ks[0],ks[1],ks[2])
@@ -3038,33 +3026,6 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         print("Cleared pc")
 
-        # ren2D = self.vis_widget_2D.frame.viewer.getRenderer()
-        # ren3D = self.vis_widget_3D.frame.viewer.getRenderer()
-
-        # present_actors = ren2D.GetActors()
-        # present_actors.InitTraversal()
-        # #self.log("Currently present actors {}".format(present_actors))
-        # #print(present_actors.GetNumberOfItems())
-        # for i in range(present_actors.GetNumberOfItems()):
-        #      nextActor = present_actors.GetNextActor()
-        #      #print(nextActor)
-        #      #print(type(nextActor))
-        #      #ren2D.RemoveActor(nextActor)
-       
-  
-        # v2D.GetRenderWindow().Render()
-
-        # present_actors = ren3D.GetActors()
-        # present_actors.InitTraversal()
-        # #self.log("Currently present actors {}".format(present_actors))
-        # print(present_actors.GetNumberOfItems())
-        # for i in range(present_actors.GetNumberOfItems()):
-        #      nextActor = present_actors.GetNextActor()
-        #      print(type(nextActor))
-        #      #ren3D.RemoveActor(nextActor)
-
-        # 
-        # #print("Rendered")
 
     def showSubvolumeRegions(self, show):
         v2D = self.vis_widget_2D.frame.viewer
@@ -3085,46 +3046,28 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         self.vis_widget_2D.frame.viewer.ren.Render()
         self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
-   
-
-        
-    def loadPointCloudFromCSV(self,filename, delimiter=','): #TODO: move into pointcloud_conversion.py
-        print ("loadPointCloudFromCSV")
-        pointcloud = []
-        with open(filename, 'r') as csvfile:
-            read = csv.reader(csvfile, delimiter=delimiter)
-            for row in read:
-                #read in only numerical values
-                #print (row)
-                try:
-                    row = list(map(lambda x: float(x),row))
-                #print ("reduce " , reduce( lambda x,y: isinstance(x,Number) and \
-                #          isinstance(y,Number) , row))
-                #if reduce( lambda x,y: isinstance(x,Number) and \
-                #          isinstance(y,Number) , row):
-                    pointcloud.append(row)
-                except ValueError as ve:
-                    print ('Value Error' , ve)
-        return pointcloud
 
 
     def displayVectors(self,disp_file, vector_dim):
         self.clearPointCloud()
+        self.disp_file = disp_file
+        
+        displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2)
+
+        self.createVectors2D(displ, self.vis_widget_2D)
+        self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
+
+    def loadDisplacementFile(self, file, disp_wrt_point0 = False):
         displ = np.asarray(
-        self.loadPointCloudFromCSV(disp_file,'\t')[:]
+        PointCloudConverter.loadPointCloudFromCSV(file,'\t')[:]
         )
 
-        if self.result_widgets['vec_entry'].currentIndex() == 2:
+        if disp_wrt_point0:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
             for count in range(len(displ)):
                 for i in range(3):
                     displ[count][i+6] = displ[count][i+6] - point0_disp[i]
-        self.displ = displ
-
-        self.createVectors2D(self.displ, self.vis_widget_2D)
-        self.createVectors3D(self.displ, self.vis_widget_3D, self.actors_3D)
-        
-        #self.createVectors3D(disp_file)
+        return displ
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
@@ -3158,7 +3101,6 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 arrow_start_vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 arrow_start_vertices.InsertCellPoint(p)
 
-                
                 arrow_vector = [0,0,0]
                 arrow_shaft_centre = [displ[count][1],displ[count][2], displ[count][3]]
                 arrow_shaft_vector = [0,0,0]
@@ -3192,7 +3134,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 # print("Arrow end loc: ", [displ[count][1] + displ[count][6],displ[count][2]+ displ[count][7],displ[count][3]+ displ[count][8]])
                 # print("Arrow shaft centre: ", [arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2]])
                 # print("Arrow head loc: ", [arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2]])
-                print("Arrow head size: ", arrowhead_vector) 
+                # print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
 
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
@@ -3299,27 +3241,31 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             arrowhead_actor = vtk.vtkActor()
             arrowhead_actor.SetMapper(arrowhead_mapper)
             arrowhead_actor.GetProperty().SetOpacity(1)
-            arrowhead_actor.GetProperty().SetLineWidth(4)
+            arrowhead_actor.GetProperty().SetLineWidth(1)
             
             viewer.AddActor(point_actor, 'arrow_pc_actor')
             viewer.AddActor(line_actor, 'arrow_shaft_actor')
             viewer.AddActor(arrowhead_actor, 'arrowhead_actor')
 
+            # For testing, show 2D arrows on 3D viewer too. Best to do thsi without clipping
             # v = self.vis_widget_3D.frame.viewer
             # v.ren.AddActor(point_actor)
             # v.ren.AddActor(line_actor)
             # v.ren.AddActor(arrowhead_actor)
             
-            viewer.startRenderLoop()
+            viewer.updatePipeline()
             viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 0.9) #handles vectors updating when switching orientation
     
     def OnKeyPressEventForVectors(self, interactor, event):
+        #Vectors have to be recreated on the 2D viewer when switching orientation
         key_code = interactor.GetKeyCode()
         #print("OnKeyPressEventForVectors", key_code)
         if key_code in ['x','y','z'] and \
             interactor._viewer.GetActor('arrow_shaft_actor').GetVisibility() and interactor._viewer.GetActor('arrowhead_actor').GetVisibility():
                 self.clearPointCloud2D()
-                self.createVectors2D(self.displ, self.vis_widget_2D)
+                print("Cleared pc")
+                displ = self.loadDisplacementFile(self.disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2)
+                self.createVectors2D(displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
         viewer = viewer_widget.frame.viewer
@@ -3398,244 +3344,245 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             v.ren.AddActor(arrow_actor)
             actor_list['pactor'] = pactor
             actor_list['arrow_actor'] = arrow_actor
-            v.startRenderLoop()
+            v.updatePipeline()
 
 
 #Run DVC  Panel:
     def CreateRunDVCPanel(self):
-            self.run_dvc_panel = generateUIDockParameters(self, "5 - Run DVC")
-            dockWidget = self.run_dvc_panel[0]
-            dockWidget.setObjectName("RunDVCPanel")
-            internalWidgetVerticalLayout = self.run_dvc_panel[4]
-            groupBox = self.run_dvc_panel[5]
-            groupBox.setTitle('Run Parameters')
-            formLayout = self.run_dvc_panel[6]
+        self.run_dvc_panel = generateUIDockParameters(self, "5 - Run DVC")
+        dockWidget = self.run_dvc_panel[0]
+        dockWidget.setObjectName("RunDVCPanel")
+        internalWidgetVerticalLayout = self.run_dvc_panel[4]
+        groupBox = self.run_dvc_panel[5]
+        groupBox.setTitle('Run Parameters')
+        formLayout = self.run_dvc_panel[6]
 
-            dockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 4))
+        dockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 4))
 
-            #Create the widgets:
-            widgetno = 1
+        #Create the widgets:
+        widgetno = 1
 
-            rdvc_widgets = {}
+        rdvc_widgets = {}
 
-            rdvc_widgets['name_label'] = QLabel(groupBox)
-            rdvc_widgets['name_label'].setText("Set a name for the run:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['name_label'])
+        rdvc_widgets['name_label'] = QLabel(groupBox)
+        rdvc_widgets['name_label'].setText("Set a name for the run:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['name_label'])
 
-            rdvc_widgets['name_entry'] = QLineEdit(self)
-            rx = QRegExp("[A-Za-z0-9]+")
-            validator = QRegExpValidator(rx, rdvc_widgets['name_entry']) #need to check this
-            rdvc_widgets['name_entry'].setValidator(validator)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['name_entry'])
-            widgetno += 1
+        rdvc_widgets['name_entry'] = QLineEdit(self)
+        rx = QRegExp("[A-Za-z0-9]+")
+        validator = QRegExpValidator(rx, rdvc_widgets['name_entry']) #need to check this
+        rdvc_widgets['name_entry'].setValidator(validator)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['name_entry'])
+        widgetno += 1
 
-            separators = []
-            separators.append(QFrame(groupBox))
-            separators[-1].setFrameShape(QFrame.HLine)
-            separators[-1].setFrameShadow(QFrame.Raised)
-            formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
-            widgetno += 1  
+        separators = []
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1  
 
-            rdvc_widgets['run_points_label'] = QLabel(groupBox)
-            rdvc_widgets['run_points_label'].setText("Points in Run:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_points_label'])
+        rdvc_widgets['run_points_label'] = QLabel(groupBox)
+        rdvc_widgets['run_points_label'].setText("Points in Run:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_points_label'])
 
-            rdvc_widgets['run_points_spinbox'] = QSpinBox(groupBox)
-            rdvc_widgets['run_points_spinbox'].setMinimum(1)
-            rdvc_widgets['run_points_spinbox'].setMaximum(10000)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_points_spinbox'])
-            widgetno += 1         
+        rdvc_widgets['run_points_spinbox'] = QSpinBox(groupBox)
+        rdvc_widgets['run_points_spinbox'].setMinimum(1)
+        rdvc_widgets['run_points_spinbox'].setMaximum(10000)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_points_spinbox'])
+        widgetno += 1         
 
-            rdvc_widgets['run_max_displacement_label'] = QLabel(groupBox)
-            rdvc_widgets['run_max_displacement_label'].setText("Maximum Displacement (voxels)")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
-            rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
-            rdvc_widgets['run_max_displacement_entry'].setValue(10)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_max_displacement_entry'])
-            widgetno += 1
+        rdvc_widgets['run_max_displacement_label'] = QLabel(groupBox)
+        rdvc_widgets['run_max_displacement_label'].setText("Maximum Displacement (voxels)")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
+        rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
+        rdvc_widgets['run_max_displacement_entry'].setValue(10)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_max_displacement_entry'])
+        widgetno += 1
 
-            rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
-            rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_ndof_label'])
-            rdvc_widgets['run_ndof_entry'] = QComboBox(groupBox)
-            rdvc_widgets['run_ndof_entry'].addItem('3')
-            rdvc_widgets['run_ndof_entry'].addItem('6')
-            rdvc_widgets['run_ndof_entry'].addItem('12')
-            rdvc_widgets['run_ndof_entry'].setCurrentIndex(1)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_ndof_entry'])
-            widgetno += 1
+        rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
+        rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_ndof_label'])
+        rdvc_widgets['run_ndof_entry'] = QComboBox(groupBox)
+        rdvc_widgets['run_ndof_entry'].addItem('3')
+        rdvc_widgets['run_ndof_entry'].addItem('6')
+        rdvc_widgets['run_ndof_entry'].addItem('12')
+        rdvc_widgets['run_ndof_entry'].setCurrentIndex(1)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_ndof_entry'])
+        widgetno += 1
 
-            rdvc_widgets['run_objf_label'] = QLabel(groupBox)
-            rdvc_widgets['run_objf_label'].setText("Objective Function")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_objf_label'])
-            rdvc_widgets['run_objf_entry'] = QComboBox(groupBox)
-            rdvc_widgets['run_objf_entry'].addItem('sad')
-            rdvc_widgets['run_objf_entry'].addItem('ssd')
-            rdvc_widgets['run_objf_entry'].addItem('zssd')
-            rdvc_widgets['run_objf_entry'].addItem('nssd')
-            rdvc_widgets['run_objf_entry'].addItem('znssd')
-            rdvc_widgets['run_objf_entry'].setCurrentIndex(4)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_objf_entry'])
-            widgetno += 1
+        rdvc_widgets['run_objf_label'] = QLabel(groupBox)
+        rdvc_widgets['run_objf_label'].setText("Objective Function")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_objf_label'])
+        rdvc_widgets['run_objf_entry'] = QComboBox(groupBox)
+        rdvc_widgets['run_objf_entry'].addItem('sad')
+        rdvc_widgets['run_objf_entry'].addItem('ssd')
+        rdvc_widgets['run_objf_entry'].addItem('zssd')
+        rdvc_widgets['run_objf_entry'].addItem('nssd')
+        rdvc_widgets['run_objf_entry'].addItem('znssd')
+        rdvc_widgets['run_objf_entry'].setCurrentIndex(4)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_objf_entry'])
+        widgetno += 1
 
-            rdvc_widgets['run_iterp_type_label'] = QLabel(groupBox)
-            rdvc_widgets['run_iterp_type_label'].setText("Interpolation type")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_iterp_type_label'])
-            rdvc_widgets['run_iterp_type_entry'] = QComboBox(groupBox)
-            rdvc_widgets['run_iterp_type_entry'].addItem('Nearest')
-            rdvc_widgets['run_iterp_type_entry'].addItem('Trilinear')
-            rdvc_widgets['run_iterp_type_entry'].addItem('Tricubic')
-            rdvc_widgets['run_iterp_type_entry'].setCurrentIndex(2)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_iterp_type_entry'])
-            widgetno += 1
+        rdvc_widgets['run_iterp_type_label'] = QLabel(groupBox)
+        rdvc_widgets['run_iterp_type_label'].setText("Interpolation type")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_iterp_type_label'])
+        rdvc_widgets['run_iterp_type_entry'] = QComboBox(groupBox)
+        rdvc_widgets['run_iterp_type_entry'].addItem('Nearest')
+        rdvc_widgets['run_iterp_type_entry'].addItem('Trilinear')
+        rdvc_widgets['run_iterp_type_entry'].addItem('Tricubic')
+        rdvc_widgets['run_iterp_type_entry'].setCurrentIndex(2)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_iterp_type_entry'])
+        widgetno += 1
 
-            # Add horizonal seperator
-            separators.append(QFrame(groupBox))
-            separators[-1].setFrameShape(QFrame.HLine)
-            separators[-1].setFrameShadow(QFrame.Raised)
-            formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
-            widgetno += 1 
+        # Add horizonal seperator
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1 
 
-            rdvc_widgets['run_type_label'] = QLabel(groupBox)
-            rdvc_widgets['run_type_label'].setText("Run type:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_type_label'])
-            rdvc_widgets['run_type_entry'] = QComboBox(groupBox)
-            rdvc_widgets['run_type_entry'].addItems(['Single', 'Bulk'])
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_type_entry'])
-            widgetno += 1
+        rdvc_widgets['run_type_label'] = QLabel(groupBox)
+        rdvc_widgets['run_type_label'].setText("Run type:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_type_label'])
+        rdvc_widgets['run_type_entry'] = QComboBox(groupBox)
+        rdvc_widgets['run_type_entry'].addItems(['Single', 'Bulk'])
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_type_entry'])
+        widgetno += 1
 
 
-            singleRun_groupBox = QGroupBox("Single Run Parameters")
-            singleRun_groupBox.setMinimumSize(QSize(0,0))
-            self.singleRun_groupBox = singleRun_groupBox
-            singleRun_groupBoxFormLayout = QFormLayout(singleRun_groupBox)
-            internalWidgetVerticalLayout.addWidget(singleRun_groupBox)
+        singleRun_groupBox = QGroupBox("Single Run Parameters")
+        singleRun_groupBox.setMinimumSize(QSize(0,0))
+        self.singleRun_groupBox = singleRun_groupBox
+        singleRun_groupBoxFormLayout = QFormLayout(singleRun_groupBox)
+        internalWidgetVerticalLayout.addWidget(singleRun_groupBox)
 
-            widgetno = 0
+        widgetno = 0
 
-            rdvc_widgets['subvol_points_label'] = QLabel(singleRun_groupBox)
-            rdvc_widgets['subvol_points_label'].setText("Points in Subvolume:")
-            singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['subvol_points_label'])
+        rdvc_widgets['subvol_points_label'] = QLabel(singleRun_groupBox)
+        rdvc_widgets['subvol_points_label'].setText("Sampling points in subvolume:")
+        singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['subvol_points_label'])
+    
+        rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
+        rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
+        rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
+        rdvc_widgets['subvol_points_spinbox'].setMaximum(10000)
+
+        singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
+        widgetno += 1
+
+        bulkRun_groupBox = QGroupBox("Bulk Run Parameters")
+        self.bulkRun_groupBox = bulkRun_groupBox
+        bulkRun_groupBoxFormLayout = QFormLayout(bulkRun_groupBox)
+        internalWidgetVerticalLayout.addWidget(bulkRun_groupBox)
+        bulkRun_groupBox.hide()
+
+        validatorint = QtGui.QIntValidator()
+
+        widgetno = 0
+
+        rdvc_widgets['radius_range_min_label'] = QLabel(bulkRun_groupBox)
+        rdvc_widgets['radius_range_min_label'].setText("Radius min ")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['radius_range_min_label'])
+        rdvc_widgets['radius_range_min_value'] = QLineEdit(bulkRun_groupBox)
+        rdvc_widgets['radius_range_min_value'].setValidator(validatorint)
         
-            rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
-            rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
-            rdvc_widgets['subvol_points_spinbox'].setMaximum(20000)
+        current_radius = self.isoValueEntry.text()
+        
+        rdvc_widgets['radius_range_min_value'].setText(current_radius)
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['radius_range_min_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # radius range max
+        rdvc_widgets['radius_range_max_label'] = QLabel(bulkRun_groupBox)
+        rdvc_widgets['radius_range_max_label'].setText("Radius max ")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['radius_range_max_label'])
+        rdvc_widgets['radius_range_max_value'] = QLineEdit(bulkRun_groupBox)
+        rdvc_widgets['radius_range_max_value'].setValidator(validatorint)
+        rdvc_widgets['radius_range_max_value'].setText("100")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['radius_range_max_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # radius range step
+        rdvc_widgets['radius_range_step_label'] = QLabel(bulkRun_groupBox)
+        rdvc_widgets['radius_range_step_label'].setText("Radius step ")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['radius_range_step_label'])
+        rdvc_widgets['radius_range_step_value'] = QLineEdit(bulkRun_groupBox)
+        rdvc_widgets['radius_range_step_value'].setValidator(validatorint)
+        rdvc_widgets['radius_range_step_value'].setText("0")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['radius_range_step_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        
+        separators = [QFrame(groupBox)]
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1
+        
+        # NUMBER OF POINTS IN SUBVOLUME min
+        rdvc_widgets['points_in_subvol_range_min_label'] = QLabel(bulkRun_groupBox)
+        rdvc_widgets['points_in_subvol_range_min_label'].setText("number of points in subvolume min ")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_min_label'])
+        rdvc_widgets['points_in_subvol_range_min_value'] = QLineEdit(bulkRun_groupBox)
+        rdvc_widgets['points_in_subvol_range_min_value'].setValidator(validatorint)
+        rdvc_widgets['points_in_subvol_range_min_value'].setText("10")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['points_in_subvol_range_min_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # overlap range max
+        rdvc_widgets['points_in_subvol_range_max_label'] = QLabel(bulkRun_groupBox)
+        rdvc_widgets['points_in_subvol_range_max_label'].setText("number of points in subvolume max ")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_max_label'])
+        rdvc_widgets['points_in_subvol_range_max_value'] = QLineEdit(bulkRun_groupBox)
+        rdvc_widgets['points_in_subvol_range_max_value'].setValidator(validatorint)
+        rdvc_widgets['points_in_subvol_range_max_value'].setText("100")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['points_in_subvol_range_max_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
+        # overlap range step
+        rdvc_widgets['points_in_subvol_range_step_label'] = QLabel(bulkRun_groupBox)
+        rdvc_widgets['points_in_subvol_range_step_label'].setText("number of points in subvolume step ")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_step_label'])
+        rdvc_widgets['points_in_subvol_range_step_value'] = QLineEdit(bulkRun_groupBox)
+        rdvc_widgets['points_in_subvol_range_step_value'].setValidator(validatorint)
+        rdvc_widgets['points_in_subvol_range_step_value'].setText("0")
+        bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['points_in_subvol_range_step_value'])
+        #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
+        #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
+        widgetno += 1
 
-            singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
-            widgetno += 1
+        button_groupBox = QGroupBox()
+        self.button_groupBox = button_groupBox
+        button_groupBoxFormLayout = QFormLayout(button_groupBox)
+        internalWidgetVerticalLayout.addWidget(button_groupBox)
 
-            bulkRun_groupBox = QGroupBox("Bulk Run Parameters")
-            self.bulkRun_groupBox = bulkRun_groupBox
-            bulkRun_groupBoxFormLayout = QFormLayout(bulkRun_groupBox)
-            internalWidgetVerticalLayout.addWidget(bulkRun_groupBox)
-            bulkRun_groupBox.hide()
+        rdvc_widgets['run_button'] = QPushButton(button_groupBox)
+        rdvc_widgets['run_button'].setText("Run DVC")
+        #rdvc_widgets['run_button'].setEnabled(False)
+        button_groupBoxFormLayout.setWidget(widgetno, QFormLayout.SpanningRole, rdvc_widgets['run_button'])
+        widgetno += 1
 
-            validatorint = QtGui.QIntValidator()
+        # rdvc_widgets['run_config'] = QPushButton(button_groupBox)
+        # rdvc_widgets['run_config'].setText("Generate Run Config")
+        # #rdvc_widgets['run_config'].setEnabled(False)
+        # button_groupBoxFormLayout.setWidget(widgetno, QFormLayout.SpanningRole, rdvc_widgets['run_config'])
+        # widgetno += 1
 
-            widgetno = 0
+        #Add button functionality:
+        #rdvc_widgets['dir_browse'].clicked.connect(lambda: self.select_directory(rdvc_widgets['dir_name_label'], [rdvc_widgets['run_button'], rdvc_widgets['run_config']], self.run_folder, "Select a directory to save the run", "run"))
+        #rdvc_widgets['roi_browse'].clicked.connect(lambda: self.select_roi(rdvc_widgets['roi_name_label'], rdvc_widgets['run_button']))
+        rdvc_widgets['run_type_entry'].currentIndexChanged.connect(self.show_run_groupbox)
+        rdvc_widgets['run_button'].clicked.connect(self.create_config_worker)
 
-            rdvc_widgets['radius_range_min_label'] = QLabel(bulkRun_groupBox)
-            rdvc_widgets['radius_range_min_label'].setText("Radius min ")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['radius_range_min_label'])
-            rdvc_widgets['radius_range_min_value'] = QLineEdit(bulkRun_groupBox)
-            rdvc_widgets['radius_range_min_value'].setValidator(validatorint)
-            
-            current_radius = self.isoValueEntry.text()
-            
-            rdvc_widgets['radius_range_min_value'].setText(current_radius)
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['radius_range_min_value'])
-            #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-            #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
-            widgetno += 1
-            # radius range max
-            rdvc_widgets['radius_range_max_label'] = QLabel(bulkRun_groupBox)
-            rdvc_widgets['radius_range_max_label'].setText("Radius max ")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['radius_range_max_label'])
-            rdvc_widgets['radius_range_max_value'] = QLineEdit(bulkRun_groupBox)
-            rdvc_widgets['radius_range_max_value'].setValidator(validatorint)
-            rdvc_widgets['radius_range_max_value'].setText("100")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['radius_range_max_value'])
-            #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-            #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
-            widgetno += 1
-            # radius range step
-            rdvc_widgets['radius_range_step_label'] = QLabel(bulkRun_groupBox)
-            rdvc_widgets['radius_range_step_label'].setText("Radius step ")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['radius_range_step_label'])
-            rdvc_widgets['radius_range_step_value'] = QLineEdit(bulkRun_groupBox)
-            rdvc_widgets['radius_range_step_value'].setValidator(validatorint)
-            rdvc_widgets['radius_range_step_value'].setText("0")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['radius_range_step_value'])
-            #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-            #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
-            widgetno += 1
-            
-            separators = [QFrame(groupBox)]
-            separators[-1].setFrameShape(QFrame.HLine)
-            separators[-1].setFrameShadow(QFrame.Raised)
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
-            widgetno += 1
-            
-            # NUMBER OF POINTS IN SUBVOLUME min
-            rdvc_widgets['points_in_subvol_range_min_label'] = QLabel(bulkRun_groupBox)
-            rdvc_widgets['points_in_subvol_range_min_label'].setText("number of points in subvolume min ")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_min_label'])
-            rdvc_widgets['points_in_subvol_range_min_value'] = QLineEdit(bulkRun_groupBox)
-            rdvc_widgets['points_in_subvol_range_min_value'].setValidator(validatorint)
-            rdvc_widgets['points_in_subvol_range_min_value'].setText("10")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['points_in_subvol_range_min_value'])
-            #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-            #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
-            widgetno += 1
-            # overlap range max
-            rdvc_widgets['points_in_subvol_range_max_label'] = QLabel(bulkRun_groupBox)
-            rdvc_widgets['points_in_subvol_range_max_label'].setText("number of points in subvolume max ")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_max_label'])
-            rdvc_widgets['points_in_subvol_range_max_value'] = QLineEdit(bulkRun_groupBox)
-            rdvc_widgets['points_in_subvol_range_max_value'].setValidator(validatorint)
-            rdvc_widgets['points_in_subvol_range_max_value'].setText("100")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['points_in_subvol_range_max_value'])
-            #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-            #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
-            widgetno += 1
-            # overlap range step
-            rdvc_widgets['points_in_subvol_range_step_label'] = QLabel(bulkRun_groupBox)
-            rdvc_widgets['points_in_subvol_range_step_label'].setText("number of points in subvolume step ")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_step_label'])
-            rdvc_widgets['points_in_subvol_range_step_value'] = QLineEdit(bulkRun_groupBox)
-            rdvc_widgets['points_in_subvol_range_step_value'].setValidator(validatorint)
-            rdvc_widgets['points_in_subvol_range_step_value'].setText("0")
-            bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['points_in_subvol_range_step_value'])
-            #self.treeWidgetUpdateElements.append(self.extendAboveEntry)
-            #self.treeWidgetUpdateElements.append(self.extendAboveLabel)
-            widgetno += 1
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
-            button_groupBox = QGroupBox()
-            self.button_groupBox = button_groupBox
-            button_groupBoxFormLayout = QFormLayout(button_groupBox)
-            internalWidgetVerticalLayout.addWidget(button_groupBox)
-
-            rdvc_widgets['run_button'] = QPushButton(button_groupBox)
-            rdvc_widgets['run_button'].setText("Run DVC")
-            #rdvc_widgets['run_button'].setEnabled(False)
-            button_groupBoxFormLayout.setWidget(widgetno, QFormLayout.SpanningRole, rdvc_widgets['run_button'])
-            widgetno += 1
-
-            # rdvc_widgets['run_config'] = QPushButton(button_groupBox)
-            # rdvc_widgets['run_config'].setText("Generate Run Config")
-            # #rdvc_widgets['run_config'].setEnabled(False)
-            # button_groupBoxFormLayout.setWidget(widgetno, QFormLayout.SpanningRole, rdvc_widgets['run_config'])
-            # widgetno += 1
-
-            #Add button functionality:
-            #rdvc_widgets['dir_browse'].clicked.connect(lambda: self.select_directory(rdvc_widgets['dir_name_label'], [rdvc_widgets['run_button'], rdvc_widgets['run_config']], self.run_folder, "Select a directory to save the run", "run"))
-            #rdvc_widgets['roi_browse'].clicked.connect(lambda: self.select_roi(rdvc_widgets['roi_name_label'], rdvc_widgets['run_button']))
-            rdvc_widgets['run_type_entry'].currentIndexChanged.connect(self.show_run_groupbox)
-            rdvc_widgets['run_button'].clicked.connect(self.create_config_worker)
-
-            self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
-
-            self.rdvc_widgets = rdvc_widgets
+        self.rdvc_widgets = rdvc_widgets
 
     def show_run_groupbox(self):
         if self.rdvc_widgets['run_type_entry'].currentIndex() == 0:
@@ -3871,8 +3818,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         self.cancelled = False
 
-
-
     def update_progress(self, exe = None):
         if exe:
             line_b = self.process.readLine()
@@ -3909,90 +3854,90 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         #self.createVectors(filename, dimensions=3)
 
     def cancel_run(self):
-         print(self.progress_window.value())
-         self.status.showMessage("Run cancelled")
-         self.process.kill()
-         self.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
-         self.alert.show()
-         self.cancelled = True
+        print(self.progress_window.value())
+        self.status.showMessage("Run cancelled")
+        self.process.kill()
+        self.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
+        self.alert.show()
+        self.cancelled = True
 
 # DVC Results Panel:
     def CreateViewDVCResultsPanel(self):
-            self.dvc_results_panel = generateUIDockParameters(self, "6 - DVC Results")
-            dockWidget = self.dvc_results_panel[0]
-            dockWidget.setObjectName("DVCResultsPanel")
-            internalWidgetVerticalLayout = self.dvc_results_panel[4]
-            groupBox = self.dvc_results_panel[5]
-            groupBox.setTitle('View Results')
-            formLayout = self.dvc_results_panel[6]
+        self.dvc_results_panel = generateUIDockParameters(self, "6 - DVC Results")
+        dockWidget = self.dvc_results_panel[0]
+        dockWidget.setObjectName("DVCResultsPanel")
+        internalWidgetVerticalLayout = self.dvc_results_panel[4]
+        groupBox = self.dvc_results_panel[5]
+        groupBox.setTitle('View Results')
+        formLayout = self.dvc_results_panel[6]
 
-            dockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 5))
+        dockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 5))
 
-            #Create the widgets:
-            widgetno = 1
+        #Create the widgets:
+        widgetno = 1
 
-            result_widgets = {}
+        result_widgets = {}
 
-            result_widgets['run_label'] = QLabel(groupBox)
-            result_widgets['run_label'].setText("Select a run:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['run_label'])
-            result_widgets['run_entry'] = QComboBox(groupBox)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['run_entry'])
-            widgetno += 1
+        result_widgets['run_label'] = QLabel(groupBox)
+        result_widgets['run_label'].setText("Select a run:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['run_label'])
+        result_widgets['run_entry'] = QComboBox(groupBox)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['run_entry'])
+        widgetno += 1
 
-            separators = []
-            separators.append(QFrame(groupBox))
-            separators[-1].setFrameShape(QFrame.HLine)
-            separators[-1].setFrameShadow(QFrame.Raised)
-            formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
-            widgetno += 1  
+        separators = []
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1  
 
-            result_widgets['graphs_button'] = QPushButton("Display Graphs")
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['graphs_button'])
-            widgetno += 1
+        result_widgets['graphs_button'] = QPushButton("Display Graphs")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['graphs_button'])
+        widgetno += 1
 
-            separators.append(QFrame(groupBox))
-            separators[-1].setFrameShape(QFrame.HLine)
-            separators[-1].setFrameShadow(QFrame.Raised)
-            formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
-            widgetno += 1  
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1  
 
-            result_widgets['pc_label'] = QLabel(groupBox)
-            result_widgets['pc_label'].setText("Pointcloud Radius:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_label'])
-            result_widgets['pc_entry'] = QComboBox(groupBox)
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_entry'])
-            widgetno += 1
+        result_widgets['pc_label'] = QLabel(groupBox)
+        result_widgets['pc_label'].setText("Pointcloud Radius:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_label'])
+        result_widgets['pc_entry'] = QComboBox(groupBox)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_entry'])
+        widgetno += 1
 
-            result_widgets['subvol_label'] = QLabel(groupBox)
-            result_widgets['subvol_label'].setText("Points in Subvolume:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
-            result_widgets['subvol_entry'] = QComboBox(groupBox)
-            result_widgets['subvol_entry'].setCurrentText("1000")
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
-            widgetno += 1
+        result_widgets['subvol_label'] = QLabel(groupBox)
+        result_widgets['subvol_label'].setText("Points in Subvolume:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
+        result_widgets['subvol_entry'] = QComboBox(groupBox)
+        result_widgets['subvol_entry'].setCurrentText("1000")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
+        widgetno += 1
 
-            result_widgets['vec_label'] = QLabel(groupBox)
-            result_widgets['vec_label'].setText("View vectors:")
-            formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
+        result_widgets['vec_label'] = QLabel(groupBox)
+        result_widgets['vec_label'].setText("View vectors:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
-            result_widgets['vec_entry'] = QComboBox(groupBox)
-            result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
-            widgetno += 1
+        result_widgets['vec_entry'] = QComboBox(groupBox)
+        result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
+        widgetno += 1
 
-            result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
-            formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
-            widgetno += 1
+        result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
+        widgetno += 1
 
-            result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)
-            
-            result_widgets['load_button'].clicked.connect(self.load_results)
+        result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)
+        
+        result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
 
-            result_widgets['graphs_button'].clicked.connect(self.create_graphs_window)
+        result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
 
-            self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
-            self.result_widgets = result_widgets
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
+        self.result_widgets = result_widgets
 
     def show_run_pcs(self):
         #show pointcloud files in list
@@ -4014,7 +3959,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 if _file.endswith(".disp"):
                     file_name= _file[:-5]
                     file_path = directory + "/" + file_name
-                    result = run_outcome(file_path)
+                    result = RunResults(file_path)
                     self.result_list.append(result)
                     #print(result.subvol_points)
                     if str(result.subvol_points) not in points_list:
@@ -4025,7 +3970,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['subvol_entry'].addItems(points_list)
                
 
-    def load_results(self):
+    def LoadResultsOnViewer(self):
 
         #print("LOAD RESULTS")
         #print("Number of results:")
@@ -4046,7 +3991,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
 
             else:
-
                 results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
                 self.roi = results_folder + "\\_" + str(radius) + ".roi"
                 print("New roi is", self.roi)
@@ -4058,74 +4002,38 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 else: 
 
                     for result in self.result_list:
-                        #print(radius)
-                        #print(result.subvol_radius)
+                        #print(radius, result.subvol_radius)
                         if result.subvol_radius == radius:
-                            #print("Radius match")
-                            #print(result.subvol_points)
-                            #print(subvol_points)
+                            #print("Radius match", result.subvol_points, subvol_points)
                             if result.subvol_points == subvol_points:
-                                #print("SUB MATCH")
-                                run_file = result.disp_file_name
+                                #print("Subv points match")
+                                run_file = result.disp_file
                                 run_file = results_folder + "\\" + os.path.basename(run_file)
 
                         self.displayVectors(run_file, 2)
 
 
-    def create_graphs_window(self):
-        print("Create graphs")
+    def CreateGraphsWindow(self):
+        #print("Create graphs")
         if self.result_widgets['run_entry'].currentText() is not "":
             self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
         else:
             self.results_folder = None
 
         if self.results_folder is not None:
-                self.graph_window = GraphsWindow(self)
-                self.graph_window.show()
+            self.graph_window = GraphsWindow(self)
+            self.graph_window.SetResultsFolder(self.results_folder)
+            self.graph_window.CreateDockWidgets()
+            self.graph_window.show()
+        
 
-                file_list=[]
-                result_list=[]
-                plot_titles = ["Objective Minimum", "Displacement in x", "Displacement in y", "Displacement in z", "Change in phi", "Change in theta", "Change in psi"]
-                #print(results_folder[0])
-                for f in listdir(self.results_folder):
-                    if f.endswith(".disp"):
-                        file_name= f[:-5]
-                        file_path = self.results_folder + "/" + file_name
-                        result = run_outcome(file_path)
-                        result_list.append(result)
-                
-                        GraphWidget = ResultsWidget(self.graph_window, result, plot_titles)
-                        dock1 = QDockWidget(result.title,self)
-                        dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-                        dock1.setWidget(GraphWidget)
-                        self.graph_window.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
-            
-                prev = None
-
-                for current_dock in self.graph_window.findChildren(QDockWidget):
-                    if self.graph_window.dockWidgetArea(current_dock) == QtCore.Qt.RightDockWidgetArea:
-                        existing_widget = current_dock
-
-                        if prev:
-                            self.graph_window.tabifyDockWidget(prev,current_dock)
-                        prev= current_dock
-                
-                SummaryTab = SummaryWidget(self.graph_window, result_list)#, summary_plot_titles)
-                dock = QDockWidget("Summary",self)
-                dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-                dock.setWidget(SummaryTab)
-                self.graph_window.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
-                self.graph_window.tabifyDockWidget(prev,dock)
-
-                dock.raise_() # makes summary panel the one that is open by default.
-
-#Dealing with saving and loading sessions:
+#Dealing with saving sessions:
 
     def closeEvent(self, event):
         self.CreateSaveWindow("Quit without Saving", event) 
         
     def CreateSaveWindow(self, cancel_text, event):
-        self.SaveWindow = CreateSaveSessionWindow(self, event)
+        self.SaveWindow = SaveSessionWindow(self, event)
         self.SaveWindow.show()
 
     def SaveSession(self, text_value, compress, event):
@@ -4281,9 +4189,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.threadpool.start(zip_worker)
         
         if compress:
-            self.show_zip_progress(tempfile.tempdir, tempfile.tempdir +'.zip', 0.7)
+            self.ShowZipProgress(tempfile.tempdir, tempfile.tempdir +'.zip', 0.7)
         else:
-            self.show_zip_progress(tempfile.tempdir, tempfile.tempdir +'.zip', 1)
+            self.ShowZipProgress(tempfile.tempdir, tempfile.tempdir +'.zip', 1)
 
         #give variables filepath including new name of temp folder:
         # print("temp", tempfile.tempdir)
@@ -4324,8 +4232,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
         self.results_folder = results_folder
-
-    
+   
     def CloseSaveWindow(self):
         if hasattr(self, 'progress_window'):
             self.progress_window.setValue(100)
@@ -4348,11 +4255,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         zip.close()
 
         print("Finished zip")
-        
-    def progress(self, value):
-        #print("progress emitted")
-        if int(value) > self.progress_window.value():
-            self.progress_window.setValue(value)
 
     def RemoveTemp(self, event):
         if hasattr(self, 'progress_window'):
@@ -4370,7 +4272,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         if event != "new session":
             QMainWindow.closeEvent(self, event)
         
-    def show_zip_progress(self, folder, new_file_dest,ratio):
+    def ShowZipProgress(self, folder, new_file_dest,ratio):
         #print("in show zip progress")
         
         self.progress_window.setValue(10)
@@ -4400,7 +4302,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     #zip_size = 0
         #print("Finished showing zip progress")
     
-    def show_export_progress(self, folder, new_file_dest):
+    def ShowExportProgress(self, folder, new_file_dest):
         
         self.progress_window.setValue(10)
 
@@ -4438,7 +4340,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 #print(exp_size)
                 #print(self.progress_window.value())  
 
-    def export_session(self):
+    def ExportSession(self):
         #print("In select image")
         dialogue = QFileDialog()
         folder= dialogue.getExistingDirectory(self, "Select a Folder")
@@ -4451,12 +4353,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             export_worker = Worker(self.exporter, export_location)
             export_worker.signals.finished.connect(self.progress_complete)
             self.threadpool.start(export_worker)
-            self.show_export_progress(tempfile.tempdir, export_location)
+            self.ShowExportProgress(tempfile.tempdir, export_location)
 
     def exporter(self, export_location, progress_callback):
         shutil.copytree(tempfile.tempdir, export_location)
 
-                
+#Dealing with loading sessions:
+         
     def CreateSessionSelector(self, stage): 
         temp_folders = []
         #print ("Session folder: ", self.temp_folder)
@@ -4482,10 +4385,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             return #Exits the LoadSession function
 
         else:     
-            self.SessionSelectionWindow = CreateSessionSelectionWindow(self, temp_folders)
+            self.SessionSelectionWindow = SessionSelectionWindow(self, temp_folders)
             #self.SessionSelectionWindow.finished.connect(self.NewSession)
             self.SessionSelectionWindow.open()
-
 
     def NewSession(self):
         self.RemoveTemp("new session")
@@ -4498,8 +4400,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # self.close()
         # subprocess.Popen(['python', 'dvc_interface.py'], shell = True) 
     
-
-    def load_config_worker(self, selected_text, progress_callback = None): 
+    def LoadConfigWorker(self, selected_text, progress_callback = None): 
         date_and_time = selected_text.split(' ')[-1]
         #print(date_and_time)
         selected_folder = ""
@@ -4563,12 +4464,18 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         progress_callback.emit(100)
        
     def LoadSession(self):
+        #bring image loading panel to front if it isnt already:
+        first_dock = None
+        for current_dock in self.findChildren(QDockWidget):
+            if self.dockWidgetArea(current_dock) == QtCore.Qt.LeftDockWidgetArea:
+                first_dock = current_dock
+                break              
+        first_dock.raise_() 
         
         self.loading_session = True
 
         self.mask_parameters['masksList'].clear()
         self.pointcloud_parameters['pointcloudList'].clear()
-        
         
         #use info to update the window:
         if 'geometry' in self.config:
@@ -4742,7 +4649,7 @@ Please move the file back to this location and reload the session, select a diff
                 if (hasattr(self, 'graph_window')):
                     plt.close('all') #closes all open figures
                     self.graph_window.close()
-                self.create_graphs_window()
+                self.CreateGraphsWindow()
         else:
             self.results_folder = None
             #self.gg_widgets['dir_name_label'].setText("")
@@ -4819,7 +4726,6 @@ Please move the file back to this location and reload the session, select a diff
             #     self.config['point0'] = None
 
 
-
     def warningDialog(self, message='', window_title='', detailed_text=''):
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Information)
@@ -4830,11 +4736,18 @@ Please move the file back to this location and reload the session, select a diff
         retval = dialog.exec_()
         return retval
 
-class CreateSettingsWindow(QDialog):
-        #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
+# Loading and Error windows:
+    def progress(self, value):
+        #print("progress emitted")
+        if int(value) > self.progress_window.value():
+            self.progress_window.setValue(value)
+
+
+
+class SettingsWindow(QDialog):
 
     def __init__(self, parent):
-        super(CreateSettingsWindow, self).__init__(parent)
+        super(SettingsWindow, self).__init__(parent)
 
         self.parent = parent
 
@@ -4937,11 +4850,13 @@ class CreateSettingsWindow(QDialog):
         self.close()
         
 
-class CreateSessionSelectionWindow(QtWidgets.QDialog):
+class SessionSelectionWindow(QtWidgets.QDialog):
+    '''a window for selecting a session
+    '''
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
     def __init__(self, parent, temp_folders):
-        super(CreateSessionSelectionWindow, self).__init__(parent=parent)
+        super(SessionSelectionWindow, self).__init__(parent=parent)
 
         self.parent = parent
 
@@ -4970,7 +4885,7 @@ class CreateSessionSelectionWindow(QtWidgets.QDialog):
         #Load Saved Session
         self.parent.InitialiseSessionVars()
 
-        config_worker = Worker(self.parent.load_config_worker, self.combo.currentText())
+        config_worker = Worker(self.parent.LoadConfigWorker, self.combo.currentText())
         self.parent.create_progress_window("Loading", "Loading Session")
         config_worker.signals.progress.connect(self.parent.progress)
         config_worker.signals.finished.connect(self.parent.LoadSession)
@@ -4985,8 +4900,9 @@ class CreateSessionSelectionWindow(QtWidgets.QDialog):
 
         self.close()
 
-class CreateSaveSessionWindow(QtWidgets.QWidget):
-        #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
+class SaveSessionWindow(QtWidgets.QWidget):
+    '''creates a window to save a session
+    '''
 
     def __init__(self, parent, event):
         super().__init__()
@@ -5048,7 +4964,9 @@ class CreateSaveSessionWindow(QtWidgets.QWidget):
             self.close()
 
 
-class CreateSaveObjectWindow(QtWidgets.QWidget):
+class SaveObjectWindow(QtWidgets.QWidget):
+    '''a window which will appear when saving a mask or pointcloud
+    '''
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
     def __init__(self, parent, object, save_only):
@@ -5148,14 +5066,17 @@ class CreateSaveObjectWindow(QtWidgets.QWidget):
         self.close()
 
 class VisualisationWindow(QtWidgets.QMainWindow):
+    '''creates a window which will contain the VisualisationWidgets
+    '''
     def __init__(self, parent):
         super().__init__()
         self.parent = parent
 
         self.setTabPosition(QtCore.Qt.AllDockWidgetAreas,QTabWidget.North)
 
-
 class VisualisationWidget(QtWidgets.QMainWindow):
+    '''creates a window with a QCILViewerWidget as the central widget
+    '''
     def __init__(self, parent, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle):
         super().__init__()
         self.parent = parent
@@ -5285,6 +5206,8 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.image_data = image_data
 
 class GraphsWindow(QMainWindow):
+    '''creates a new window with graphs from results saved in the selected run folder.
+    '''
     def __init__(self, parent=None):
         super(GraphsWindow, self).__init__(parent)
         #QMainWindow.__init__(self)
@@ -5293,6 +5216,16 @@ class GraphsWindow(QMainWindow):
         # Menu
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
+        self.settings_menu = self.menu.addMenu("Settings")
+
+        displacement_setting_action = QAction("Show Displacement Relative to Reference Point 0", self)
+        displacement_setting_action.setCheckable(True)
+        displacement_setting_action.setChecked(False)
+        self.displacement_setting_action = displacement_setting_action
+
+        displacement_setting_action.triggered.connect(self.ReloadGraphs)
+        self.settings_menu.addAction(displacement_setting_action)
+
 
         # Exit QAction
         exit_action = QAction("Exit", self)
@@ -5309,9 +5242,60 @@ class GraphsWindow(QMainWindow):
 
         self.setGeometry(100,100, geometry.width()-200, geometry.height()-200)
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
-  
-class ResultsWidget(QtWidgets.QWidget):
-    def __init__(self, parent, plot_data, plot_titles):
+
+    def SetResultsFolder(self, folder):
+        self.results_folder = folder
+    
+    def ReloadGraphs(self):
+        self.DeleteAllWidgets()
+        self.CreateDockWidgets(displ_wrt_point0 = self.displacement_setting_action.isChecked())
+
+    def DeleteAllWidgets(self):
+         for current_dock in self.findChildren(QDockWidget):
+            current_dock.close()
+            del current_dock
+
+    def CreateDockWidgets(self, displ_wrt_point0 = False):
+        file_list=[]
+        result_list=[]
+        plot_titles = ["Objective Minimum", "Displacement in x", "Displacement in y", "Displacement in z", "Change in phi", "Change in theta", "Change in psi"]
+        #print(results_folder[0])
+        for f in listdir(self.results_folder):
+            if f.endswith(".disp"):
+                file_name= f[:-5]
+                file_path = self.results_folder + "/" + file_name
+                result = RunResults(file_path)
+                result_list.append(result)
+        
+                GraphWidget = SingleRunResultsWidget(self, result, plot_titles, displ_wrt_point0)
+                dock1 = QDockWidget(result.title,self)
+                dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+                dock1.setWidget(GraphWidget)
+                self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
+    
+        prev = None
+
+        for current_dock in self.findChildren(QDockWidget):
+            if self.dockWidgetArea(current_dock) == QtCore.Qt.RightDockWidgetArea:
+                existing_widget = current_dock
+
+                if prev:
+                    self.tabifyDockWidget(prev,current_dock)
+                prev= current_dock
+        
+        SummaryTab = SummaryGraphsWidget(self, result_list)#, summary_plot_titles)
+        dock = QDockWidget("Summary",self)
+        dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+        dock.setWidget(SummaryTab)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
+        self.tabifyDockWidget(prev,dock)
+
+        dock.raise_() # makes summary panel the one that is open by default.
+
+class SingleRunResultsWidget(QtWidgets.QWidget):
+    '''creates a dockable widget which will display results from a single run of the DVC code
+    '''
+    def __init__(self, parent, plot_data, plot_titles, displ_wrt_point0 = False):
         super().__init__()
         self.parent = parent
 
@@ -5325,16 +5309,35 @@ class ResultsWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-        self.create_histogram(plot_data, plot_titles)
+        self.CreateHistogram(plot_data, plot_titles, displ_wrt_point0)
 
-    def create_histogram(self, result, plot_titles):
+    def CreateHistogram(self, result, plot_titles, displ_wrt_point0):
         numGraphs = len(plot_titles)
         if numGraphs <= 3:
             numRows = 1
         else:
             numRows = np.round(np.sqrt(numGraphs))
         numColumns = np.ceil(numGraphs/numRows)
-        plot_data = [result.obj_mins, result.u_disp, result.v_disp, result.w_disp, result.phi_disp, result.theta_disp, result.psi_disp]
+
+        displ = np.asarray(
+        PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
+        )
+        if displ_wrt_point0:
+            point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+            for count in range(len(displ)):
+                for i in range(3):
+                    displ[count][i+6] = displ[count][i+6] - point0_disp[i]
+
+        obj_mins = displ[:, 5]
+        u_disp = displ[:, 6]
+        v_disp = displ[:, 7]
+        w_disp = displ[:, 8]
+        phi_disp = displ[:, 9]
+        theta_disp = displ[:, 10]
+        psi_disp = displ[:, 11]
+        points = np.shape(displ[0])
+
+        plot_data = [obj_mins, u_disp, v_disp, w_disp, phi_disp, theta_disp, psi_disp]
         plotNum = 0
         for array in plot_data:
             plotNum = plotNum + 1
@@ -5348,8 +5351,10 @@ class ResultsWidget(QtWidgets.QWidget):
 
         self.canvas.draw() 
 
-class SummaryWidget(QtWidgets.QWidget):
-    def __init__(self, parent, result_list):
+class SummaryGraphsWidget(QtWidgets.QWidget):
+    '''creates a dockable widget which will display results from all runs in a bulk run
+    '''
+    def __init__(self, parent, result_list, displ_wrt_point0 = False):
         super().__init__()
         self.parent = parent
 
@@ -5392,7 +5397,7 @@ class SummaryWidget(QtWidgets.QWidget):
         self.toolbar = NavigationToolbar(self.canvas, self)
 
         self.button = QtWidgets.QPushButton("Plot Histograms")
-        self.button.clicked.connect(partial(self.create_histogram,result_list))
+        self.button.clicked.connect(partial(self.CreateHistogram,result_list, displ_wrt_point0))
 
         #Layout
         self.layout = QtWidgets.QGridLayout()
@@ -5429,20 +5434,37 @@ class SummaryWidget(QtWidgets.QWidget):
             self.secondParamCombo.addItems([str(i) for i in self.subvolPoints])   
         
     
-    def create_histogram(self, result_list):
+    def CreateHistogram(self, result_list, displ_wrt_point0):
 
         self.figure.clear()
 
         index = self.combo1.currentIndex()
         
-
-        points = []
+        points_list = []
 
         resultsToPlot= []
 
         for result in result_list:
-            if result.points not in points:
-                points.append(result.points)
+            displ = np.asarray(
+            PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
+            )
+            if displ_wrt_point0:
+                point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+                for count in range(len(displ)):
+                    for i in range(3):
+                        displ[count][i+6] = displ[count][i+6] - point0_disp[i]
+
+            obj_mins = displ[:, 5]
+            u_disp = displ[:, 6]
+            v_disp = displ[:, 7]
+            w_disp = displ[:, 8]
+            phi_disp = displ[:, 9]
+            theta_disp = displ[:, 10]
+            psi_disp = displ[:, 11]
+            no_points = np.shape(displ[0])
+
+            if no_points not in points_list:
+                points_list.append(no_points)
 
             if index == 0: #compare all
                 resultsToPlot.append(result)
@@ -5455,8 +5477,7 @@ class SummaryWidget(QtWidgets.QWidget):
                 if result.subvol_points == float(self.secondParamCombo.currentText()):
                     resultsToPlot.append(result)
 
-        
-        points.sort()
+        points_list.sort()
 
         if index ==0:
             numRows = len(self.subvolPoints)
@@ -5476,61 +5497,60 @@ class SummaryWidget(QtWidgets.QWidget):
 
         plotNum = 0
         for result in resultsToPlot:
+            if index ==0:
+                row = self.subvolPoints.index(result.subvol_points) + 1
+                column= self.radii.index(result.subvol_radius) + 1
+                plotNum = (row-1)*numColumns + column
+                ax = self.figure.add_subplot(numRows, numColumns, plotNum)
+                
+                if row ==1:
+                    ax.set_title("Radius:" + str(result.subvol_radius) )
+                if column == 1:
+                    text = str(result.subvol_points) 
+                    ax.set_ylabel(text + " " + "Points in subvol")
 
-                if index ==0:
-                    row = self.subvolPoints.index(result.subvol_points) + 1
-                    column= self.radii.index(result.subvol_radius) + 1
-                    plotNum = (row-1)*numColumns + column
-                    ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-                    
-                    if row ==1:
-                        ax.set_title("Radius:" + str(result.subvol_radius) )
-                    if column == 1:
-                        text = str(result.subvol_points) 
-                        ax.set_ylabel(text + " " + "Points in subvol")
-
-                else:
-                    # if index ==1:
-                    #     row = self.subvolPoints.index(result.subvol_points) + 1
-                    # if index ==2:
-                    #     row= self.radii.index(result.subvol_radius) + 1
+            else:
+                # if index ==1:
+                #     row = self.subvolPoints.index(result.subvol_points) + 1
+                # if index ==2:
+                #     row= self.radii.index(result.subvol_radius) + 1
 
 
-                    plotNum = plotNum + 1
-                    ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-                    #ax.set_ylabel("")
-                    #ax.set_xlabel(plot_titles[plotNum-1])
-                    #ax.set_title(plot_titles[plotNum-1])
-                    #ax.hist(array,20)
-    
-                    # column = points.index(result.points) + 1
-                    # plotNum = (row-1)*numColumns + column
-                    # ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-                    
-                    #if row ==1:
-                        #ax.set_title(str(result.points) + " Points")
-                    #if column == 1:
-                    if index ==1:
-                        text = str(result.subvol_points) 
-                    if index ==2:
-                        text = str(result.subvol_radius) 
-                    ax.set_ylabel(text + " " + self.combo1.currentText())
+                plotNum = plotNum + 1
+                ax = self.figure.add_subplot(numRows, numColumns, plotNum)
+                #ax.set_ylabel("")
+                #ax.set_xlabel(plot_titles[plotNum-1])
+                #ax.set_title(plot_titles[plotNum-1])
+                #ax.hist(array,20)
 
-                #get variable to display graphs for:
-                if self.combo.currentIndex()==0:
-                    ax.hist(result.obj_mins,20)
-                elif self.combo.currentIndex()==1:
-                    ax.hist(result.u_disp,20)
-                elif self.combo.currentIndex()==2:
-                    ax.hist(result.v_disp,20)
-                elif self.combo.currentIndex()==3:
-                    ax.hist(result.w_disp,20)
-                elif self.combo.currentIndex()==4:
-                    ax.hist(result.phi_disp,20)
-                elif self.combo.currentIndex()==5:
-                    ax.hist(result.theta_disp,20)
-                elif self.combo.currentIndex()==6:
-                    ax.hist(result.psi_disp,20)
+                # column = points.index(result.points) + 1
+                # plotNum = (row-1)*numColumns + column
+                # ax = self.figure.add_subplot(numRows, numColumns, plotNum)
+                
+                #if row ==1:
+                    #ax.set_title(str(result.points) + " Points")
+                #if column == 1:
+                if index ==1:
+                    text = str(result.subvol_points) 
+                if index ==2:
+                    text = str(result.subvol_radius) 
+                ax.set_ylabel(text + " " + self.combo1.currentText())
+
+            #get variable to display graphs for:
+            if self.combo.currentIndex()==0:
+                ax.hist(obj_mins,20)
+            elif self.combo.currentIndex()==1:
+                ax.hist(u_disp,20)
+            elif self.combo.currentIndex()==2:
+                ax.hist(v_disp,20)
+            elif self.combo.currentIndex()==3:
+                ax.hist(w_disp,20)
+            elif self.combo.currentIndex()==4:
+                ax.hist(phi_disp,20)
+            elif self.combo.currentIndex()==5:
+                ax.hist(theta_disp,20)
+            elif self.combo.currentIndex()==6:
+                ax.hist(psi_disp,20)
 
         self.figure.suptitle(self.combo.currentText(),size ="large")
 
@@ -5538,15 +5558,10 @@ class SummaryWidget(QtWidgets.QWidget):
         plt.subplots_adjust(top=0.88) # Means heading doesn't overlap with subplot titles
         self.canvas.draw()
         
-class run_outcome:
+class RunResults():
     def __init__(self,file_name):
-        self.obj_mins=[]
-        self.u_disp=[]
-        self.v_disp=[]
-        self.w_disp=[]
-        self.phi_disp=[]
-        self.theta_disp=[]
-        self.psi_disp=[]       
+        
+        self.points = None       
 
         disp_file_name = file_name + ".disp"
         stat_file_name = file_name + ".stat"
@@ -5567,75 +5582,57 @@ class run_outcome:
                 self.rigid_trans = [int(line.split('\t')[1]),int(line.split('\t')[2], int(line.split('\t')[3]))]
             count+=1
 
-        
-
-        disp_file = open(disp_file_name,"r")
-        self.disp_file_name = disp_file_name
-
-        self.points = 0
-        for line in disp_file:
-            if self.points>0:
-                line_array = line.split()
-                self.obj_mins.append(float(line_array[5]))
-                self.u_disp.append(float(line_array[6])) #- self.rigid_trans[0])
-                self.v_disp.append(float(line_array[7])) #- self.rigid_trans[1])
-                self.w_disp.append(float(line_array[8]))#- self.rigid_trans[2])
-                self.phi_disp.append(float(line_array[9]))
-                self.theta_disp.append(float(line_array[10]))
-                self.psi_disp.append(float(line_array[11]))
-            self.points+=1
-
-        self.points-=1
+        self.disp_file = disp_file_name
 
         #self.rigid_trans.append(0)
 
-        self.title =  str(self.subvol_points) + " Points in Subvolume," + " Radius: " + str(self.subvol_radius) # + str(self.points) + " Points, " +
+        self.title =  str(self.subvol_points) + " Points in Subvolume," + " Radius: " + str(self.subvol_radius)
 
 def generateUIDockParameters(self, title): #copied from dvc_configurator.py
-        '''creates a dockable widget with a form layout group to add things to
+    '''creates a dockable widget with a form layout group to add things to
 
-        basically you can add widget to the returned groupBoxFormLayout and paramsGroupBox
-        The returned dockWidget must be added with
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
-        '''
-        dockWidget = QDockWidget(self)
-        dockWidget.setWindowTitle(title)
-        dockWidgetContents = QWidget()
-
-
-        # Add vertical layout to dock contents
-        dockContentsVerticalLayout = QVBoxLayout(dockWidgetContents)
-        dockContentsVerticalLayout.setContentsMargins(0, 0, 0, 0)
-
-        # Create widget for dock contents
-        internalDockWidget = QWidget(dockWidgetContents)
-
-        # Add vertical layout to dock widget
-        internalWidgetVerticalLayout = QVBoxLayout(internalDockWidget)
-        internalWidgetVerticalLayout.setContentsMargins(0, 0, 0, 0)
-
-        # Add group box
-        paramsGroupBox = QGroupBox(internalDockWidget)
+    basically you can add widget to the returned groupBoxFormLayout and paramsGroupBox
+    The returned dockWidget must be added with
+    self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+    '''
+    dockWidget = QDockWidget(self)
+    dockWidget.setWindowTitle(title)
+    dockWidgetContents = QWidget()
 
 
-        # Add form layout to group box
-        groupBoxFormLayout = QFormLayout(paramsGroupBox)
-        #groupBoxFormLayout.setFormAlignment(Qt.AlignCenter)
+    # Add vertical layout to dock contents
+    dockContentsVerticalLayout = QVBoxLayout(dockWidgetContents)
+    dockContentsVerticalLayout.setContentsMargins(0, 0, 0, 0)
 
-        # Add elements to layout
-        internalWidgetVerticalLayout.addWidget(paramsGroupBox)
-        dockContentsVerticalLayout.addWidget(internalDockWidget)
-        dockWidget.setWidget(dockWidgetContents)
+    # Create widget for dock contents
+    internalDockWidget = QWidget(dockWidgetContents)
 
-        #        self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
-        #        self.graphDockVL.addWidget(self.dockWidget)
-        #        self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
-        #
-        # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.pointCloudDockWidget)
-        return (dockWidget, dockWidgetContents,
-                dockContentsVerticalLayout, internalDockWidget,
-                internalWidgetVerticalLayout, paramsGroupBox,
-                groupBoxFormLayout)
+    # Add vertical layout to dock widget
+    internalWidgetVerticalLayout = QVBoxLayout(internalDockWidget)
+    internalWidgetVerticalLayout.setContentsMargins(0, 0, 0, 0)
+
+    # Add group box
+    paramsGroupBox = QGroupBox(internalDockWidget)
+
+
+    # Add form layout to group box
+    groupBoxFormLayout = QFormLayout(paramsGroupBox)
+    #groupBoxFormLayout.setFormAlignment(Qt.AlignCenter)
+
+    # Add elements to layout
+    internalWidgetVerticalLayout.addWidget(paramsGroupBox)
+    dockContentsVerticalLayout.addWidget(internalDockWidget)
+    dockWidget.setWidget(dockWidgetContents)
+
+    #        self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
+    #        self.graphDockVL.addWidget(self.dockWidget)
+    #        self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
+    #
+    # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.pointCloudDockWidget)
+    return (dockWidget, dockWidgetContents,
+            dockContentsVerticalLayout, internalDockWidget,
+            internalWidgetVerticalLayout, paramsGroupBox,
+            groupBoxFormLayout)
 
 
 def main():
