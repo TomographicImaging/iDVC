@@ -1,8 +1,31 @@
 import numpy
+import csv
 from numbers import Integral, Number
 
 import vtk
 from vtk.util.vtkAlgorithm import VTKPythonAlgorithmBase
+
+class PointCloudConverter():
+    @staticmethod
+    def loadPointCloudFromCSV(filename, delimiter=','):
+        # print ("loadPointCloudFromCSV")
+        pointcloud = []
+        with open(filename, 'r') as csvfile:
+            read = csv.reader(csvfile, delimiter=delimiter)
+            for row in read:
+                #read in only numerical values
+                #print (row)
+                try:
+                    row = list(map(lambda x: float(x),row))
+                #print ("reduce " , reduce( lambda x,y: isinstance(x,Number) and \
+                #          isinstance(y,Number) , row))
+                #if reduce( lambda x,y: isinstance(x,Number) and \
+                #          isinstance(y,Number) , row):
+                    pointcloud.append(row)
+                except ValueError as ve:
+                    print ('Value Error' , ve)
+        return pointcloud
+
 
 class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
     '''vtkAlgorithm to create a regular point cloud grid for Digital Volume Correlation
@@ -218,15 +241,15 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
                 if self.GetOrientation() == 0: #YZ
                     vtkPointCloud.InsertNextPoint( a, b, c)
-                    print(c)
+                    # print(c)
                     
                 elif self.GetOrientation() == 1: #XZ
                     vtkPointCloud.InsertNextPoint( b, a, c)
-                    print(c)
+                    # print(c)
 
                 elif self.GetOrientation() == 2: #XY
                     vtkPointCloud.InsertNextPoint( b, c, a)
-                    print(a)
+                    # print(a)
 
                 n_c += 1
 
@@ -358,7 +381,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         return x0
 
 
-class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase): #This class is copied from dvc_configurator.py
+class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
     '''vtkAlgorithm to read a point cloud from a NumPy array
     '''
     def __init__(main_window):
