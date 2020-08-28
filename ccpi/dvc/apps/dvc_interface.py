@@ -93,8 +93,11 @@ class MainWindow(QMainWindow):
 
         self.temp_folder = None
 
-        self.setWindowTitle("DVC Interface")
-        self.setWindowIcon(QtGui.QIcon("C:/Users/lhe97136/OneDrive - Science and Technology Facilities Council/Pictures/DVCLogo.png"))
+        self.setWindowTitle("Digital Volume Correlation")
+        DVCIcon = QtGui.QIcon()
+        DVCIcon.addFile("DVCIconSquare.png")
+
+        self.setWindowIcon(DVCIcon)
         
         self.InitialiseSessionVars()
 
@@ -154,7 +157,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface 3")
+        self.settings = QSettings("CCPi", "DVC Interface")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -599,23 +602,23 @@ and then input to the DVC code.")
         msg.exec_()
 
     def view_image(self):
-            self.ref_image_data = vtk.vtkImageData()
-            self.image_info = dict()
-            if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
-                if self.settings.value("vis_size"):
-                    if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
-                        target_size = self.settings.value("vis_size")
-                    else:
-                        target_size = (float(self.settings.value("gpu_size")))
+        self.ref_image_data = vtk.vtkImageData()
+        self.image_info = dict()
+        if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
+            if self.settings.value("vis_size"):
+                if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
+                    target_size = self.settings.value("vis_size")
                 else:
                     target_size = (float(self.settings.value("gpu_size")))
             else:
-                if self.settings.value("vis_size"):
-                    target_size = float(self.settings.value("vis_size"))
-                else:
-                    target_size = 0.125
-            ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
-            print("Created ref image")
+                target_size = (float(self.settings.value("gpu_size")))
+        else:
+            if self.settings.value("vis_size"):
+                target_size = float(self.settings.value("vis_size"))
+            else:
+                target_size = 0.125
+        ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
+        print("Created ref image")
 
 
     def save_image_info(self, image_type):
@@ -4157,6 +4160,18 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.config['pc_rotx'] = pc['pointcloud_rotation_x_entry'].text()
         self.config['pc_roty'] = pc['pointcloud_rotation_y_entry'].text()
         self.config['pc_rotz'] = pc['pointcloud_rotation_z_entry'].text()
+
+        #Downsampling level
+        if self.settings.value("gpu_size") is not None: 
+            self.config['gpu_size'] = self.settings.value("gpu_size")
+        else:
+            self.config['gpu_size'] = 1
+
+        if self.settings.value("vis_size") is not None:
+            self.config['vis_size'] = self.settings.value("vis_size")
+        else:
+            self.config['vis_size'] = 1
+        
   
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y-%H-%M")
@@ -4550,13 +4565,13 @@ Please move the file back to this location and reload the session, select a diff
                         path = i
                         self.dvc_input_image[j].append(i)
                     if not os.path.exists(path):
-                            self.e(
-                            '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
+                        self.e(
+                        '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
 Please move the file back to this location and reload the session, select a different session to load or start a new session')
-                            error_title = "READ ERROR"
-                            error_text = "Error reading file: ({filename})".format(filename=i)
-                            self.displayFileErrorDialog(message=error_text, title=error_title)
-                            return #Exits the LoadSession function
+                        error_title = "READ ERROR"
+                        error_text = "Error reading file: ({filename})".format(filename=i)
+                        self.displayFileErrorDialog(message=error_text, title=error_title)
+                        return #Exits the LoadSession function
             
              # Set labels to display file names:
             if len(self.config['image'][0])>1:
@@ -4586,6 +4601,20 @@ Please move the file back to this location and reload the session, select a diff
             if 'mask_file' in self.config:
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
+                if 'gpu_size' in self.config and 'vis_size' in self.config:
+                    if self.settings.value('gpu_size') != self.config['gpu_size'] \
+                        or self.settings.value('vis_size') != self.config['vis_size']:
+
+                        self.mask_load = False
+
+                        self.e(
+                        '', '', "If you would like to load the mask, open the settings and change the GPU size field to {gpu_size}GB and the maximum visualisation size to {vis_size} GB.\
+    Then reload the session.".format(gpu_size=self.config['gpu_size'], vis_size = self.config['vis_size']))
+                        error_title = "LOAD ERROR"
+                        error_text = 'This session was saved with a different level of downsampling. This means the mask could not be loaded.'
+                        self.displayFileErrorDialog(message=error_text, title=error_title)
+                        #return #Exits the LoadSession function
+
             else:
                 self.mask_load = False
 
