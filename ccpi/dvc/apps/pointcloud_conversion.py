@@ -223,7 +223,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         max_b = image_dimensions[0] * image_spacing[0] / point_spacing[0]
         max_c = image_dimensions[1] * image_spacing [1]/ point_spacing[1]
 
-        a = sliceno * spacing_a - origin_a
+        a = sliceno * spacing_a #- origin_a
 
         # skip the offset in voxels
         offset = [0, 0]
@@ -236,8 +236,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
             while n_c < max_c:
 
-                b = (n_b / max_b) * image_spacing[0] * image_dimensions[0]- image_origin[0] #+ int(image_dimensions[0] * density[0] * .7)
-                c = (n_c / max_c) * image_spacing[1] * image_dimensions[1]- image_origin[1] #+ int(image_dimensions[1] * density[1] * .7)
+                b = (n_b / max_b) * image_spacing[0] * image_dimensions[0] #- image_origin[0] #+ int(image_dimensions[0] * density[0] * .7)
+                c = (n_c / max_c) * image_spacing[1] * image_dimensions[1]# - image_origin[1] #+ int(image_dimensions[1] * density[1] * .7)
 
                 if self.GetOrientation() == 0: #YZ
                     vtkPointCloud.InsertNextPoint( a, b, c)
@@ -305,9 +305,9 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
                 # y axis
                 n_z = 0
                 while n_z < max_z:
-                    x = (n_x / max_x) * image_spacing[0] * image_dimensions[0]- image_origin[0] + offset[0] * image_spacing[0] #+ int(image_dimensions[0] * density[0] * .7)
-                    y = (n_y / max_y) * image_spacing[1] * image_dimensions[1]- image_origin[1] + offset[1] * image_spacing[1]#+ int(image_dimensions[1] * density[1] * .7)
-                    z = (n_z / max_z) * image_spacing[2] * image_dimensions[2]- image_origin[2] + offset[2] * image_spacing[2]#+ int(image_dimensions[1] * density[1] * .7)
+                    x = (n_x / max_x) * image_spacing[0] * image_dimensions[0] + offset[0] * image_spacing[0] #- image_origin[0] #+ int(image_dimensions[0] * density[0] * .7)
+                    y = (n_y / max_y) * image_spacing[1] * image_dimensions[1] + offset[1] * image_spacing[1] # - image_origin[1] #+ int(image_dimensions[1] * density[1] * .7)
+                    z = (n_z / max_z) * image_spacing[2] * image_dimensions[2] + offset[2] * image_spacing[2] # - image_origin[2] #+ int(image_dimensions[1] * density[1] * .7)
 
                     vtkPointCloud.InsertNextPoint( x, y, z )
                     n_z += 1
