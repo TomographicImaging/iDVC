@@ -525,7 +525,7 @@ def createRawImportDialog(main_window, fname, output_image, info_var, resample, 
         fortranOrder = QComboBox(groupBox)
         fortranOrder.addItem("Fortran Order: XYZ")
         fortranOrder.addItem("C Order: ZYX")
-        fortranOrder.setCurrentIndex(1)
+        fortranOrder.setCurrentIndex(0)
         # dimensionalityValue.currentIndexChanged.connect(lambda: \
         #             main_window.overlapZValueEntry.setEnabled(True) \
         #             if main_window.dimensionalityValue.currentIndex() == 0 else \
