@@ -74,17 +74,17 @@ import copy
 from distutils.dir_util import copy_tree
 
 #TODO: switch from/to these lines for dev/release
-from ccpi.dvc.apps.image_data import ImageDataCreator
+# from ccpi.dvc.apps.image_data import ImageDataCreator
 
-from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
+# from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
-from ccpi.dvc.apps.dvc_runner import DVC_runner
+# from ccpi.dvc.apps.dvc_runner import DVC_runner
 
-# from image_data import ImageDataCreator
+from image_data import ImageDataCreator
 
-# from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
+from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
-# from dvc_runner import DVC_runner
+from dvc_runner import DVC_runner
 
 __version__ = '20.07.2'
 
@@ -365,25 +365,27 @@ class MainWindow(QMainWindow):
         for viewer in viewers_2D:
             if hasattr(viewer, 'img3D'):
                 if viewer.img3D is not None:
+                    viewer.setVisualisationDownsampling(self.resample_rate)
+                    shown_resample_rate = self.resample_rate
                     vs_widgets['loaded_image_dims_label'].setVisible(True)
                     vs_widgets['loaded_image_dims_value'].setVisible(True)
 
                     if vs_widgets['coords_combobox'].currentIndex() == 0:
-                        shown_resample_rate = self.resample_rate
+                        viewer.setDisplayUnsampledCoordinates(True)
                         if shown_resample_rate != [1,1,1]:
                             vs_widgets['coords_warning_label'].setVisible(True)
                         else:
                             vs_widgets['coords_warning_label'].setVisible(False)
 
                     else:
-                        shown_resample_rate =[1,1,1]
+                        viewer.setDisplayUnsampledCoordinates(False)
                         vs_widgets['coords_warning_label'].setVisible(False)
 
                     if hasattr(self, 'point0_world_coords'):
                         self.SetPoint0Text()
                     
 
-                    viewer.setVisualisationDownsampling(shown_resample_rate)
+                    
                     viewer.updatePipeline()
 
 
@@ -1449,7 +1451,7 @@ It is used as a global starting point and a translation reference."
             vs_widgets['coords_warning_label'].setVisible(False)
             vs_widgets['displayed_image_dims_label'].setVisible(False)
             vs_widgets['displayed_image_dims_value'].setVisible(False)
-            self.vis_widget_reg.frame.viewer.setVisualisationDownsampling((1,1,1))
+            self.vis_widget_reg.frame.viewer.setDisplayUnsampledCoordinates(False)
             vs_widgets['coords_info_label'].setText("The viewer displays the original image:")
             #vs_widgets['loaded_image_dims_label'].setText("Image Size: ")
             
@@ -1458,7 +1460,7 @@ It is used as a global starting point and a translation reference."
             if hasattr(self, 'current_coord_choice'):
                 vs_widgets['coords_combobox'].setCurrentIndex(self.current_coord_choice)
                 
-                self.vis_widget_reg.frame.viewer.setVisualisationDownsampling(self.resample_rate)
+                self.vis_widget_reg.frame.viewer.setDisplayUnsampledCoordinates(True)
                 vs_widgets['coords_info_label'].setText("The viewer displays a downsampled image for visualisation purposes:")
                 if self.resample_rate != [1,1,1]:
                     vs_widgets['coords_combobox'].setEnabled(True)
@@ -5180,6 +5182,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
         else:
             self.frame.viewer.setVisualisationDownsampling(self.parent.resample_rate)
+            self.frame.viewer.setDisplayUnsampledCoordinates(True)
 
             vs_widgets = self.parent.visualisation_setting_widgets
 
