@@ -77,9 +77,9 @@ from distutils.dir_util import copy_tree
 #TODO: switch from/to these lines for dev/release
 from ccpi.dvc.apps.image_data import ImageDataCreator
 
-from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
+from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
-from ccpi.dvc.apps.dvc_runner import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
+from ccpi.dvc.apps.dvc_runner import DVC_runner
 
 # from image_data import ImageDataCreator
 
