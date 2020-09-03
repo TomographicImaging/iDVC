@@ -127,6 +127,8 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
 
     if run_succeeded:
         if runs_completed == required_runs:
+            if hasattr(main_window, 'progress_window'):
+                main_window.progress_window.close()
             main_window.alert = QMessageBox(QMessageBox.NoIcon,"Success","The DVC code ran successfully.", QMessageBox.Ok) 
             main_window.alert.show()
             if finish_fn is not None:
@@ -196,7 +198,7 @@ class DVC_runner():
 
         # exe_file = os.path.abspath("dvc.exe")
         exe_file = "dvc.exe"
-        exe_file = "C:/Users/lhe97136/OneDrive - Science and Technology Facilities Council/Documents/Tomography/DVC_release/dvc.exe"
+        #exe_file = "C:/Users/lhe97136/OneDrive - Science and Technology Facilities Council/Documents/Tomography/DVC_release/dvc.exe"
 
 
         # Process to run the DVC executable:

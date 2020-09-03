@@ -74,16 +74,18 @@ import copy
 from distutils.dir_util import copy_tree
 
 
-#TODO: switch to these lines for dev/release
-#from ccpi.dvc.apps.image_data import ImageDataCreator
+#TODO: switch from/to these lines for dev/release
+from ccpi.dvc.apps.image_data import ImageDataCreator
 
-#from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
+from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
 
-from image_data import ImageDataCreator
+from ccpi.dvc.apps.dvc_runner import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData
 
-from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
+# from image_data import ImageDataCreator
 
-from dvc_runner import DVC_runner
+# from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
+
+# from dvc_runner import DVC_runner
 
 __version__ = '20.07.2'
 
@@ -158,7 +160,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v20.7.1")
+        self.settings = QSettings("CCPi", "DVC Interface v20.7.2")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
