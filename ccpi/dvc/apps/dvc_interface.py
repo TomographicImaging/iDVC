@@ -85,7 +85,7 @@ from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointC
 
 from dvc_runner import DVC_runner
 
-__version__ = '20.07.0'
+__version__ = '20.07.2'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -105,7 +105,6 @@ class MainWindow(QMainWindow):
 
         self.setDockNestingEnabled(True)
         self.CreateDockWindows()
-
 
         # Menu
         self.menu = self.menuBar()
@@ -159,7 +158,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface")
+        self.settings = QSettings("CCPi", "DVC Interface v20.7.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -395,18 +394,17 @@ class MainWindow(QMainWindow):
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["'raw' and 'npy' formats are recommended.\n You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
+        self.help_text = ["Please use 'raw' or 'npy' images.\n You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append("Click 'Select point 0' to select a point and region for registering the image.\n It is recommended to select 'Register on Selection' \
-and select a size smaller than 1000.\n Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m. \n Then click 'Stop Registration' \
-and you can switch orientation using 'x, y, z', and then click 'Start Registration' again to register in another plane. \n Once you are satisfied with the registration, make sure the point 0 \
+and select a size smaller than 1000.\n Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'. \n Once you are satisfied with the registration, make sure the point 0 \
 you have selected is the point you want the DVC to start from.")
         
         self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand. \n \
 When you are happy with your region click 'Create Mask'.")
 
         self.help_text.append("If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0. \
-Otherwise, this will not happen. \n If you load a pointcloud from a file, you must still specify the pointcloud radius on this panel, which will later be doubled to get the pointcloud size \
+\n If you load a pointcloud from a file, you must still specify the pointcloud radius on this panel, which will later be doubled to get the pointcloud size \
 and then input to the DVC code.")
 
         self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results. You can access these options under 'File'.")
@@ -622,11 +620,11 @@ and then input to the DVC code.")
             else:
                 target_size = 0.125
         ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
-        print("Created ref image")
+        #print("Created ref image")
 
 
     def save_image_info(self, image_type):
-        print("INFO: ", self.image_info)
+        #print("INFO: ", self.image_info)
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
@@ -640,8 +638,8 @@ and then input to the DVC code.")
         if 'shape' in self.image_info:
             self.unsampled_image_dimensions = self.image_info['shape'] 
 
-            print("Unsampled dims: ", self.unsampled_image_dimensions)
-            print("current dims: ", self.ref_image_data.GetDimensions())
+            #print("Unsampled dims: ", self.unsampled_image_dimensions)
+            #print("current dims: ", self.ref_image_data.GetDimensions())
             
             for i, value in enumerate(self.resample_rate):
                 self.resample_rate[i] = self.unsampled_image_dimensions[i]/(self.ref_image_data.GetDimensions()[i])
@@ -677,33 +675,17 @@ and then input to the DVC code.")
 
         self.create_progress_window("Loading", "Loading Image")
         self.progress_window.setValue(10)
-        # print(self.ref_image_data)
-        # print(self.ref_image_data3D)
-        # print(self.ref_image_data == self.ref_image_data3D)
-        # print("Are they the same?")
 
-
-
-        #print("2D")
-        print(self.ref_image_data.GetExtent())
         self.vis_widget_2D.setImageData(self.ref_image_data)
-        
-        print("Set 2D image data") 
+         
         self.vis_widget_2D.displayImageData()
 
-
-
-
-        #print("3D")
-        #print(50)
         self.progress_window.setValue(50)
-        print(self.ref_image_data.GetExtent())
+        # print(self.ref_image_data.GetExtent())
         self.vis_widget_3D.setImageData(self.ref_image_data) #3D)
         self.vis_widget_3D.displayImageData()
 
         self.progress_window.setValue(80)
-
-        
 
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
@@ -750,8 +732,6 @@ and then input to the DVC code.")
                 self.no_mask_pc_load = False
 
         if(self.reg_load):
-            #Image Reg:
-            
                 self.createRegistrationViewer()
                 #first we need to set the z slice -> go to slice self.config['point0'][2]
                 v = self.vis_widget_2D.frame.viewer
@@ -837,18 +817,18 @@ and then input to the DVC code.")
 
         # # Cube source
         cube_source = vtk.vtkCubeSource()
-        print("IMAGE SPACING", v.img3D.GetSpacing())
+        # print("IMAGE SPACING", v.img3D.GetSpacing())
         cube_source.SetXLength(self.pointCloud_radius)
         cube_source.SetYLength(self.pointCloud_radius)
         cube_source.SetZLength(self.pointCloud_radius)
         self.cube_source = cube_source
         rotate= self.pointCloud_rotation
-        print("Rotate", self.pointCloud_rotation)
+        # print("Rotate", self.pointCloud_rotation)
         transform = vtk.vtkTransform()
         # save reference
         self.transform = transform
         # rotate around the center of the image data
-        print("ROTATE: ", self.pointCloud_rotation[2])
+        # print("ROTATE: ", self.pointCloud_rotation[2])
         transform.RotateX(self.pointCloud_rotation[0])
         transform.RotateY(self.pointCloud_rotation[1])
         transform.RotateZ(self.pointCloud_rotation[2])
@@ -1005,6 +985,10 @@ and then input to the DVC code.")
         rp = {}
 
         dockWidget.visibilityChanged.connect(self.displayRegistrationViewer)
+
+        point0_text = "The rigid body offset will be centered on this point.\n\
+If it falls within your chosen mask, this will be the first point of the ROI cloud.\n\
+It is used as a global starting point and a translation reference."
         
         # Button select point0
         rp['select_point_zero'] = QPushButton(groupBox)
@@ -1012,12 +996,14 @@ and then input to the DVC code.")
         rp['select_point_zero'].setEnabled(True)
         rp['select_point_zero'].setCheckable(True)
         rp['select_point_zero'].setChecked(False)
+        rp['select_point_zero'].setToolTip(point0_text)
         rp['select_point_zero'].clicked.connect( lambda: self.selectPointZero() )
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['select_point_zero'])
         widgetno += 1
         # Point0 Location
         rp['point_zero_label'] = QLabel(groupBox)
         rp['point_zero_label'].setText("Point Zero Location")
+        rp['point_zero_label'].setToolTip(point0_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['point_zero_label'])
         rp['point_zero_entry']= QLineEdit(groupBox)
         rp['point_zero_entry'].setEnabled(False)
@@ -1066,9 +1052,12 @@ and then input to the DVC code.")
         separators[-1].setFrameShadow(QFrame.Raised)
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1
+
+        translation_tooltip_text = "These translations will be input to the DVC code as the rigid body offset."
         # Translate X field
         rp['translate_X_label'] = QLabel(groupBox)
         rp['translate_X_label'].setText("Translate X")
+        rp['translate_X_label'].setToolTip(translation_tooltip_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['translate_X_label'])
         rp['translate_X_entry']= QLineEdit(groupBox)
         rp['translate_X_entry'].setValidator(validatorint)
@@ -1079,16 +1068,18 @@ and then input to the DVC code.")
         # Translate Y field
         rp['translate_Y_label'] = QLabel(groupBox)
         rp['translate_Y_label'].setText("Translate Y")
+        rp['translate_Y_label'].setToolTip(translation_tooltip_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['translate_Y_label'])
         rp['translate_Y_entry']= QLineEdit(groupBox)
         rp['translate_Y_entry'].setValidator(validatorint)
         rp['translate_Y_entry'].setText("0")
-        rp['translate_Y_entry'].setEnabled(False)
+        rp['translate_Y_entry'].setEnabled(False) 
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Y_entry'])
         widgetno += 1
         # Translate Z field
         rp['translate_Z_label'] = QLabel(groupBox)
         rp['translate_Z_label'].setText("Translate Z")
+        rp['translate_Z_label'].setToolTip(translation_tooltip_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rp['translate_Z_label'])
         rp['translate_Z_entry']= QLineEdit(groupBox)
         rp['translate_Z_entry'].setValidator(validatorint)
@@ -1112,7 +1103,7 @@ and then input to the DVC code.")
         self.registration_parameters = rp
 
     def createRegistrationViewer(self):
-        print("Create reg viewer")
+        # print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
         self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
         self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
@@ -1158,7 +1149,7 @@ and then input to the DVC code.")
             if registration_open:
                 self.help_label.setText(self.help_text[1])
                 if not hasattr(self, 'vis_widget_reg'):
-                    print("Creating reg viewer")
+                    # print("Creating reg viewer")
                     self.createRegistrationViewer()
                     self.viewer2D_dock.setVisible(False)
                     self.viewer3D_dock.setVisible(False)
@@ -1198,17 +1189,17 @@ and then input to the DVC code.")
             self.warningDialog("Load an image on the viewer first.", "Error")
         
     def OnLeftButtonPressEventForPointZero(self, interactor, event):
-            print('OnLeftButtonPressEventForPointZero', event)
+            # print('OnLeftButtonPressEventForPointZero', event)
             v = self.vis_widget_reg.frame.viewer
             shift = interactor.GetShiftKey()          
             rp = self.registration_parameters
             
             if shift and rp['select_point_zero'].isChecked():
                 position = interactor.GetEventPosition()
-                print(position)
-                print("Image coord p0l: ", v.style.display2imageCoordinate(position)[:-1])
+                #print(position)
+                #print("Image coord p0l: ", v.style.display2imageCoordinate(position)[:-1])
                 p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
-                print("p0l, ", p0l)               
+                #print("p0l, ", p0l)               
                 self.createPoint0(p0l)
 
     def updatePoint0Display(self):
@@ -1224,14 +1215,14 @@ and then input to the DVC code.")
         v = self.vis_widget_reg.frame.viewer
         spacing = v.img3D.GetSpacing()
         origin = v.img3D.GetOrigin()
-        print("Point0 WORLD: ", p0)
+        #  print("Point0 WORLD: ", p0)
         self.point0_world_coords = copy.deepcopy(p0)
         self.point0_sampled_image_coords = copy.deepcopy(self.getPoint0ImageCoords())
         #p0 = [round(p0[i]) for i in range(3)]
         point0actor = 'Point0' in v.actors
         rp = self.registration_parameters
         vox = p0
-        print ("vox ", vox, 'p0', p0)
+        # print ("vox ", vox, 'p0', p0)
 
         rp = self.registration_parameters
         self.SetPoint0Text()
@@ -1284,7 +1275,7 @@ and then input to the DVC code.")
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
     def centerOnPointZero(self):
-        print("Center on point0")
+        #print("Center on point0")
         '''Centers the viewing slice where Point 0 is'''
         if hasattr(self, 'vis_widget_reg'):
             rp = self.registration_parameters
@@ -1292,7 +1283,7 @@ and then input to the DVC code.")
 
             point0 = self.getPoint0ImageCoords()
 
-            print("center on Point0 is ", point0)
+            #print("center on Point0 is ", point0)
 
             if isinstance (point0, tuple) or isinstance(point0, list):
                 #print("Tuple")
@@ -1386,7 +1377,7 @@ and then input to the DVC code.")
         extent = [ round(el) if el > 0 else 0 for i,el in enumerate(extent) ] #TODO: add correction for upper bound as well
 
         self.registration_box_extent = extent
-        print("Full reg box extent: ", extent)
+        #print("Full reg box extent: ", extent)
 
         return extent
 
@@ -1408,7 +1399,7 @@ and then input to the DVC code.")
 
         p0 = [round(i) for i in p0]
 
-        print("Point0 orig image coords", p0)
+        #print("Point0 orig image coords", p0)
 
         return p0
 
@@ -1419,7 +1410,7 @@ and then input to the DVC code.")
             vs_widgets = self.visualisation_setting_widgets
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
-                print ("Start Registration Checked")
+                # print ("Start Registration Checked")
                 rp['start_registration_button'].setText("Stop Registration")
                 rp['registration_box_size_entry'].setEnabled(False)
 
@@ -1437,7 +1428,7 @@ and then input to the DVC code.")
                 
             
             else:
-                print ("Start Registration Unchecked")
+                # print ("Start Registration Unchecked")
                 rp['start_registration_button'].setText("Start Registration")
                 rp['registration_box_size_entry'].setEnabled(True)
 
@@ -1447,7 +1438,7 @@ and then input to the DVC code.")
                     self.createPoint0(self.getPoint0WorldCoords())
 
     def UpdateViewerSettingsPanelForRegistration(self):
-        print("UpdateViewerSettings")
+        # print("UpdateViewerSettings")
         vs_widgets = self.visualisation_setting_widgets
         rp = self.registration_parameters
         if rp['start_registration_button'].isChecked():
@@ -1490,7 +1481,7 @@ and then input to the DVC code.")
 
         if hasattr(self, 'registration_box_extent'):
             previous_reg_box_extent = copy.deepcopy(self.registration_box_extent)
-            print("Prev", previous_reg_box_extent)
+            # print("Prev", previous_reg_box_extent)
         else:
             previous_reg_box_extent = None
 
@@ -1502,7 +1493,7 @@ and then input to the DVC code.")
         if target_z_extent[0] <0:
             target_z_extent[0] = 0
         target_z_extent = tuple(target_z_extent)
-        print("Target z extent", target_z_extent)
+        # print("Target z extent", target_z_extent)
 
         self.target_cropped_image_z_extent = target_z_extent
 
@@ -1516,11 +1507,11 @@ and then input to the DVC code.")
         if self.image_info['sampled']:
             
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
-                    print("About to create image")
-                    self.unsampled_ref_image_data = vtk.vtkImageData()
-                    ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
-                    #TODO: move to doing both image data creators simultaneously - would this work?
-                    return
+                #print("About to create image")
+                self.unsampled_ref_image_data = vtk.vtkImageData()
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                #TODO: move to doing both image data creators simultaneously - would this work?
+                return
 
             if previous_reg_box_extent != reg_box_extent:
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
@@ -1552,7 +1543,7 @@ and then input to the DVC code.")
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
-            print("About to del image reg viewer")
+            #print("About to del image reg viewer")
             self.displayRegistrationViewer(False)
 
             del self.vis_widget_reg
@@ -1573,8 +1564,6 @@ and then input to the DVC code.")
 
             if hasattr(self, 'point0_world_coords'):
                 del self.point0_world_coords
-        if hasattr(self, 'vis_widget_reg'):
-            print("Still exists")
 
 
     def translateImages(self, progress_callback = None):
@@ -1606,13 +1595,13 @@ and then input to the DVC code.")
         subtract.Update()
         #progress_callback.emit(80)
         
-        print ("subtract type", subtract.GetOutput().GetScalarTypeAsString(), subtract.GetOutput().GetDimensions())
+        # print ("subtract type", subtract.GetOutput().GetScalarTypeAsString(), subtract.GetOutput().GetDimensions())
         
         stats = vtk.vtkImageHistogramStatistics()
         stats.SetInputConnection(subtract.GetOutputPort())
         stats.Update()
         #progress_callback.emit(90)
-        print ("stats ", stats.GetMinimum(), stats.GetMaximum(), stats.GetMean(), stats.GetMedian())
+        # print ("stats ", stats.GetMinimum(), stats.GetMaximum(), stats.GetMean(), stats.GetMedian())
         self.subtract = subtract
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
@@ -1622,7 +1611,7 @@ and then input to the DVC code.")
 
         extent = self.getRegistrationBoxExtentInWorldCoords()
 
-        print("Registration box extent", extent )
+        #print("Registration box extent", extent )
 
         # get the selected ROI
         voi = vtk.vtkExtractVOI()
@@ -1636,11 +1625,11 @@ and then input to the DVC code.")
         data1 = vtk.vtkImageData()
         data1.DeepCopy(voi.GetOutput())
         
-        print ("Reading image 2")
+        #print ("Reading image 2")
         
         voi.SetInputData(self.unsampled_corr_image_data)
         
-        print ("Extracting selection")
+        # print ("Extracting selection")
         voi.Update()
         #progress_callback.emit(30)
         data2 = vtk.vtkImageData()
@@ -1649,14 +1638,14 @@ and then input to the DVC code.")
 
         
         #progress_callback.emit(40)
-        print ("clearing memory")
+        # print ("clearing memory")
         del voi
 
         return [data1, data2]
 
 
     def reg_viewer_update(self, type = None):
-        print("Reg viewer update")
+        # print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
@@ -1667,14 +1656,14 @@ and then input to the DVC code.")
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
             current_slice = v.GetActiveSlice()
-        print("About to set the input data")
+        # print("About to set the input data")
         v.setInputData(self.subtract.GetOutput())
-        print("Set the input data")
+        # print("Set the input data")
 
         if type == 'starting registration':
             v.style.UpdatePipeline()
             v.startRenderLoop()
-            print("About to center on point0")
+            # print("About to center on point0")
             self.centerOnPointZero()
         else:
             v.style.SetActiveSlice(round(current_slice))
@@ -1689,7 +1678,7 @@ and then input to the DVC code.")
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
         #key_sym = interactor.GetKeySym()
-        print('OnKeyPressEventForRegistration', key_code) #,event)
+        # print('OnKeyPressEventForRegistration', key_code) #,event)
         #print("Key sym", key_sym)
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
@@ -1709,7 +1698,7 @@ and then input to the DVC code.")
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
         key_code = interactor.GetKeyCode()
-        print('AfterKeyPressEventForRegistration', key_code) #,event)
+        # print('AfterKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
 
         if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
@@ -1723,7 +1712,7 @@ and then input to the DVC code.")
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         current_slice = v.GetActiveSlice()
-        print("Current slice", current_slice)
+        # print("Current slice", current_slice)
         trans = list(self.translate.GetTranslation())
         #print("Previous translation: ", trans)
         orientation = v.style.GetSliceOrientation()
@@ -1806,6 +1795,7 @@ and then input to the DVC code.")
 
         mp_widgets['mask_extend_above_label'] = QLabel(groupBox)
         mp_widgets['mask_extend_above_label'].setText("Extend Above ")
+        mp_widgets['mask_extend_above_label'].setToolTip("Slices above the current plane to extend the mask to.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp_widgets['mask_extend_above_label'])
         mp_widgets['mask_extend_above_entry'] = QSpinBox(groupBox)
         mp_widgets['mask_extend_above_entry'].setSingleStep(1)
@@ -1816,6 +1806,7 @@ and then input to the DVC code.")
 
         mp_widgets['mask_extend_below_label'] = QLabel(groupBox)
         mp_widgets['mask_extend_below_label'].setText("Extend Below ")
+        mp_widgets['mask_extend_below_label'].setToolTip("Slices below the current plane to extend the mask to.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, mp_widgets['mask_extend_below_label'])
         mp_widgets['mask_extend_below_entry'] = QSpinBox(groupBox)
         mp_widgets['mask_extend_below_entry'].setSingleStep(1)
@@ -1827,6 +1818,7 @@ and then input to the DVC code.")
         # Add should extend checkbox
         mp_widgets['extendMaskCheck'] = QCheckBox(groupBox)
         mp_widgets['extendMaskCheck'].setText("Extend mask")
+        mp_widgets['extendMaskCheck'].setToolTip("You may draw a second trace. Select extend mask to extend the mask to this second traced region.")
         #mp_widgets['extendMaskCheck'].setEnabled(False)
 
         formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
@@ -1898,134 +1890,131 @@ and then input to the DVC code.")
         self.SaveWindow.show()
 
     def extendMask(self, progress_callback=None):
-            #if we have loaded the mask from a file then atm we cannot extend it bc we don't have stencil so need to set stencil somewhere?
-            #we can easily get the image data v.image2 but would need a stencil?
+        #if we have loaded the mask from a file then atm we cannot extend it bc we don't have stencil so need to set stencil somewhere?
+        #we can easily get the image data v.image2 but would need a stencil?
 
-            print("Extend mask")
+        # print("Extend mask")
 
-            v = self.vis_widget_2D.frame.viewer
+        v = self.vis_widget_2D.frame.viewer
 
-            poly = vtk.vtkPolyData()
-            v.imageTracer.GetPath(poly) 
-            #print(v.imageTracer.GetPath(poly))
-            pathpoints = poly.GetPoints()
-            #print(pathpoints)
-            # for i in range(poly.GetPoints().GetNumberOfPoints()):
-            #    print (poly.GetPoints().GetPoint(i))
-            lasso = vtk.vtkLassoStencilSource()
-            self.lasso = lasso
+        poly = vtk.vtkPolyData()
+        v.imageTracer.GetPath(poly) 
+        #print(v.imageTracer.GetPath(poly))
+        pathpoints = poly.GetPoints()
+        #print(pathpoints)
+        # for i in range(poly.GetPoints().GetNumberOfPoints()):
+        #    print (poly.GetPoints().GetPoint(i))
+        lasso = vtk.vtkLassoStencilSource()
+        self.lasso = lasso
 
-            image_data = self.vis_widget_2D.image_data
+        image_data = self.vis_widget_2D.image_data
 
-            lasso.SetShapeToPolygon()
-            # pass the slice at which the lasso has to process
-            sliceno = v.style.GetActiveSlice()
-            lasso.SetSlicePoints(sliceno , pathpoints)
-            orientation = v.GetSliceOrientation()
-            lasso.SetSliceOrientation(orientation)
-            lasso.SetInformationInput(image_data)
+        lasso.SetShapeToPolygon()
+        # pass the slice at which the lasso has to process
+        sliceno = v.style.GetActiveSlice()
+        lasso.SetSlicePoints(sliceno , pathpoints)
+        orientation = v.GetSliceOrientation()
+        lasso.SetSliceOrientation(orientation)
+        lasso.SetInformationInput(image_data)
 
-            #print([orientation,sliceno])
+        #print([orientation,sliceno])
 
-            self.mask_details['current'] = [orientation, sliceno]
+        self.mask_details['current'] = [orientation, sliceno]
 
-            #print(self.mask_details)
+        #print(self.mask_details)
 
-            #Appropriate modification to Point Cloud Panel
-            #self.updatePointCloudPanel()
-            
-            # create a blank image
-            dims = image_data.GetDimensions()
-            print("Dims:" + str(dims))
+        #Appropriate modification to Point Cloud Panel
+        #self.updatePointCloudPanel()
+        
+        # create a blank image
+        dims = image_data.GetDimensions()
+        # print("Dims:" + str(dims))
 
-
-            #print(image_data.GetSpacing())
-            
-
-            progress_callback.emit(40)
+        #print(image_data.GetSpacing())
+        
+        progress_callback.emit(40)
 
 
-            mask0 = Converter.numpy2vtkImage(np.zeros((dims[0],dims[1],dims[2]),order='F', 
-                                                dtype=np.uint8),origin = image_data.GetOrigin(), spacing = image_data.GetSpacing())
+        mask0 = Converter.numpy2vtkImage(np.zeros((dims[0],dims[1],dims[2]),order='F', 
+                                            dtype=np.uint8),origin = image_data.GetOrigin(), spacing = image_data.GetSpacing())
 
-            mask1 = Converter.numpy2vtkImage(np.ones((dims[0],dims[1],dims[2]),order='F', dtype=np.uint8),
-                                                origin = image_data.GetOrigin(), spacing = image_data.GetSpacing())
+        mask1 = Converter.numpy2vtkImage(np.ones((dims[0],dims[1],dims[2]),order='F', dtype=np.uint8),
+                                            origin = image_data.GetOrigin(), spacing = image_data.GetSpacing())
 
-            print("Mask spacing:", mask0.GetSpacing())
+        # print("Mask spacing:", mask0.GetSpacing())
 
+        # Create a Mask from the lasso.
+        stencil = vtk.vtkImageStencil()
+        self.mask_reader = stencil
+        stencil.SetInputData(mask1)
+        stencil.SetBackgroundInputData(mask0)
 
-            # Create a Mask from the lasso.
-            stencil = vtk.vtkImageStencil()
-            self.mask_reader = stencil
-            stencil.SetInputData(mask1)
-            stencil.SetBackgroundInputData(mask0)
+        stencil.SetStencilConnection(lasso.GetOutputPort())
+        stencil.Update()
+        dims = stencil.GetOutput().GetDimensions()
 
-            stencil.SetStencilConnection(lasso.GetOutputPort())
-            stencil.Update()
-            dims = stencil.GetOutput().GetDimensions()
+        progress_callback.emit(80)
 
-            progress_callback.emit(80)
+        #print("Stencil dims: " + str(dims))
 
-            #print("Stencil dims: " + str(dims))
+        down = self.mask_parameters['mask_extend_below_entry'].value()
+        up = self.mask_parameters['mask_extend_above_entry'].value()
 
-            down = self.mask_parameters['mask_extend_below_entry'].value()
-            up = self.mask_parameters['mask_extend_above_entry'].value()
+        # do not extend outside the image
+        zmin = sliceno -down if sliceno-down>=0 else 0
+        zmax = sliceno + up if sliceno+up < dims[orientation] else dims[orientation]
 
-            # do not extend outside the image
-            zmin = sliceno -down if sliceno-down>=0 else 0
-            zmax = sliceno + up if sliceno+up < dims[orientation] else dims[orientation]
+        #vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
+        stencil_output = self.copySlices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
 
-            #vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
-            stencil_output = self.copySlices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
+        progress_callback.emit(85)
 
-            progress_callback.emit(85)
+        # save the mask to a file in temp folder
+        writer = vtk.vtkMetaImageWriter()
+        tmpdir = tempfile.gettempdir()
+        writer.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
+        self.mask_file = "Masks/latest_selection.mha"
 
-            # save the mask to a file in temp folder
-            writer = vtk.vtkMetaImageWriter()
-            tmpdir = tempfile.gettempdir()
-            writer.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
-            self.mask_file = "Masks/latest_selection.mha"
+        progress_callback.emit(90)
 
-            progress_callback.emit(90)
+        # if extend mask -> load temp saved mask
+        if self.mask_parameters['extendMaskCheck'].isChecked():
+            self.setStatusTip('Extending mask')
+            if os.path.exists(os.path.join(tmpdir, "Masks/latest_selection.mha")):
+                # print  ("extending mask ", os.path.join(tmpdir, "Masks/latest_selection.mha"))
+                reader = vtk.vtkMetaImageReader()
+                reader.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
+                reader.Update()
 
-            # if extend mask -> load temp saved mask
-            if self.mask_parameters['extendMaskCheck'].isChecked():
-                self.setStatusTip('Extending mask')
-                if os.path.exists(os.path.join(tmpdir, "Masks/latest_selection.mha")):
-                    print  ("extending mask ", os.path.join(tmpdir, "Masks/latest_selection.mha"))
-                    reader = vtk.vtkMetaImageReader()
-                    reader.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
-                    reader.Update()
+                math = vtk.vtkImageMathematics()
+                math.SetOperationToAdd()
+                #math.SetInput1Data(stencil.GetOutput())
+                math.SetInput1Data(stencil_output)
+                math.SetInput2Data(reader.GetOutput())
+                math.Update()
 
-                    math = vtk.vtkImageMathematics()
-                    math.SetOperationToAdd()
-                    #math.SetInput1Data(stencil.GetOutput())
-                    math.SetInput1Data(stencil_output)
-                    math.SetInput2Data(reader.GetOutput())
-                    math.Update()
+                threshold = vtk.vtkImageThreshold()
+                threshold.ThresholdBetween(1, 255)
+                threshold.ReplaceInOn()
+                threshold.SetInValue(1)
+                threshold.SetInputConnection(math.GetOutputPort())
+                threshold.Update()
 
-                    threshold = vtk.vtkImageThreshold()
-                    threshold.ThresholdBetween(1, 255)
-                    threshold.ReplaceInOn()
-                    threshold.SetInValue(1)
-                    threshold.SetInputConnection(math.GetOutputPort())
-                    threshold.Update()
+                writer.SetInputData(threshold.GetOutput())
+                self.mask_data = threshold.GetOutput()
+            # else:
+            #     print  ("extending mask failed ", tmpdir)
+        else:
+            #writer.SetInputData(stencil.GetOutput())
+            writer.SetInputData(stencil_output)
+            #self.mask_data = stencil.GetOutput()
+            self.mask_data = stencil_output
 
-                    writer.SetInputData(threshold.GetOutput())
-                    self.mask_data = threshold.GetOutput()
-                else:
-                    print  ("extending mask failed ", tmpdir)
-            else:
-                #writer.SetInputData(stencil.GetOutput())
-                writer.SetInputData(stencil_output)
-                #self.mask_data = stencil.GetOutput()
-                self.mask_data = stencil_output
+        writer.Write() # writes to file.
+        self.mask_parameters['extendMaskCheck'].setEnabled(True)
+        self.setStatusTip('Done')
 
-            writer.Write() # writes to file.
-            self.mask_parameters['extendMaskCheck'].setEnabled(True)
-            self.setStatusTip('Done')
-
-            progress_callback.emit(100)
+        progress_callback.emit(100)
 
     def copySlices(self, indata, fromslice, min, max, orientation, progress_callback):
 
@@ -2050,7 +2039,7 @@ and then input to the DVC code.")
         return (indata)
 
     def loadMask(self, load_session, progress_callback = None): #loading mask from a file
-        print("Load mask")
+        #print("Load mask")
         time.sleep(0.1) #required so that progress window displays
         progress_callback.emit(30)
         #Appropriate modification to Point Cloud Panel
@@ -2099,10 +2088,10 @@ and then input to the DVC code.")
         
         
         dims = v.img3D.GetDimensions()
-        print("Image dims:" + str(v.img3D.GetDimensions()))
-        print("Mask dims:" + str(self.mask_reader.GetOutput().GetDimensions()))
+        #print("Image dims:" + str(v.img3D.GetDimensions()))
+        #print("Mask dims:" + str(self.mask_reader.GetOutput().GetDimensions()))
         if not dims == self.mask_reader.GetOutput().GetDimensions():
-            print("Not compatible")
+            #print("Not compatible")
             return 
 
         #v.setInputData2(self.mask_reader.GetOutput())
@@ -2126,7 +2115,6 @@ and then input to the DVC code.")
     def clearMask(self):
         self.vis_widget_2D.frame.viewer.setInputData2(vtk.vtkImageData()) #deletes mask
         self.mask_reader = None
-
 
         #how to clear the tracer? ...
         #self.vis_widget_2D.frame.viewer.imageTracer =  vtk.vtkImageTracerWidget() #this line causes problems
@@ -2224,6 +2212,7 @@ and then input to the DVC code.")
         # Add ISO Value field
         self.isoValueLabel = QLabel(self.graphParamsGroupBox)
         self.isoValueLabel.setText("Subvolume radius")
+        self.isoValueLabel.setToolTip("Defines the radius of the subvolumes created around each search point. This is in units of voxels on the original image.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.isoValueLabel)
         self.isoValueEntry= QLineEdit(self.graphParamsGroupBox)
         self.isoValueEntry.setValidator(validatorint)
@@ -2275,6 +2264,8 @@ and then input to the DVC code.")
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
         self.dimensionalityLabel.setText("Dimensionality")
+        self.dimensionalityLabel.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
+A 3D pointcloud is created within the full extent of the mask.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
@@ -2295,9 +2286,11 @@ and then input to the DVC code.")
         orientation = v.GetSliceOrientation()
 
         # Add Log Tree field
+        overlap_tooltip_text = "Overlap as a fraction of the subvolume radius."
         # Add Overlap X
         self.overlapXLabel = QLabel(self.graphParamsGroupBox)
         self.overlapXLabel.setText("Overlap X")
+        self.overlapXLabel.setToolTip(overlap_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.overlapXLabel)
         self.overlapXValueEntry = QDoubleSpinBox(self.graphParamsGroupBox)
         self.overlapXValueEntry.setValue(0.20)
@@ -2315,6 +2308,7 @@ and then input to the DVC code.")
         # Add Overlap Y
         self.overlapYLabel = QLabel(self.graphParamsGroupBox)
         self.overlapYLabel.setText("Overlap Y")
+        self.overlapYLabel.setToolTip(overlap_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.overlapYLabel)
         self.overlapYValueEntry = QDoubleSpinBox(self.graphParamsGroupBox)
         self.overlapYValueEntry.setValue(0.20)
@@ -2332,6 +2326,7 @@ and then input to the DVC code.")
         # Add Overlap Z
         self.overlapZLabel = QLabel(self.graphParamsGroupBox)
         self.overlapZLabel.setText("Overlap Z")
+        self.overlapZLabel.setToolTip(overlap_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.overlapZLabel)
         self.overlapZValueEntry = QDoubleSpinBox(self.graphParamsGroupBox)
         self.overlapZValueEntry.setValue(0.20)
@@ -2347,9 +2342,12 @@ and then input to the DVC code.")
         widgetno += 1
         pc['pointcloud_overlap_z_entry'] = self.overlapZValueEntry
 
+        rotation_tooltip_text = "Rotation of the pointcloud in degrees."
+
         # Add Rotation X
         self.rotateXLabel = QLabel(self.graphParamsGroupBox)
         self.rotateXLabel.setText("Rotation angle X")
+        self.rotateXLabel.setToolTip(rotation_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.rotateXLabel)
         self.rotateXValueEntry = QLineEdit(self.graphParamsGroupBox)
         self.rotateXValueEntry.setValidator(validator)
@@ -2363,6 +2361,7 @@ and then input to the DVC code.")
         # Add Overlap Y
         self.rotateYLabel = QLabel(self.graphParamsGroupBox)
         self.rotateYLabel.setText("Rotation angle Y")
+        self.rotateYLabel.setToolTip(rotation_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.rotateYLabel)
         self.rotateYValueEntry = QLineEdit(self.graphParamsGroupBox)
         self.rotateYValueEntry.setValidator(validator)
@@ -2377,6 +2376,7 @@ and then input to the DVC code.")
         # Add Overlap Z
         self.rotateZLabel = QLabel(self.graphParamsGroupBox)
         self.rotateZLabel.setText("Rotation angle Z")
+        self.rotateZLabel.setToolTip(rotation_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.rotateZLabel)
         self.rotateZValueEntry = QLineEdit(self.graphParamsGroupBox)
         self.rotateZValueEntry.setValidator(validator)
@@ -2392,6 +2392,7 @@ and then input to the DVC code.")
         # Add should extend checkbox
         self.erodeCheck = QCheckBox(self.graphParamsGroupBox)
         self.erodeCheck.setText("Erode mask")
+        self.erodeCheck.setToolTip("Mask erosion ensures the entirety of the subvolume regions are within the mask.")
         self.erodeCheck.setEnabled(True)
         self.erodeCheck.setChecked(False)
         
@@ -2407,6 +2408,7 @@ and then input to the DVC code.")
         
         self.erodeRatioLabel =  QLabel(self.graphParamsGroupBox)
         self.erodeRatioLabel.setText("Erosion Multiplier")
+        self.erodeRatioLabel.setToolTip("Adjust the level of mask erosion.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.erodeRatioLabel)
         self.erodeRatioSpinBox = QDoubleSpinBox(self.graphParamsGroupBox)
         self.erodeRatioSpinBox.setEnabled(False)
@@ -2552,7 +2554,7 @@ and then input to the DVC code.")
 
         else:
             if(self.pointCloudCreated or self.pointCloudLoaded): 
-                print("pointcloud created")
+                # print("pointcloud created")
                 self.SavePointCloudWindow = SaveObjectWindow(self, "pointcloud", save_only)
                 self.SavePointCloudWindow.show()
             else:
@@ -2560,7 +2562,7 @@ and then input to the DVC code.")
 
     def createPointCloud(self, filename = "latest_pointcloud.roi", progress_callback=None, radius = None):
         ## Create the PointCloud
-        print("Create point cloud")
+        #print("Create point cloud")
 
         # Mask is read from temp file
         tmpdir = tempfile.gettempdir() 
@@ -2604,7 +2606,7 @@ and then input to the DVC code.")
         
         pointCloud.SetInputConnection(0, reader.GetOutputPort())
 
-        print("Overlap: ", [self.overlapXValueEntry.text(), self.overlapYValueEntry.text(), self.overlapZValueEntry.text()])
+        #print("Overlap: ", [self.overlapXValueEntry.text(), self.overlapYValueEntry.text(), self.overlapZValueEntry.text()])
 
         if radius is None:
             radius = int(self.isoValueEntry.text())
@@ -2616,13 +2618,13 @@ and then input to the DVC code.")
         pointCloud.SetOverlap(1,float(self.overlapYValueEntry.text()))
         pointCloud.SetOverlap(2,float(self.overlapZValueEntry.text()))
 
-        print("Radius: ", radius)
+        #print("Radius: ", radius)
         pointCloud.SetSubVolumeRadiusInVoxel(radius)
         pointCloud.Update()
         self.pointCloud_radius = radius
         self.pointCloud_overlap = [float(self.overlapXValueEntry.text()), float(self.overlapYValueEntry.text()), float(self.overlapZValueEntry.text())]
         
-        print ("pointCloud number of points", pointCloud.GetNumberOfPoints())
+        #print ("pointCloud number of points", pointCloud.GetNumberOfPoints())
 
         if pointCloud.GetNumberOfPoints() == 0: 
             return         
@@ -2643,7 +2645,7 @@ and then input to the DVC code.")
         #Set up erosion if user has selected it:
 
         if( self.erodeCheck.isChecked()):
-            print ("Erode checked" ,self.erodeCheck.isChecked())
+            #print ("Erode checked" ,self.erodeCheck.isChecked())
             
             if orientation == SLICE_ORIENTATION_XY:
                 ks = [pointCloud.GetSubVolumeRadiusInVoxel(), pointCloud.GetSubVolumeRadiusInVoxel(), 1]
@@ -2763,13 +2765,13 @@ and then input to the DVC code.")
         mm = mask_data.GetScalarComponentAsDouble(int(self.point0_sampled_image_coords[0]),int(self.point0_sampled_image_coords[1]), int(self.point0_sampled_image_coords[2]), 0)
 
         if int(mm) == 1: #if point0 is in the mask
-            print("POINT 0 IN MASK")
+            #print("POINT 0 IN MASK")
 
             #Translate pointcloud so that point 0 is in the cloud
             if hasattr(self, 'point0'):
                 pointCloud_points = []
                 pointCloud_distances = []
-                print("Point 0: ", self.point0_world_coords)
+                #print("Point 0: ", self.point0_world_coords)
                 for i in range (0, pointCloud.GetNumberOfPoints()):
                     current_point = pointCloud.GetPoints().GetPoint(i)
                     pointCloud_points.append(current_point)
@@ -2777,11 +2779,11 @@ and then input to the DVC code.")
 
                 lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
 
-                print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
+                #print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
 
                 pointCloud_Translation = (self.point0_world_coords[0]-pointCloud_points[lowest_distance_index][0],self.point0_world_coords[1]-pointCloud_points[lowest_distance_index][1],self.point0_world_coords[2]-pointCloud_points[lowest_distance_index][2])
 
-                print("Translation from it is:", pointCloud_Translation)
+                #print("Translation from it is:", pointCloud_Translation)
 
                 #transform = vtk.vtkTransform()
                 transform.Translate(pointCloud_Translation)
@@ -2809,7 +2811,7 @@ and then input to the DVC code.")
 
         #print("Points in mask now: ", polydata_masker)
 
-        print("Updated polydata_masker")
+        #print("Updated polydata_masker")
         
         self.reader = reader
         self.pointcloud = pointCloud
@@ -2827,7 +2829,7 @@ and then input to the DVC code.")
         pointcloud = self.polydata_masker.GetOutputDataObject(0)
         #array = np.zeros((pointcloud.GetNumberOfPoints(), 4))
         array = []
-        print("Points:", pointcloud.GetNumberOfPoints())
+        #print("Points:", pointcloud.GetNumberOfPoints())
         if(pointcloud.GetNumberOfPoints() == 0):
             self.pointCloud = pointcloud
             return (False)
@@ -2840,7 +2842,7 @@ and then input to the DVC code.")
             pp = pointcloud.GetPoint(i)
             distance = (pp[0]-self.point0_world_coords[0])**2 + (pp[1]-self.point0_world_coords[1])**2 + (pp[2]-self.point0_world_coords[2])**2
             if distance < 0.001:
-                print("Distance is 0 for:", pp)
+                #print("Distance is 0 for:", pp)
                 #print("Add to front of list")
                 array.insert(0,(1,*pp))
             else:
@@ -2851,7 +2853,7 @@ and then input to the DVC code.")
         np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
         #print(self.roi)
-        print("finished making the cloud")
+        #print("finished making the cloud")
         return(True)
             
 
@@ -2879,13 +2881,13 @@ and then input to the DVC code.")
             self.pointCloud_overlap = self.pointCloud_details[pointcloud_file][1]
             self.pointCloud_rotation = self.pointCloud_details[pointcloud_file][2]
             self.pointCloud_shape = self.pointCloud_details[pointcloud_file][3]
-            print("Set properties")
+            #print("Set properties")
         else:
             self.pointCloud_radius = 0
             self.pointCloud_overlap = [0.00,0.00,0.00]
             self.pointCloud_rotation = [0.00,0.00,0.00]
             self.pointCloud_shape = cilRegularPointCloudToPolyData.CUBE
-            print("No details found")
+            #print("No details found")
 
         #SET UP APPROPRIATE VALUES OF SPINBOXES ON INTERFACE:
         # self.overlapXValueEntry.setValue(float(self.pointCloud_overlap[0]))
@@ -2904,7 +2906,7 @@ and then input to the DVC code.")
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
         self.setup3DPointCloudPipeline()
-        print(self.loading_session)
+        #print(self.loading_session)
         self.progress_window.setValue(100)
         if not self.loading_session:
             self.warningDialog(window_title="Success", message="Point cloud loaded.")
@@ -2924,7 +2926,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             self.eroded_mask = False
             self.pointCloudLoaded = False
             return
-        print("display pointcloud")
+        #print("display pointcloud")
         
         v = self.vis_widget_2D.frame.viewer
         if not self.pointCloudCreated:
@@ -2939,9 +2941,9 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
             spacing = v.img3D.GetSpacing()
             radius = self.pointCloud_radius
             rotate = self.pointCloud_rotation
-            print("Spacing ",spacing)
-            print("Radius ",radius)
-            print("Rotation", rotate)
+            # print("Spacing ",spacing)
+            # print("Radius ",radius)
+            # print("Rotation", rotate)
 
             if self.pointCloud_shape == cilRegularPointCloudToPolyData.CUBE:
             #cube
@@ -2967,7 +2969,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         self.vis_widget_2D.frame.viewer.GetRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
 
-        print(self.pointCloudCreated)
+        #print(self.pointCloudCreated)
 
         self.progress_window.setValue(100)
 
@@ -3024,28 +3026,30 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         v3D.getRenderWindow().Render()
 
-        print("Cleared pc")
+        #print("Cleared pc")
 
 
     def showSubvolumeRegions(self, show):
         v2D = self.vis_widget_2D.frame.viewer
-        if show:
-            if v2D.GetActor('subvolume_actor'):
-                v2D.GetActor('subvolume_actor').VisibilityOn()
+        if hasattr(v2D, 'img3D'):
+            if show:
+                if v2D.GetActor('subvolume_actor'):
+                    v2D.GetActor('subvolume_actor').VisibilityOn()
 
-        else:
-            if v2D.GetActor('subvolume_actor'):
-                v2D.GetActor('subvolume_actor').VisibilityOff()
+            else:
+                if v2D.GetActor('subvolume_actor'):
+                    v2D.GetActor('subvolume_actor').VisibilityOff()
 
-        if hasattr(self, 'actors_3D'):
-            if 'pointcloud' in self.actors_3D:
-                if show:
-                    self.actors_3D ['pointcloud_frame'].VisibilityOn()
-                else:
-                    self.actors_3D ['pointcloud_frame'].VisibilityOff()
+            if hasattr(self, 'actors_3D'):
+                if 'pointcloud' in self.actors_3D:
+                    if show:
+                        self.actors_3D ['pointcloud_frame'].VisibilityOn()
+                    else:
+                        self.actors_3D ['pointcloud_frame'].VisibilityOff()
 
-        self.vis_widget_2D.frame.viewer.ren.Render()
-        self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
+            self.vis_widget_2D.frame.viewer.ren.Render()
+            if hasattr(self.vis_widget_2D, 'PlaneClipper'):
+                self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
 
 
     def displayVectors(self,disp_file, vector_dim):
@@ -3141,7 +3145,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
                 
             lut = vtk.vtkLookupTable()
-            print ("lut table range" , acolor.GetRange())
+            #print ("lut table range" , acolor.GetRange())
             lut.SetTableRange(acolor.GetRange())
             lut.SetNumberOfTableValues( 256 )
             lut.SetHueRange( 240/360., 0. )
@@ -3264,7 +3268,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         if key_code in ['x','y','z'] and \
             interactor._viewer.GetActor('arrow_shaft_actor').GetVisibility() and interactor._viewer.GetActor('arrowhead_actor').GetVisibility():
                 self.clearPointCloud2D()
-                print("Cleared pc")
+                #print("Cleared pc")
                 displ = self.loadDisplacementFile(self.disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2)
                 self.createVectors2D(displ, self.vis_widget_2D)
 
@@ -3291,7 +3295,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                 acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
                 
             lut = vtk.vtkLookupTable()
-            print ("lut table range" , acolor.GetRange())
+            #print ("lut table range" , acolor.GetRange())
             lut.SetTableRange(acolor.GetRange())
             lut.SetNumberOfTableValues( 256 )
             lut.SetHueRange( 240/360., 0. )
@@ -3385,10 +3389,11 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         rdvc_widgets['run_points_label'] = QLabel(groupBox)
         rdvc_widgets['run_points_label'].setText("Points in Run:")
+        rdvc_widgets['run_points_label'].setToolTip("Run on a selection of the points in the pointcloud.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_points_label'])
 
         rdvc_widgets['run_points_spinbox'] = QSpinBox(groupBox)
-        rdvc_widgets['run_points_spinbox'].setMinimum(2)
+        rdvc_widgets['run_points_spinbox'].setMinimum(10)
         rdvc_widgets['run_points_spinbox'].setMaximum(10000)
         rdvc_widgets['run_points_spinbox'].setValue(100)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_points_spinbox'])
@@ -3396,6 +3401,12 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         rdvc_widgets['run_max_displacement_label'] = QLabel(groupBox)
         rdvc_widgets['run_max_displacement_label'].setText("Maximum Displacement (voxels)")
+        rdvc_widgets['run_max_displacement_label'].setToolTip("Defines the maximum displacement expected within the reference image volume.\n\
+This is a very important paramater used for search process control and memory allocation.\n\
+Set to a reasonable value just greater than the actual sample maximum displacement.\n\
+Be cautious: large displacements make the search process slower and less reliable.\n\
+It is best to reduce large rigid body displacements through image volume manipulation.\n\
+Future code development will introduce methods for better management of large displacements.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
         rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
         rdvc_widgets['run_max_displacement_entry'].setValue(10)
@@ -3404,6 +3415,11 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
         rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
+        rdvc_widgets['run_ndof_label'].setToolTip("Defines the degree-of-freedom set for the final stage of the search.\nThe actual search process introduces degrees-of-freedom in stages up to this value.\n\
+Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nReserve strain degrees-of-freedom for cases when the highest precision is required.\n\
+3 = translation only,\n\
+6 = translation plus rotation,\n\
+12 = translation, rotation and strain.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_ndof_label'])
         rdvc_widgets['run_ndof_entry'] = QComboBox(groupBox)
         rdvc_widgets['run_ndof_entry'].addItem('3')
@@ -3415,6 +3431,19 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         rdvc_widgets['run_objf_label'] = QLabel(groupBox)
         rdvc_widgets['run_objf_label'].setText("Objective Function")
+        rdvc_widgets['run_objf_label'].setToolTip("Defines the objective function template matching form.\n\
+See B. Pan, Equivalence of Digital Image Correlation Criteria for Pattern Matching, 2010\n\
+Functions become increasingly expensive and more robust as you progress from sad to znssd.\n\
+Minimizing squared-difference and maximizing cross-correlation are functionally equivalent.\n\
+sad  = sum of absolute differences\n\
+ssd  = sum of squared differences\n\
+zssd  = intensity offset insensitive sum of squared differences (value not normalized)\n\
+nssd  = intensity range insensitive sum of squared differences (0.0 = perfect match, 1.0 = max value)\n\
+znssd  = intensity offset and range insensitive sum of squared differences (0.0 = perfect match, 1.0 = max value)\n\
+Notes on objective function values:\n\
+    1. The normalized quantities nssd and znssd are preferred, as quality of match can be assessed.\n\
+    2. The natural range of nssd is [0.0 to 2.0], and of znssd is [0.0 to 4.0].\n\
+    3. Both are scaled for output into the [0.0 to 1.0] range for ease of comparison.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_objf_label'])
         rdvc_widgets['run_objf_entry'] = QComboBox(groupBox)
         rdvc_widgets['run_objf_entry'].addItem('sad')
@@ -3428,6 +3457,10 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         rdvc_widgets['run_iterp_type_label'] = QLabel(groupBox)
         rdvc_widgets['run_iterp_type_label'].setText("Interpolation type")
+        rdvc_widgets['run_iterp_type_label'].setToolTip("Defines the interpolation method used during template matching.\n\
+Trilinear is significantly faster, but with known template matching artifacts.\n\
+Trilinear is most useful for tuning other search parameters during preliminary runs.\n\
+Tricubic is computationally expensive, but is the choice if strain is of interst.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_iterp_type_label'])
         rdvc_widgets['run_iterp_type_entry'] = QComboBox(groupBox)
         rdvc_widgets['run_iterp_type_entry'].addItem('Nearest')
@@ -3463,6 +3496,12 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
         rdvc_widgets['subvol_points_label'] = QLabel(singleRun_groupBox)
         rdvc_widgets['subvol_points_label'].setText("Sampling points in subvolume:")
+        rdvc_widgets['subvol_points_label'].setToolTip("Defines the number of points within each subvolume.\n\
+In this code, subvolume point locations are NOT voxel-centered and the number is INDEPENDENT of subvolume size.\n\
+Interpolation within the reference image volume is used to establish templates with arbitrary point locations.\n\
+For cubes a uniform grid of approximately this number of points is generated.\n\
+For spheres the sampling points are randomly distributed within the subvolume.\n\
+This parameter has a strong effect on computation time, so be careful.")
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['subvol_points_label'])
     
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
@@ -3527,7 +3566,13 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         
         # NUMBER OF POINTS IN SUBVOLUME min
         rdvc_widgets['points_in_subvol_range_min_label'] = QLabel(bulkRun_groupBox)
-        rdvc_widgets['points_in_subvol_range_min_label'].setText("number of points in subvolume min ")
+        rdvc_widgets['points_in_subvol_range_min_label'].setText("Sampling points in subvolume min ")
+        rdvc_widgets['points_in_subvol_range_min_label'].setToolTip("Defines the number of points within each subvolume.\n\
+In this code, subvolume point locations are NOT voxel-centered and the number is INDEPENDENT of subvolume size.\n\
+Interpolation within the reference image volume is used to establish templates with arbitrary point locations.\n\
+For cubes a uniform grid of approximately subvol_npts is generated.\n\
+For spheres subvol_npts are randomly distributed within the subvolume.\n\
+This parameter has a strong effect on computation time, so be careful.")
         bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_min_label'])
         rdvc_widgets['points_in_subvol_range_min_value'] = QLineEdit(bulkRun_groupBox)
         rdvc_widgets['points_in_subvol_range_min_value'].setValidator(validatorint)
@@ -3538,7 +3583,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         widgetno += 1
         # overlap range max
         rdvc_widgets['points_in_subvol_range_max_label'] = QLabel(bulkRun_groupBox)
-        rdvc_widgets['points_in_subvol_range_max_label'].setText("number of points in subvolume max ")
+        rdvc_widgets['points_in_subvol_range_max_label'].setText("Sampling points in subvolume max ")
         bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_max_label'])
         rdvc_widgets['points_in_subvol_range_max_value'] = QLineEdit(bulkRun_groupBox)
         rdvc_widgets['points_in_subvol_range_max_value'].setValidator(validatorint)
@@ -3549,7 +3594,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         widgetno += 1
         # overlap range step
         rdvc_widgets['points_in_subvol_range_step_label'] = QLabel(bulkRun_groupBox)
-        rdvc_widgets['points_in_subvol_range_step_label'].setText("number of points in subvolume step ")
+        rdvc_widgets['points_in_subvol_range_step_label'].setText("Sampling points in subvolume step ")
         bulkRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['points_in_subvol_range_step_label'])
         rdvc_widgets['points_in_subvol_range_step_value'] = QLineEdit(bulkRun_groupBox)
         rdvc_widgets['points_in_subvol_range_step_value'].setValidator(validatorint)
@@ -3703,7 +3748,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                         N = (xmax-xmin)//xstep + 1
                         self.radii = [xmin + i * xstep for i in range(N)]
                     else:
-                        print("radius error")
+                        #print("radius error")
                         return ("radius error")
                 else:
                     self.radii = [xmin]
@@ -3723,17 +3768,14 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
                     progress_callback.emit(radius_count/len(self.radii)*90)
                 #print("finished making pointclouds")
 
-                print(self.roi_files)
+                #print(self.roi_files)
 
-            print("DVC in: ", self.dvc_input_image)
-
-            
-                
+            #print("DVC in: ", self.dvc_input_image)
             
             self.reference_file = self.dvc_input_image[0][0]
             self.correlate_file = self.dvc_input_image[1][0]
 
-            print("REF: ", self.reference_file)
+            #print("REF: ", self.reference_file)
 
 
             run_config = {}
@@ -3772,7 +3814,7 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
 
             with open(self.run_config_file, "w+") as tmp:
                 json.dump(run_config, tmp)
-                print("Saving")
+                #print("Saving")
 
             progress_callback.emit(100)
 
@@ -3806,7 +3848,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.cancelled = True
             return
             
-        print("About to run dvc")
+        # print("About to run dvc")
 
         # self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
         # self.progress_window.setValue(1)
@@ -3834,7 +3876,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         if exe:
             line_b = self.process.readLine()
             line = str(line_b,"utf-8")
-            print(line)
+            #print(line)
             if len(line) > 4:
                 try:
                     num = float(line.split(' ')[0]) #weird delay means isn't correct
@@ -3980,7 +4022,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         #print("LOAD RESULTS")
         #print("Number of results:")
         if hasattr(self, 'result_list'):
-            print(len(self.result_list))
+            # print(len(self.result_list))
             try:
                 radius = int(self.result_widgets['pc_entry'].currentText())
             except ValueError as ve:
@@ -3998,7 +4040,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             else:
                 results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
                 self.roi = results_folder + "\\_" + str(radius) + ".roi"
-                print("New roi is", self.roi)
+                #print("New roi is", self.roi)
                 self.results_folder = results_folder
 
                 if (self.result_widgets['vec_entry'].currentText() == "None"):
@@ -4007,11 +4049,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 else: 
 
                     for result in self.result_list:
-                        print(radius, result.subvol_radius)
+                        #print(radius, result.subvol_radius)
                         if result.subvol_radius == radius:
-                            print("Radius match", result.subvol_points, subvol_points)
+                            #print("Radius match", result.subvol_points, subvol_points)
                             if result.subvol_points == subvol_points:
-                                print("Subv points match")
+                                #print("Subv points match")
                                 run_file = result.disp_file
                                 run_file = results_folder + "\\" + os.path.basename(run_file)
 
@@ -4086,7 +4128,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.config['dvc_input_image']=dvc_input_image
             self.config['dvc_input_image_in_session_folder'] = self.dvc_input_image_in_session_folder
 
-            print("ROI: ", self.roi)
+            # print("ROI: ", self.roi)
             # print("temp", tempfile.tempdir)
             if (self.roi):
                 self.roi = os.path.abspath(self.roi)
@@ -4191,7 +4233,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         with open(f, "w+") as tmp:
             json.dump(self.config, tmp)
-            print("Saving")
+            #print("Saving")
 
         os.close(fd)
 
@@ -4217,7 +4259,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # print(self.config['roi_file'])
         if (self.roi and not self.config['roi_ext']):
             self.roi = os.path.join(os.path.abspath(tempfile.tempdir), self.config['roi_file'])
-            print(self.roi)
+            #print(self.roi)
 
         if hasattr(self, 'mask_file'):
             if 'mask_file' in self.config:
@@ -4226,7 +4268,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         count = 0
         for i in self.image[0]:
             if self.image_copied[0]:
-                print(os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) )
+                # print(os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) )
                 self.image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) 
             count +=1
         count = 0
@@ -4271,14 +4313,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 zip.write(os.path.join(r, _file),os.path.join(r, _file)[len(directory)+1:],compress_type=compress_type)#zipfile.ZIP_DEFLATED)
         zip.close()
 
-        print("Finished zip")
+        # print("Finished zip")
 
     def RemoveTemp(self, event):
         if hasattr(self, 'progress_window'):
             self.progress_window.setLabelText("Closing")
             self.progress_window.setMaximum(100)
             self.progress_window.setValue(98)
-        print("removed temp")
+        #print("removed temp")
         shutil.rmtree(tempfile.tempdir)
         
         if hasattr(self, 'progress_window'):
@@ -4344,7 +4386,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
 
         while temp_size != exp_size and self.progress_window.value() < 98 and self.progress_window.value() !=-1:
-            print((float(exp_size)/(float(temp_size)))*100)
+            # print((float(exp_size)/(float(temp_size)))*100)
             self.progress_window.setValue((float(exp_size)/(float(temp_size)))*100)
             time.sleep(0.01)
 
@@ -4531,8 +4573,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     #save paths to images to variable
                     if self.config['image_copied'][j]:
                         path = os.path.abspath(os.path.join(tempfile.tempdir, i))
-                        print("The path is")
-                        print(path)
+                        # print("The path is")
+                        # print(path)
                         self.image[j].append(path)
                     else:
                         path = i
@@ -4552,8 +4594,8 @@ Please move the file back to this location and reload the session, select a diff
                     #save paths to images to variable
                     if self.config['image_copied'][j]:
                         path = os.path.abspath(os.path.join(tempfile.tempdir, i))
-                        print("The DVC input path is")
-                        print(path)
+                        # print("The DVC input path is")
+                        # print(path)
                         self.dvc_input_image[j].append(path)
                     elif('dvc_input_image_in_session_folder' in self.config):
                         self.dvc_input_image_in_session_folder = self.config['dvc_input_image_in_session_folder']
@@ -4668,7 +4710,7 @@ Please move the file back to this location and reload the session, select a diff
             #self.gg_widgets['dir_name_label'].setText(self.results_folder[0])
             #self.gg_widgets['gen_button'].setEnabled(True)
             if(self.config['results_open']):
-                print("results open")
+                #print("results open")
                 if (hasattr(self, 'graph_window')):
                     plt.close('all') #closes all open figures
                     self.graph_window.close()
@@ -4712,7 +4754,7 @@ Please move the file back to this location and reload the session, select a diff
 
         for r, d, f in os.walk(results_directory):
             for directory in d:
-                print(directory.split('_')[-1])
+                # print(directory.split('_')[-1])
                 self.result_widgets['run_entry'].addItem(directory.split('_')[-1])
         
 
@@ -4858,7 +4900,6 @@ class SettingsWindow(QDialog):
         self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
 
         if self.parent.settings.value("first_app_load") != "False":
-            print("Not false")
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")
             
@@ -4867,10 +4908,7 @@ class SettingsWindow(QDialog):
 
         #print(self.parent.settings.value("copy_files"))
     def quit(self):
-        print("QUIT")
-        print(self.parent.settings.value("first_app_load"))
         if self.parent.settings.value("first_app_load") != "False":
-            print("Not false")
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")
         self.close()
@@ -5065,7 +5103,7 @@ class SaveObjectWindow(QtWidgets.QWidget):
             self.parent.pointcloud_parameters['pointcloudList'].setEnabled(True)
             self.parent.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.parent.pointCloud_details[filename] = self.parent.pointCloud_details['latest_pointcloud.roi']
-            print(self.parent.pointCloud_details)
+            #print(self.parent.pointCloud_details)
             #self.parent.createPointCloud()
             if not save_only:
                 self.parent.PointCloudWorker("create")
@@ -5147,12 +5185,12 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             vs_widgets['loaded_image_dims_value'].setVisible(True)
             vs_widgets['loaded_image_dims_value'].setText(str(self.parent.unsampled_image_dimensions))
 
-            print("resample rate: ", self.parent.resample_rate)
+            #print("resample rate: ", self.parent.resample_rate)
 
             if self.parent.resample_rate != [1,1,1]:
                 vs_widgets['displayed_image_dims_value'].setVisible(True)
                 vs_widgets['displayed_image_dims_label'].setVisible(True)
-                print("Disp image size ", [self.parent.ref_image_data.GetDimensions()[i] for i in range(3)])
+                #print("Disp image size ", [self.parent.ref_image_data.GetDimensions()[i] for i in range(3)])
                 vs_widgets['displayed_image_dims_value'].setText(str([round(self.parent.ref_image_data.GetDimensions()[i]) for i in range(3)]))
                 vs_widgets['coords_combobox'].setEnabled(True)
                 vs_widgets['coords_combobox'].setCurrentIndex(0)
@@ -5198,8 +5236,8 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             #Loads appropriate orientation
             #self.frame.viewer.setSliceOrientation(axis)
             #self.parent.orientation = self.frame.viewer.GetSliceOrientation()
-            print("Target slice: ", self.parent.current_slice)
-            print("extent: ", self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1])
+            #print("Target slice: ", self.parent.current_slice)
+            #print("extent: ", self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1])
             if self.parent.current_slice:
                 if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
                     self.frame.viewer.displaySlice(self.parent.current_slice)
@@ -5367,7 +5405,7 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         plotNum = 0
         for array in plot_data:
             plotNum = plotNum + 1
-            ax = self.figure.add_subplot(numRows, numColumns, plotNum)
+            ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
             ax.set_ylabel("")
             #ax.set_xlabel(plot_titles[plotNum-1])
             ax.set_title(plot_titles[plotNum-1])
