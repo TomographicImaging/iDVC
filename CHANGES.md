@@ -1,5 +1,18 @@
 # ChangeLog
 
+## v20.07.2
+*  Downsampling of large image files based on gpu size and max. downsampling size input by user. Can switch between coordinates of downsampled or original image.
+*  Displacement vectors are displayed correctly in 2D and 3D, and can show total or relative displacement.
+*  Improvements to progress bar and error reporting for running the DVC code.
+*  Improvements to image registration – can scroll through slices in registration box and switch orientation without error.
+*  Fixed mask erosion, with ability to adjust level of erosion.
+*  Added DVC icon.
+*  Added user help when hovering over labels.
+*  Improvements to viewer including correct linkage between 2D and 3D for slice scrolling and window level
+
+## v20.07.1
+*  Endianness is set and input to DVC code. This allows uint16 images to be worked with.
+
 ## v20.07.0
 * Fixed problem with image header length automatically being set instead of being read from the image file - this caused the dvc run to fail.
 * mha/mhd files can be used. In this case, a copy of the file is converted to numpy format and saved in the session folder. 
