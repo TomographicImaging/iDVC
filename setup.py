@@ -24,8 +24,8 @@ cil_version= '20.07.3'
 # extensions = [Extension("ccpi.apps.image_data", sourcefiles)]
 
 setup(
-      name="DVC App Prototype",
-      description='Prototype for the CCPi DVC Configurator',
+      name="Digital Volume Correlation App",
+      description='CCPi DVC Configurator',
 	version=cil_version,
 	packages = {'ccpi','ccpi.dvc.apps'},
       package_data= {'ccpi.dvc.apps':'DVCIconSquare.png'}
