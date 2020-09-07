@@ -17,16 +17,17 @@ import os
 from distutils.core import setup
 from distutils.extension import Extension
 
-cil_version= '20.06'
+cil_version= '20.07.3'
 
 # sourcefiles = ["src/image_data.py"]
 
 # extensions = [Extension("ccpi.apps.image_data", sourcefiles)]
 
 setup(
-      name="DVC App Prototype 1",
-      description='First Prototype for the CCPi DVC Configurator',
-	   version=cil_version,
-	   packages = {'ccpi','ccpi.dvc.apps'},
+      name="DVC App Prototype",
+      description='Prototype for the CCPi DVC Configurator',
+	version=cil_version,
+	packages = {'ccpi','ccpi.dvc.apps'},
+      package_data= {'ccpi.dvc.apps':'DVCIconSquare.png'}
       #ext_modules=extensions
 )
