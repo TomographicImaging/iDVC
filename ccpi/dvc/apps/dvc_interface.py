@@ -3249,11 +3249,12 @@ Try modifying the subvolume radius before creating a new pointcloud, and make su
         key_code = interactor.GetKeyCode()
         #print("OnKeyPressEventForVectors", key_code)
         if key_code in ['x','y','z'] and \
-            interactor._viewer.GetActor('arrow_shaft_actor').GetVisibility() and interactor._viewer.GetActor('arrowhead_actor').GetVisibility():
-                self.clearPointCloud2D()
-                #print("Cleared pc")
-                displ = self.loadDisplacementFile(self.disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2)
-                self.createVectors2D(displ, self.vis_widget_2D)
+            interactor._viewer.GetActor('arrow_shaft_actor') and interactor._viewer.GetActor('arrowhead_actor'):
+                if interactor._viewer.GetActor('arrow_shaft_actor').GetVisibility() and interactor._viewer.GetActor('arrowhead_actor').GetVisibility():
+                    self.clearPointCloud2D()
+                    #print("Cleared pc")
+                    displ = self.loadDisplacementFile(self.disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2)
+                    self.createVectors2D(displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
         viewer = viewer_widget.frame.viewer
