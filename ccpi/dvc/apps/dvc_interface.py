@@ -1445,6 +1445,7 @@ It is used as a global starting point and a translation reference."
             vs_widgets['displayed_image_dims_label'].setVisible(False)
             vs_widgets['displayed_image_dims_value'].setVisible(False)
             self.vis_widget_reg.frame.viewer.setDisplayUnsampledCoordinates(False)
+            self.vis_widget_reg.frame.viewer.setVisualisationDownsampling([1,1,1])
             vs_widgets['coords_info_label'].setText("The viewer displays the original image:")
             #vs_widgets['loaded_image_dims_label'].setText("Image Size: ")
             
@@ -1454,6 +1455,7 @@ It is used as a global starting point and a translation reference."
                 vs_widgets['coords_combobox'].setCurrentIndex(self.current_coord_choice)
                 
                 self.vis_widget_reg.frame.viewer.setDisplayUnsampledCoordinates(True)
+                self.vis_widget_reg.frame.viewer.setVisualisationDownsampling(self.resample_rate)
                 vs_widgets['coords_info_label'].setText("The viewer displays a downsampled image for visualisation purposes:")
                 if self.resample_rate != [1,1,1]:
                     vs_widgets['coords_combobox'].setEnabled(True)
@@ -1654,6 +1656,7 @@ It is used as a global starting point and a translation reference."
             current_slice = v.GetActiveSlice()
         # print("About to set the input data")
         v.setInputData(self.subtract.GetOutput())
+        #v.setVisualisationDownsampling(1,1,1)
         # print("Set the input data")
 
         if type == 'starting registration':
