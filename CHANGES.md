@@ -5,7 +5,7 @@
 *  Fixed problem with image translation on the z axis causing a DVC run error.
 *  Fixed pointcloud rotation so it works for all pointclouds generated on any axis.
 *  Minor interface updates to prevent errors when clicking in unexpected order.
-*  Added DVC icon.
+*  Scale maximum registration box size according to maximum downsampling level.
 
 ## v20.07.2
 *  Downsampling of large image files based on gpu size and max. downsampling size input by user. Can switch between coordinates of downsampled or original image.
