@@ -621,6 +621,8 @@ and then input to the DVC code.")
                 target_size = float(self.settings.value("vis_size"))
             else:
                 target_size = 0.125
+        self.target_image_size = target_size
+        
         ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_numpy = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
         #print("Created ref image")
 
@@ -629,6 +631,14 @@ and then input to the DVC code.")
         #print("INFO: ", self.image_info)
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
+
+            #Update registration box size according to target size and vol bit depth
+            self.registration_parameters['registration_box_size_entry'].setMaximum(round((self.target_image_size**(1/3))*1024/3*int(self.vol_bit_depth)/8))
+            self.registration_parameters['registration_box_size_entry'].setValue(round((self.target_image_size**(1/3))*1024/3*int(self.vol_bit_depth)/8))
+        
+        #Update mask slices above/below to be max extent of downsampled image
+        self.mask_parameters['mask_extend_above_entry'].setMaximum(np.max(self.ref_image_data.GetDimensions()))
+        self.mask_parameters['mask_extend_below_entry'].setMaximum(np.max(self.ref_image_data.GetDimensions()))
 
         if 'header_length' in self.image_info:
             self.vol_hdr_lngth = self.image_info['header_length']
@@ -1017,7 +1027,7 @@ It is used as a global starting point and a translation reference."
         # rp['registration_box_size_entry'].returnPressed.connect(self.displayRegistrationSelection)
         rp['registration_box_size_entry'] = QSpinBox(groupBox)
         rp['registration_box_size_entry'].setSingleStep(1)
-        rp['registration_box_size_entry'].setValue(20)
+        rp['registration_box_size_entry'].setValue(200)
         rp['registration_box_size_entry'].setMaximum(200)
         rp['registration_box_size_entry'].setEnabled(True)
         rp['registration_box_size_entry'].valueChanged.connect(self.displayRegistrationSelection)
@@ -1167,18 +1177,18 @@ It is used as a global starting point and a translation reference."
             self.warningDialog("Load an image on the viewer first.", "Error")
         
     def OnLeftButtonPressEventForPointZero(self, interactor, event):
-            # print('OnLeftButtonPressEventForPointZero', event)
-            v = self.vis_widget_reg.frame.viewer
-            shift = interactor.GetShiftKey()          
-            rp = self.registration_parameters
-            
-            if shift and rp['select_point_zero'].isChecked():
-                position = interactor.GetEventPosition()
-                #print(position)
-                #print("Image coord p0l: ", v.style.display2imageCoordinate(position)[:-1])
-                p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
-                #print("p0l, ", p0l)               
-                self.createPoint0(p0l)
+        # print('OnLeftButtonPressEventForPointZero', event)
+        v = self.vis_widget_reg.frame.viewer
+        shift = interactor.GetShiftKey()          
+        rp = self.registration_parameters
+        
+        if shift and rp['select_point_zero'].isChecked():
+            position = interactor.GetEventPosition()
+            #print(position)
+            #print("Image coord p0l: ", v.style.display2imageCoordinate(position)[:-1])
+            p0l = v.style.image2world(v.style.display2imageCoordinate(position)[:-1])
+            #print("p0l, ", p0l)               
+            self.createPoint0(p0l)
 
     def updatePoint0Display(self):
         vox = self.getPoint0WorldCoords()
@@ -1259,20 +1269,22 @@ It is used as a global starting point and a translation reference."
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
 
-            point0 = self.getPoint0ImageCoords()
+            if hasattr(self, 'point0_world_coords'):
+                point0 = self.getPoint0ImageCoords()
 
-            #print("center on Point0 is ", point0)
-
-            if isinstance (point0, tuple) or isinstance(point0, list):
-                #print("Tuple")
-                orientation = v.style.GetSliceOrientation()
-                gotoslice = point0[orientation]
-                v.style.SetActiveSlice( round(gotoslice) )
-                v.style.UpdatePipeline(True)
-                self.displayRegistrationSelection()
-                self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+                if isinstance (point0, tuple) or isinstance(point0, list):
+                    #print("Tuple")
+                    orientation = v.style.GetSliceOrientation()
+                    gotoslice = point0[orientation]
+                    v.style.SetActiveSlice( round(gotoslice) )
+                    v.style.UpdatePipeline(True)
+                    self.displayRegistrationSelection()
+                    self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes()
+                else:
+                    self.warningDialog("Choose a Point 0 first.", "Error")
             else:
                 self.warningDialog("Choose a Point 0 first.", "Error")
+
 
     def displayRegistrationSelection(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1393,6 +1405,9 @@ It is used as a global starting point and a translation reference."
                 # print ("Start Registration Checked")
                 rp['start_registration_button'].setText("Confirm Registration")
                 rp['registration_box_size_entry'].setEnabled(False)
+                
+                rp['select_point_zero'].setChecked(False)
+                rp['select_point_zero'].setCheckable(False)
 
                 # setup the appropriate stuff to run the registration
                 if not hasattr(self, 'translate'):
@@ -1411,7 +1426,8 @@ It is used as a global starting point and a translation reference."
                 # print ("Start Registration Unchecked")
                 rp['start_registration_button'].setText("Start Registration")
                 rp['registration_box_size_entry'].setEnabled(True)
-
+                rp['select_point_zero'].setCheckable(True)
+                
                 v.setInput3DData(self.ref_image_data)
                 v.style.UpdatePipeline()
                 if rp['point_zero_entry'].text() != "":
@@ -1700,7 +1716,7 @@ It is used as a global starting point and a translation reference."
         if orientation == SLICE_ORIENTATION_XY:
             ij = [0,1]
         elif orientation == SLICE_ORIENTATION_XZ:
-            ij = [0,2]
+            ij = [2,0]
         elif orientation == SLICE_ORIENTATION_YZ:
             ij = [1,2]
         if key_code == "j":
@@ -1793,6 +1809,11 @@ It is used as a global starting point and a translation reference."
         mp_widgets['mask_extend_below_entry'].setValue(10)
         mp_widgets['mask_extend_below_entry'].setEnabled(True)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_extend_below_entry'])
+        widgetno += 1
+
+        mp_widgets['mask_downsampled_coords_warning'] = QLabel(groupBox)
+        mp_widgets['mask_downsampled_coords_warning'].setText("Note: if your image has been downsampled, the number of slices is in the coordinates of the downsampled image.")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_downsampled_coords_warning'])
         widgetno += 1
 
         # Add should extend checkbox
@@ -2188,6 +2209,12 @@ It is used as a global starting point and a translation reference."
         pc = {}
         self.pointcloud_parameters = pc
 
+        #Pointcloud points label
+        # self.pc_points_label = QLabel("Points in current Pointcloud:")
+        # self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.pc_points_label)
+        # self.pc_points_value = QLabel("0")
+        # self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.pc_points_value)
+        # widgetno += 1
         
         # Add ISO Value field
         self.isoValueLabel = QLabel(self.graphParamsGroupBox)
@@ -2810,9 +2837,11 @@ A 3D pointcloud is created within the full extent of the mask.")
         #array = np.zeros((pointcloud.GetNumberOfPoints(), 4))
         array = []
         #print("Points:", pointcloud.GetNumberOfPoints())
+        self.pc_no_points = pointcloud.GetNumberOfPoints()
         if(pointcloud.GetNumberOfPoints() == 0):
             self.pointCloud = pointcloud
             return (False)
+        
 
         if int(mm) == 1: #if point0 is in the mask
             count = 2
@@ -2845,6 +2874,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.roi = pointcloud_file
         #print(self.roi)
         points = np.loadtxt(self.roi)
+        self.pc_no_points = np.shape(points)[0]
         progress_callback.emit(50)
         self.polydata_masker = cilNumpyPointCloudToPolyData()
         self.polydata_masker.SetData(points)
