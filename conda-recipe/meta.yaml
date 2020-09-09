@@ -9,6 +9,7 @@ build:
 
   entry_points:
     - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
+    - idvc = ccpi.dvc.apps.dvc_interface:main
   number: 0
   
 requirements:
