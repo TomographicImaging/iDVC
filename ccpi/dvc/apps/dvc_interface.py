@@ -98,7 +98,8 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Digital Volume Correlation")
         DVCIcon = QtGui.QIcon()
-        DVCIcon.addFile("DVCIconSquare.png")
+        file_dir = os.path.dirname(__file__)
+        DVCIcon.addFile(os.path.join(file_dir, "DVCIconSquare.png"))
 
         self.setWindowIcon(DVCIcon)
         

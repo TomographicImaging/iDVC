@@ -28,6 +28,7 @@ setup(
       description='CCPi DVC Configurator',
 	version=cil_version,
 	packages = {'ccpi','ccpi.dvc.apps'},
-      package_data= {'ccpi.dvc.apps':'DVCIconSquare.png'}
+      package_dir={'ccpi.dvc.apps': 'ccpi/dvc/apps'},
+      package_data= {'ccpi.dvc.apps':['DVCIconSquare.png']}
       #ext_modules=extensions
 )

@@ -23,7 +23,6 @@ requirements:
     - ccpi-viewer ==20.07.3
     - natsort
     - docopt
-    - tqdm
     
 
 about:
