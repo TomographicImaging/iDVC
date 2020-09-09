@@ -98,7 +98,8 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle("Digital Volume Correlation")
         DVCIcon = QtGui.QIcon()
-        DVCIcon.addFile("DVCIconSquare.png")
+        file_dir = os.path.dirname(__file__)
+        DVCIcon.addFile(os.path.join(file_dir, "DVCIconSquare.png"))
 
         self.setWindowIcon(DVCIcon)
         
@@ -611,7 +612,7 @@ and then input to the DVC code.")
         if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
             if self.settings.value("vis_size"):
                 if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
-                    target_size = self.settings.value("vis_size")
+                    target_size = float(self.settings.value("vis_size"))
                 else:
                     target_size = (float(self.settings.value("gpu_size")))
             else:
