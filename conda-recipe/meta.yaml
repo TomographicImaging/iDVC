@@ -1,6 +1,6 @@
 package:
   name: ccpi-dvc
-  version: 20.07.3
+  version: 20.07.4
 # conda build ... -c file://my_local_channel --override-channels
 
 build:
@@ -21,7 +21,7 @@ requirements:
   run:
     - python
     - numpy
-    - ccpi-viewer ==20.07.3
+    - ccpi-viewer ==20.07.4
     - natsort
     - docopt
     
