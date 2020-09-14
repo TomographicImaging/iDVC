@@ -136,10 +136,10 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
     def SetSubVolumeRadiusInVoxel(self, value):
         '''Set the radius of the subvolume in voxel'''
-        if not isinstance(value, Integral):
-            raise ValueError('SubVolumeRadius must be an integer larger than 1. Got', value)
+        if not (isinstance(value, (Integral, float))):
+            raise ValueError('SubVolumeRadius must be an integer or float larger than 1. Got', value)
         if not value > 1:
-            raise ValueError('SubVolumeRadius must be an integer larger than 1. Got', value)
+            raise ValueError('SubVolumeRadius must be larger than 1. Got', value)
         if self.__SubVolumeRadius != value:
             self.__SubVolumeRadius = value
             self.Modified()

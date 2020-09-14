@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v20.07.4
+* Rearranged viewers on interface
+* Changed subvolume radius setting to subvolume size
+* Added preview of subvolume at position of point 0
+* Allow manual setting of translation for registration
+* Allow displacement vectors to be scaled up/down
+* Added more info about run configuration to results summary panel
 
 ## v20.07.3
 *  Fixed problem with image translation on the z axis causing a DVC run error.

@@ -161,7 +161,7 @@ class DVC_runner():
                 config = json.load(tmp)
 
         subvolume_points = config['subvolume_points'] 
-        radii = config['cloud_radii']
+        subvolume_sizes = config['subvolume_sizes']
         points = int(config['points'])
 
         roi_files = config['roi_files']
@@ -192,7 +192,7 @@ class DVC_runner():
 
         #running the code:
 
-        required_runs = len(subvolume_points)*len(radii)   
+        required_runs = len(subvolume_points)*len(subvolume_sizes)   
 
         #print("Required runs", required_runs)
 
@@ -245,7 +245,7 @@ class DVC_runner():
         file_count = -1
         for roi_file in roi_files:
             file_count +=1
-            pointcloud_diameter = int(radii[file_count])*2
+            subvolume_size = int(subvolume_sizes[file_count])
             #print(roi_file)
             entire_central_grid = open(roi_file, "r")
                 
@@ -308,7 +308,7 @@ class DVC_runner():
                     vol_tall= dims[2], #number of z slices
                     vol_endian = endian,
                     subvol_geom=  subvol_geom,
-                    subvol_size=  pointcloud_diameter, #subvolume diameter
+                    subvol_size=  subvolume_size, 
                     subvol_npts= subvolume_point,
                     subvol_thresh='off',
                     gray_thresh_min='27',
