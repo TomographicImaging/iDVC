@@ -3,7 +3,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
 from PyQt5.QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
 from PyQt5.QtWidgets import QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
-from PyQt5.QtWidgets import QProgressDialog, QDialogButtonBox
+from PyQt5.QtWidgets import QProgressDialog, QDialogButtonBox, QDialog
 from PyQt5.QtGui import QRegExpValidator, QKeySequence, QCloseEvent
 import os
 import time
@@ -80,13 +80,7 @@ from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, 
 
 from ccpi.dvc.apps.dvc_runner import DVC_runner
 
-#from image_data import ImageDataCreator
-
-# from pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
-
-# from dvc_runner import DVC_runner
-
-__version__ = '20.07.4'
+__version__ = '20.07.5'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -273,9 +267,9 @@ class MainWindow(QMainWindow):
 
         self.RightDockWindow.setCentralWidget(self.viewer2D_dock)
 
-        self.RightDockWindow.addDockWidget(QtCore.Qt.TopDockWidgetArea,self.help_dock)
+        self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.help_dock)
 
-        self.RightDockWindow.addDockWidget(QtCore.Qt.TopDockWidgetArea,self.viewer_settings_dock)
+        self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_settings_dock)
         
 
     def CreateViewerSettingsPanel(self):
@@ -773,6 +767,7 @@ It will be the first point in the file that is used as the reference point.")
         self.progress_window.setMinimumDuration(0.01)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
+        self.progress_window.setAutoClose(True)
         if cancel is None:
             self.progress_window.setCancelButton(None)
         else:
@@ -3122,9 +3117,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
         
 
-    def loadDisplacementFile(self, file, disp_wrt_point0 = False, multiplier = 1):
+    def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
+        
         displ = np.asarray(
-        PointCloudConverter.loadPointCloudFromCSV(file,'\t')[:]
+            PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
         )
 
         if disp_wrt_point0:
@@ -3872,7 +3868,9 @@ This parameter has a strong effect on computation time, so be careful."
 
             self.run_folder = os.path.abspath(os.path.join(results_folder, folder_name))
             run_config['run_folder']= self.run_folder
-
+            
+            #where is point0
+            run_config['point0'] = self.getPoint0ImageCoords()
             suffix_text = "run_config"
 
             self.run_config_file = os.path.join(tempfile.tempdir, "Results/" +folder_name + "/_" + suffix_text + ".json")
@@ -3932,8 +3930,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # self.cancelled = False
 
         self.run_succeeded = True
-        DVC_runner.run_dvc(self,os.path.abspath(self.run_config_file), self.finished_run, self.run_succeeded)
-
+        # DVC_runner.run_dvc(self,os.path.abspath(self.run_config_file), self.finished_run, self.run_succeeded)
+        self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
+                                     self.finished_run, self.run_succeeded)
+        
+        self.dvc_runner.run_dvc()
 
     def update_progress(self, exe = None):
         if exe:
@@ -3958,6 +3959,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def finished_run(self):
         if self.run_succeeded:
             self.result_widgets['run_entry'].addItem(self.rdvc_widgets['name_entry'].text())
+            self.show_run_pcs()
 
 
 
@@ -4074,18 +4076,21 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         for r, d, f in os.walk(directory):
             for _file in f:
-                if '.roi' in _file:
+                print ("Looking at ", _file)
+                if _file.endswith(".roi") and _file.startswith("_"):
                     self.result_widgets['pc_entry'].addItem((_file.split('_')[-1]).split('.')[0])
 
                 if _file.endswith(".disp"):
                     file_name= _file[:-5]
                     file_path = directory + "/" + file_name
                     result = RunResults(file_path)
+                    print (result)
                     self.result_list.append(result)
                     #print(result.subvol_points)
                     if str(result.subvol_points) not in points_list:
                         points_list.append(str(result.subvol_points))
                         #self.result_widgets['pc_entry'].addItem(str(result.subvol_size))
+                        print ("Adding to points_list ", points_list[-1])
 
         
         self.result_widgets['subvol_entry'].addItems(points_list)
@@ -4121,17 +4126,23 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     self.PointCloudWorker("load pointcloud file")
 
                 else: 
-
+                    print("Result list", self.result_list, len(self.result_list))
                     for result in self.result_list:
-                        #print(subvol_size, result.subvol_size)
+                        print("Subvolume size match? ", result.subvol_size, subvol_size)
                         if result.subvol_size == subvol_size:
-                            #print("Subvolume size match", result.subvol_points, subvol_points)
+                            print ("YES")
+                            print("Subv points match? {} {}".format(result.subvol_points, subvol_points))
                             if result.subvol_points == subvol_points:
-                                #print("Subv points match")
+                                print ("YES")
                                 run_file = result.disp_file
-                                run_file = results_folder + "\\" + os.path.basename(run_file)
+                                run_file = os.path.join(results_folder , os.path.basename(run_file))
 
-                        self.displayVectors(run_file, 2)
+                                self.displayVectors(run_file, 2)
+                            else:
+                                print ("NO")    
+                        else:
+                            print ("NO")
+
 
 
     def CreateGraphsWindow(self):
@@ -5674,7 +5685,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         plt.subplots_adjust(top=0.88) # Means heading doesn't overlap with subplot titles
         self.canvas.draw()
         
-class RunResults():
+class RunResults(object):
     def __init__(self,file_name):
         
         self.points = None       
@@ -5682,39 +5693,46 @@ class RunResults():
         disp_file_name = file_name + ".disp"
         stat_file_name = file_name + ".stat"
 
-        stat_file = open(stat_file_name,"r")
-        count = 0
-        offset = 0
-        for line in stat_file:
-            if count == 9:
-                if line.split('\t')[0] == "vol_endian":
-                    offset = 1
+        with open(stat_file_name,"r") as stat_file:
+            
+            count = 0
+            offset = 0
+            for line in stat_file:
+                if count == 9:
+                    if line.split('\t')[0] == "vol_endian":
+                        offset = 1
 
-            if count == 14 + offset:
-                self.subvol_geom = str(line.split('\t')[1])
-            if count == 15 + offset:
-                self.subvol_size = round(int(line.split('\t')[1]))
-            if count == 16 +offset:
-                self.subvol_points = int(line.split('\t')[1])
-            if count == 20 + offset:
-                self.disp_max = int(line.split('\t')[1])
-            if count == 21 + offset:
-                self.num_srch_dof = int(line.split('\t')[1])
-            if count == 22 + offset:
-                self.obj_function = str(line.split('\t')[1])
-            if count == 23 + offset:
-                self.interp_type = str(line.split('\t')[1])
-            if count == 25 + offset:
-                self.rigid_trans = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
-            # if count == 26 + offset:
-            #     self.basin_radius = int(line.split('\t')[1])
-            # if count == 27 + offset:
-            #     self.subvol_aspect = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
-            count+=1
+                if count == 14 + offset:
+                    self.subvol_geom = str(line.split('\t')[1])
+                if count == 15 + offset:
+                    self.subvol_size = round(int(line.split('\t')[1]))
+                if count == 16 +offset:
+                    self.subvol_points = int(line.split('\t')[1])
+                if count == 20 + offset:
+                    self.disp_max = int(line.split('\t')[1])
+                if count == 21 + offset:
+                    self.num_srch_dof = int(line.split('\t')[1])
+                if count == 22 + offset:
+                    self.obj_function = str(line.split('\t')[1])
+                if count == 23 + offset:
+                    self.interp_type = str(line.split('\t')[1])
+                if count == 25 + offset:
+                    self.rigid_trans = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
+                # if count == 26 + offset:
+                #     self.basin_radius = int(line.split('\t')[1])
+                # if count == 27 + offset:
+                #     self.subvol_aspect = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
+                count+=1
 
         self.disp_file = disp_file_name
 
         self.title =  str(self.subvol_points) + " Points in Subvolume," + " Subvolume Size: " + str(self.subvol_size)
+
+    def __str__(self):
+
+        a = "subvol_size {}".format(self.subvol_size)
+        n = "subvol_points {}".format(self.subvol_points)
+        return "RunResults:\n{}\n{}".format(a , n)
 
 def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     '''creates a dockable widget with a form layout group to add things to

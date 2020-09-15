@@ -23,7 +23,7 @@ class PointCloudConverter():
                 #          isinstance(y,Number) , row):
                     pointcloud.append(row)
                 except ValueError as ve:
-                    print ('Value Error' , ve)
+                    print ('ValueError {}... skipping line {}'.format(ve, row))
         return pointcloud
 
 

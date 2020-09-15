@@ -4,12 +4,10 @@ from PyQt5 import QtCore
 from datetime import datetime
 from functools import partial
 from PyQt5.QtWidgets import QMessageBox
-
 import json
-
 import sys
-
 import time
+import shutil
 
 count = 0
 runs_completed = 0
@@ -72,16 +70,20 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
     # print("Required runs", required_runs)
     while(process.canReadLine()):
         #print("READ")
+        string = process.readLine()  
+        line = str(string,"utf-8")
+        
         global count
         count+=1
         #print("{:.0f} \n".format(count/(total_points+3*required_runs)*100))
         if hasattr(main_window, 'progress_window'):
             #print(count/(total_points+3*required_runs)*100)
             main_window.progress_window.setValue(count/(total_points+3*required_runs)*100)
-        string = process.readLine()  
-        line = str(string,"utf-8")
-        # print(line)
-        if line[:11] =="Input Error":
+            label_text = main_window.progress_window.labelText().split("\n")[0]
+            main_window.progress_window.setLabelText(
+                    "{}\n{}".format(label_text, line)
+                )
+        if line[:11] == "Input Error":
             run_succeeded = False
             if hasattr(main_window, 'progress_window'):
                 main_window.progress_window.setValue(100)
@@ -113,10 +115,15 @@ def displayFileErrorDialog(main_window, message, title):
     msg.exec_()
 
 def cancel_run(main_window, process, run_succeeded):
-    process.kill()
-    main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
-    main_window.alert.show()
-    run_succeeded = False
+    
+    if not run_succeeded:
+        print ("run cancelled?")
+        process.kill()
+        main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
+        main_window.alert.show()
+        run_succeeded = False
+    else:
+        print ("all OK, all processes ended")
 
 
 def finished_run(main_window, exitCode, exitStatus, process = None, required_runs = 1, run_succeeded = False, finish_fn = None):
@@ -143,11 +150,24 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
     #     runs_completed = 0
     # print("did")
 
-class DVC_runner():
-    def run_dvc(main_window, input_file, finish_fn, run_succeeded):
+class DVC_runner(object):
+    def __init__(self, main_window, input_file, finish_fn, run_succeeded):
+        self.main_window = main_window
+        self.input_file = input_file
+        self.finish_fn = finish_fn
+        self.run_succeeded = run_succeeded
+
         working_directory = os.getcwd()
         #print ("We are here ", working_directory)
         os.chdir(working_directory)
+
+        self.processes = []
+        self.process_num = 0
+
+        working_directory = os.getcwd()
+        #print ("We are here ", working_directory)
+        os.chdir(working_directory)
+        self.working_directory = working_directory
 
         # 
 
@@ -192,33 +212,22 @@ class DVC_runner():
 
         #running the code:
 
+        # this should be renamed to num_optimisations
         required_runs = len(subvolume_points)*len(subvolume_sizes)   
 
-        #print("Required runs", required_runs)
-
         # exe_file = os.path.abspath("dvc.exe")
+        # TODO: change to something more general
         exe_file = "dvc.exe"
         #exe_file = "C:/Users/lhe97136/OneDrive - Science and Technology Facilities Council/Documents/Tomography/DVC_release/dvc.exe"
 
 
         # Process to run the DVC executable:
-        process = QtCore.QProcess()
-        process.setWorkingDirectory(run_folder)
-        process.finished.connect(partial(finished_run, main_window, process = process, required_runs = required_runs, run_succeeded = run_succeeded, finish_fn = finish_fn))
-        main_window.create_progress_window("Running", "Running DVC code", 100, lambda: cancel_run(main_window, process, run_succeeded))
-        # print(run_folder)
-        # process.setStandardErrorFile(os.path.join(run_folder, "QProcess_Error.txt"))
-        #print(run_folder)
-        #process.setStandardOutputFile(os.path.join(run_folder, "QProcess_Output.txt")) #use in testing to get errors from QProcess
-
-
+        # process.setWorkingDirectory(run_folder)
+        # process.finished.connect(partial(finished_run, main_window, process = process, required_runs = required_runs, run_succeeded = run_succeeded, finish_fn = finish_fn))
         
-
-        # blank_config_file = open("dvc_config_template.txt","r")
-        # blank_config = blank_config_file.read()
-        # blank_config_file.close()
-
-
+        # main_window.create_progress_window("Running", "Running DVC code", 100,
+        #      lambda: cancel_run(main_window, process, run_succeeded))
+        
         total_points = 0
         for cloud in roi_files:
             i=0
@@ -236,54 +245,46 @@ class DVC_runner():
 
         #print("Total points", total_points)
 
-        process.readyRead.connect(lambda: update_progress(main_window, process, total_points, required_runs, run_succeeded))
-        # process.readyReadStandardError.connect(lambda: report_error())
-        # process.errorOccurred.connect(lambda: report_error())
-
+        #process.readyRead.connect(lambda: update_progress(main_window, process, total_points, 
+        #    required_runs, run_succeeded))
+        
 
 
         file_count = -1
+        point0 = main_window.getPoint0WorldCoords()
+            
         for roi_file in roi_files:
             file_count +=1
             subvolume_size = int(subvolume_sizes[file_count])
             #print(roi_file)
-            entire_central_grid = open(roi_file, "r")
-                
-            line_num = 1
             distances = []
-            for line in entire_central_grid:
-                line_array = line.split()
+                
+            with open(roi_file, "r") as entire_central_grid:
+                
+                for line in entire_central_grid:
+                    line_array = line.split()
 
-                if line_num == 1:
-                    point1_x = float(line_array[1]) #was previously int, not sure which is correct
-                    point1_y = float(line_array[2])
-                    point1_z = float(line_array[3])
-                distance = np.sqrt(np.square(float(line_array[1]) - point1_x) + np.square(float(line_array[2])-point1_y) + np.square(float(line_array[3])-point1_z))
+                    distance = np.sqrt(np.square(float(line_array[1]) - point0[0]) + \
+                        np.square(float(line_array[2])-point0[1]) + np.square(float(line_array[3])-point0[2]))
 
-                distances.append(distance)
-                line_num+=1
-
-            entire_central_grid.close()
-
+                    distances.append(distance)
+                
             lines_to_write = []
 
-            for i in range(points):
-                index = distances.index(min(distances))
-                lines_to_write.append(index)
-                distances[index]=max(distances)+1
-
-            selected_central_grid = open(os.path.join(os.path.abspath(run_folder), "grid_input.roi"),"w")
-            entire_central_grid = open(roi_file, "r")
-
-            i=0
-            for line in entire_central_grid:
-                if i in lines_to_write:
-                    selected_central_grid.write(line)
-                i+=1
-
-            selected_central_grid.close()
-            entire_central_grid.close()
-
+            # sort the points in euclidean distance to the point0
+            # add to the list of points to be run (selected_central_grid) by adding to 
+            # the point list only the files with index in lines_to_write
+            order = [ i for i in range(len(distances))]
+            sorted_list_index = [ el for el in zip(distances, order)]
+            sorted_list_index.sort()
+            # this contains the indices of the sorted list
+            lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
+            with open(os.path.join(os.path.abspath(run_folder), "grid_input.roi"),"w") \
+                as selected_central_grid:
+                with open(roi_file, "r") as entire_central_grid:
+                    for i,line in enumerate(entire_central_grid):
+                        if i in lines_to_write:
+                            selected_central_grid.write(line)
 
             for subvolume_point in subvolume_points:
                 now = datetime.now()
@@ -292,14 +293,28 @@ class DVC_runner():
                 config_filename = "%s/dvc_config_%s" %( run_folder,dt_string)
                 config_filename = config_filename + ".txt"
                 param_file = os.path.abspath(config_filename)
+
+                # copy the file grid_input.roi to grid_roi_<dt_string>.roi
+                try:
+                    grid_roi = os.path.join("{}/grid_roi_{}.roi".format( run_folder,dt_string))
+                    shutil.copyfile(os.path.join(os.path.abspath(run_folder), "grid_input.roi"), \
+                        grid_roi )
+                except OSError as oe:
+                    # should raise a warning
+                    print("Help OSError!, " , oe)
+                    break
+                except shutil.SameFileError as fee:
+                    print ("Destination file already exists", fee)
+                    break                    
                 
-                outfile = new_output_filename #.strip('/') TODO: allow file to be saved in base working directory
+                outfile = new_output_filename
+                # TODO: allow file to be saved in base working directory
                 #print(outfile)
 
                 config =  blank_config.format(
                     reference_filename=  reference_file, # reference tomography image volume
                     correlate_filename=  correlate_file, # correlation tomography image volume
-                    point_cloud_filename=os.path.join(run_folder, 'grid_input.roi'),
+                    point_cloud_filename = grid_roi,
                     output_filename= new_output_filename,
                     vol_bit_depth=  vol_bit_depth, # get from ref, 8 or 16
                     vol_hdr_lngth=vol_hdr_lngth,# get from ref, fixed-length header size, may be zero
@@ -321,16 +336,107 @@ class DVC_runner():
                     rigid_trans= rigid_trans, #translation between ref and cor - determined from image registration
                     basin_radius='0.0',
                     subvol_aspect='1.0 1.0 1.0') # image spacing
-
-                config_file = open(param_file,"w")
-                config_file.write(config)
-                config_file.close()
+                time.sleep(1)
+                with open(param_file,"w") as config_file:
+                    config_file.write(config)
             
                 #if run_count == len( subvolume_points):
-                process.start( exe_file , [ param_file ] )          
+                # process.start( exe_file , [ param_file ] )          
                 cancelled=False
 
-                process.waitForFinished(msecs=2147483647) #wait for process to finish before doing next run
+                # TODO: 
+                # ideally we should start a new process from the main thread once the previous
+                # has finished
+                # wait for process to finish before doing next run
+                
+                # process.waitForFinished(msecs=2147483647)
+                
+                self.processes.append( 
+                    ( exe_file, [ param_file ], run_folder , \
+                        required_runs, total_points ) 
+                )
+        
+    def run_dvc(self):
+        main_window = self.main_window
+        input_file = self.input_file
+        finish_fn = self.finish_fn
+        run_succeeded = self.run_succeeded
+        
+        process = QtCore.QProcess()
+        
+        exe_file, param_file, run_folder, required_runs,\
+             total_points = self.processes[self.process_num]
+        
+
+        process.setWorkingDirectory(run_folder)
+        # process.finished.connect(partial(finished_run, main_window, 
+        #             process = process, required_runs = required_runs, 
+        #             run_succeeded = run_succeeded, finish_fn = finish_fn))
+        process.finished.connect(self.finished_run)
+        process.started.connect(self.onStarted)
+        if self.process_num == 0:
+            main_window.create_progress_window("Running", 
+                "Running DVC code {}/{}".format(self.process_num +1, len(self.processes)), 100,
+                #lambda: cancel_run(main_window, process, run_succeeded)
+                lambda: self.onCancel(process)
+                )
+        else:
+            main_window.progress_window.setLabelText(
+                "Running DVC code {}/{}".format(self.process_num +1, len(self.processes))
+            )
+            main_window.progress_window.canceled.connect(lambda: self.onCancel(process))
+        process.readyRead.connect(
+            lambda: update_progress(main_window, process, total_points, required_runs,\
+                                    run_succeeded))
+        # process.finished.connect(self.run_dvc())
+        process.start( exe_file , param_file )
+
+    def onStarted(self):
+        pass
+
+    def onCancel(self, process):
+        main_window = self.main_window
+        run_succeeded = self.run_succeeded
+        state = process.state()
+        print ("Process state", state)
+        if state in [2,1]:
+            print ("Cancelling run")
+            process.kill()
+            main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
+            main_window.alert.show()
+            self.run_succeeded = False
+        elif state == 0:
+            print ("all OK, all processes ended")
+
+    def finished_run(self, exitCode, exitStatus):
+        main_window = self.main_window
+        input_file = self.input_file
+        finish_fn = self.finish_fn
+        run_succeeded = self.run_succeeded
+        required_runs = self.processes[self.process_num][3]
+
+        print ("finished {}/{} (or {}) with {} {}"\
+            .format(self.process_num, required_runs, \
+                len(self.processes), exitCode, exitStatus))
+        
+        if exitStatus == 0:
+            self.run_succeeded = self.run_succeeded and True
+        else:
+            self.run_succeeded = self.run_succeeded and False
+            
+        if self.process_num == required_runs-1:
+            main_window.progress_window.close()
+            if self.run_succeeded:
+                main_window.alert = QMessageBox(QMessageBox.NoIcon,
+                    "Success","The DVC code ran successfully.", QMessageBox.Ok)
+            else:
+                main_window.alert = QMessageBox(QMessageBox.NoIcon,
+                    "Fail","The DVC code had some troubles.", QMessageBox.Ok) 
+            main_window.alert.show()
+            if finish_fn is not None:
+                finish_fn() 
+        else:
+            self.process_num += 1
+            self.run_dvc()
 
             
-
