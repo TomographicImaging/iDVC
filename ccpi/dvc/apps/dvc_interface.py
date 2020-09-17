@@ -2104,6 +2104,7 @@ It is used as a global starting point and a translation reference."
 
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
+        self.mask_parameters['submitButton'].setText("Create Mask")
         self.vis_widget_2D.frame.viewer.setInputData2(vtk.vtkImageData()) #deletes mask
         self.mask_reader = None
 
