@@ -1091,7 +1091,7 @@ It is used as a global starting point and a translation reference."
 
         self.reg_viewer_dock = reg_viewer_dock
         
-        self.RightDockWindow.addDockWidget(Qt.BottomDockWidgetArea,reg_viewer_dock)
+        self.RightDockWindow.addDockWidget(Qt.TopDockWidgetArea,reg_viewer_dock)
 
 
         #ref_image_copy = vtk.vtkImageData()
@@ -2948,10 +2948,18 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointCloud_shape = self.pointCloud_details[pointcloud_file][3]
             #print("Set properties")
         else:
-            self.pointCloud_subvol_size = 0
+            # should read the subvolume size and shape from the interface
+            # the other info has no meaning.
+            self.pointCloud_subvol_size = int(self.isoValueEntry.text())
+            print ("load pointcloud from external ", self.subvolumeShapeValue.currentIndex())
+            if int(self.subvolumeShapeValue.currentIndex()) == 0:
+                self.pointCloud_shape = cilRegularPointCloudToPolyData.CUBE
+            elif int(self.subvolumeShapeValue.currentIndex()) == 1:
+                self.pointCloud_shape = cilRegularPointCloudToPolyData.SPHERE
+
             self.pointCloud_overlap = [0.00,0.00,0.00]
             self.pointCloud_rotation = [0.00,0.00,0.00]
-            self.pointCloud_shape = cilRegularPointCloudToPolyData.CUBE
+            
             #print("No details found")
 
         #SET UP APPROPRIATE VALUES OF SPINBOXES ON INTERFACE: #TODO
