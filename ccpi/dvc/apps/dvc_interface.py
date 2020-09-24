@@ -685,20 +685,21 @@ It will be the first point in the file that is used as the reference point.")
         self.vis_widget_2D.displayImageData()
 
         self.progress_window.setValue(50)
-        # print(self.ref_image_data.GetExtent())
+        
         self.vis_widget_3D.setImageData(self.ref_image_data) #3D)
         self.vis_widget_3D.displayImageData()
 
         self.progress_window.setValue(80)
 
+        # observe mouse events and keypress events and invoke the plane clipper
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
         self.vis_widget_2D.frame.viewer.style.AddObserver("MouseWheelBackwardEvent",
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
         self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent",
                                                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes, 0.9)
-
-        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 0.95) #handles vectors updating when switching orientation)
+        # handles vectors updating when switching orientation)
+        self.vis_widget_2D.frame.viewer.style.AddObserver("KeyPressEvent", self.OnKeyPressEventForVectors, 0.95) 
 
 
 
