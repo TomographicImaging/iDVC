@@ -17,7 +17,7 @@ import os
 from distutils.core import setup
 from distutils.extension import Extension
 
-cil_version= '20.07.5'
+cil_version= '20.07.6'
 
 # sourcefiles = ["src/image_data.py"]
 

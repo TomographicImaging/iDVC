@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v20.07.6
+* Fixed location of registration viewer on interface
+* shows subvolume size for externally loaded pointclouds
+
 ## v20.07.5
 * Changed default location of viewers on interface
 * refactored process launching for DVC analysis with DVC_runner class

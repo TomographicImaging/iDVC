@@ -80,7 +80,7 @@ from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, 
 
 from ccpi.dvc.apps.dvc_runner import DVC_runner
 
-__version__ = '20.07.5'
+__version__ = '20.07.6'
 
 class MainWindow(QMainWindow):
     def __init__(self):

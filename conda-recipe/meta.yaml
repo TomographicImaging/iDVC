@@ -1,6 +1,6 @@
 package:
   name: ccpi-dvc
-  version: 20.07.5
+  version: 20.07.6
 # conda build ... -c file://my_local_channel --override-channels
 
 build:
