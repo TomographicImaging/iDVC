@@ -8,7 +8,10 @@ from vtk import vtkPolyData, vtkAlgorithmOutput
 
 
 class cilPlaneClipper(object):
-
+    '''cilPlaneClipper stores a dictionary of vtkPolyData or vtkAlgorithmOutput that need to be 
+    clipped between the planes around the slices that are being displayed in 2D, from a 3D scene.
+    It performs the clipping of all items in the dictionary on selection of a new slice from the 
+    user in the viewer2D'''
 
     def __init__(self, interactor, data_list_to_clip = {}):
         self.SetInteractor(interactor)
@@ -29,12 +32,9 @@ class cilPlaneClipper(object):
 
     def MakeClippableData(self, data_to_clip):
         clippable_data = cilClipPolyDataBetweenPlanes()
-        # print("Type", type(data_to_clip))
         if isinstance(data_to_clip, vtkPolyData):
-            # print("Polydata output")
             clippable_data.SetInputDataObject(data_to_clip)
         elif isinstance(data_to_clip, vtkAlgorithmOutput):
-            # print("Algorithm output")
             clippable_data.SetInputConnection(data_to_clip)
         return clippable_data
 
@@ -55,21 +55,15 @@ class cilPlaneClipper(object):
             if len(self.DataListToClip) > 0:
                 if interactor is None:
                     interactor = self.Interactor
-                print("Update Clipping Planes", self.DataListToClip)
                 
-                print("Orientation", interactor.GetSliceOrientation())
-                #print("Interactor", interactor)
                 normal = [0, 0, 0]
                 origin = [0, 0, 0]
                 norm = 1
 
                 orientation = interactor.GetSliceOrientation()
-
-                beta = 0
-                # print("Current active slice", interactor.GetActiveSlice()+beta)
-
                 spac = interactor.GetInputData().GetSpacing()
                 orig = interactor.GetInputData().GetOrigin()
+
                 slice_thickness = spac[orientation]
 
                 rounding = False
