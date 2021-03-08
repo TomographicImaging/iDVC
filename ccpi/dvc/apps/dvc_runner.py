@@ -1,9 +1,9 @@
 import os
 import numpy as np
-from PyQt5 import QtCore
+from PySide2 import QtCore
 from datetime import datetime
 from functools import partial
-from PyQt5.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox
 import json
 import sys
 import time

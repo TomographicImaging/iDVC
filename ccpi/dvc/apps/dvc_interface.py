@@ -1,10 +1,10 @@
 import sys
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
-from PyQt5.QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
-from PyQt5.QtWidgets import QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
-from PyQt5.QtWidgets import QProgressDialog, QDialogButtonBox, QDialog
-from PyQt5.QtGui import QRegExpValidator, QKeySequence, QCloseEvent
+from PySide2 import QtCore, QtWidgets, QtGui
+from QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
+from QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
+from QtWidgets import QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
+from QtWidgets import QProgressDialog, QDialogButtonBox, QDialog
+from QtGui import QRegExpValidator, QKeySequence, QCloseEvent
 import os
 import time
 import numpy as np
@@ -602,7 +602,8 @@ It will be the first point in the file that is used as the reference point.")
                 target_size = 0.125
         self.target_image_size = target_size
         
-        ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
+        finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
 
 
     def save_image_info(self, image_type):
