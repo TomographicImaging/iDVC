@@ -1,10 +1,11 @@
+import pysnooper
 import sys
 from PySide2 import QtCore, QtWidgets, QtGui
-from QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
-from QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
-from QtWidgets import QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
-from QtWidgets import QProgressDialog, QDialogButtonBox, QDialog
-from QtGui import QRegExpValidator, QKeySequence, QCloseEvent
+from PySide2.QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
+from PySide2.QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
+from PySide2.QtWidgets import QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
+from PySide2.QtWidgets import QProgressDialog, QDialogButtonBox, QDialog
+from PySide2.QtGui import QRegExpValidator, QKeySequence, QCloseEvent
 import os
 import time
 import numpy as np
@@ -39,7 +40,9 @@ from ccpi.viewer.utils import cilNumpyMETAImageWriter
 
 import locale
 
-from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
+# from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
+from eqt.threading import Worker
+from eqt.threading.QtThreading import ErrorObserver
 
 from natsort import natsorted
 import imghdr
@@ -80,6 +83,8 @@ from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, 
 
 from ccpi.dvc.apps.dvc_runner import DVC_runner
 
+from eqt.ui import FormDialog
+
 __version__ = '20.07.6'
 
 class MainWindow(QMainWindow):
@@ -114,7 +119,7 @@ class MainWindow(QMainWindow):
 
         #Save QAction
         save_action = QAction("Save", self)
-        save_action.triggered.connect(partial(self.CreateSaveWindow,"Cancel"))
+        save_action.triggered.connect(partial(self.CreateSaveWindow,"Cancel", lambda x: print(type(x))))
         self.file_menu.addAction(save_action)
 
         #New QAction
@@ -548,7 +553,12 @@ It will be the first point in the file that is used as the reference point.")
             next_button.setEnabled(True)
             #print(self.vis_widget_2D.image_file)
 
-    def copy_file(self, start_location, end_location, progress_callback):
+    def copy_file(self, **kwargs):
+        
+        start_location = kwargs.get('start_location')
+        end_location   = kwargs.get('end_location')
+        progress_callback = kwargs.get('progress_callback')
+
         file_extension = os.path.splitext(start_location)[1]
 
         if file_extension == '.mhd':
@@ -767,7 +777,7 @@ It will be the first point in the file that is used as the reference point.")
         
         self.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
         self.progress_window.setMinimumDuration(0.01)
-        self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
+        self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, True)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         self.progress_window.setAutoClose(True)
         if cancel is None:
@@ -1885,7 +1895,7 @@ It is used as a global starting point and a translation reference."
         self.SaveWindow = SaveObjectWindow(self, "mask", save_only)
         self.SaveWindow.show()
 
-    def extendMask(self, progress_callback=None):
+    def extendMask(self, **kwargs):
         #if we have loaded the mask from a file then atm we cannot extend it bc we don't have stencil so need to set stencil somewhere?
         #we can easily get the image data v.image2 but would need a stencil?
 
@@ -4174,18 +4184,81 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
     def closeEvent(self, event):
         self.CreateSaveWindow("Quit without Saving", event) 
-        
+    #@pysnooper.snoop()
     def CreateSaveWindow(self, cancel_text, event):
-        self.SaveWindow = SaveSessionWindow(self, event)
-        self.SaveWindow.show()
+        # self.SaveWindow = SaveSessionWindow(self, event)
+        # self.SaveWindow.show()
 
-    def SaveSession(self, text_value, compress, event):
-        #Save window geometry and state of dockwindows
-        g = self.saveGeometry()
-        self.config['geometry'] =  bytes(g.toHex()).decode('ascii') # can't save qbyte array to json so have to convert it
-        #w = self.saveState()
-        #self.config['window_state'] = bytes(w.toHex()).decode('ascii')
+        dialog = FormDialog(parent=self, title='Save Session')
+        self.SaveWindow = dialog
+        self.SaveWindow.Ok.clicked.connect(lambda: self.save_quit_accepted())
+        self.SaveWindow.Ok.setText('Save')
         
+
+        # add input 1 as QLineEdit
+        qlabel = QtWidgets.QLabel(dialog.groupBox)
+        qlabel.setText("Save session as:")
+        qwidget = QtWidgets.QLineEdit(dialog.groupBox)
+        qwidget.setClearButtonEnabled(True)
+        rx = QRegExp("[A-Za-z0-9]+")
+        validator = QRegExpValidator(rx, dialog) #need to check this
+        qwidget.setValidator(validator)
+        # finally add to the form widget
+        dialog.addWidget(qwidget, qlabel, 'session_name')
+        
+        qwidget = QtWidgets.QCheckBox(dialog.groupBox)
+        qwidget.setText("Compress Files")
+        qwidget.setEnabled(True)
+        qwidget.setChecked(False)
+        dialog.addWidget(qwidget,'','compress')
+        
+        self.save_button = QPushButton("Save")
+        print (event, type(event))
+        if type(event) ==  QCloseEvent:
+            self.SaveWindow.Cancel.clicked.connect(lambda: self.save_quit_just_quit())
+            self.SaveWindow.Cancel.setText('Quit without saving')
+        else:
+            self.SaveWindow.Cancel.clicked.connect(lambda: self.save_quit_rejected())
+            self.SaveWindow.Cancel.setText('Cancel')
+        
+        self.SaveWindow.exec()
+
+        
+
+    def save_quit_accepted(self):
+        #Load Saved Session
+        compress = self.SaveWindow.widgets['compress_field'].isChecked()
+        self.SaveWindow.close()
+        #print(compress)
+        self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
+        
+
+    def save_quit_just_quit(self):
+        event = QCloseEvent()
+        self.SaveWindow.close()
+        self.RemoveTemp(event) # remove tempdir for this session.
+        # QMainWindow.closeEvent(self.parent, event)
+        self.close()
+    def save_quit_rejected(self):
+        self.SaveWindow.close()
+
+
+    #@pysnooper.snoop(depth=2)
+    def SaveSession(self, text_value, compress, event):
+        # Save window geometry and state of dockwindows
+        # https://doc.qt.io/qt-5/qwidget.html#saveGeometry
+        g = self.saveGeometry()
+        # print( str(g.toHex().data(), encoding='utf-8'))
+        # qsettings = QtCore.QSettings(parent=self)
+        # qsettings.setValue('geometry', self.saveGeometry())
+        
+        # can't save qbyte array to json so have to convert it
+        # self.config['geometry'] =  bytes(g.toHex()).decode('ascii') 
+        self.config['geometry'] = str(g.toHex().data(), encoding='utf-8')
+        w = self.saveState()
+        # self.config['window_state'] = bytes(w.toHex()).decode('ascii')
+        self.config['window_state'] = str(g.toHex().data(), encoding='utf-8')
+
         #save values for select image panel:
         if len(self.image[0]) > 0: 
             if(self.copy_files):
@@ -4385,7 +4458,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     
         self.SaveWindow.close()
        
-    def ZipDirectory(self, directory, compress, progress_callback):
+    def ZipDirectory(self, *args, **kwargs):
+        directory, compress = args
+        progress_callback = kwargs.get('progress_callback', None)
+
         zip = zipfile.ZipFile(directory + '.zip', 'a')#, compression = zipfile.ZIP_STORED) #compression=zipfile.ZIP_DEFLATED)
 
         for r, d, f in os.walk(directory):
@@ -4407,7 +4483,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setLabelText("Closing")
             self.progress_window.setMaximum(100)
             self.progress_window.setValue(98)
-        #print("removed temp")
+        print("removed temp", tempfile.tempdir)
         shutil.rmtree(tempfile.tempdir)
         
         if hasattr(self, 'progress_window'):
@@ -4536,7 +4612,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # self.close()
         # subprocess.Popen(['python', 'dvc_interface.py'], shell = True) 
     
-    def LoadConfigWorker(self, selected_text, progress_callback = None): 
+    def LoadConfigWorker(self, **kwargs): 
+        selected_text = kwargs.get('selected_text', None)
+        progress_callback = kwargs.get('progress_callback', None)
         date_and_time = selected_text.split(' ')[-1]
         #print(date_and_time)
         selected_folder = ""
@@ -4549,13 +4627,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     #print(selected_folder_name)
                     selected_folder =  os.path.join(self.temp_folder, _file)
                     break
-
-        progress_callback.emit(50)
+        if progress_callback is not None:
+            progress_callback.emit(50)
         
         shutil.unpack_archive(selected_folder, selected_folder[:-4])
         loaded_tempdir = selected_folder[:-4]
-
-        progress_callback.emit(70)
+        
+        if progress_callback is not None:
+            progress_callback.emit(70)
 
         #Create folder to store masks if one doesn't exist
         mask_folder_exists = False
@@ -4579,7 +4658,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         if tempfile.tempdir != loaded_tempdir: # if we are not loading the same session that we already had open
             shutil.rmtree(tempfile.tempdir) 
 
-        progress_callback.emit(90)
+        if progress_callback is not None:
+            progress_callback.emit(90)
 
         tempfile.tempdir = loaded_tempdir
         #print("working tempdir")
@@ -4597,7 +4677,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.config = json.load(tmp)
         
         os.remove(selected_file)
-        progress_callback.emit(100)
+        if progress_callback is not None:
+            progress_callback.emit(100)
        
     def LoadSession(self):
         self.resetRegistration()
@@ -4994,7 +5075,7 @@ class SessionSelectionWindow(QtWidgets.QDialog):
         #Load Saved Session
         self.parent.InitialiseSessionVars()
 
-        config_worker = Worker(self.parent.LoadConfigWorker, self.combo.currentText())
+        config_worker = Worker(self.parent.LoadConfigWorker, selected_text=self.combo.currentText())
         self.parent.create_progress_window("Loading", "Loading Session")
         config_worker.signals.progress.connect(self.parent.progress)
         config_worker.signals.finished.connect(self.parent.LoadSession)
@@ -5007,12 +5088,14 @@ class SessionSelectionWindow(QtWidgets.QDialog):
         self.parent.NewSession()
         self.close()
 
+
+
 class SaveSessionWindow(QtWidgets.QWidget):
     '''creates a window to save a session
     '''
 
     def __init__(self, parent, event):
-        super().__init__()
+        super(SaveSessionWindow, self).__init__(parent=parent)
 
         self.parent = parent
         self.event = event
@@ -5051,7 +5134,7 @@ class SaveSessionWindow(QtWidgets.QWidget):
         self.layout.addRow(self.save_button, self.quit_button)
         self.setLayout(self.layout)
 
-
+    @pysnooper.snoop()
     def save(self, event):
         #Load Saved Session
         if(self.checkbox.checkState()):
@@ -5066,7 +5149,8 @@ class SaveSessionWindow(QtWidgets.QWidget):
         if type(self.event) ==  QCloseEvent:
             self.parent.RemoveTemp(event) # remove tempdir for this session.
             self.close()
-            QMainWindow.closeEvent(self.parent, event)
+            # QMainWindow.closeEvent(self.parent, event)
+            self.parent.close()
         else:
             self.close()
 

@@ -1,29 +1,27 @@
 package:
   name: ccpi-dvc
-  version: 20.07.6
-# conda build ... -c file://my_local_channel --override-channels
+  version: 21.0
 
 build:
   preserve_egg_dir: False
   
 
   entry_points:
-    - DVC_Interface = ccpi.dvc.apps.dvc_interface:main
     - idvc = ccpi.dvc.apps.dvc_interface:main
-  number: 0
+  number: 3
   
 requirements:
   build:
     - python 
-    - setuptools
-    
  
   run:
     - python
     - numpy
-    - ccpi-viewer ==20.07.4
+    - ccpi-viewer >=21.0
     - natsort
     - docopt
+    - matplotlib
+
     
 
 about:
