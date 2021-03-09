@@ -1717,8 +1717,12 @@ It is used as a global starting point and a translation reference."
             self.completeRegistration()
 
         
-    def translate_image_reg(self,key_code, event, progress_callback):
+    def translate_image_reg(self, *args, **kwargs):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
+        key_code, event = args
+        progress_callback = kwargs.get('progress_callback', None)
+        # notice that None should not be possible as progress_callback is
+        # added in Worker
         progress_callback.emit(10)
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
@@ -1875,10 +1879,10 @@ It is used as a global starting point and a translation reference."
                 self.mask_worker = Worker(self.extendMask)
                 self.mask_worker.signals.finished.connect(self.DisplayMask)
         elif type == "load mask":
-            self.mask_worker = Worker(self.loadMask, load_session = False)
+            self.mask_worker = Worker(self.loadMask, load_session=False)
             self.mask_worker.signals.finished.connect(self.DisplayMask)
         elif type == "load session":
-            self.mask_worker = Worker(self.loadMask, load_session = True)
+            self.mask_worker = Worker(self.loadMask, load_session=True)
             self.mask_worker.signals.finished.connect(lambda:self.DisplayMask(type = "load session"))
             
         self.create_progress_window("Loading", "Loading Mask")
@@ -1900,7 +1904,8 @@ It is used as a global starting point and a translation reference."
         #we can easily get the image data v.image2 but would need a stencil?
 
         # print("Extend mask")
-
+        progress_callback = kwargs.get('progress_callback', None)
+        
         v = self.vis_widget_2D.frame.viewer
 
         poly = vtk.vtkPolyData()
@@ -2040,8 +2045,10 @@ It is used as a global starting point and a translation reference."
 
         return (indata)
 
-    def loadMask(self, load_session, progress_callback = None): #loading mask from a file
+    def loadMask(self, **kwargs): #loading mask from a file
         #print("Load mask")
+        load_session = kwargs.get('load_session', False)
+        progress_callback = kwargs.get('progress_callback', None)
         time.sleep(0.1) #required so that progress window displays
         progress_callback.emit(30)
         #Appropriate modification to Point Cloud Panel
@@ -2638,7 +2645,7 @@ The first point is significant, as it is used as a global starting point and ref
         elif type == "create without loading":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.createPointCloud, filename = filename)
+            self.pointcloud_worker = Worker(self.createPointCloud, filename=filename)
             self.pointcloud_worker.signals.finished.connect(self.progress_complete)
             
         self.create_progress_window("Loading", "Loading Pointcloud")
@@ -2670,10 +2677,12 @@ The first point is significant, as it is used as a global starting point and ref
             else:
                 self.PointCloudWorker("create")
 
-    def createPointCloud(self, filename = "latest_pointcloud.roi", progress_callback=None, subvol_size = None):
+    def createPointCloud(self, **kwargs):
         ## Create the PointCloud
         #print("Create point cloud")
-
+        filename = kwargs.get('filename', "latest_pointcloud.roi")
+        progress_callback = kwargs.get('progress_callback', None)
+        subvol_size = kwargs.get('subvol_size',None)
         # Mask is read from temp file
         tmpdir = tempfile.gettempdir() 
         reader = vtk.vtkMetaImageReader()
@@ -2936,14 +2945,20 @@ The first point is significant, as it is used as a global starting point and ref
         return(True)
             
 
-    def loadPointCloud(self, pointcloud_file, progress_callback):
+    def loadPointCloud(self, *args, **kwargs):
         time.sleep(0.1) #required so that progress window displays
+        pointcloud_file = os.path.abspath(args[0])
+        progress_callback = kwargs.get('progress_callback', None)
         progress_callback.emit(20)
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
         #print(self.roi)
-        points = np.loadtxt(self.roi)
+        try:
+            points = np.loadtxt(self.roi)
+        except ValueError as ve:
+            print (ve)
+            return
         self.pc_no_points = np.shape(points)[0]
         progress_callback.emit(50)
         self.polydata_masker = cilNumpyPointCloudToPolyData()
@@ -3009,6 +3024,7 @@ The first point is significant, as it is used as a global starting point and ref
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
         
+
     def DisplayPointCloud(self):
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
         if self.pointCloud.GetNumberOfPoints() == 0:
@@ -3027,7 +3043,14 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         if not self.pointCloudCreated:
             # visualise polydata
             self.setup2DPointCloudPipeline()
-            v.setInputData2(self.reader.GetOutput()) #TODO: fix this line - we don't have a reader
+            if not hasattr(self, 'reader'):
+                #TODO: fix this line - we don't have a reader
+                tmpdir = tempfile.gettempdir()
+                reader = vtk.vtkMetaImageReader()
+                reader.AddObserver("ErrorEvent", self.e)
+                reader.SetFileName(os.path.join(tmpdir,"Masks\\latest_selection.mha"))
+                reader.Update()
+            v.setInputData2(self.reader.GetOutput()) 
             self.setup3DPointCloudPipeline()
             self.pointCloudCreated = True
             self.pointCloudLoaded = True
@@ -3786,7 +3809,8 @@ This parameter has a strong effect on computation time, so be careful."
         self.progress_window.setValue(10)
         
 
-    def create_run_config(self, progress_callback = None):
+    def create_run_config(self, **kwargs):
+        progress_callback = kwargs.get('progress_callback', None)
         try:
             folder_name = "_" + self.rdvc_widgets['name_entry'].text()
 
@@ -3844,7 +3868,7 @@ This parameter has a strong effect on computation time, so be careful."
                     subvol_size_count+=1
                     filename = "Results/" + folder_name + "/_" + str(subvol_size) + ".roi"
                     #print(filename)
-                    if not self.createPointCloud(filename, subvol_size=int(subvol_size)):
+                    if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
                         return ("pointcloud error")
                     self.roi_files.append(os.path.join(tempfile.tempdir, filename))
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
@@ -4567,7 +4591,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.threadpool.start(export_worker)
             self.ShowExportProgress(tempfile.tempdir, export_location)
 
-    def exporter(self, export_location, progress_callback):
+    def exporter(self, *args, **kwargs):
+        export_location = args[0]
         shutil.copytree(tempfile.tempdir, export_location)
 
 #Dealing with loading sessions:
@@ -4690,7 +4715,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         
         #use info to update the window:
         if 'geometry' in self.config:
-            g = QByteArray.fromHex(bytes(self.config['geometry'], 'ascii'))
+            g = QByteArray.fromHex(bytes(self.config['geometry'], 'utf-8'))
             #w = QByteArray.fromHex(bytes(self.config['window_state'], 'ascii'))
             self.restoreGeometry(g)
             #self.restoreState(w)
@@ -5049,7 +5074,7 @@ class SessionSelectionWindow(QtWidgets.QDialog):
         super(SessionSelectionWindow, self).__init__(parent=parent)
 
         self.parent = parent
-
+        
         self.setWindowTitle("Load a Session")
         self.label = QLabel("Select a session:")
         self.setWindowModality(QtCore.Qt.ApplicationModal)
