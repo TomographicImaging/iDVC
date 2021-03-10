@@ -85,7 +85,7 @@ from ccpi.dvc.apps.dvc_runner import DVC_runner
 
 from eqt.ui import FormDialog
 
-__version__ = '20.07.6'
+__version__ = '21.0.0'
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -95,7 +95,7 @@ class MainWindow(QMainWindow):
 
         self.temp_folder = None
 
-        self.setWindowTitle("Digital Volume Correlation")
+        self.setWindowTitle("Digital Volume Correlation v{}".format(__version__))
         DVCIcon = QtGui.QIcon()
         file_dir = os.path.dirname(__file__)
         DVCIcon.addFile(os.path.join(file_dir, "DVCIconSquare.png"))
@@ -4210,8 +4210,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.CreateSaveWindow("Quit without Saving", event) 
     #@pysnooper.snoop()
     def CreateSaveWindow(self, cancel_text, event):
-        # self.SaveWindow = SaveSessionWindow(self, event)
-        # self.SaveWindow.show()
 
         dialog = FormDialog(parent=self, title='Save Session')
         self.SaveWindow = dialog
@@ -4253,7 +4251,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         #Load Saved Session
         compress = self.SaveWindow.widgets['compress_field'].isChecked()
         self.SaveWindow.close()
-        #print(compress)
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
         
 
@@ -4516,7 +4513,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.SaveWindow.close()
 
         if event != "new session":
-            QMainWindow.closeEvent(self, event)
+            self.close()
         
     def ShowZipProgress(self, folder, new_file_dest,ratio):
        
@@ -4621,10 +4618,42 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.displayFileErrorDialog(message=error_text, title=error_title)
             return #Exits the LoadSession function
 
-        else:     
-            self.SessionSelectionWindow = SessionSelectionWindow(self, temp_folders)
-            #self.SessionSelectionWindow.finished.connect(self.NewSession)
-            self.SessionSelectionWindow.open()
+        else:
+            
+            dialog = FormDialog(parent=self, title='Load a Session')
+            
+            self.label = QLabel("Select a session:")
+            combo = QComboBox(dialog.groupBox)
+            combo.addItems(temp_folders)
+            dialog.addWidget(combo, 'Select a session:', 'select_session')
+
+            dialog.Ok.setText('Load')
+            dialog.Cancel.setText('New Session')
+            dialog.Ok.clicked.connect(self.load_session_load)
+            dialog.Cancel.clicked.connect(self.load_session_new)
+            self.SessionSelectionWindow = dialog
+            dialog.exec()
+        
+
+    def load_session_load(self):
+        #Load Saved Session
+        self.InitialiseSessionVars()
+
+        config_worker = Worker(self.LoadConfigWorker, selected_text=self.SessionSelectionWindow.widgets['select_session_field'].currentText())
+        self.create_progress_window("Loading", "Loading Session")
+        config_worker.signals.progress.connect(self.progress)
+        config_worker.signals.finished.connect(self.LoadSession)
+        self.threadpool.start(config_worker)
+        self.progress_window.setValue(10)
+        #self.parent.loaded_session = True
+        self.SessionSelectionWindow.close()
+
+    def load_session_new(self):
+        self.NewSession()
+        self.SessionSelectionWindow.close()
+
+
+
 
     def NewSession(self):
         self.RemoveTemp("new session")
@@ -4715,10 +4744,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         
         #use info to update the window:
         if 'geometry' in self.config:
-            g = QByteArray.fromHex(bytes(self.config['geometry'], 'utf-8'))
-            #w = QByteArray.fromHex(bytes(self.config['window_state'], 'ascii'))
-            self.restoreGeometry(g)
-            #self.restoreState(w)
+            # g = QByteArray.fromHex(bytes(self.config['geometry'], 'utf-8'))
+            w = QByteArray.fromHex(bytes(self.config['window_state'], 'utf-8'))
+            # self.restoreGeometry(g)
+            self.restoreState(w)
 
         if 'pointcloud_loaded' in self.config: #whether a pointcloud was displayed when session saved
             self.pointCloudLoaded = self.config['pointcloud_loaded']
@@ -5064,120 +5093,6 @@ class SettingsWindow(QDialog):
             self.parent.settings.setValue("first_app_load", "False")
         self.close()
         
-
-class SessionSelectionWindow(QtWidgets.QDialog):
-    '''a window for selecting a session
-    '''
-        #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
-
-    def __init__(self, parent, temp_folders):
-        super(SessionSelectionWindow, self).__init__(parent=parent)
-
-        self.parent = parent
-        
-        self.setWindowTitle("Load a Session")
-        self.label = QLabel("Select a session:")
-        self.setWindowModality(QtCore.Qt.ApplicationModal)
-        #self.setInputMode(QtWidgets.QInputDialog.TextInput)
-        self.combo = QComboBox(self)
-        self.combo.addItems(temp_folders)
-
-        self.load_button = QPushButton("Load")
-        self.new_button = QPushButton("New Session")
-        self.load_button.clicked.connect(self.load)
-        self.new_button.clicked.connect(self.new)
-        
-        #self.setWindowFlags(QtCore.Qt.WindowTitleHint | QtCore.Qt.WindowCloseButtonHint)
-        #self.setCancelButtonText("New Session")
-        #self.setAttribute(Qt.WA_DeleteOnClose)
-        self.layout = QtWidgets.QFormLayout()
-        self.layout.addRow(self.label)
-        self.layout.addRow(self.combo)
-        self.layout.addRow(self.load_button, self.new_button)
-        self.setLayout(self.layout)
-
-    def load(self):
-        #Load Saved Session
-        self.parent.InitialiseSessionVars()
-
-        config_worker = Worker(self.parent.LoadConfigWorker, selected_text=self.combo.currentText())
-        self.parent.create_progress_window("Loading", "Loading Session")
-        config_worker.signals.progress.connect(self.parent.progress)
-        config_worker.signals.finished.connect(self.parent.LoadSession)
-        self.parent.threadpool.start(config_worker)
-        self.parent.progress_window.setValue(10)
-        #self.parent.loaded_session = True
-        self.close()
-
-    def new(self):
-        self.parent.NewSession()
-        self.close()
-
-
-
-class SaveSessionWindow(QtWidgets.QWidget):
-    '''creates a window to save a session
-    '''
-
-    def __init__(self, parent, event):
-        super(SaveSessionWindow, self).__init__(parent=parent)
-
-        self.parent = parent
-        self.event = event
-
-        self.setWindowTitle("Save Session")
-        self.label = QLabel("Save session as:")
-        self.setWindowModality(QtCore.Qt.ApplicationModal)
-        #self.setInputMode(QtWidgets.QInputDialog.TextInput)
-
-        self.textbox = QLineEdit(self)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, self.textbox) #need to check this
-        self.textbox.setValidator(validator)
-
-        self.checkbox = QCheckBox()
-        self.checkbox.setText("Compress Files")
-        self.checkbox.setEnabled(True)
-        self.checkbox.setChecked(False)
-        
-        self.save_button = QPushButton("Save")
-        if type(self.event) ==  QCloseEvent:
-            self.quit_button = QPushButton("Quit without Saving")
-        else:
-            self.quit_button = QPushButton("Cancel")
-
-        self.save_button.clicked.connect(partial(self.save, event))
-        self.quit_button.clicked.connect(partial(self.quit, event))
-        
-        self.setWindowFlags(QtCore.Qt.WindowTitleHint )
-        #self.setCancelButtonText("New Session")
-        #self.setAttribute(Qt.WA_DeleteOnClose)
-        self.layout = QtWidgets.QFormLayout()
-        self.layout.addRow(self.label)
-        self.layout.addRow(self.textbox)
-        self.layout.addRow(self.checkbox)
-        self.layout.addRow(self.save_button, self.quit_button)
-        self.setLayout(self.layout)
-
-    @pysnooper.snoop()
-    def save(self, event):
-        #Load Saved Session
-        if(self.checkbox.checkState()):
-            compress = True
-        else:
-            compress=False
-        #print(compress)
-        self.parent.SaveSession(self.textbox.text(), compress, event)
-        
-
-    def quit(self, event):
-        if type(self.event) ==  QCloseEvent:
-            self.parent.RemoveTemp(event) # remove tempdir for this session.
-            self.close()
-            # QMainWindow.closeEvent(self.parent, event)
-            self.parent.close()
-        else:
-            self.close()
 
 
 class SaveObjectWindow(QtWidgets.QWidget):
