@@ -1,8 +1,13 @@
 # ChangeLog
 
+## v**
+* change backend to PySide2
+* add dependency on eqt (package with some Qt threading and UI templates)
+
 ## v20.07.6
 * Fixed location of registration viewer on interface
 * shows subvolume size for externally loaded pointclouds
+* updates minimal version of viewer
 
 ## v20.07.5
 * Changed default location of viewers on interface
