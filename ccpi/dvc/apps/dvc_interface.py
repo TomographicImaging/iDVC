@@ -2942,6 +2942,7 @@ The first point is significant, as it is used as a global starting point and ref
 
         np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+
         return(True)
             
 
@@ -3005,9 +3006,11 @@ The first point is significant, as it is used as a global starting point and ref
         # print("Set the values")
 
     def DisplayNumberOfPointcloudPoints(self):
+        print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
         self.result_widgets['pc_points_value'].setText(str(self.pc_no_points))
-        self.rdvc_widgets['run_points_spinbox'].setValue(self.pc_no_points)
+        self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
+        
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
@@ -3495,7 +3498,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         rdvc_widgets['run_points_spinbox'] = QSpinBox(groupBox)
         rdvc_widgets['run_points_spinbox'].setMinimum(10)
-        rdvc_widgets['run_points_spinbox'].setMaximum(10000)
+        # max should be the number in the point cloud
+        maxpoints = 10000
+        rdvc_widgets['run_points_spinbox'].setMaximum(maxpoints)
         rdvc_widgets['run_points_spinbox'].setValue(100)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_points_spinbox'])
         widgetno += 1         
