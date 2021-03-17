@@ -13,6 +13,8 @@ build:
 requirements:
   build:
     - python 
+    - openmp # [osx]
+    
  
   run:
     - python
@@ -21,6 +23,8 @@ requirements:
     - natsort
     - docopt
     - matplotlib
+    - openmp # [osx]
+    
 
     
 
