@@ -14,6 +14,7 @@ requirements:
   build:
     - python 
     - openmp # [osx]
+    - cmake
     
  
   run:
