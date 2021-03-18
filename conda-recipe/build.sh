@@ -32,9 +32,9 @@ else
   cmake ${RECIPE_DIR}../../../  \
                         -DBUILD_PYTHON_WRAPPER=OFF\
                         -DCMAKE_BUILD_TYPE="Release"\
-                        -DLIBRARY_LIB=$CONDA_PREFIX/lib \
-                        -DLIBRARY_INC=$CONDA_PREFIX \
                         -DCMAKE_INSTALL_PREFIX=$PREFIX
+#                        -DLIBRARY_LIB=$CONDA_PREFIX/lib \
+#                        -DLIBRARY_INC=$CONDA_PREFIX \
 fi
 cmake --build . --target install
 ${PYTHON} setup.py install
