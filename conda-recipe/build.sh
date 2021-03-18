@@ -15,11 +15,11 @@ then
   cmake ${RECIPE_DIR}/../../../  \
                         -DBUILD_PYTHON_WRAPPER=OFF\
                         -DCMAKE_BUILD_TYPE="Release"\
-                        -DLIBRARY_LIB=$CONDA_PREFIX/lib \
-                        -DLIBRARY_INC=$CONDA_PREFIX \
-                        -DCMAKE_INSTALL_PREFIX=$PREFIX\
-                        -DOPENMP_CXX_INCLUDE_DIR=${CONDA_PREFIX}/include \
-                        -DOPENMP_LIBRARIES=${CONDA_PREFIX}/lib
+                        -DCMAKE_INSTALL_PREFIX=$PREFIX
+#                        -DLIBRARY_LIB=$CONDA_PREFIX/lib \
+#                        -DLIBRARY_INC=$CONDA_PREFIX \
+#                        -DOPENMP_CXX_INCLUDE_DIR=${CONDA_PREFIX}/include \
+#                        -DOPENMP_LIBRARIES=${CONDA_PREFIX}/lib
 #-DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${CONDA_PREFIX}/include" \
 #-DOpenMP_C_LIB_NAMES="omp" \
 #-DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${CONDA_PREFIX}/include" \
