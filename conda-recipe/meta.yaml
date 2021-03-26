@@ -20,7 +20,7 @@ requirements:
   run:
     - python
     - numpy
-    - ccpi-viewer >=21.0
+    - ccpi-viewer >=21.0.0
     - natsort
     - docopt
     - matplotlib
