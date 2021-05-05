@@ -15,6 +15,7 @@ requirements:
     - python 
     - openmp # [osx]
     - cmake
+    - numpy {{ numpy }} 
     
  
   run:
