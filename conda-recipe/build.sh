@@ -29,7 +29,7 @@ then
 else 
   echo "something else"; 
   #cmake ${RECIPE_DIR}/../../../ -DBUILD_PYTHON_WRAPPERS=OFF -DCONDA_BUILD=ON -DBUILD_CUDA=OFF -DCMAKE_BUILD_TYPE="Release" -DLIBRARY_LIB="${CONDA_PREFIX}/lib" -DLIBRARY_INC="${CONDA_PREFIX}" -DCMAKE_INSTALL_PREFIX="${PREFIX}/Library" 
-  cmake ${RECIPE_DIR}../../../  \
+  cmake ${RECIPE_DIR}/../../../  \
                         -DBUILD_PYTHON_WRAPPER=OFF\
                         -DCMAKE_BUILD_TYPE="Release"\
                         -DCMAKE_INSTALL_PREFIX=$PREFIX
