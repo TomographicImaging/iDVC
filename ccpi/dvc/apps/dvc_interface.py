@@ -1,4 +1,3 @@
-import pysnooper
 import sys
 from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2.QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
@@ -76,7 +75,6 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-#TODO: switch from/to these lines for dev/release
 from ccpi.viewer.utils.io import ImageDataCreator
 
 from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
@@ -478,8 +476,8 @@ It will be the first point in the file that is used as the reference point.")
         widgetno += 1
 
         #button functions:
-        si_widgets['ref_browse'].clicked.connect(lambda: self.SelectImage(si_widgets['ref_file_label'],0,si_widgets['cor_browse']))
-        si_widgets['cor_browse'].clicked.connect(lambda: self.SelectImage(si_widgets['cor_file_label'],1,si_widgets['view_button']))
+        si_widgets['ref_browse'].clicked.connect(lambda: self.SelectImage(0, self.image, label=si_widgets['ref_file_label'], next_button=si_widgets['cor_browse']))
+        si_widgets['cor_browse'].clicked.connect(lambda: self.SelectImage(1, self.image, label=si_widgets['cor_file_label'], next_button=si_widgets['view_button']))
         si_widgets['view_button'].clicked.connect(self.view_and_load_images)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
@@ -489,9 +487,8 @@ It will be the first point in the file that is used as the reference point.")
     def view_and_load_images(self):
         self.view_image()
         self.resetRegistration()
-        #del self.vis_widget_reg.frame.viewer
 
-    def SelectImage(self, label, image_var, next_button): 
+    def SelectImage(self, image_var, image, label=None, next_button=None): 
         #print("In select image")
         dialogue = QFileDialog()
         files = dialogue.getOpenFileNames(self,"Load Images")[0]
@@ -511,7 +508,7 @@ It will be the first point in the file that is used as the reference point.")
                     else:
                         new_file_dest = os.path.join(tempfile.tempdir, file_name)
                     
-                    copy_worker = Worker(self.copy_file, f, new_file_dest)
+                    copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
                     self.threadpool.start(copy_worker)
                     files[file_num] = new_file_dest
                     file_num+=1
@@ -524,11 +521,12 @@ It will be the first point in the file that is used as the reference point.")
                 self.image_copied[image_var] = False
 
             if len(files) == 1: #@todo
-                if(self.image[image_var]):
-                    self.image[image_var]= files
+                if(image[image_var]):
+                    image[image_var]= files
                 else:
-                    self.image[image_var].append(files[0])
-                label.setText(os.path.basename(files[0]))
+                    image[image_var].append(files[0])
+                if label is not None:
+                    label.setText(os.path.basename(files[0]))
                 
             else:
                 # Make sure that the files are sorted 0 - end
@@ -544,14 +542,12 @@ It will be the first point in the file that is used as the reference point.")
                         error_text = "Error reading file: ({filename})".format(filename=f)
                         self.displayFileErrorDialog(message=error_text, title=error_title)
                         return #prevents dialog showing for every single file by exiting the for loop
-                if(self.image[image_var]):
-                    self.image[image_var] = filenames
-                else:
-                    self.image[image_var]=filenames
-                label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
-            
-            next_button.setEnabled(True)
-            #print(self.vis_widget_2D.image_file)
+                image[image_var] = filenames
+                if label is not None:
+                    label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+
+            if next_button is not None:
+                next_button.setEnabled(True)
 
     def copy_file(self, **kwargs):
         
@@ -586,12 +582,14 @@ It will be the first point in the file that is used as the reference point.")
         self.progress_window.setValue(100)
 
 
-    def displayFileErrorDialog(self, message, title):
+    def displayFileErrorDialog(self, message, title, action_button=None):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle(title)
         msg.setText(message)
         msg.setDetailedText(self.e.ErrorMessage())
+        if action_button is not None:
+            msg.addButton(action_button, msg.ActionRole)
         msg.exec_()
 
     def view_image(self):
@@ -762,7 +760,7 @@ It will be the first point in the file that is used as the reference point.")
                     self.translate.SetTranslation(self.config['reg_translation'])
                     self.registration_parameters['registration_box_size_entry'].setValue(self.config['reg_sel_size'])
                     self.registration_parameters['registration_box_size_entry'].setEnabled(True)
-            #self.displayRegistrationViewer(registration_open = False)
+
             self.reg_viewer_dock.setVisible(False)
             self.viewer2D_dock.setVisible(True)
             self.viewer3D_dock.setVisible(True)
@@ -1106,15 +1104,10 @@ It is used as a global starting point and a translation reference."
         self.RightDockWindow.addDockWidget(Qt.TopDockWidgetArea,reg_viewer_dock)
 
 
-        #ref_image_copy = vtk.vtkImageData()
-        #ref_image_copy.DeepCopy(self.ref_image_data)
         self.vis_widget_reg.setImageData(self.ref_image_data)
         self.vis_widget_reg.displayImageData()
-        #self.tabifyDockWidget(self.viewer2D_dock,reg_viewer_dock) #breaks
         self.viewer2D_dock.setVisible(False)
         self.viewer3D_dock.setVisible(False)
-        
-
 
         #Clear for next image visualisation:
         self.orientation = None
@@ -1212,7 +1205,6 @@ It is used as a global starting point and a translation reference."
         #  print("Point0 WORLD: ", p0)
         self.point0_world_coords = copy.deepcopy(p0)
         self.point0_sampled_image_coords = copy.deepcopy(self.getPoint0ImageCoords())
-        #p0 = [round(p0[i]) for i in range(3)]
         point0actor = 'Point0' in v.actors
         rp = self.registration_parameters
         vox = p0
@@ -1545,7 +1537,6 @@ It is used as a global starting point and a translation reference."
         ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var = self.unsampled_image_info, resample= resample_corr_image, crop_image = crop_corr_image, origin = origin , target_z_extent = z_extent, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        #if self.image_info['sampled']:
         self.updatePoint0Display()
         self.translateImages()
         self.reg_viewer_update(type = 'starting registration')
@@ -1668,7 +1659,6 @@ It is used as a global starting point and a translation reference."
             current_slice = v.GetActiveSlice()
         # print("About to set the input data")
         v.setInputData(self.subtract.GetOutput())
-        #v.setVisualisationDownsampling(1,1,1)
         # print("Set the input data")
 
         if type == 'starting registration':
@@ -2012,9 +2002,7 @@ It is used as a global starting point and a translation reference."
             # else:
             #     print  ("extending mask failed ", tmpdir)
         else:
-            #writer.SetInputData(stencil.GetOutput())
             writer.SetInputData(stencil_output)
-            #self.mask_data = stencil.GetOutput()
             self.mask_data = stencil_output
 
         writer.Write() # writes to file.
@@ -2103,7 +2091,6 @@ It is used as a global starting point and a translation reference."
             #print("Not compatible")
             return 
 
-        #v.setInputData2(self.mask_reader.GetOutput())
         self.mask_data = self.mask_reader.GetOutput()
 
     def select_mask(self): 
@@ -2830,19 +2817,13 @@ The first point is significant, as it is used as a global starting point and ref
         
         ## Create a Transform to modify the PointCloud
         # Translation and Rotation
-        #rotate = (0.,0.,25.)
         rotate = [
                 float(self.rotateXValueEntry.text()),
                 float(self.rotateYValueEntry.text()),
                 float(self.rotateZValueEntry.text())
         ]
         self.pointCloud_rotation = rotate
-#        if not self.pointCloudCreated:
-#            transform = vtk.vtkTransform()
-#            # save reference
-#            self.transform = transform
-#        else:
-#            transform = self.transform
+
         transform = vtk.vtkTransform()
         # save reference
         self.transform = transform
@@ -3294,7 +3275,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer_widget.PlaneClipper.AddDataToClip('arrow_shaft_actor', line_glyph.GetOutputPort())
 
             line_mapper = vtk.vtkPolyDataMapper()
-            #line_mapper.SetInputConnection(line_glyph.GetOutputPort())
             line_mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('arrow_shaft_actor').GetOutputPort())
             line_mapper.SetScalarModeToUsePointFieldData()
             line_mapper.SelectColorArray(0)
@@ -3339,7 +3319,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer_widget.PlaneClipper.AddDataToClip('arrowhead_actor', arrowhead_glyph.GetOutputPort())
 
             arrowhead_mapper = vtk.vtkPolyDataMapper()
-            #arrowhead_mapper.SetInputConnection(arrowhead_glyph.GetOutputPort())
             arrowhead_mapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('arrowhead_actor').GetOutputPort())
             arrowhead_mapper.SetScalarModeToUsePointFieldData()
             arrowhead_mapper.SelectColorArray(0)
@@ -3355,7 +3334,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer.AddActor(line_actor, 'arrow_shaft_actor')
             viewer.AddActor(arrowhead_actor, 'arrowhead_actor')
 
-            # For testing, show 2D arrows on 3D viewer too. Best to do thsi without clipping
+            # For testing, show 2D arrows on 3D viewer too. Best to do this without clipping
             # v = self.vis_widget_3D.frame.viewer
             # v.ren.AddActor(point_actor)
             # v.ren.AddActor(line_actor)
@@ -3959,28 +3938,12 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.cancelled = True
             return
             
-        # print("About to run dvc")
 
-        # self.create_progress_window("Running", "Running DVC code", 100, self.cancel_run)
-        # self.progress_window.setValue(1)
-
-        # self.process = QtCore.QProcess(self)
-        # self.process.setWorkingDirectory(working_directory)
-        # #self.process.setStandardOutputFile("QProcess_Output.txt") #use in testing to get errors from QProcess
-        # self.process.setStandardErrorFile("QProcess_Error.txt") #use in testing to get errors from QProcess
-        # self.process.readyRead.connect(lambda: self.update_progress(exe = True))
-        # self.process.finished.connect(self.finished_run)
-
-        # # self.process.start(python_file, [self.run_config_file])
         python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
         pythonCommand = "python " + '"' + os.path.abspath(python_file) + '" "' + os.path.abspath(self.run_config_file) + '"'
-        # print (pythonCommand)
-        # self.process.start(pythonCommand)
-
-        # self.cancelled = False
 
         self.run_succeeded = True
-        # DVC_runner.run_dvc(self,os.path.abspath(self.run_config_file), self.finished_run, self.run_succeeded)
+
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
                                      self.finished_run, self.run_succeeded)
         
@@ -4256,7 +4219,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         #Load Saved Session
         compress = self.SaveWindow.widgets['compress_field'].isChecked()
         self.SaveWindow.close()
-        self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
+        self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, None)
         
 
     def save_quit_just_quit(self):
@@ -4279,10 +4242,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # qsettings.setValue('geometry', self.saveGeometry())
         
         # can't save qbyte array to json so have to convert it
-        # self.config['geometry'] =  bytes(g.toHex()).decode('ascii') 
         self.config['geometry'] = str(g.toHex().data(), encoding='utf-8')
         w = self.saveState()
-        # self.config['window_state'] = bytes(w.toHex()).decode('ascii')
         self.config['window_state'] = str(g.toHex().data(), encoding='utf-8')
 
         #save values for select image panel:
@@ -4488,18 +4449,16 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         directory, compress = args
         progress_callback = kwargs.get('progress_callback', None)
 
-        zip = zipfile.ZipFile(directory + '.zip', 'a')#, compression = zipfile.ZIP_STORED) #compression=zipfile.ZIP_DEFLATED)
+        zip = zipfile.ZipFile(directory + '.zip', 'a')
 
         for r, d, f in os.walk(directory):
-            #for folder in d:
-                #zip.write(os.path.join(directory, folder),folder, compress_type=zipfile.ZIP_DEFLATED)
             for _file in f:
                 if compress:
                     compress_type = zipfile.ZIP_DEFLATED
                 else:
                     compress_type = zipfile.ZIP_STORED
 
-                zip.write(os.path.join(r, _file),os.path.join(r, _file)[len(directory)+1:],compress_type=compress_type)#zipfile.ZIP_DEFLATED)
+                zip.write(os.path.join(r, _file),os.path.join(r, _file)[len(directory)+1:],compress_type=compress_type)
         zip.close()
 
         # print("Finished zip")
@@ -4657,9 +4616,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.NewSession()
         self.SessionSelectionWindow.close()
 
-
-
-
     def NewSession(self):
         self.RemoveTemp("new session")
         self.CreateWorkingTempFolder()
@@ -4710,8 +4666,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         if not results_folder_exists:
             os.mkdir(os.path.join(loaded_tempdir, "Results"))
         
-            
-
         #print(tempfile.tempdir)
 
         if tempfile.tempdir != loaded_tempdir: # if we are not loading the same session that we already had open
@@ -4738,7 +4692,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         os.remove(selected_file)
         if progress_callback is not None:
             progress_callback.emit(100)
-       
+
     def LoadSession(self):
         self.resetRegistration()
         
@@ -4797,36 +4751,46 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                         path = i
                         self.image[j].append(i)
                     if not os.path.exists(path):
-                            self.e(
-                            '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
-Please move the file back to this location and reload the session, select a different session to load or start a new session')
-                            error_title = "READ ERROR"
-                            error_text = "Error reading file: ({filename})".format(filename=i)
-                            self.displayFileErrorDialog(message=error_text, title=error_title)
-                            return #Exits the LoadSession function
-
-                
-                for i in self.config['dvc_input_image'][j]:
-
-                    #save paths to images to variable
-                    if self.config['image_copied'][j]:
-                        path = os.path.abspath(os.path.join(tempfile.tempdir, i))
-                        # print("The DVC input path is")
-                        # print(path)
-                        self.dvc_input_image[j].append(path)
-                    elif('dvc_input_image_in_session_folder' in self.config):
-                        self.dvc_input_image_in_session_folder = self.config['dvc_input_image_in_session_folder']
-                    else:
-                        path = i
-                        self.dvc_input_image[j].append(i)
-                    if not os.path.exists(path):
+                        search_button = QPushButton('Select Image')
+                        search_button.clicked.connect(lambda: self.SelectImage(j,self.image))
                         self.e(
                         '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
 Please move the file back to this location and reload the session, select a different session to load or start a new session')
                         error_title = "READ ERROR"
                         error_text = "Error reading file: ({filename})".format(filename=i)
-                        self.displayFileErrorDialog(message=error_text, title=error_title)
-                        return #Exits the LoadSession function
+                        self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button)
+
+
+                if self.config['dvc_input_image'] == self.config['image']:
+                    self.dvc_input_image = copy.deepcopy(self.image)
+                else:
+                    for num, i in enumerate(self.config['dvc_input_image'][j]):
+
+                        #save paths to images to variable
+                        if self.config['image_copied'][j]:
+                            path = os.path.abspath(os.path.join(tempfile.tempdir, i))
+                            # print("The DVC input path is")
+                            # print(path)
+                            self.dvc_input_image[j].append(path)
+                        elif('dvc_input_image_in_session_folder' in self.config):
+                            #TODO: check this?
+                            self.dvc_input_image_in_session_folder = self.config['dvc_input_image_in_session_folder']
+                        else:
+                            path = i
+                            self.dvc_input_image[j].append(i)
+                        if not os.path.exists(path):
+                            if [path] == self.image[j][num]:
+                                self.dvc_input_image.append(self.image[j][num])
+
+                            else:
+                                search_button = QPushButton('Select Image')
+                                search_button.clicked.connect(lambda: self.SelectImage(j,self.dvc_input_image))
+                                self.e(
+                                '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
+        Please move the file back to this location and reload the session, select a different session to load or start a new session')
+                                error_title = "READ ERROR"
+                                error_text = "Error reading file: ({filename})".format(filename=i)
+                                self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button)
             
              # Set labels to display file names:
             if len(self.config['image'][0])>1:
@@ -5105,14 +5069,13 @@ class SaveObjectWindow(QtWidgets.QWidget):
     '''
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
-    def __init__(self, parent, object, save_only):
+    def __init__(self, parent, object_type, save_only):
         super().__init__()
 
         #print(save_only)
 
         self.parent = parent
-        self.object = object
-        #self.object = object
+        self.object = object_type
 
         if self.object == "mask":
             self.setWindowTitle("Save Existing Mask")
@@ -5343,7 +5306,6 @@ class GraphsWindow(QMainWindow):
     '''
     def __init__(self, parent=None):
         super(GraphsWindow, self).__init__(parent)
-        #QMainWindow.__init__(self)
         self.setWindowTitle("Digital Volume Correlation Results")
         DVCIcon = QtGui.QIcon()
         DVCIcon.addFile("DVCIconSquare.png")
@@ -5651,11 +5613,6 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             numColumns = len(self.subvol_sizes)
 
         else:
-            # if index ==1:
-            #     numRows = len(self.subvol_points)
-            # elif index ==2:
-            #     numRows = len(self.subvol_sizes)
-            # numColumns = len(points)
             if len(resultsToPlot) <= 3:
                 numRows = 1
             else:
@@ -5677,26 +5634,9 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                     ax.set_ylabel(text + " " + "Points in subvol")
 
             else:
-                # if index ==1:
-                #     row = self.subvol_points.index(result.subvol_points) + 1
-                # if index ==2:
-                #     row= self.subvol_sizes.index(result.subvol_size) + 1
-
 
                 plotNum = plotNum + 1
                 ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-                #ax.set_ylabel("")
-                #ax.set_xlabel(plot_titles[plotNum-1])
-                #ax.set_title(plot_titles[plotNum-1])
-                #ax.hist(array,20)
-
-                # column = points.index(result.points) + 1
-                # plotNum = (row-1)*numColumns + column
-                # ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-                
-                #if row ==1:
-                    #ax.set_title(str(result.points) + " Points")
-                #if column == 1:
                 if index ==1:
                     text = str(result.subvol_points) 
                 if index ==2:
