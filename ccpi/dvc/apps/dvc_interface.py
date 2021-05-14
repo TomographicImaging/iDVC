@@ -83,6 +83,10 @@ from ccpi.dvc.apps.dvc_runner import DVC_runner
 
 from eqt.ui import FormDialog
 
+import qdarkstyle
+from qdarkstyle.dark.palette import DarkPalette
+from qdarkstyle.light.palette import LightPalette
+
 __version__ = '21.0.0'
 
 class MainWindow(QMainWindow):
@@ -160,12 +164,23 @@ class MainWindow(QMainWindow):
         else:
             self.copy_files = False
 
+        self.SetAppStyle()
+
         if self.settings.value("first_app_load") != "False":
             self.OpenSettings()
             # self.settings.setValue("first_app_load", False)
 
         else:
             self.CreateSessionSelector("new window")
+
+    def SetAppStyle(self):
+        if self.settings.value("dark_mode") is None:
+            self.settings.setValue("dark_mode", True)
+        if self.settings.value("dark_mode") == "true":
+            style = qdarkstyle.load_stylesheet(palette=DarkPalette)
+        else:
+            style = qdarkstyle.load_stylesheet(palette=LightPalette)
+        self.setStyleSheet(style)
 
         
 #Setting up the session:
@@ -4970,6 +4985,8 @@ class SettingsWindow(QDialog):
 
         self.setWindowTitle("Settings")
 
+        self.dark_checkbox = QCheckBox("Dark Mode")
+
         self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
         self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
         self.vis_size_entry = QDoubleSpinBox()
@@ -4984,6 +5001,14 @@ class SettingsWindow(QDialog):
         else:
             self.vis_size_entry.setValue(1.0)
 
+
+        if self.parent.settings.value("dark_mode") is not None:
+            if self.parent.settings.value("dark_mode") == "true":
+                self.dark_checkbox.setChecked(True)
+            else:
+                self.dark_checkbox.setChecked(False)
+        else:
+            self.dark_checkbox.setChecked(True)
 
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
@@ -5014,6 +5039,7 @@ class SettingsWindow(QDialog):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
         self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.dark_checkbox)
         self.layout.addWidget(self.copy_files_checkbox)
         self.layout.addWidget(self.vis_size_label)
         self.layout.addWidget(self.vis_size_entry)
@@ -5032,6 +5058,12 @@ class SettingsWindow(QDialog):
 
     def accept(self):
         #self.parent.settings.setValue("settings_chosen", 1)
+        if self.dark_checkbox.isChecked():
+            self.parent.settings.setValue("dark_mode", True)
+        else:
+            self.parent.settings.setValue("dark_mode", False)
+        self.parent.SetAppStyle()
+
         if self.copy_files_checkbox.isChecked():
             self.parent.copy_files = 1 # save for this session
             self.parent.settings.setValue("copy_files", 1) #save for next time we open app
