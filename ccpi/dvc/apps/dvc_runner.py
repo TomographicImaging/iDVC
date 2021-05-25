@@ -8,6 +8,7 @@ import json
 import sys
 import time
 import shutil
+import platform
 
 count = 0
 runs_completed = 0
@@ -71,7 +72,7 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
     while(process.canReadLine()):
         #print("READ")
         string = process.readLine()  
-        line = str(string,"utf-8")
+        line = str(string.data(),"utf-8")
         
         global count
         count+=1
@@ -215,18 +216,13 @@ class DVC_runner(object):
         # this should be renamed to num_optimisations
         required_runs = len(subvolume_points)*len(subvolume_sizes)   
 
-        # exe_file = os.path.abspath("dvc.exe")
-        # TODO: change to something more general
-        exe_file = "dvc.exe"
-        #exe_file = "C:/Users/lhe97136/OneDrive - Science and Technology Facilities Council/Documents/Tomography/DVC_release/dvc.exe"
-
-
-        # Process to run the DVC executable:
-        # process.setWorkingDirectory(run_folder)
-        # process.finished.connect(partial(finished_run, main_window, process = process, required_runs = required_runs, run_succeeded = run_succeeded, finish_fn = finish_fn))
-        
-        # main_window.create_progress_window("Running", "Running DVC code", 100,
-        #      lambda: cancel_run(main_window, process, run_succeeded))
+        # check for the extension
+        if platform.system() in ['Linux', 'Darwin']:    
+            exe_file = 'dvc'
+        elif platform.system() == 'Windows':
+            exe_file = 'dvc.exe'
+        else:
+            raise ValueError('Not supported platform, ', platform.system())
         
         total_points = 0
         for cloud in roi_files:

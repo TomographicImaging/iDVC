@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
         
 #Setting up the session:
     def CreateWorkingTempFolder(self):
-        temp_folder = os.path.join(working_directory,'DVC_Sessions')
+        temp_folder = os.path.join(working_directory, 'DVC_Sessions')
         
         if not os.path.isdir(temp_folder):
             os.mkdir("DVC_Sessions")
@@ -971,6 +971,7 @@ It will be the first point in the file that is used as the reference point.")
 
         self.registration_panel = generateUIDockParameters(self, '2 - Manual Registration')
         dockWidget = self.registration_panel[0]
+        dockWidget.setObjectName("RegistrationPanel")
         groupBox = self.registration_panel[5]
         groupBox.setTitle('Registration Parameters')
         formLayout = self.registration_panel[6]
@@ -1984,7 +1985,7 @@ It is used as a global starting point and a translation reference."
         # save the mask to a file in temp folder
         writer = vtk.vtkMetaImageWriter()
         tmpdir = tempfile.gettempdir()
-        writer.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
+        writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         self.mask_file = "Masks/latest_selection.mha"
 
         progress_callback.emit(90)
@@ -1992,10 +1993,10 @@ It is used as a global starting point and a translation reference."
         # if extend mask -> load temp saved mask
         if self.mask_parameters['extendMaskCheck'].isChecked():
             self.setStatusTip('Extending mask')
-            if os.path.exists(os.path.join(tmpdir, "Masks/latest_selection.mha")):
+            if os.path.exists(os.path.join(tmpdir, "Masks", "latest_selection.mha")):
                 # print  ("extending mask ", os.path.join(tmpdir, "Masks/latest_selection.mha"))
                 reader = vtk.vtkMetaImageReader()
-                reader.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
+                reader.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
                 reader.Update()
 
                 math = vtk.vtkImageMathematics()
@@ -2067,11 +2068,11 @@ It is used as a global starting point and a translation reference."
         self.mask_reader.AddObserver("ErrorEvent", self.e)
         tmpdir = tempfile.gettempdir()
         if (load_session):
-            self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
+            self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
             progress_callback.emit(40)
         else:
             filename = self.mask_parameters["masksList"].currentText()
-            self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks/" + filename))
+            self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", filename))
             #print("MASK DETAILS")
             #print(self.mask_details)
             if filename in self.mask_details:
@@ -2092,7 +2093,7 @@ It is used as a global starting point and a translation reference."
 
         writer = vtk.vtkMetaImageWriter()
        
-        writer.SetFileName(os.path.join(tmpdir, "Masks/latest_selection.mha"))
+        writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         writer.SetInputConnection(self.mask_reader.GetOutputPort())
         progress_callback.emit(80)
         writer.Write()
@@ -2114,7 +2115,7 @@ It is used as a global starting point and a translation reference."
         if mask:
             if ".mha" in mask:
                 filename = os.path.basename(mask)
-                shutil.copyfile(mask, os.path.join(tempfile.tempdir, "Masks/" + filename))
+                shutil.copyfile(mask, os.path.join(tempfile.tempdir, "Masks", filename))
                 self.mask_parameters["masksList"].addItem(filename)
                 self.mask_parameters["masksList"].setCurrentText(filename)
                 self.clearMask()
@@ -2179,6 +2180,7 @@ It is used as a global starting point and a translation reference."
 
         self.pointCloudDockWidget = QDockWidget(self)
         self.pointCloudDockWidget.setWindowTitle('4 - Point Cloud')
+        self.pointCloudDockWidget.setObjectName("PointCloudPanel")
         self.pointCloudDockWidgetContents = QWidget()
 
         self.pointCloudDockWidget.visibilityChanged.connect(partial(self.displayHelp, panel_no = 3))
@@ -2716,7 +2718,7 @@ The first point is significant, as it is used as a global starting point and ref
         tmpdir = tempfile.gettempdir() 
         reader = vtk.vtkMetaImageReader()
         reader.AddObserver("ErrorEvent", self.e)
-        reader.SetFileName(os.path.join(tmpdir,"Masks\\latest_selection.mha"))
+        reader.SetFileName(os.path.join(tmpdir,"Masks","latest_selection.mha"))
         reader.Update()
 
         origin = reader.GetOutput().GetOrigin()
@@ -2779,7 +2781,7 @@ The first point is significant, as it is used as a global starting point and ref
             # save reference
             self.erode = erode
             self.erode_pars = {'selection_mtime':os.path.getmtime(
-                    os.path.join(tmpdir, "Masks\\latest_selection.mha"))}
+                    os.path.join(tmpdir, "Masks","latest_selection.mha"))}
         else:
             erode = self.erode
 
@@ -2823,7 +2825,7 @@ The first point is significant, as it is used as a global starting point and ref
                 run_erode = False
                 # test if mask is different from last one by checking the modification
                 # time
-                mtime = os.path.getmtime(os.path.join(tmpdir, "Masks\\latest_selection.mha"))
+                mtime = os.path.getmtime(os.path.join(tmpdir, "Masks","latest_selection.mha"))
                 if mtime != self.erode_pars['selection_mtime']:
                     #print("mask has changed")
                     run_erode = True
@@ -3074,7 +3076,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 tmpdir = tempfile.gettempdir()
                 reader = vtk.vtkMetaImageReader()
                 reader.AddObserver("ErrorEvent", self.e)
-                reader.SetFileName(os.path.join(tmpdir,"Masks\\latest_selection.mha"))
+                reader.SetFileName(os.path.join(tmpdir,"Masks","latest_selection.mha"))
                 reader.Update()
             v.setInputData2(self.reader.GetOutput()) 
             self.setup3DPointCloudPipeline()
@@ -3944,7 +3946,7 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['point0'] = self.getPoint0ImageCoords()
             suffix_text = "run_config"
 
-            self.run_config_file = os.path.join(tempfile.tempdir, "Results/" +folder_name + "/_" + suffix_text + ".json")
+            self.run_config_file = os.path.join(tempfile.tempdir, "Results", folder_name, "_" + suffix_text + ".json")
 
             with open(self.run_config_file, "w+") as tmp:
                 json.dump(run_config, tmp)
@@ -4123,7 +4125,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].clear()
         self.result_widgets['subvol_entry'].clear()
 
-        directory = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+        directory = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
         self.results_folder = directory
 
         file_list=[]
@@ -4173,8 +4175,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
 
             else:
-                results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
-                self.roi = results_folder + "\\_" + str(subvol_size) + ".roi"
+                results_folder = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
+                self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
                 #print("New roi is", self.roi)
                 self.results_folder = results_folder
 
@@ -4191,7 +4193,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                             if result.subvol_points == subvol_points:
                                 # print ("YES")
                                 run_file = result.disp_file
-                                run_file = os.path.join(results_folder , os.path.basename(run_file))
+                                run_file = os.path.join(results_folder, os.path.basename(run_file))
 
                                 self.displayVectors(run_file, 2)
                             # else:
@@ -4204,7 +4206,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def CreateGraphsWindow(self):
         #print("Create graphs")
         if self.result_widgets['run_entry'].currentText() is not "":
-            self.results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+            self.results_folder = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
         else:
             self.results_folder = None
 
@@ -4218,13 +4220,18 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 #Dealing with saving sessions:
 
     def closeEvent(self, event):
-        self.CreateSaveWindow("Quit without Saving", event) 
+        self.CreateSaveWindow("Quit without Saving", event)
+        self.threadpool.waitForDone()
+        if not hasattr(self, 'should_really_close') or not self.should_really_close:
+            event.ignore()
+        else:
+            event.accept()
     #@pysnooper.snoop()
     def CreateSaveWindow(self, cancel_text, event):
 
         dialog = FormDialog(parent=self, title='Save Session')
         self.SaveWindow = dialog
-        self.SaveWindow.Ok.clicked.connect(lambda: self.save_quit_accepted())
+        
         self.SaveWindow.Ok.setText('Save')
         
 
@@ -4246,32 +4253,46 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         dialog.addWidget(qwidget,'','compress')
         
         self.save_button = QPushButton("Save")
-        # print (event, type(event))
+        # We have 2 instances of the window.
         if type(event) ==  QCloseEvent:
+            # This is the case where we are quitting the app and the window asks if we
+            # would like to save
             self.SaveWindow.Cancel.clicked.connect(lambda: self.save_quit_just_quit())
+            self.SaveWindow.Ok.clicked.connect(lambda: self.save_quit_accepted())
             self.SaveWindow.Cancel.setText('Quit without saving')
         else:
+            # This is the case where we are just choosing to 'Save' in the file menu
+            # so we never quit the app.
             self.SaveWindow.Cancel.clicked.connect(lambda: self.save_quit_rejected())
+            self.SaveWindow.Ok.clicked.connect(lambda: self.save_accepted())
             self.SaveWindow.Cancel.setText('Cancel')
         
         self.SaveWindow.exec()
 
-        
-
-    def save_quit_accepted(self):
-        #Load Saved Session
+    def save_accepted(self):
+        self.should_really_close = False
         compress = self.SaveWindow.widgets['compress_field'].isChecked()
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, None)
+
+
+    def save_quit_accepted(self):
+        #Load Saved Session
+        self.should_really_close = True
+        compress = self.SaveWindow.widgets['compress_field'].isChecked()
+        self.SaveWindow.close()
+        self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
         
 
     def save_quit_just_quit(self):
         event = QCloseEvent()
         self.SaveWindow.close()
         self.RemoveTemp(event) # remove tempdir for this session.
-        # QMainWindow.closeEvent(self.parent, event)
+        self.should_really_close = True
         self.close()
+
     def save_quit_rejected(self):
+        self.should_really_close = False
         self.SaveWindow.close()
 
 
@@ -4479,7 +4500,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.dvc_input_image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][1][count]) 
             count+=1
 
-        results_folder = os.path.join(tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+        results_folder = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
         self.results_folder = results_folder
    
     def CloseSaveWindow(self):
@@ -4487,6 +4508,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setValue(100)
     
         self.SaveWindow.close()
+        self.should_really_close = True
        
     def ZipDirectory(self, *args, **kwargs):
         directory, compress = args
@@ -4998,7 +5020,7 @@ Please move the file back to this location and reload the session, select a diff
 
 # Loading and Error windows:
     def progress(self, value):
-        #print("progress emitted")
+        # print("progress emitted")
         if int(value) > self.progress_window.value():
             self.progress_window.setValue(value)
 
@@ -5173,7 +5195,7 @@ class SaveObjectWindow(QtWidgets.QWidget):
             #Load Saved Session
             #print("Write mask to file, then carry on")
             filename = self.textbox.text() + ".mha"
-            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks/" + filename))
+            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
             self.parent.mask_parameters['masksList'].addItem(filename)
             self.parent.mask_details[filename] = self.parent.mask_details['current']
             #print(self.parent.mask_details)

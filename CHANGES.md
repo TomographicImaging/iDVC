@@ -1,9 +1,11 @@
 # ChangeLog
 
 ## v21.0.1
+* improvements to saving and closing app
+* check for platform, and adjust call to dvc core code
 * Update orienatation in manual registration, in line with v21.0.1 of the CILViewer
 * Rearrange X, Y, Z entry boxes to be horizontal
-
+* Fix reading dvc progress updates on linux
 
 ## v21.0.0
 * change backend to PySide2
