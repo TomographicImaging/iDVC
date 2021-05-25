@@ -117,20 +117,20 @@ def displayFileErrorDialog(main_window, message, title):
 def cancel_run(main_window, process, run_succeeded):
     
     if not run_succeeded:
-        print ("run cancelled?")
+        # print ("run cancelled?")
         process.kill()
         main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
         main_window.alert.show()
         run_succeeded = False
-    else:
-        print ("all OK, all processes ended")
+    # else:
+    #     print ("all OK, all processes ended")
 
 
 def finished_run(main_window, exitCode, exitStatus, process = None, required_runs = 1, run_succeeded = False, finish_fn = None):
     global runs_completed
     runs_completed+=1
     # print ("DVC command ended.", exitCode, exitStatus)
-    print("Completed, ", runs_completed)
+    # print("Completed, ", runs_completed)
 
     if run_succeeded:
         if runs_completed == required_runs:
@@ -398,9 +398,9 @@ class DVC_runner(object):
         main_window = self.main_window
         run_succeeded = self.run_succeeded
         state = process.state()
-        print ("Process state", state)
+        # print ("Process state", state)
         if state in [2,1]:
-            print ("Cancelling run")
+            # print ("Cancelling run")
             process.kill()
             main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
             main_window.alert.show()

@@ -1,6 +1,9 @@
 # ChangeLog
 
-## v**
+## v21.0.1
+* Rearrange X, Y, Z entry boxes to be horizontal
+
+## v21.0.0
 * change backend to PySide2
 * add dependency on eqt (package with some Qt threading and UI templates)
 
