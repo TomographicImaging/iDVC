@@ -1733,7 +1733,6 @@ It is used as a global starting point and a translation reference."
         progress_callback.emit(10)
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        current_slice = v.GetActiveSlice()
         # print("Current slice", current_slice)
         trans = list(self.translate.GetTranslation())
         #print("Previous translation: ", trans)
@@ -1742,9 +1741,9 @@ It is used as a global starting point and a translation reference."
         if orientation == SLICE_ORIENTATION_XY:
             ij = [0,1]
         elif orientation == SLICE_ORIENTATION_XZ:
-            ij = [2,0]
+            ij = [0, 2]
         elif orientation == SLICE_ORIENTATION_YZ:
-            ij = [1,2]
+            ij = [2, 1]
         if key_code == "j":
             if trans[ij[1]] < int(rp['registration_box_size_entry'].value()):
                 trans[ij[1]] += 1

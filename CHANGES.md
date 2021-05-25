@@ -1,7 +1,9 @@
 # ChangeLog
 
 ## v21.0.1
+* Update orienatation in manual registration, in line with v21.0.1 of the CILViewer
 * Rearrange X, Y, Z entry boxes to be horizontal
+
 
 ## v21.0.0
 * change backend to PySide2
