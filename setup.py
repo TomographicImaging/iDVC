@@ -15,16 +15,19 @@
 
 import os
 from distutils.core import setup
-from distutils.extension import Extension
+import subprocess
 
-dversion = os.system('git describe')
+cmd = 'git describe'
+dversion = str(subprocess.check_output(cmd, shell=True).strip())
+
+print ('version {}'.format(dversion))
+
 if os.environ.get('CONDA_BUILD', 0) == 0:
       cwd = os.getcwd()
 else:
       cwd = os.path.join(os.environ.get('RECIPE_DIR'),'..')
 fname = os.path.abspath(os.path.join(cwd, 'src', 'ccpi', 'dvc', 'apps', 'version.py'))
-print('looking for {}'.format(fname))
-print ('version {}'.format(dversion))
+
 
 if os.path.exists(fname):
     os.remove(fname)

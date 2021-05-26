@@ -12,8 +12,19 @@ build:
 
   entry_points:
     - idvc = ccpi.dvc.apps.dvc_interface:main
+test:
+  source_files:
+    - ./test
 
+  commands:
+    - python -c "import os; print ('TESTING IN THIS DIRECTORY' , os.getcwd())"
+    - python -m unittest discover test
+  
+  requires:
+    - conda-verify
+    
 requirements:
+  
   build:
     - python 
     - openmp # [osx]
