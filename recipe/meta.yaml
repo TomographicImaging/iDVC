@@ -12,15 +12,7 @@ build:
 
   entry_points:
     - idvc = ccpi.dvc.apps.dvc_interface:main
-test:
-  source_files:
-    - ./Wrappers/Python/test # [win]
-    - ./ccpi/test # [not win]
-  commands:
-    - python -c "import os; print ('TESTING IN THIS DIRECTORY' , os.getcwd())"
-    - python -m unittest discover Wrappers/Python/test # [win]
-    - python -m unittest discover -s ccpi/test # [not win]
-    
+
 requirements:
   build:
     - python 
