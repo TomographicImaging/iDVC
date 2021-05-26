@@ -18,7 +18,7 @@ from distutils.core import setup
 from distutils.extension import Extension
 
 cil_version = os.system('git describe')
-fname = os.path.join(os.path.getcwd(), 'ccpi', 'apps', 'dvc', 'version.py')
+fname = os.path.join(os.getcwd(), 'ccpi', 'apps', 'dvc', 'version.py')
 
 if os.path.exists(fname):
     os.remove(fname)
