@@ -1,23 +1,25 @@
 package:
   name: ccpi-dvc-gui
-  version: 21.0.1
+  version: {{ environ.get('GIT_DESCRIBE_TAG','v')[1:] }}
+
+source:
+  path: ..
 
 build:
+  number: {{ GIT_DESCRIBE_NUMBER }}
+
   preserve_egg_dir: False
-  
 
   entry_points:
     - idvc = ccpi.dvc.apps.dvc_interface:main
-  number: 0
-  
+
 requirements:
   build:
     - python 
     - openmp # [osx]
     - cmake
     - numpy {{ numpy }} 
-    
- 
+
   run:
     - python
     - numpy
@@ -28,9 +30,6 @@ requirements:
     - matplotlib
     - openmp # [osx]
     - qdarkstyle
-    
-
-    
 
 about:
   home: http://www.ccpi.ac.uk
