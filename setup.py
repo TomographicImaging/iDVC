@@ -17,7 +17,13 @@ import os
 from distutils.core import setup
 from distutils.extension import Extension
 
-cil_version= '20.07.6'
+cil_version = os.system('git describe')
+fname = os.path.join(os.path.getcwd(), 'ccpi', 'apps', 'dvc', 'version.py')
+
+if os.path.exists(fname):
+    os.remove(fname)
+with open(fname, 'w+') as f:
+    f.write('version = \'{}\''.format(cil_version))
 
 # sourcefiles = ["src/image_data.py"]
 
