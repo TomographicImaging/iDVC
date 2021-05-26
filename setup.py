@@ -18,7 +18,7 @@ from distutils.core import setup
 import subprocess
 
 cmd = 'git describe'
-dversion = str(subprocess.check_output(cmd, shell=True).strip())
+dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')
 
 print ('version {}'.format(dversion))
 
