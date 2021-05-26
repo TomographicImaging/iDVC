@@ -1,7 +1,4 @@
-::IF NOT DEFINED CIL_VERSION (
-::ECHO CIL_VERSION Not Defined.
-::exit 1
-::)
+
 
 mkdir "%SRC_DIR%"
 ROBOCOPY /E "%RECIPE_DIR%\..\src\ccpi" "%SRC_DIR%\ccpi"

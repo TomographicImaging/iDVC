@@ -17,22 +17,24 @@ import os
 from distutils.core import setup
 from distutils.extension import Extension
 
-version = os.system('git describe')
+dversion = os.system('git describe')
 if os.environ.get('CONDA_BUILD', 0) == 0:
       cwd = os.getcwd()
 else:
       cwd = os.path.join(os.environ.get('RECIPE_DIR'),'..')
-fname = os.path.join(cwd, 'ccpi', 'apps', 'dvc', 'version.py')
+fname = os.path.abspath(os.path.join(cwd, 'src', 'ccpi', 'dvc', 'apps', 'version.py'))
+print('looking for {}'.format(fname))
+print ('version {}'.format(dversion))
 
 if os.path.exists(fname):
     os.remove(fname)
-with open(fname, 'w+') as f:
-    f.write('version = \'{}\''.format(version))
+with open(fname, 'w') as f:
+    f.write('version = \'{}\''.format(dversion))
 
 setup(
       name = "Digital Volume Correlation App",
       description = 'CCPi DVC Configurator',
-	version = version,
+	version = dversion,
 	packages = {'ccpi','ccpi.dvc.apps'},
       package_dir = {'ccpi.dvc.apps': 'ccpi/dvc/apps'},
       package_data = {'ccpi.dvc.apps':['DVCIconSquare.png']}
