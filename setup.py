@@ -28,17 +28,19 @@ else:
       cwd = os.path.join(os.environ.get('RECIPE_DIR'),'..')
 fname = os.path.abspath(os.path.join(cwd, 'src', 'ccpi', 'dvc', 'apps', 'version.py'))
 
-
+print ("Creating version.py in {}".format(fname))
 if os.path.exists(fname):
+    print ("path already exists, deleting")
     os.remove(fname)
 with open(fname, 'w') as f:
     f.write('version = \'{}\''.format(dversion))
+    print ("creating version.py in {}".format(os.path.dirname(fname)))
 
 setup(
       name = "Digital Volume Correlation App",
       description = 'CCPi DVC Configurator',
 	version = dversion,
-	packages = {'ccpi','ccpi.dvc.apps'},
+	packages = {'ccpi','ccpi.dvc', 'ccpi.dvc.apps'},
       package_dir = {'ccpi.dvc.apps': 'ccpi/dvc/apps'},
       package_data = {'ccpi.dvc.apps':['DVCIconSquare.png']}
       
