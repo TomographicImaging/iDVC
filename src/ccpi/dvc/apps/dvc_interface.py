@@ -87,7 +87,8 @@ import qdarkstyle
 from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
-__version__ = '21.0.0'
+from ccpi.dvc.apps import version as gui_version
+__version__ = gui_version.version
 
 class MainWindow(QMainWindow):
     def __init__(self):
