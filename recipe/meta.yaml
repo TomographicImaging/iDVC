@@ -36,9 +36,10 @@ requirements:
   
   build:
     - python 
-    - openmp # [osx]
+    - openmp                # [osx]
     - cmake
-    - numpy {{ numpy }} 
+    - numpy {{ numpy }}
+    - importlib_metadata    # [py<38]
 
   run:
     - python
@@ -48,7 +49,7 @@ requirements:
     - natsort
     - docopt
     - matplotlib
-    - openmp # [osx]
+    - openmp                # [osx]
     - qdarkstyle
 
 about:
