@@ -23,11 +23,11 @@ dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:]
 print ('version {}'.format(dversion))
 
 setup(
-      name = "Digital Volume Correlation App",
+      name = "Digital Volume Correlation App IDVC",
       description = 'CCPi DVC Configurator',
 	version = dversion,
-	packages = {'ccpi','ccpi.dvc', 'ccpi.dvc.apps'},
-      package_dir = {'ccpi.dvc.apps': 'ccpi/dvc/apps'},
-      package_data = {'ccpi.dvc.apps':['DVCIconSquare.png']}
+	packages = {'idvc'},
+      package_dir = {'idvc': 'idvc'},
+      package_data = {'idvc':['DVCIconSquare.png']}
       
 )

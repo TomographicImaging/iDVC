@@ -5,7 +5,7 @@ else:
     from importlib_metadata import version
 
 try:
-    version = version("ccpi.dvc.apps")
+    version = version("idvc")
 except:
     # package is not installed
     version = 'something bad happened'
