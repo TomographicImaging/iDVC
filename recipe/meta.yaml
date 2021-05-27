@@ -39,7 +39,6 @@ requirements:
     - openmp                # [osx]
     - cmake
     - numpy {{ numpy }}
-    - importlib_metadata    # [py<38]
 
   run:
     - python
@@ -51,6 +50,7 @@ requirements:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
+    - importlib_metadata    # [py<38]
 
 about:
   home: http://www.ccpi.ac.uk
