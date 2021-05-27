@@ -18,23 +18,9 @@ from distutils.core import setup
 import subprocess
 
 cmd = 'git describe'
-dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')
+dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:]
 
 print ('version {}'.format(dversion))
-
-# if os.environ.get('CONDA_BUILD', 0) == 0:
-#       cwd = os.getcwd()
-# else:
-#       cwd = os.path.join(os.environ.get('SRC_DIR'),'..')
-# fname = os.path.abspath(os.path.join(cwd, 'ccpi', 'dvc', 'apps', 'version.py'))
-
-# print ("Creating version.py in {}".format(fname))
-# if os.path.exists(fname):
-#     print ("path already exists, deleting")
-#     os.remove(fname)
-# with open(fname, 'w') as f:
-#     f.write('version = \'{}\''.format(dversion))
-#     print ("creating version.py in {}".format(os.path.dirname(fname)))
 
 setup(
       name = "Digital Volume Correlation App",
