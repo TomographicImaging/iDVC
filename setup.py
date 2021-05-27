@@ -23,11 +23,17 @@ dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:]
 print ('version {}'.format(dversion))
 
 setup(
-      name = "Digital Volume Correlation App IDVC",
+      name = "idvc",
       description = 'CCPi DVC Configurator',
 	version = dversion,
 	packages = {'idvc'},
       package_dir = {'idvc': 'idvc'},
-      package_data = {'idvc':['DVCIconSquare.png']}
+      package_data = {'idvc':['DVCIconSquare.png']},
+      # metadata for upload to PyPI
+      author="Edoardo Pasca, Laura Murgatroyd",
+      author_email="edo.paskino@gmail.com",
+      license="Apache v2.0",
+      keywords="Digital Volume Correlation",
+      url="http://www.ccpi.ac.uk",   # project home page, if any
       
 )
