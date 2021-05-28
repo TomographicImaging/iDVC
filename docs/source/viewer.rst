@@ -23,7 +23,7 @@ Both viewers show the reference image, and are linked, so will show the same ori
 By default, the volume render is switched off on the 3D viewer, but to toggle it on/off, click on the 3D viewer and press **v**.
 
 To view all of the interactions for the viewers, click on one of the viewers and press **h** on your keyboard. Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
-The interactions for the viewers are as follows (correct as of version 21.0.1 of the CILViewer)…
+The interactions for the viewers are as follows (correct as of version 21.0.1 of the `CILViewer<https://github.com/vais-ral/CILViewer>`_.)…
 
 2D Viewer Interactions
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -93,3 +93,13 @@ The **Loaded Image Size** is the original size of your chosen image.
 You can choose to display the viewer coordinates in the loaded image or the down-sampled image.
 This will change how the slices and coordinates are labelled in the corner annotation of the 2D viewer.
 If the image has not been down-sampled then it will only display the **Loaded Image Size** which is the size of the image you selected.
+
+Downsampling Settings
+=====================
+Under File->Settings you can set the maximum down-sampled size of the image, which limits how heavily the image is down-sampled. The settings appear as below:
+
+.. image:: images/idvc_settings_panel.png
+
+For the volume render on the 3D viewer, it is recommended to use GPU volume rendering, otherwise the render will be very slow. You will need to set the memory of your GPU for this.
+If the memory of your GPU is lower than the maximum down-sampling size you have set, then it will be the size of your GPU that dictates how much the image will be down-sampled if you choose to use the GPU for volume rendering.
+You will have to click **View Image** on the Select Image panel to update the down-sampling of the image once you have saved the new settings.

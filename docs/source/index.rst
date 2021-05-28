@@ -5,6 +5,8 @@
 
 Welcome to iDVC's documentation!
 ================================
+The DVC app allows a digital volume correlation analysis to be performed on a reference and correlate image volume. You may either use a point cloud you have pre-created, or generate this in the app.
+This manual was written at the time of version 21.1.0 being the latest release.
 
 .. toctree::
    :maxdepth: 2
