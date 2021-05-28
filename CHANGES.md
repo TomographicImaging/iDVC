@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v21.1.0
+* the package renamed to idvc
+* version string from git describe
+* introduced unit test infrastructure
+
 ## v21.0.1
 * improvements to saving and closing app
 * check for platform, and adjust call to dvc core code
