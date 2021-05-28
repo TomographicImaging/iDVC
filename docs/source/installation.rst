@@ -25,9 +25,10 @@ Installing the DVC Executable Only
 If you have followed the instructions to install the app above, you will have installed both the app and the dvc executable which can be called from the command line by typing ‘dvc’
 Alternatively, if you would only like to install the dvc executable and not the gui, you may follow these instructions:
 
-1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html if you don’t have it
+1.	Install miniconda<https://docs.conda.io/en/latest/miniconda.html>
 2.	Open an anaconda prompt (miniconda) and type….
 3.	**conda create --name dvc-core ccpi-dvc -c ccpi -c paskino -c conda-forge -c defaults --override-channels**
 4.	**activate dvc-core**
 5.	**dvc**
+
 Please note that whenever you would like to run the executable in future, you need to carry out steps 2, 4 and 5 above.
