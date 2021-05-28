@@ -1,2 +1,2 @@
-# DVC-GUI
+# iDVC
 Digital Volume Correlation user interface
