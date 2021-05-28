@@ -77,9 +77,9 @@ from distutils.dir_util import copy_tree
 
 from ccpi.viewer.utils.io import ImageDataCreator
 
-from ccpi.dvc.apps.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
+from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
-from ccpi.dvc.apps.dvc_runner import DVC_runner
+from idvc.dvc_runner import DVC_runner
 
 from eqt.ui import FormDialog
 
@@ -87,7 +87,9 @@ import qdarkstyle
 from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
-__version__ = '21.0.0'
+from idvc import version as gui_version
+
+__version__ = gui_version.version
 
 class MainWindow(QMainWindow):
     def __init__(self):

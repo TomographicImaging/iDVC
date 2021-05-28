@@ -1,23 +1,45 @@
 package:
-  name: ccpi-dvc-gui
-  version: 21.0.1
+  name: idvc
+  version: {{ environ.get('GIT_DESCRIBE_TAG','v')[1:] }}
+
+source:
+  path: ..
 
 build:
+  number: {{ GIT_DESCRIBE_NUMBER }}
+
   preserve_egg_dir: False
-  
 
   entry_points:
-    - idvc = ccpi.dvc.apps.dvc_interface:main
-  number: 0
+    - idvc = idvc.dvc_interface:main
+
+  missing_dso_whitelist:
+    - /lib64/libc.so.6            # [linux]
+    - /lib64/libm.so.6            # [linux]
+    - /lib64/libpthread.so.0      # [linux]
+    - /lib64/ld-linux-x86-64.so.2 # [linux]
+    - C:\Windows\System32\ADVAPI32.dll # [win]
+    - C:\Windows\System32\KERNEL32.dll # [win]
+    - C:\Windows\System32\msvcrt.dll   # [win]
+    - C:\Windows\System32\SHELL32.dll  # [win]
+
+
+test:
+  source_files:
+    - ./test
+
+  commands:
+    - python -c "import os; print ('TESTING IN THIS DIRECTORY' , os.getcwd())"
+    - python -m unittest discover test
   
 requirements:
+  
   build:
     - python 
-    - openmp # [osx]
+    - openmp                # [osx]
     - cmake
-    - numpy {{ numpy }} 
-    
- 
+    - numpy {{ numpy }}
+
   run:
     - python
     - numpy
@@ -26,11 +48,9 @@ requirements:
     - natsort
     - docopt
     - matplotlib
-    - openmp # [osx]
+    - openmp                # [osx]
     - qdarkstyle
-    
-
-    
+    - importlib_metadata    # [py<38]
 
 about:
   home: http://www.ccpi.ac.uk

@@ -1,10 +1,7 @@
-::IF NOT DEFINED CIL_VERSION (
-::ECHO CIL_VERSION Not Defined.
-::exit 1
-::)
 
 mkdir "%SRC_DIR%"
-ROBOCOPY /E "%RECIPE_DIR%\..\src\ccpi" "%SRC_DIR%\ccpi"
+ROBOCOPY /E "%RECIPE_DIR%\..\src" "%SRC_DIR%"
+ROBOCOPY /E "%RECIPE_DIR%\..\test" "%SRC_DIR%\test"
 copy "%RECIPE_DIR%\..\setup.py" "%SRC_DIR%\setup.py"
 cd %SRC_DIR%
 

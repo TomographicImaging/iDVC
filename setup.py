@@ -15,20 +15,25 @@
 
 import os
 from distutils.core import setup
-from distutils.extension import Extension
+import subprocess
 
-cil_version= '20.07.6'
+cmd = 'git describe'
+dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:]
 
-# sourcefiles = ["src/image_data.py"]
-
-# extensions = [Extension("ccpi.apps.image_data", sourcefiles)]
+print ('version {}'.format(dversion))
 
 setup(
-      name="Digital Volume Correlation App",
-      description='CCPi DVC Configurator',
-	version=cil_version,
-	packages = {'ccpi','ccpi.dvc.apps'},
-      package_dir={'ccpi.dvc.apps': 'ccpi/dvc/apps'},
-      package_data= {'ccpi.dvc.apps':['DVCIconSquare.png']}
-      #ext_modules=extensions
+      name = "idvc",
+      description = 'CCPi DVC Configurator',
+	version = dversion,
+	packages = {'idvc'},
+      package_dir = {'idvc': os.path.join('src','idvc')},
+      package_data = {'idvc':['DVCIconSquare.png']},
+      # metadata for upload to PyPI
+      author="Edoardo Pasca, Laura Murgatroyd",
+      author_email="edo.paskino@gmail.com",
+      license="Apache v2.0",
+      keywords="Digital Volume Correlation",
+      url="http://www.ccpi.ac.uk",   # project home page, if any
+      
 )
