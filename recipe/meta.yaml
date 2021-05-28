@@ -1,5 +1,5 @@
 package:
-  name: ccpi-dvc-gui
+  name: idvc
   version: {{ environ.get('GIT_DESCRIBE_TAG','v')[1:] }}
 
 source:
@@ -11,7 +11,7 @@ build:
   preserve_egg_dir: False
 
   entry_points:
-    - idvc = ccpi.dvc.apps.dvc_interface:main
+    - idvc = idvc.dvc_interface:main
 
   missing_dso_whitelist:
     - /lib64/libc.so.6            # [linux]
