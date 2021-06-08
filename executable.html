@@ -1,0 +1,336 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>DVC Executable &mdash; iDVC  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="DVC Results" href="results.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> iDVC
+          
+
+          
+            
+            <img src="_static/DVCIconSquare.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Datasets &amp; Visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_steps.html">DVC Configuration Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="saving.html">Saving &amp; Exporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">DVC Results</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DVC Executable</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#dvc-commands">DVC Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#example-dvc-input-file">Example DVC Input File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dvc-configuration">DVC Configuration</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">iDVC</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>DVC Executable</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/executable.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="dvc-executable">
+<h1>DVC Executable<a class="headerlink" href="#dvc-executable" title="Permalink to this headline">¶</a></h1>
+<p>Whether you have installed the full gui, or just the executable, you are able to run the DVC from the command line, in the environment where you have installed it.</p>
+<div class="section" id="dvc-commands">
+<h2>DVC Commands<a class="headerlink" href="#dvc-commands" title="Permalink to this headline">¶</a></h2>
+<p>The DVC executable can be called using the following commands:</p>
+<p><strong>dvc</strong> <code class="docutils literal notranslate"><span class="pre">dvc_in</span></code> - execute dvc code with <strong>dvc_in</strong> (a txt dvc input file) controlling the run</p>
+<p><strong>dvc help</strong> - provide additional detail about running the dvc code</p>
+<p><strong>dvc example</strong> - print dvc_in_example with brief keyword descriptions</p>
+<p><strong>dvc manual</strong> - print dvc_manual with more detailed information</p>
+</div>
+<div class="section" id="example-dvc-input-file">
+<h2>Example DVC Input File<a class="headerlink" href="#example-dvc-input-file" title="Permalink to this headline">¶</a></h2>
+<p>This is the contents of the <strong>dvc_in_example</strong> file mentioned above:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1">###############################################################################</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1">#               example dvc process control file</span>
+<span class="c1">#</span>
+<span class="c1">#</span>
+<span class="c1">###############################################################################</span>
+
+<span class="c1"># all lines beginning with a # character are ignored</span>
+<span class="c1"># some parameters are conditionally required, depending on the setting of other parameters</span>
+<span class="c1"># for example, if subvol_thresh is off, the threshold description parameters are not required</span>
+
+<span class="c1">### file names</span>
+
+<span class="n">reference_filename</span>      <span class="n">frame_000_f</span><span class="o">.</span><span class="n">npy</span>         <span class="c1">### reference tomography image volume</span>
+<span class="n">correlate_filename</span>      <span class="n">frame_010_f</span><span class="o">.</span><span class="n">npy</span>         <span class="c1">### correlation tomography image volume</span>
+
+<span class="n">point_cloud_filename</span>    <span class="n">central_grid_5</span><span class="o">.</span><span class="n">roi</span>      <span class="c1">### file of search point locations</span>
+<span class="n">output_filename</span>         <span class="n">central_grid_5_test</span>             <span class="c1">### base name for output files</span>
+
+<span class="c1">### description of the image data files, all must be the same size and structure</span>
+
+<span class="n">vol_bit_depth</span>           <span class="mi">8</span>                       <span class="c1">### 8 or 16</span>
+<span class="n">vol_hdr_lngth</span>           <span class="mi">96</span>              <span class="c1">### fixed-length header size, may be zero</span>
+<span class="n">vol_wide</span>                <span class="mi">1520</span>                    <span class="c1">### width in pixels of each slice</span>
+<span class="n">vol_high</span>                <span class="mi">1257</span>                    <span class="c1">### height in pixels of each slice</span>
+<span class="n">vol_tall</span>                <span class="mi">1260</span>                    <span class="c1">### number of slices in the stack</span>
+
+<span class="c1">### parameters defining the subvolumes that will be created at each search point</span>
+
+<span class="n">subvol_geom</span>             <span class="n">sphere</span>                  <span class="c1">### cube, sphere</span>
+<span class="n">subvol_size</span>             <span class="mi">80</span>                      <span class="c1">### side length or diameter, in voxels</span>
+<span class="n">subvol_npts</span>             <span class="mi">8000</span>                    <span class="c1">### number of points to distribute within the subvol</span>
+
+<span class="n">subvol_thresh</span>           <span class="n">off</span>                     <span class="c1">### on or off, evaluate subvolumes based on threshold</span>
+<span class="n">gray_thresh_min</span> <span class="mi">27</span>                      <span class="c1">### lower limit of a gray threshold range if subvol_thresh is on</span>
+<span class="n">gray_thresh_max</span> <span class="mi">127</span>                     <span class="c1">### upper limit of a gray threshold range if subvol_thresh is on</span>
+<span class="n">min_vol_fract</span>   <span class="mf">0.2</span>                     <span class="c1">### only search if subvol fraction is greater than</span>
+
+<span class="c1">### required parameters defining the basic the search process</span>
+
+<span class="n">disp_max</span>                <span class="mi">38</span>                      <span class="c1">### in voxels, used for range checking and global search limits</span>
+<span class="n">num_srch_dof</span>            <span class="mi">6</span>                       <span class="c1">### 3, 6, or 12</span>
+<span class="n">obj_function</span>            <span class="n">znssd</span>                   <span class="c1">### sad, ssd, zssd, nssd, znssd</span>
+<span class="n">interp_type</span>             <span class="n">tricubic</span>                <span class="c1">### trilinear, tricubic</span>
+
+<span class="c1">### optional parameters tuning and refining the search process</span>
+
+<span class="n">rigid_trans</span>             <span class="mf">34.0</span> <span class="mf">4.0</span> <span class="mf">0.0</span>            <span class="c1">### rigid body offset of target volume, in voxels</span>
+<span class="n">basin_radius</span>            <span class="mf">0.0</span>                     <span class="c1">### coarse-search resolution, in voxels, 0.0 = none</span>
+<span class="n">subvol_aspect</span>           <span class="mf">1.0</span> <span class="mf">1.0</span> <span class="mf">1.0</span>             <span class="c1">### subvolume aspect ratio</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="dvc-configuration">
+<h2>DVC Configuration<a class="headerlink" href="#dvc-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Details about most of the options can be found in the <a class="reference internal" href="dvc_steps.html#running-dvc-analysis"><span class="std std-ref">Running DVC Analysis</span></a> section.</p>
+<p>However, the DVC executable has some options which have not yet made their way into the app. These are as follows:</p>
+<p><strong>subvol_thresh</strong></p>
+<blockquote>
+<div><blockquote>
+<div><p>examplar:       subvol_thresh   off
+required:       yes
+suitable:       on, off</p>
+</div></blockquote>
+<p>Defines the state of subvolume thresholding to active (on) or inactive (off).</p>
+<p>Useful if there is a simple gray level segmentation between foreground and background.</p>
+<p>Subvolumes with little foreground content are not searched and flagged on output.</p>
+</div></blockquote>
+<p><strong>gray_thresh_min</strong></p>
+<blockquote>
+<div><blockquote>
+<div><p>examplar:       gray_thresh_min 25</p>
+<p>required:       If subvol_thresh is on</p>
+<p>suitable:       0 &lt;= int &lt;= 2^vol_bit_depth, and &lt; gray_thresh_max</p>
+</div></blockquote>
+<p>Defines the lower limit of a gray scale threshold range.</p>
+<p>Voxels between (min) and (max) are included in the threshold range.</p>
+</div></blockquote>
+<p><strong>gray_thresh_max</strong></p>
+<blockquote>
+<div><blockquote>
+<div><p>examplar:       gray_thresh_max 125</p>
+<p>required:       If subvol_thresh is on</p>
+<p>suitable:       0 &lt;= int &lt;= 2^vol_bit_depth, and &gt; gray_thresh_min</p>
+</div></blockquote>
+<p>Defines the upper limit of a gray scale threshold range.</p>
+<p>Voxels between (min) and (max) are included in the threshold range.</p>
+</div></blockquote>
+<p><strong>min_vol_fract</strong></p>
+<blockquote>
+<div><blockquote>
+<div><p>examplar:       min_vol_fract   0.2</p>
+<p>required:       If subvol_thresh is on</p>
+<p>suitable:       0.000000 &lt;= double &lt;= 1.000000</p>
+</div></blockquote>
+<p>Defines a parameter for pre-checking subvolumes for content.</p>
+<p>The fraction of subvolume points within the gray_thresh_min/max range is determined.</p>
+<p>If below min_vol_fract, the subvolume is likely in a void or in a background region.</p>
+<p>A point failing the test is not searched and flagged on output.</p>
+</div></blockquote>
+<p>More detailed information about all parameters can be found in by running the <strong>dvc_manual</strong> command.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="results.html" class="btn btn-neutral float-left" title="DVC Results" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, UKRI STFC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

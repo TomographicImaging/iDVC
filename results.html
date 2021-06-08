@@ -1,0 +1,277 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>DVC Results &mdash; iDVC  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="DVC Executable" href="executable.html" />
+    <link rel="prev" title="Saving &amp; Exporting" href="saving.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> iDVC
+          
+
+          
+            
+            <img src="_static/DVCIconSquare.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Datasets &amp; Visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_steps.html">DVC Configuration Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="saving.html">Saving &amp; Exporting</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">DVC Results</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#graphs-of-the-results">Graphs of the Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#displacement-vectors">Displacement Vectors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#results-files">Results Files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="executable.html">DVC Executable</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">iDVC</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+        
+      <li>DVC Results</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="_sources/results.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="dvc-results">
+<h1>DVC Results<a class="headerlink" href="#dvc-results" title="Permalink to this headline">¶</a></h1>
+<p>Once your run has completed, you can look at the results on the <strong>DVC Results</strong> panel.
+There are two ways of doing this – looking at graphs, and viewing the displacement vectors.
+First, you need to select the run you would like to view the results for from the dropdown list of all of the runs you have saved.</p>
+<div class="section" id="graphs-of-the-results">
+<h2>Graphs of the Results<a class="headerlink" href="#graphs-of-the-results" title="Permalink to this headline">¶</a></h2>
+<p>Then click on <strong>Display Graphs</strong>.
+Another window will open (once you are done looking at the graphs you can either close or minimize this window and it will take you back to the main app just fine).
+It will start you off on the <strong>Summary</strong> tab.
+This isn’t so useful if you only performed one run. For each run that you performed, there will be a separate tab.
+If you navigate to one of these it will show you graphs for the objective minimum, and displacements in x, y, z as well as changes in φ, θ, ψ for that run.
+The title of the tab also gives the number of sampling points in the subvolume and the subvolume size.</p>
+<p>This will automatically show the displacements including the translation that you set in the manual registration.
+You can adjust the displacements to exclude this translation by going to Settings and selecting <strong>Show displacement relative to reference point 0</strong>.
+Now, coming back to the summary tab, this shows the settings for the runs including the subvolume geometry, maximum displacement etc.,
+and if you have done a bulk run then you can select a particular variable (such as the objective minimum) and then compare the graphs for this variable in each of the runs.
+You can select to just compare for a certain subvolume size or number of sampling points, or you can choose to compare them all (which is what is chosen in the image below).</p>
+<img alt="_images/graphs_bulk_run.png" src="_images/graphs_bulk_run.png" />
+<p><span class="raw-html"><br /></span></p>
+</div>
+<div class="section" id="displacement-vectors">
+<h2>Displacement Vectors<a class="headerlink" href="#displacement-vectors" title="Permalink to this headline">¶</a></h2>
+<p>To view the displacements as vectors overlaid on the reference image, return to the main app.
+For each run you are able to select and visualise the different point clouds with different sizes and number of sampling points in the subvolumes.
+Then when viewing the vectors, you can select <strong>None</strong> to just view the point cloud, or you can select <strong>Total Displacement</strong> or <strong>Displacement with respect to reference point 0</strong>.
+Both of these latter options will display the displacements of each point in the cloud as arrows overlaid on the reference image, but <strong>Total displacement</strong> will show the displacement including the rigid translation set in the manual registration panel, whereas displacement with respect to point 0 will not.</p>
+<p>If the vector scaling is set to 1, this will show the displacement vectors true to size, but you may modify this to make them easier to see. You will need to click <strong>View Pointcloud/Vectors</strong> once again to reload them with the new scaling.
+On the 2D viewer, the vectors will be shown as 2D arrows, showing only the displacements in the current plane. E.g. if you pressed the ‘x’ key you would be viewing the YZ plane, so would just see the y and z components of the displacement. Whereas on the 3D viewer, it shows the total displacement, taking into account all components.
+Below is a comparison of some vectors shown in 2D compared to 3D.</p>
+<img alt="_images/2D_3D_vectors_lava.png" src="_images/2D_3D_vectors_lava.png" />
+<p><span class="raw-html"><br /></span></p>
+<p>The arrows are coloured according to their relative size. Red arrows are the largest and dark blue the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions.</p>
+</div>
+<div class="section" id="results-files">
+<h2>Results Files<a class="headerlink" href="#results-files" title="Permalink to this headline">¶</a></h2>
+<p>The DVC analysis code generates two files for each run it performs.
+These aren’t directly accessible from the app, but you are able to access them if you export your session (see <a class="reference internal" href="saving.html#exporting-sessions"><span class="std std-ref">Exporting Sessions</span></a>).
+The two files it produces for each run are as follows:</p>
+<p><strong>Status file</strong> (.stat): This contains:</p>
+<ul class="simple">
+<li><p>An echo of the input file used to control program execution.</p></li>
+<li><p>Information about the point cloud, dvc program version, and run date/time.</p></li>
+<li><p>Search statistics and timing.</p></li>
+</ul>
+<p><strong>Displacement file</strong> (.disp): This is a tab-delimited text file of the dev results. A header line appears first identifying columns:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">n</span></code> = the point identifier</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">x,</span> <span class="pre">y,</span> <span class="pre">z</span></code> = the point location within the reference volume</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">status</span></code> = the search outcome: 0 = successful (no error), -1 = Range_Fail, -2 = Convg_Fail</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">objmin</span></code> = the objective function magnitude at the end of the search</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">u,</span> <span class="pre">v,</span> <span class="pre">w</span></code> = the point displacement: [location in target volume] - [location in reference volume]</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">phi,</span> <span class="pre">theta,</span> <span class="pre">psi</span></code> = subvolume rotation, if num_srch_dof = 6 or 12</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">exx</span> <span class="pre">eyy</span> <span class="pre">ezz</span> <span class="pre">exy</span> <span class="pre">eyz</span> <span class="pre">exz</span></code> = subvolume strain, if num_srch_dof = 12</p></li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="executable.html" class="btn btn-neutral float-right" title="DVC Executable" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="saving.html" class="btn btn-neutral float-left" title="Saving &amp; Exporting" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, UKRI STFC.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
