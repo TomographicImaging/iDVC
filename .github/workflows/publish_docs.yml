@@ -24,6 +24,9 @@ jobs:
       with:
         name: DocumentationHTML
         path: docs/build/html/
+  publish:
+    runs-on: ubuntu-latest
+    steps:
     - name: Commit documentation changes
       run: |
         git clone https://github.com/TomographicImaging/iDVC.git --branch gh-pages --single-branch gh-pages
