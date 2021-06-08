@@ -41,8 +41,8 @@ Here is an example of what an image registration would look like as you begin to
 Once you are satisfied with the registration, click **Confirm Registration** to save the translation. This will be provided to the DVC analysis code later on.
 Then move on to the **Mask** tab. 
 
-Mask
-====
+Mask Creation
+=============
 
 Creating a mask
 ~~~~~~~~~~~~~~~
