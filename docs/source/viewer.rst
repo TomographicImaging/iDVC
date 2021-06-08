@@ -81,6 +81,7 @@ The interactions for the viewers are as follows (correct as of version |cil_view
 * Whole image Auto Window/Level: a
 
 .. _Viewer Settings:
+
 Viewer Settings
 ===============
 The viewer settings panel shows how much the image has been down-sampled:

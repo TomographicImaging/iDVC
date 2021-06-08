@@ -1,14 +1,17 @@
 DVC Configuration Steps
 **************************
+
 Each panel contains a different step in the DVC configuration process.
 When moving between each panel, the Help section is updated. Additional help can be viewed by hovering the mouse over some of the buttons and labels on the interface.
 
 Manual Registration
 ===================
+
 The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the **Manual Registration** tab to get started with this.
 
 The Point 0 Location
 ~~~~~~~~~~~~~~~~~~~~
+
 First you will need to click on **Select point 0**. This will allow you to press shift and left click on a point in the image. Then change the size of the registration box.
 If you scroll through slices of the image, clicking **Center on Point 0** will return you to the slice where point 0 is.
 You should try to select point 0 to be at the position you would like to start your DVC analysis from. Later when you select your mask, if your point 0 lies within the mask then when you generate a point cloud, it will guarantee that a point lies at the location of point 0. Then this will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
@@ -16,6 +19,7 @@ Otherwise, a random point in the cloud will be selected to begin with.
 
 Registering the Images
 ~~~~~~~~~~~~~~~~~~~~~~
+
 You can set an initial translation if you already know some information about how the images are translated relative to each other.
 
 When you click **Start Registration** this will crop the image to the size of the reference box you chose, centred on the point 0. It will do the same for the correlate image, and then it will subtract one image from the other, and display that on the viewer. It does this for the original images, not the down-sampled versions.
@@ -41,11 +45,12 @@ Here is an example of what an image registration would look like as you begin to
 Once you are satisfied with the registration, click **Confirm Registration** to save the translation. This will be provided to the DVC analysis code later on.
 Then move on to the **Mask** tab. 
 
-Mask
-====
+Mask Creation
+=============
 
 Creating a mask
 ~~~~~~~~~~~~~~~
+
 A mask needs to be created to dictate where the point cloud will lie.
 To draw a mask, click on the 2D viewer and then press **t**.
 You can then trace a region freehand.
@@ -60,6 +65,7 @@ Then you can draw another region and press **Extend Mask** to extend the mask to
 
 Saving and Loading a mask
 ~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The most recent mask you have created will automatically be saved, but if you would like to create a new mask, you will be prompted to then save the previous one, otherwise it will be discarded.
 
 The names of all of the masks you have saved will appear in a dropdown list. You can select one from here and reload it.
@@ -105,6 +111,7 @@ The display registration region toggles on/off the view of the registration box 
 
 Saving and Loading a point cloud
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 The most recent point cloud you have created will automatically be saved, but if you would like to create a new point cloud, you will be prompted to then save the previous one, otherwise it will be discarded.
 The names of all of the point clouds you have saved to the current session will appear in a dropdown list.
 You can select one from here and reload it.
@@ -123,8 +130,10 @@ Note that the point cloud is in the coordinate system of the original image, and
 Once you are happy with your point cloud, you can move on to the **Run DVC** panel.
 
 .. _Running DVC Analysis:
+
 Running the DVC Analysis
 ========================
+
 First, set a name for your run.
 This is how the run will be saved, and you will need to refer to this name later when you would like to view the results.
 The settings you can change for your run are as follows:
