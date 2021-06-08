@@ -130,6 +130,7 @@ Note that the point cloud is in the coordinate system of the original image, and
 Once you are happy with your point cloud, you can move on to the **Run DVC** panel.
 
 .. _Running DVC Analysis:
+
 Running the DVC Analysis
 ========================
 
