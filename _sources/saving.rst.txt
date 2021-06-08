@@ -20,6 +20,7 @@ files can cause problems with reloading the sessions, so instead of doing this,
 if you would like to access the session files you should export the session.
 
 .. _Exporting Sessions:
+
 Exporting Sessions
 ==================
 At any point, you can export the session files by going to File->Export.
