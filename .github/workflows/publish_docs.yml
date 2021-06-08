@@ -10,12 +10,12 @@ on:
 
 jobs:
   build:
-    name: Publish Documentation
+
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v1
-      - uses: seanzhengw/sphinx-pages@master
-        id: sphinx-pages
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          create_readme: false
+    - uses: actions/checkout@v1
+    # Standard drop-in approach that should work for most people.
+    - uses: ammaraskar/sphinx-action@master
+      with:
+        docs-folder: "docs/"
