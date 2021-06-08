@@ -19,6 +19,7 @@ This manual was written at the time of version 21.1.0 being the latest release.
    saving
    results
    executable
+   contact
 
 
 
