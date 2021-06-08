@@ -17,12 +17,15 @@
 
 # -- Project information -----------------------------------------------------
 
+import re
+import os
+
 project = 'iDVC'
-copyright = '2021, Edoardo Pasca and Laura Murgatroyd'
+copyright = '2021, UKRI STFC'
 author = 'Edoardo Pasca and Laura Murgatroyd'
 
-# The full version, including alpha/beta/rc tags
-version = '21.1.0'
+version = re.sub('^v', '', os.popen('git describe').read().strip())
+version = version.split('-')[0]
 
 rst_epilog = """
 .. |cil_viewer_version| replace:: 21.0.1
