@@ -1,6 +1,8 @@
 Installation
 ************
 
+Currently the app is available to install on windows. Linux and MacOS versions are currently a work in progress.
+
 Installing the App
 ==================
 1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html 
