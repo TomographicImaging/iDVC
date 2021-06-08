@@ -13,6 +13,7 @@ jobs:
     name: Publish Documentation
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v1
       - uses: seanzhengw/sphinx-pages@master
         id: sphinx-pages
         with:
