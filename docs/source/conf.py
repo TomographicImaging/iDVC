@@ -28,6 +28,8 @@ version = re.sub('^v', '', os.popen('git describe').read().strip())
 version = version.split('-')[0]
 release = version
 
+print("The version is: ", version)
+
 rst_epilog = """
 .. |cil_viewer_version| replace:: 21.0.1
 """
