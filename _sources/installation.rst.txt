@@ -18,8 +18,8 @@ Updating the App
 If you have previously installed the app, to get an updated version:
 
 1.	Open anaconda prompt (miniconda) and type…
-2.	**activate dvc-gui** (note that when you created your environment, if you called it something else you need to replace dvc-gui with your environment name.)
-3.	**conda install ccpi-dvc=21.0.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels** (or replace 21.0.0 with the latest version number)
+2.	**activate idvc** (note that when you created your environment, if you called it something else you need to replace dvc-gui with your environment name.)
+3.	**conda install idvc=21.1.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels** (or replace 21.1.0 with the latest version number)
 4.	Then use: **idvc** to open up the app, as normal
 
 Installing the DVC Executable Only
