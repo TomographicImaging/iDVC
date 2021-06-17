@@ -17,7 +17,7 @@ jobs:
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: "docs/"
-        pre-build-command: python -m pip install --upgrade pip; pip install sphinx_rtd_theme; sudo apt-get install git
+        pre-build-command: python -m pip install --upgrade pip; pip install sphinx_rtd_theme; apt-get install git
     # Create an artifact of the html output.
     - uses: actions/upload-artifact@v1
       with:
