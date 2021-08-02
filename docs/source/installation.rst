@@ -9,7 +9,7 @@ Installing the App
 2.	Open an anaconda prompt (miniconda) and type... 
 3.	``conda create --name idvc idvc -c ccpi -c paskino -c conda-forge -c defaults --override-channels``
 4.	``activate idvc``
-5.	**idvc**
+5.	``idvc``
 
 Please note that whenever you would like to open the app you need to carry out steps 2, 4 and 5 above.
 
