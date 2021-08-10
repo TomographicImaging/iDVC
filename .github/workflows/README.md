@@ -23,8 +23,9 @@ The github action has two jobs:
 -  uses download-artifact to retrieve the built html files
 -  pushes the html files to the gh-pages branch
 
-If opening or modifying a pull request to master, `build` is run, but not `publish`.
-If pushing to master or tagging, the documentation is built *and* published (both the `build` and `publish` jobs are run).
+When opening or modifying a pull request to master, `build` is run, but not `publish`.
+
+When pushing to master or tagging, the documentation is built *and* published (both the `build` and `publish` jobs are run).
 
 ### Viewing Built Documentation
 The `build` job builds the documentation and uploads it as an [artifact](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L21),
