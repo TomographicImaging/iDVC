@@ -47,7 +47,7 @@ Any push to this branch automatically updates the github site.
 
 ### Initial Setup of the Docs Site & Action
 To get the action to work I first had to:
-1. Create a gh-pages branch: https://gist.github.com/ramnathv/2227408 - note this only worked in bash, not windows command line.
+1. [Create a gh-pages branch](https://gist.github.com/ramnathv/2227408) - note this only worked in bash, not windows command line.
 2. Make the repo public
 3. [Set the source](https://github.com/TomographicImaging/iDVC/settings/pages) for our github pages to be the gh-pages branch.
 
