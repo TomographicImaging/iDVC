@@ -14,8 +14,14 @@ When opening or modifying a pull request to master, a single variant is built an
 This github action builds and optionally publishes the documentation located in [docs/source](https://github.com/TomographicImaging/iDVC/tree/master/docs/source). 
 
 The github action has two jobs:
-[build](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L12)
-and [publish](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L27).
+
+1. [build](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L12): 
+-  builds the documentation with sphinx
+-  uses upload-artifact to upload the html files which may then be used by **publish**
+
+2. [publish](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L27):
+-  uses download-artifact to retrieve the built html files
+-  pushes the html files to the gh-pages branch
 
 If opening or modifying a pull request to master, `build` is run, but not `publish`.
 If pushing to master or tagging, the documentation is built *and* published (both the `build` and `publish` jobs are run).
@@ -37,5 +43,13 @@ If you are an admin of the repository, you are able to see the settings for the 
 
 To publish the documentation, the publish job of the gh-action pushes the documentation changes to the `gh-pages` branch.
 Any push to this branch automatically updates the github site.
+
+### Initial Setup of the Docs Site & Action
+To get the action to work I first had to:
+1. Create a gh-pages branch: https://gist.github.com/ramnathv/2227408 - note this only worked in bash, not windows command line.
+2. Make the repo public
+3. [Set the source](https://github.com/TomographicImaging/iDVC/settings/pages) for our github pages to be the gh-pages branch.
+
+I followed the examples on the [sphinx build action page](https://github.com/marketplace/actions/sphinx-build), specifically this [example workflow](https://github.com/ammaraskar/sphinx-action-test/blob/master/.github/workflows/default.yml)
 
 
