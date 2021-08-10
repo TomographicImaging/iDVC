@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v21.1.1
+* Increases ccpi-dvc version requirement to 21.1.0.
+* This fixes issue of missing DLLs when running DVC exe on windows
+
 ## v21.1.0
 * the package renamed to idvc
 * version string from git describe
