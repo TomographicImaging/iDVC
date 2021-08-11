@@ -3,7 +3,7 @@ import numpy as np
 from PySide2 import QtCore
 from datetime import datetime
 from functools import partial
-from PySide2.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox, QProgressDialog
 import json
 import sys
 import time
@@ -275,7 +275,13 @@ class DVC_runner(object):
             sorted_list_index.sort()
             # this contains the indices of the sorted list
             lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
-            with open(os.path.join(os.path.abspath(run_folder), "grid_input.roi"),"w") \
+            
+            # save the grid_input.roi in a subfolder with the name as the subvolume size
+            subdir = self.get_run_subdir(roi_file)
+            # make the directory
+            os.makedirs(os.path.join(os.path.abspath(run_folder), subdir))
+
+            with open(os.path.join(os.path.abspath(run_folder), subdir, "grid_input.roi"),"w") \
                 as selected_central_grid:
                 with open(roi_file, "r") as entire_central_grid:
                     for i,line in enumerate(entire_central_grid):
@@ -285,15 +291,16 @@ class DVC_runner(object):
             for subvolume_point in subvolume_points:
                 now = datetime.now()
                 dt_string = now.strftime("%d%m%Y_%H%M%S")
-                new_output_filename = "%s/dvc_result_%s" %( run_folder,dt_string)
-                config_filename = "%s/dvc_config_%s" %( run_folder,dt_string)
+                # add a reference to the run name
+                new_output_filename = os.path.join(run_folder, subdir, "dvc_result_{}".format(dt_string))
+                config_filename = os.path.join(run_folder, subdir, "dvc_config_{}".format(dt_string))
                 config_filename = config_filename + ".txt"
                 param_file = os.path.abspath(config_filename)
 
                 # copy the file grid_input.roi to grid_roi_<dt_string>.roi
                 try:
-                    grid_roi = os.path.join("{}/grid_roi_{}.roi".format( run_folder,dt_string))
-                    shutil.copyfile(os.path.join(os.path.abspath(run_folder), "grid_input.roi"), \
+                    grid_roi = os.path.join(run_folder, subdir, "grid_roi_{}.roi".format(dt_string))
+                    shutil.copyfile(os.path.join(os.path.abspath(run_folder), subdir, "grid_input.roi"), \
                         grid_roi )
                 except OSError as oe:
                     # should raise a warning
@@ -333,7 +340,7 @@ class DVC_runner(object):
                     basin_radius='0.0',
                     subvol_aspect='1.0 1.0 1.0') # image spacing
                 time.sleep(1)
-                with open(param_file,"w") as config_file:
+                with open(os.path.join(os.path.abspath(run_folder), subdir, param_file) ,"w") as config_file:
                     config_file.write(config)
             
                 #if run_count == len( subvolume_points):
@@ -348,10 +355,14 @@ class DVC_runner(object):
                 # process.waitForFinished(msecs=2147483647)
                 
                 self.processes.append( 
-                    ( exe_file, [ param_file ], run_folder , \
+                    ( exe_file, [ param_file ], os.path.join(run_folder, subdir) , \
                         required_runs, total_points ) 
                 )
-        
+    def get_run_subdir(self, roi_file):
+        # https://github.com/TomographicImaging/iDVC/blob/9da5acfc8844b6332bf53239dc0a050468ef5187/src/idvc/dvc_interface.py#L3899
+        subdir = str(os.path.basename(roi_file)).strip('.roi')
+        return subdir
+
     def run_dvc(self):
         main_window = self.main_window
         input_file = self.input_file

@@ -3809,16 +3809,20 @@ This parameter has a strong effect on computation time, so be careful."
             self.warningDialog("Complete image registration first.", "Error")
             return
 
-        if self.singleRun_groupBox.isVisible():
-            if not self.roi:
-                self.warningDialog(window_title="Error", 
-                               message="Create or load a pointcloud on the viewer first." )
-                return
-        else:
-            if not self.mask_reader:
-                self.warningDialog(window_title="Error", 
-                               message="Load a mask on the viewer first" )
-                return
+        # if self.singleRun_groupBox.isVisible():
+        #     if not self.roi:
+        #         self.warningDialog(window_title="Error", 
+        #                        message="Create or load a pointcloud on the viewer first." )
+        #         return
+        # else:
+        #     if not self.mask_reader:
+        #         self.warningDialog(window_title="Error", 
+        #                        message="Load a mask on the viewer first" )
+        #         return
+        if not self.roi:
+            self.warningDialog(window_title="Error", 
+                            message="Create or load a pointcloud on the viewer first." )
+            return
         
         folder_name = "_" + self.rdvc_widgets['name_entry'].text()
 
@@ -3896,11 +3900,18 @@ This parameter has a strong effect on computation time, so be careful."
                 for subvol_size in self.subvol_sizes:
                     #print(subvol_size)
                     subvol_size_count+=1
-                    filename = "Results/" + folder_name + "/_" + str(subvol_size) + ".roi"
-                    #print(filename)
-                    if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
-                        return ("pointcloud error")
-                    self.roi_files.append(os.path.join(tempfile.tempdir, filename))
+                    for num_points in self.subvolume_points:
+                        run_directory = os.path.join("Results" , folder_name, "_size_{}_num_points_{}".format( subvol_size, num_points ))
+                        filename = os.path.join(run_directory , "grid_input.roi" )
+                        
+                    # A point cloud (created or loaded externally) should not be modified at this stage
+                    
+                    # if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
+                    #     return ("pointcloud error")
+                        # copy the file roi file to the result directory
+                        shutil.copyfile(self.roi, filename)
+                        
+                        self.roi_files.append(os.path.join(tempfile.tempdir, filename))
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
 
