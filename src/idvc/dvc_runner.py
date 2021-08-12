@@ -2,10 +2,8 @@ import os
 import numpy as np
 from PySide2 import QtCore
 from datetime import datetime
-from functools import partial
 from PySide2.QtWidgets import QMessageBox
 import json
-import sys
 import time
 import shutil
 import platform
@@ -72,7 +70,7 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
     while(process.canReadLine()):
         #print("READ")
         string = process.readLine()  
-        line = str(string.data(),"utf-8")
+        line = str(string, "utf-8")
         
         global count
         count+=1
@@ -96,16 +94,16 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
     #sys.stdout.flush()
 
 def create_progress_window(main_window, title, text, max = 100, cancel = None):
-        main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
-        main_window.progress_window.setWindowTitle(title)
-        main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        main_window.progress_window.setMinimumDuration(0.1)
-        main_window.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
-        main_window.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
-        if cancel is None:
-            main_window.progress_window.setCancelButton(None)
-        else:
-            main_window.progress_window.canceled.connect(cancel)
+    main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
+    main_window.progress_window.setWindowTitle(title)
+    main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
+    main_window.progress_window.setMinimumDuration(0.1)
+    main_window.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
+    main_window.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
+    if cancel is None:
+        main_window.progress_window.setCancelButton(None)
+    else:
+        main_window.progress_window.canceled.connect(cancel)
 
 def displayFileErrorDialog(main_window, message, title):
     msg = QMessageBox(main_window)
@@ -118,20 +116,20 @@ def displayFileErrorDialog(main_window, message, title):
 def cancel_run(main_window, process, run_succeeded):
     
     if not run_succeeded:
-        # print ("run cancelled?")
+        print("run cancelled?")
         process.kill()
         main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
         main_window.alert.show()
         run_succeeded = False
-    # else:
-    #     print ("all OK, all processes ended")
+    else:
+        print("all OK, all processes ended")
 
 
 def finished_run(main_window, exitCode, exitStatus, process = None, required_runs = 1, run_succeeded = False, finish_fn = None):
     global runs_completed
     runs_completed+=1
     # print ("DVC command ended.", exitCode, exitStatus)
-    # print("Completed, ", runs_completed)
+    print("Completed, ", runs_completed)
 
     if run_succeeded:
         if runs_completed == required_runs:
@@ -152,34 +150,18 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
     # print("did")
 
 class DVC_runner(object):
-    def __init__(self, main_window, input_file, finish_fn, run_succeeded):
+    def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
+        print("The session folder is", session_folder)
         self.main_window = main_window
         self.input_file = input_file
         self.finish_fn = finish_fn
         self.run_succeeded = run_succeeded
 
-        working_directory = os.getcwd()
-        #print ("We are here ", working_directory)
-        os.chdir(working_directory)
-
         self.processes = []
         self.process_num = 0
 
-        working_directory = os.getcwd()
-        #print ("We are here ", working_directory)
-        os.chdir(working_directory)
-        self.working_directory = working_directory
-
-        # 
-
-        #input_file = sys.argv[1]
-
-        #input_file = "C:/Users/lhe97136/Music/_run_config.json"
-        #print(input_file)
-
-
         with open(input_file) as tmp:
-                config = json.load(tmp)
+            config = json.load(tmp)
 
         subvolume_points = config['subvolume_points'] 
         subvolume_sizes = config['subvolume_sizes']
@@ -209,7 +191,10 @@ class DVC_runner(object):
 
         rigid_trans = config['rigid_trans']
 
-        run_folder = config['run_folder']
+        # Change directory into the folder where the run will be saved:
+        os.chdir(session_folder)
+        self.run_folder = config['run_folder']
+        print ("We are here ", os.getcwd())
 
         #running the code:
 
@@ -248,7 +233,7 @@ class DVC_runner(object):
 
         file_count = -1
         point0 = main_window.getPoint0WorldCoords()
-            
+        
         for roi_file in roi_files:
             file_count +=1
             subvolume_size = int(subvolume_sizes[file_count])
@@ -275,8 +260,8 @@ class DVC_runner(object):
             sorted_list_index.sort()
             # this contains the indices of the sorted list
             lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
-            with open(os.path.join(os.path.abspath(run_folder), "grid_input.roi"),"w") \
-                as selected_central_grid:
+            with open(os.path.join(self.run_folder, "grid_input.roi"),"w") \
+                    as selected_central_grid:
                 with open(roi_file, "r") as entire_central_grid:
                     for i,line in enumerate(entire_central_grid):
                         if i in lines_to_write:
@@ -285,15 +270,16 @@ class DVC_runner(object):
             for subvolume_point in subvolume_points:
                 now = datetime.now()
                 dt_string = now.strftime("%d%m%Y_%H%M%S")
-                new_output_filename = "%s/dvc_result_%s" %( run_folder,dt_string)
-                config_filename = "%s/dvc_config_%s" %( run_folder,dt_string)
+                new_output_filename = "%s/dvc_result_%s" % (self.run_folder, dt_string)
+                config_filename = "%s/dvc_config_%s" % (self.run_folder, dt_string)
                 config_filename = config_filename + ".txt"
                 param_file = os.path.abspath(config_filename)
 
                 # copy the file grid_input.roi to grid_roi_<dt_string>.roi
                 try:
-                    grid_roi = os.path.join("{}/grid_roi_{}.roi".format( run_folder,dt_string))
-                    shutil.copyfile(os.path.join(os.path.abspath(run_folder), "grid_input.roi"), \
+                    grid_roi = os.path.join(
+                        "{}/grid_roi_{}.roi".format(self.run_folder, dt_string))
+                    shutil.copyfile(os.path.join(os.path.abspath(self.run_folder), "grid_input.roi"), \
                         grid_roi )
                 except OSError as oe:
                     # should raise a warning
@@ -335,7 +321,7 @@ class DVC_runner(object):
                 time.sleep(1)
                 with open(param_file,"w") as config_file:
                     config_file.write(config)
-            
+
                 #if run_count == len( subvolume_points):
                 # process.start( exe_file , [ param_file ] )          
                 cancelled=False
@@ -348,10 +334,9 @@ class DVC_runner(object):
                 # process.waitForFinished(msecs=2147483647)
                 
                 self.processes.append( 
-                    ( exe_file, [ param_file ], run_folder , \
-                        required_runs, total_points ) 
+                    (exe_file, [ param_file ], required_runs, total_points)
                 )
-        
+
     def run_dvc(self):
         main_window = self.main_window
         input_file = self.input_file
@@ -360,22 +345,25 @@ class DVC_runner(object):
         
         process = QtCore.QProcess()
         
-        exe_file, param_file, run_folder, required_runs,\
-             total_points = self.processes[self.process_num]
-        
+        print("Processes: ", self.processes)
+        print("num: ", self.process_num)        
 
-        process.setWorkingDirectory(run_folder)
+        exe_file, param_file, required_runs,\
+            total_points = self.processes[self.process_num]
+
+        process.setWorkingDirectory(os.getcwd())
         # process.finished.connect(partial(finished_run, main_window, 
         #             process = process, required_runs = required_runs, 
         #             run_succeeded = run_succeeded, finish_fn = finish_fn))
         process.finished.connect(self.finished_run)
         process.started.connect(self.onStarted)
         if self.process_num == 0:
-            main_window.create_progress_window("Running", 
-                "Running DVC code {}/{}".format(self.process_num +1, len(self.processes)), 100,
-                #lambda: cancel_run(main_window, process, run_succeeded)
-                lambda: self.onCancel(process)
-                )
+            main_window.create_progress_window("Running",
+                                               "Running DVC code {}/{}".format(
+                                                   self.process_num + 1, len(self.processes)), 100,
+                                               #lambda: cancel_run(main_window, process, run_succeeded)
+                                               lambda: self.onCancel(process)
+                                               )
         else:
             main_window.progress_window.setLabelText(
                 "Running DVC code {}/{}".format(self.process_num +1, len(self.processes))
@@ -409,10 +397,10 @@ class DVC_runner(object):
         input_file = self.input_file
         finish_fn = self.finish_fn
         run_succeeded = self.run_succeeded
-        required_runs = self.processes[self.process_num][3]
+        required_runs = self.processes[self.process_num][2]
 
-        print ("finished {}/{} (or {}) with {} {}"\
-            .format(self.process_num, required_runs, \
+        print("finished {}/{} (or {}) with {} {}"
+              .format(self.process_num + 1, required_runs,
                 len(self.processes), exitCode, exitStatus))
         
         if exitStatus == 0:

@@ -1,11 +1,18 @@
-import sys
-from PySide2 import QtCore, QtWidgets, QtGui
-from PySide2.QtCore import QThreadPool, QRegExp, QSize, Qt, QSettings, QByteArray
-from PySide2.QtWidgets import QMainWindow, QAction, QDockWidget, QFrame, QVBoxLayout, QHBoxLayout, QFileDialog, QStyle, QMessageBox, QApplication, QWidget, QDialog, QDoubleSpinBox
-from PySide2.QtWidgets import QSizePolicy, QLineEdit, QSpinBox, QLabel, QComboBox, QProgressBar, QStatusBar,  QPushButton, QFormLayout, QGroupBox, QCheckBox, QTabWidget, qApp
-from PySide2.QtWidgets import QProgressDialog, QDialogButtonBox, QDialog
-from PySide2.QtGui import QRegExpValidator, QKeySequence, QCloseEvent
 import os
+import sys
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
+                            QThreadPool)
+from PySide2.QtGui import QCloseEvent, QKeySequence, QRegExpValidator
+from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
+                               QDialog, QDialogButtonBox, QDockWidget,
+                               QDoubleSpinBox, QFileDialog, QFormLayout,
+                               QFrame, QGroupBox, QLabel, QLineEdit,
+                               QMainWindow, QMessageBox,
+                               QProgressDialog, QPushButton, QSpinBox,
+                               QStatusBar, QStyle, QTabWidget, QVBoxLayout,
+                               QHBoxLayout, QSizePolicy,
+                               QWidget, qApp)
 import time
 import numpy as np
 import math
@@ -23,21 +30,12 @@ from os.path import isfile, join
 from os import path
 
 import vtk
-from ccpi.viewer.QCILRenderWindowInteractor import QCILRenderWindowInteractor #
-from ccpi.viewer import viewer2D, viewer3D # 
-from ccpi.viewer.QCILViewerWidget import QCILViewerWidget #
-
-from ccpi.viewer.utils import Converter
-from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XY
-from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_XZ
-from ccpi.viewer.CILViewer2D import SLICE_ORIENTATION_YZ
-
-from ccpi.viewer.CILViewer2D import CILInteractorStyle as CILInteractorStyle2D
-from ccpi.viewer.CILViewer import CILInteractorStyle as CILInteractorStyle3D
-
-from ccpi.viewer.utils import cilNumpyMETAImageWriter
-
-import locale
+from ccpi.viewer import viewer2D, viewer3D
+from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
+from ccpi.viewer.CILViewer2D import (SLICE_ORIENTATION_XY,
+                                     SLICE_ORIENTATION_XZ,
+                                     SLICE_ORIENTATION_YZ)
+import ccpi.viewer.viewerLinker as vlink
 
 # from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 from eqt.threading import Worker
@@ -46,20 +44,14 @@ from eqt.threading.QtThreading import ErrorObserver
 from natsort import natsorted
 import imghdr
 
-from vtk.util import numpy_support
-
-from vtk.numpy_interface import dataset_adapter as dsa
-from vtk.numpy_interface import algorithms as algs
-
-import ccpi.viewer.viewerLinker as vlink
+# from vtk.numpy_interface import algorithms as algs
+# from vtk.numpy_interface import dataset_adapter as dsa
+# from vtk.util import numpy_support
 
 working_directory = os.getcwd()
 os.chdir(working_directory) 
 
-from ccpi.viewer.utils import cilMaskPolyData, cilClipPolyDataBetweenPlanes
-
-from ccpi.viewer.utils import cilPlaneClipper
-
+from ccpi.viewer.utils import (cilMaskPolyData, cilPlaneClipper, Converter)
 import tempfile
 import json
 import shutil
@@ -86,6 +78,11 @@ from eqt.ui import FormDialog
 import qdarkstyle
 from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
+
+import h5py
+import glob
+
+from ccpi.viewer.utils.hdf5_io import write_image_data_to_hdf5, HDF5Reader
 
 from idvc import version as gui_version
 
@@ -143,6 +140,11 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self.ExportSession)
         self.file_menu.addAction(export_action)
 
+        # Export Session
+        load_export_action = QAction("Load Exported Session", self)
+        load_export_action.triggered.connect(self.LoadExportedSession)
+        self.file_menu.addAction(load_export_action)
+
         # Exit QAction
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence.Quit)
@@ -197,8 +199,11 @@ class MainWindow(QMainWindow):
         self.temp_folder = os.path.abspath(temp_folder)
         tempfile.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
 
-        os.mkdir(os.path.join(tempfile.tempdir, "Masks")) # Creates folder in tempdir to save mask files in
-        os.mkdir(os.path.join(tempfile.tempdir, "Results"))
+        os.chdir(tempfile.tempdir)
+
+        # Creates folder in tempdir to save mask files in
+        os.mkdir("Masks")
+        os.mkdir("Results")
 
     def OpenSettings(self):
         self.settings_window = SettingsWindow(self)
@@ -513,27 +518,25 @@ It will be the first point in the file that is used as the reference point.")
         if len(files) > 0:
             if self.copy_files:
                 self.image_copied[image_var] = True
-                count = 0
                 self.create_progress_window("Copying", "Copying files", 100, None)
                 self.progress_window.setValue(1)
-                file_num = 0
-                for f in files:
+                for file_num, f in enumerate(files):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
                     if file_ext == "mhd":
-                        new_file_dest = os.path.join(tempfile.tempdir, file_name[:-3] + "mha")
+                        new_file_dest = os.path.join(file_name[:-3] + "mha")
                     else:
-                        new_file_dest = os.path.join(tempfile.tempdir, file_name)
-                    
+                        new_file_dest = os.path.join(file_name)
+
                     copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
                     self.threadpool.start(copy_worker)
                     files[file_num] = new_file_dest
-                    file_num+=1
-                    count+=1
+                    print("Current dir: ", os.getcwd())
+                    print("New file dest: ", new_file_dest)
                     if len(files) == 1:
                         self.show_copy_progress(f, new_file_dest, 1, file_ext, len(files))
                     else:
-                        self.progress_window.setValue(count/len(files)*100)
+                        self.progress_window.setValue((file_num+1)/len(files)*100)
             else:
                 self.image_copied[image_var] = False
 
@@ -565,6 +568,7 @@ It will be the first point in the file that is used as the reference point.")
 
             if next_button is not None:
                 next_button.setEnabled(True)
+            print(self.image)
 
     def copy_file(self, **kwargs):
         
@@ -627,9 +631,10 @@ It will be the first point in the file that is used as the reference point.")
                 target_size = 0.125
         self.target_image_size = target_size
         
+        print("The in file is: ", self.image[0])
+        print("The current working directory is: ", os.getcwd())
         ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
-        finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, tempfolder = os.path.abspath(tempfile.tempdir))
-
+        finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
     def save_image_info(self, image_type):
         #print("INFO: ", self.image_info)
@@ -678,11 +683,13 @@ It will be the first point in the file that is used as the reference point.")
 
         if 'raw_file' in self.image_info:
             image_file = [self.image_info['raw_file']]
+            print("The raw file is: ", image_file)
             if image_type == "ref":
                 self.dvc_input_image[0] = image_file
                 if os.path.splitext(self.image[0][0])[1] in ['.mhd', '.mha']: #need to call create image data so we read header and save image to file w/o header
                     self.temp_image_data = vtk.vtkImageData()
-                    ImageDataCreator.createImageData(self, self.image[1], self.temp_image_data, info_var = self.image_info, convert_raw = True,  finish_fn = partial(self.save_image_info, "corr"), tempfolder = os.path.abspath(tempfile.tempdir))
+                    ImageDataCreator.createImageData(self, self.image[1], self.temp_image_data, info_var=self.image_info, convert_raw=True,  finish_fn=partial(
+                        self.save_image_info, "corr"), output_dir='.')
             elif image_type == "corr":
                 self.dvc_input_image[1] = image_file
                 if hasattr(self, 'temp_image_data'):
@@ -785,6 +792,7 @@ It will be the first point in the file that is used as the reference point.")
 
             #bring image loading panel to front if it isnt already:          
             self.select_image_dock.raise_() 
+            print("Image visualised: ", self.image)
 
     def create_progress_window(self, title, text, max = 100, cancel = None):
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
@@ -1407,7 +1415,7 @@ It is used as a global starting point and a translation reference."
 
         rp = self.registration_parameters
         p0_world = self.getPoint0WorldCoords()
-        p0 =  self.vis_widget_reg.frame.viewer.style.world2imageCoordinate(p0_world)       
+        p0 =  self.vis_widget_reg.frame.viewer.style.world2imageCoordinate(p0_world)
 
         p0 = [round(i) for i in p0]
 
@@ -1532,12 +1540,14 @@ It is used as a global starting point and a translation reference."
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
             if previous_reg_box_extent != reg_box_extent:
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var = self.unsampled_image_info, crop_image = True, origin = origin , target_z_extent = target_z_extent, tempfolder = os.path.abspath(tempfile.tempdir), finish_fn = self.LoadCorrImageForReg, crop_corr_image = True)
+                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1554,7 +1564,8 @@ It is used as a global starting point and a translation reference."
         z_extent = self.target_cropped_image_z_extent
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var = self.unsampled_image_info, resample= resample_corr_image, crop_image = crop_corr_image, origin = origin , target_z_extent = z_extent, finish_fn = self.completeRegistration, tempfolder = os.path.abspath(tempfile.tempdir))
+        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image,
+                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
         self.updatePoint0Display()
@@ -1898,6 +1909,7 @@ It is used as a global starting point and a translation reference."
        
         self.progress_window.setValue(10)
         self.threadpool.start(self.mask_worker)  
+        self.mask_worker.signals.error.connect(self.select_mask)
 
     def ShowSaveMaskWindow(self, save_only):
         if not self.mask_reader:
@@ -2627,7 +2639,7 @@ The first point is significant, as it is used as a global starting point and ref
         
 
     def updatePointCloudPanel(self):
-        #updates which settings can be changed when orientation/dimensions of image changed
+        # updates which settings can be changed when orientation/dimensions of image changed
         orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
         dimensionality = self.dimensionalityValue.currentText()
 
@@ -2648,10 +2660,7 @@ The first point is significant, as it is used as a global starting point and ref
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
         #print(self.roi)
         if self.roi:
-            if ".roi" in self.roi:
-                self.PointCloudWorker("load pointcloud file")
-            else:
-                self.warningDialog("Please select a .roi file", "Error")
+            self.PointCloudWorker("load pointcloud file")
 
         if self.copy_files:
             filename = os.path.basename(self.roi)
@@ -2684,8 +2693,26 @@ The first point is significant, as it is used as a global starting point and ref
         self.create_progress_window("Loading", "Loading Pointcloud")
         self.pointcloud_worker.signals.progress.connect(self.progress)
         self.progress_window.setValue(10)
-        self.threadpool.start(self.pointcloud_worker)  
+        os.chdir(tempfile.tempdir)
+        self.threadpool.start(self.pointcloud_worker)
 
+        # Show error and allow re-selection of pointcloud if it can't be loaded:
+        search_button = QPushButton('Select Pointcloud')
+        search_button.clicked.connect(self.reselect_pointcloud)
+        self.e(
+            '', '', 'This file has been deleted or moved to another location, or cannot be read. Therefore this pointcloud cannot be loaded. \
+Please select a replacement pointcloud file.')
+        error_title = "READ ERROR"
+        error_text = "Error reading file: ({filename})".format(
+            filename=self.roi)
+        self.pointcloud_worker.signals.error.connect(
+            lambda: self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button))
+        # TODO: fix so that closing this window doesn't leave the progress bar going forever
+
+    def reselect_pointcloud(self):
+        self.progress_complete()
+        self.select_pointcloud()
+        self.threadpool.start(self.pointcloud_worker)
 
     def progress_complete(self):
         #print("FINISHED")
@@ -2968,7 +2995,7 @@ The first point is significant, as it is used as a global starting point and ref
                 count += 1
 
         np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
-        self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+        self.roi = filename
 
         return(True)
             
@@ -2982,11 +3009,12 @@ The first point is significant, as it is used as a global starting point and ref
         progress_callback.emit(30)
         self.roi = pointcloud_file
         #print(self.roi)
-        try:
-            points = np.loadtxt(self.roi)
-        except ValueError as ve:
-            # print (ve)
-            return
+
+        points = np.loadtxt(self.roi)
+        # except ValueError as ve:
+        #     print(ve)
+        #     return
+
         self.pc_no_points = np.shape(points)[0]
         progress_callback.emit(50)
         self.polydata_masker = cilNumpyPointCloudToPolyData()
@@ -3840,6 +3868,7 @@ This parameter has a strong effect on computation time, so be careful."
         
 
     def create_run_config(self, **kwargs):
+        os.chdir(tempfile.tempdir)
         progress_callback = kwargs.get('progress_callback', None)
         try:
             folder_name = "_" + self.rdvc_widgets['name_entry'].text()
@@ -3893,18 +3922,19 @@ This parameter has a strong effect on computation time, so be careful."
                 self.roi_files = []
                 #print(self.subvol_sizes)
                 subvol_size_count = 0
+                run_folder = "Results/" + folder_name + "/"
                 for subvol_size in self.subvol_sizes:
                     #print(subvol_size)
                     subvol_size_count+=1
-                    filename = "Results/" + folder_name + "/_" + str(subvol_size) + ".roi"
+                    filename = run_folder + "_" + str(subvol_size) + ".roi"
                     #print(filename)
                     if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
                         return ("pointcloud error")
-                    self.roi_files.append(os.path.join(tempfile.tempdir, filename))
+                    self.roi_files.append(filename)
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
 
-                #print(self.roi_files)
+            print(self.roi_files)
 
             #print("DVC in: ", self.dvc_input_image)
             
@@ -3940,10 +3970,9 @@ This parameter has a strong effect on computation time, so be careful."
             else:
                 run_config['rigid_trans']= "0.0 0.0 0.0"
 
+            self.run_folder = "Results/" + folder_name
+            run_config['run_folder'] = self.run_folder
 
-            self.run_folder = os.path.abspath(os.path.join(results_folder, folder_name))
-            run_config['run_folder']= self.run_folder
-            
             #where is point0
             run_config['point0'] = self.getPoint0ImageCoords()
             suffix_text = "run_config"
@@ -3991,8 +4020,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.run_succeeded = True
 
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
-                                     self.finished_run, self.run_succeeded)
-        
+                                     self.finished_run, self.run_succeeded, tempfile.tempdir)
+
         self.dvc_runner.run_dvc()
 
     def update_progress(self, exe = None):
@@ -4136,7 +4165,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         for r, d, f in os.walk(directory):
             for _file in f:
-                # print ("Looking at ", _file)
+                print("Looking at ", _file)
                 if _file.endswith(".roi") and _file.startswith("_"):
                     self.result_widgets['pc_entry'].addItem((_file.split('_')[-1]).split('.')[0])
 
@@ -4228,7 +4257,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             event.ignore()
         else:
             event.accept()
-    #@pysnooper.snoop()
+
     def CreateSaveWindow(self, cancel_text, event):
 
         dialog = FormDialog(parent=self, title='Save Session')
@@ -4298,7 +4327,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
 
 
-    #@pysnooper.snoop(depth=2)
     def SaveSession(self, text_value, compress, event):
         # Save window geometry and state of dockwindows
         # https://doc.qt.io/qt-5/qwidget.html#saveGeometry
@@ -4320,15 +4348,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             #we need to change location of image to being the name of the image w/o directories
             image = [[],[]]
             for i in self.image[0]:
-                if self.image_copied[0]:
-                    image[0].append(os.path.basename(i))
-                else:
-                    image[0].append(i)
+                image[0].append(i)
             for j in self.image[1]:
-                if self.image_copied[1]:
-                    image[1].append(os.path.basename(j))
-                else:
-                   image[1].append(j)
+                image[1].append(j)
 
             self.config['image']=image
             self.config['image_copied']=self.image_copied
@@ -4383,8 +4405,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.config['subvol_points'] = self.subvolume_points
                 self.config['points'] = self.points
                 self.config['run_button_enabled'] = True
-                self.config['run_folder'] = self.run_folder[len(os.path.abspath(tempfile.tempdir))+1:]
-
         self.config['pointcloud_loaded'] = self.pointCloudLoaded
 
         #Image Registration:
@@ -4440,7 +4460,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         
         suffix_text = "_" + user_string + "_" + now_string 
 
-        tempdir = shutil.move(tempfile.tempdir, 'DVC_Sessions/'+suffix_text)
+        os.chdir(self.temp_folder)
+        tempdir = shutil.move(tempfile.tempdir, suffix_text)
         tempfile.tempdir = os.path.abspath(tempdir)
 
         fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
@@ -4531,13 +4552,15 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # print("Finished zip")
 
     def RemoveTemp(self, event):
+        # ensure we are not 'in' a directory we will be deleting:
+        os.chdir(self.temp_folder)
         if hasattr(self, 'progress_window'):
             self.progress_window.setLabelText("Closing")
             self.progress_window.setMaximum(100)
             self.progress_window.setValue(98)
-        # print("removed temp", tempfile.tempdir)
+        print("removed temp", tempfile.tempdir)
         shutil.rmtree(tempfile.tempdir)
-        
+
         if hasattr(self, 'progress_window'):
             self.progress_window.setValue(100)
         if hasattr(self, 'SaveWindow'):
@@ -4605,23 +4628,310 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     exp_size += os.path.getsize(fp)
 
     def ExportSession(self):
-        #print("In select image")
         dialogue = QFileDialog()
-        folder= dialogue.getExistingDirectory(self, "Select a Folder")
+        target_file = dialogue.getSaveFileName(
+            self, "Export Session to HDF5", "", "HDF5 Files (*.h5)")
+        if target_file:
+            print("image at start of target file: ", self.image)
+            self.update_session_config_dict()
+            self.create_session_hdf5(
+                target_file[0], self.config, tempfile.tempdir)
+            # TODO: make progress bar and worker
+
+    def create_session_hdf5(self, filename, session_config, session_folder):
+        
+        config = copy.deepcopy(self.config)
+        with h5py.File(filename, 'w') as hdf5_file:
+            # TODO:
+            # Write displayed images as HDF5 -> method for writing image types to hdf5
+            # Write images for DVC input as HDF5 -> method for writing image types to hdf5
+            # Create config and add to HDF5 -> make sure they reference places in hdf5 above
+            os.chdir(session_folder)
+            print(self.image)
+            mask_folder = os.path.join(session_folder, 'Masks')
+            results_folder = os.path.join(session_folder, 'Results')
+            # Save image files to HDF5 if they have been exported to the session:
+            for i, image in enumerate(self.image):
+                print("The image is: ", image)
+                if self.image_copied[i]:
+                    vtk_image = vtk.vtkImageData()
+                    
+                    name = 'Images'
+                    if i == 0:
+                        name += '/Reference'
+                    elif i == 1:
+                        name += '/Correlate'
+
+                    image_name, ext =  os.path.splitext(image[0])
+                    # Note that this means in the case where we have a tiff, it 
+                    # gets saved as the name of the first tiff file
+                    name +='/' + image_name
+                    print("name image saved as: ", name)
+                    if 'tif' in ext:
+                        array_name='Tiff Scalars'
+
+                    elif 'raw' in ext or 'mha' in ext:
+                        array_name = 'MetaImage'
+                    else:
+                        array_name = 'vtkarray'
+                    save_fn = partial(write_image_data_to_hdf5,
+                                        filename, vtk_image, dataset_name=name, array_name=array_name)
+                    ImageDataCreator.createImageData(self, image, vtk_image, info_var=self.image_info, convert_raw=False,
+                                         finish_fn=save_fn, resample=False, output_dir=os.path.abspath(tempfile.tempdir))
+                    config['image'][i] = [name]
+                    config['dvc_input_image'][i]=[name]
+
+            # Save pointcloud files to HDF5:
+            for f in glob.glob("*.roi"):
+                name = os.path.basename(f)
+                pc = np.loadtxt(f)
+                label = 'PointClouds/{}'.format(name)
+                hdf5_file.create_dataset(label, data=pc)
+            # Save mask files to HDF5:
+            for root, dirs, files in os.walk('Masks'):
+                for f in files:
+                    name = os.path.basename(f)
+                    label = 'Masks/{}'.format(name)
+                    mask_reader = vtk.vtkMetaImageReader()
+                    mask_reader.SetFileName(label)
+                    mask_reader.Update()
+                    mask = mask_reader.GetOutput()
+                    write_image_data_to_hdf5(
+                        filename, mask, dataset_name=label, array_name='MetaImage')
+                    # TODO Later: add mask attributes
+            # Save results to HDF5:
+            for root, dirs, files in os.walk('Results'):
+                for d in dirs:
+                    dirname = os.path.basename(d)
+                    dirlabel = 'Results/{}'.format(dirname)
+                    hdf5_file.create_group(dirlabel)
+                    os.chdir(dirlabel)
+                    for _root, _dirs, _files in os.walk('.'):
+                        for f in _files:
+                            name = "{}/{}".format(dirlabel,
+                                                  os.path.basename(f))
+                            if '.json' not in name:
+                                with open(f) as fd:
+                                    data = fd.read()
+                                    hdf5_file.create_dataset(name, data=data)
+
+                    with open(glob.glob("*.json")[0]) as fd:
+                        attributes = json.load(fd)
+                    for key, value in attributes.items():
+                        hdf5_file[dirlabel].attrs[key] = value
+            os.chdir(session_folder)
+            for k, v in config.items():
+                hdf5_file.attrs[k] = str(v)
+            print(dict(hdf5_file.attrs.items()))
+
+    def update_session_config_dict(self):
+        g = self.saveGeometry()
+        self.config['geometry'] = str(g.toHex().data(), encoding='utf-8')
+        w = self.saveState()
+        self.config['window_state'] = str(g.toHex().data(), encoding='utf-8')
+        # save values for select image panel:
+        print("The image is: ", self.image)
+        if len(self.image[0]) > 0:
+            if(self.copy_files):
+                self.config['copy_files'] = self.copy_files
+
+            self.config['image'] = self.image
+            self.config['image_copied'] = self.image_copied
+            self.config['image_orientation'] = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+            self.config['current_slice'] = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+
+            print("DVC in image: ", self.dvc_input_image)
+            self.config['dvc_input_image'] = self.dvc_input_image
+            self.config['dvc_input_image_in_session_folder'] = self.dvc_input_image_in_session_folder
+
+            # print("ROI: ", self.roi)
+            # print("temp", tempfile.tempdir)
+            if (self.roi):
+                self.roi = os.path.abspath(self.roi)
+                if os.path.abspath(tempfile.tempdir) in self.roi:
+                    self.config['roi_file'] = self.roi[len(
+                        os.path.abspath(tempfile.tempdir))+1:]
+                    self.config['roi_ext'] = False
+                else:
+                    self.config['roi_file'] = self.roi
+                    self.config['roi_ext'] = True
+            else:
+                self.config['roi_file'] = None
+                self.config['roi_ext'] = False
+
+            if hasattr(self, 'mask_file'):
+                self.config['mask_details'] = self.mask_details
+                if tempfile.tempdir in os.path.abspath(self.mask_file):
+                    self.config['mask_file'] = self.mask_file[len(
+                        os.path.abspath(tempfile.tempdir))+1:]
+                    self.config['mask_ext'] = False
+                else:
+                    self.config['mask_file'] = self.mask_file
+                    self.config['mask_ext'] = True
+
+        self.config['pointCloud_details'] = self.pointCloud_details
+
+        # save values for Run DVC panel
+        if hasattr(self, 'subvolume_points'):  # check if this test correct
+            if self.subvolume_points is not None:
+                self.config['subvol_points'] = self.subvolume_points
+                self.config['points'] = self.points
+                self.config['run_button_enabled'] = True
+
+        self.config['pointcloud_loaded'] = self.pointCloudLoaded
+
+        # Image Registration:
+
+        if hasattr(self, 'translate'):
+            if self.translate is not None:
+                self.config['reg_translation'] = (self.translate.GetTranslation(
+                )[0], self.translate.GetTranslation()[1], self.translate.GetTranslation()[2])
+            else:
+                self.config['reg_translation'] = None
+
+        else:
+            self.config['reg_translation'] = None
+        if hasattr(self, 'point0_world_coords'):
+            self.config['point0'] = eval(
+                self.registration_parameters['point_zero_entry'].text())
+        else:
+            self.config['point0'] = None
+
+        self.config['reg_sel_size'] = self.registration_parameters['registration_box_size_entry'].value()
+        # size of reg box
+        # if tickbox checked
+
+        pc = self.pointcloud_parameters
+
+        # Pointcloud panel:
+        self.config['pc_subvol_rad'] = pc['pointcloud_size_entry'].text()
+        self.config['pc_subvol_shape'] = pc['pointcloud_volume_shape_entry'].currentIndex()
+        self.config['pc_dim'] = pc['pointcloud_dimensionality_entry'].currentIndex()
+        self.config['pc_overlapx'] = pc['pointcloud_overlap_x_entry'].value()
+        self.config['pc_overlapy'] = pc['pointcloud_overlap_y_entry'].value()
+        self.config['pc_overlapz'] = pc['pointcloud_overlap_z_entry'].value()
+        self.config['pc_rotx'] = pc['pointcloud_rotation_x_entry'].text()
+        self.config['pc_roty'] = pc['pointcloud_rotation_y_entry'].text()
+        self.config['pc_rotz'] = pc['pointcloud_rotation_z_entry'].text()
+
+        # Downsampling level
+        if self.settings.value("gpu_size") is not None:
+            self.config['gpu_size'] = self.settings.value("gpu_size")
+        else:
+            self.config['gpu_size'] = 1
+
+        if self.settings.value("vis_size") is not None:
+            self.config['vis_size'] = self.settings.value("vis_size")
+        else:
+            self.config['vis_size'] = 1
+
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y-%H-%M")
-        export_location = folder + "\_" + now_string
-        if folder:
-            self.create_progress_window("Exporting","Exporting Files",max=100)
-            self.progress_window.setValue(5)
-            export_worker = Worker(self.exporter, export_location)
-            export_worker.signals.finished.connect(self.progress_complete)
-            self.threadpool.start(export_worker)
-            self.ShowExportProgress(tempfile.tempdir, export_location)
+        self.config['datetime'] = now_string
 
-    def exporter(self, *args, **kwargs):
-        export_location = args[0]
-        shutil.copytree(tempfile.tempdir, export_location)
+        if (self.roi and not self.config['roi_ext']):
+            self.roi = os.path.join(os.path.abspath(
+                tempfile.tempdir), self.config['roi_file'])
+            # print(self.roi)
+
+        if hasattr(self, 'mask_file'):
+            if 'mask_file' in self.config:
+                self.mask_file = os.path.join(os.path.abspath(
+                    tempfile.tempdir), self.config['mask_file'])
+
+        results_folder = os.path.join(
+            tempfile.tempdir, "Results/_" + self.result_widgets['run_entry'].currentText())
+        self.results_folder = results_folder
+
+        print("The image is: ", self.image)
+
+    def LoadExportedSession(self):
+        '''Loads session which was exported to HDF5'''
+        self.RemoveTemp("new session")
+        self.CreateWorkingTempFolder()
+        self.InitialiseSessionVars()
+        dialogue = QFileDialog()
+        target_file = dialogue.getOpenFileName(
+            self, "Load Session from HDF5", "", "HDF5 Files (*.h5)")[0]
+        os.chdir(tempfile.gettempdir())
+        print(tempfile.gettempdir())
+        if target_file:
+            with h5py.File(target_file, "r") as f:
+                print("loading hdf5")
+                image_types =['Reference', 'Correlate']
+                for image_type in image_types:
+                    if f.get('Images/{}'.format(image_type)) is not None:
+                        if not os.path.exists('Images'):
+                                os.mkdir('Images')
+                        if not os.path.exists('Images/{}'.format(image_type)):
+                                os.mkdir('Images/{}'.format(image_type))
+                        for image_file in f.get('Images/{}'.format(image_type)):
+                            print("image name: ", image_file)
+                            label = "Images/{}/{}".format(image_type, image_file)
+                            hdf5_reader = HDF5Reader()
+                            hdf5_reader.SetFileName(target_file)
+                            hdf5_reader.SetDatasetName(label)
+                            writer = vtk.vtkMetaImageWriter()
+                            writer.SetCompression(False)
+                            writer.SetFileName(label +'.mha')
+                            writer.SetInputConnection(hdf5_reader.GetOutputPort())
+                            writer.Write()
+                # Generate pointcloud files:
+                if f.get('PointClouds') is not None:
+                    for pc_file in f.get('PointClouds'):
+                        label = "PointClouds/{}".format(pc_file)
+                        if not os.path.exists('PointClouds'):
+                            os.mkdir('PointClouds')
+                        np.savetxt(pc_file, f[label][()])
+                # Generate mask files:
+                if f.get('Masks') is not None:
+                    for mask_file in f.get('Masks'):
+                        label = "Masks/{}".format(mask_file)
+                        
+                        hdf5_reader = HDF5Reader()
+                        hdf5_reader.SetFileName(target_file)
+                        hdf5_reader.SetDatasetName(label)
+                        writer = vtk.vtkMetaImageWriter()
+                        writer.SetFileName(label)
+                        writer.SetInputConnection(hdf5_reader.GetOutputPort())
+                        writer.Write()
+
+                os.chdir('Results')
+                # Generate results files:
+                if f.get('Results') is not None:
+                    for results_folder in f.get('Results'):
+                        print("Result Folder: ", results_folder)
+                        os.mkdir(results_folder)
+                        os.chdir(results_folder)
+                        dirlabel = 'Results/{}'.format(results_folder)
+                        run_config = dict(f[dirlabel].attrs.items())
+                        print("config: ", run_config)
+                        for results_file in f[dirlabel]:
+                            print(results_file)
+                            label = '{}/{}'.format(dirlabel, results_file)
+                            with open(results_file, 'w') as fd:
+                                data = f[label][()]
+                                # print(data)
+                                fd.write(f[label][()])
+                                #np.savetxt(results_file, f[label][()])
+                    os.chdir(tempfile.tempdir)
+
+                self.config = dict(f.attrs.items())
+                for k, v in self.config.items():
+                    if k not in ['datetime', 'mask_file', 'run_folder', 'geometry', 'roi_file', 'window_state']:
+                        print(k, v)
+                        self.config[k] = eval(v)
+
+                images_to_mod = ['image', 'dvc_input_image']
+                for image in images_to_mod:
+                    for i, i_val in enumerate(self.config[image]):
+                        for j, j_val in enumerate(self.config[image][i]):
+                            self.config[image][i][j] = j_val + '.mha'
+
+
+            print("Config to Load: ", self.config)
+            self.LoadSession()
+
 
 #Dealing with loading sessions:
          
@@ -4735,8 +5045,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         
         #print(tempfile.tempdir)
 
-        if tempfile.tempdir != loaded_tempdir: # if we are not loading the same session that we already had open
-            shutil.rmtree(tempfile.tempdir) 
+        # if tempfile.tempdir != loaded_tempdir:  # if we are not loading the same session that we already had open
+        #     shutil.rmtree(tempfile.tempdir)
 
         if progress_callback is not None:
             progress_callback.emit(90)
@@ -4761,6 +5071,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             progress_callback.emit(100)
 
     def LoadSession(self):
+        os.chdir(tempfile.tempdir)
         self.resetRegistration()
         
         self.loading_session = True
@@ -4779,9 +5090,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.pointCloudLoaded = self.config['pointcloud_loaded']
             if self.pointCloudLoaded:
                 self.roi = self.config['roi_file']
-                if 'roi_ext' in self.config:
-                    if  not self.config['roi_ext']:
-                        self.roi = os.path.abspath(os.path.join(tempfile.tempdir, self.roi))
+                # if 'roi_ext' in self.config:
+                #     if not self.config['roi_ext']:
+                #         self.roi = os.path.abspath(
+                #             os.path.join(tempfile.tempdir, self.roi))
 
         #pointcloud files could still exist even if there wasn't a pointcloud displayed when the session was saved.
         pointcloud_files = []
@@ -4809,14 +5121,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 for i in self.config['image'][j]:
 
                     #save paths to images to variable
-                    if self.config['image_copied'][j]:
-                        path = os.path.abspath(os.path.join(tempfile.tempdir, i))
-                        # print("The path is")
-                        # print(path)
-                        self.image[j].append(path)
-                    else:
-                        path = i
-                        self.image[j].append(i)
+                    path = i
+                    self.image[j].append(i)
                     if not os.path.exists(path):
                         search_button = QPushButton('Select Image')
                         search_button.clicked.connect(lambda: self.SelectImage(j,self.image))
@@ -4826,7 +5132,6 @@ Please move the file back to this location and reload the session, select a diff
                         error_title = "READ ERROR"
                         error_text = "Error reading file: ({filename})".format(filename=i)
                         self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button)
-
 
                 if self.config['dvc_input_image'] == self.config['image']:
                     self.dvc_input_image = copy.deepcopy(self.image)
@@ -4840,7 +5145,7 @@ Please move the file back to this location and reload the session, select a diff
                             # print(path)
                             self.dvc_input_image[j].append(path)
                         elif('dvc_input_image_in_session_folder' in self.config):
-                            #TODO: check this?
+                            # TODO: check this?
                             self.dvc_input_image_in_session_folder = self.config['dvc_input_image_in_session_folder']
                         else:
                             path = i
@@ -4888,8 +5193,12 @@ Please move the file back to this location and reload the session, select a diff
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
                 if 'gpu_size' in self.config and 'vis_size' in self.config:
-                    if self.settings.value('gpu_size') != self.config['gpu_size'] \
-                        or self.settings.value('vis_size') != self.config['vis_size']:
+                    print("Config sizes: ",
+                          self.config['gpu_size'], self.config['vis_size'])
+                    print("Config sizes: ", self.settings.value(
+                        'gpu_size'), self.settings.value('vis_size'))
+                    if float(self.settings.value('gpu_size')) != float(self.config['gpu_size']) \
+                            or float(self.settings.value('vis_size')) != float(self.config['vis_size']):
 
                         self.mask_load = False
 
@@ -4928,8 +5237,8 @@ Please move the file back to this location and reload the session, select a diff
             self.points = self.config['points']
             self.rdvc_widgets['run_points_spinbox'].setValue(self.points)
 
-            self.run_folder = self.config['run_folder']
-        
+            #self.run_folder = self.config['run_folder']
+
         else:
             self.subvolume_points = None 
             self.rdvc_widgets['subvol_points_spinbox'].setValue(self.rdvc_widgets['subvol_points_spinbox'].minimum())
@@ -4937,9 +5246,7 @@ Please move the file back to this location and reload the session, select a diff
             self.points = None
             self.rdvc_widgets['run_points_spinbox'].setValue(self.rdvc_widgets['run_points_spinbox'].minimum())
 
-
-
-            self.run_folder = [None]
+            #self.run_folder = [None]
             #self.rdvc_widgets['dir_name_label'].setText("")
 
         if 'results_folder' in self.config:
@@ -5677,7 +5984,6 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             elif index ==2:
                 if result.subvol_points == float(self.secondParamCombo.currentText()):
                     resultsToPlot.append(result)
-            displacements.append(displ)
 
         points_list.sort()
 
