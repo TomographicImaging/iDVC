@@ -519,8 +519,6 @@ It will be the first point in the file that is used as the reference point.")
                     copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
                     self.threadpool.start(copy_worker)
                     files[file_num] = new_file_dest
-                    print("Current dir: ", os.getcwd())
-                    print("New file dest: ", new_file_dest)
                     if len(files) == 1:
                         self.show_copy_progress(f, new_file_dest, 1, file_ext, len(files))
                     else:
@@ -556,7 +554,6 @@ It will be the first point in the file that is used as the reference point.")
 
             if next_button is not None:
                 next_button.setEnabled(True)
-            print(self.image)
 
     def copy_file(self, **kwargs):
         
@@ -619,8 +616,6 @@ It will be the first point in the file that is used as the reference point.")
                 target_size = 0.125
         self.target_image_size = target_size
         
-        print("The in file is: ", self.image[0])
-        print("The current working directory is: ", os.getcwd())
         ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
         finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
@@ -671,7 +666,6 @@ It will be the first point in the file that is used as the reference point.")
 
         if 'raw_file' in self.image_info:
             image_file = [self.image_info['raw_file']]
-            print("The raw file is: ", image_file)
             if image_type == "ref":
                 self.dvc_input_image[0] = image_file
                 if os.path.splitext(self.image[0][0])[1] in ['.mhd', '.mha']: #need to call create image data so we read header and save image to file w/o header
