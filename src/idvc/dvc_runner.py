@@ -2,10 +2,8 @@ import os
 import numpy as np
 from PySide2 import QtCore
 from datetime import datetime
-from functools import partial
 from PySide2.QtWidgets import QMessageBox
 import json
-import sys
 import time
 import shutil
 import platform
@@ -72,7 +70,7 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
     while(process.canReadLine()):
         #print("READ")
         string = process.readLine()  
-        line = str(string.data(),"utf-8")
+        line = str(string, "utf-8")
         
         global count
         count+=1
@@ -152,34 +150,18 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
     # print("did")
 
 class DVC_runner(object):
-    def __init__(self, main_window, input_file, finish_fn, run_succeeded):
+    def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
+        # print("The session folder is", session_folder)
         self.main_window = main_window
         self.input_file = input_file
         self.finish_fn = finish_fn
         self.run_succeeded = run_succeeded
 
-        working_directory = os.getcwd()
-        #print ("We are here ", working_directory)
-        os.chdir(working_directory)
-
         self.processes = []
         self.process_num = 0
 
-        working_directory = os.getcwd()
-        #print ("We are here ", working_directory)
-        os.chdir(working_directory)
-        self.working_directory = working_directory
-
-        # 
-
-        #input_file = sys.argv[1]
-
-        #input_file = "C:/Users/lhe97136/Music/_run_config.json"
-        #print(input_file)
-
-
         with open(input_file) as tmp:
-                config = json.load(tmp)
+            config = json.load(tmp)
 
         subvolume_points = config['subvolume_points'] 
         subvolume_sizes = config['subvolume_sizes']
@@ -209,7 +191,10 @@ class DVC_runner(object):
 
         rigid_trans = config['rigid_trans']
 
-        run_folder = config['run_folder']
+        # Change directory into the folder where the run will be saved:
+        os.chdir(session_folder)
+        self.run_folder = config['run_folder']
+        print ("We are here ", os.getcwd())
 
         #running the code:
 
@@ -275,8 +260,8 @@ class DVC_runner(object):
             sorted_list_index.sort()
             # this contains the indices of the sorted list
             lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
-            with open(os.path.join(os.path.abspath(run_folder), "grid_input.roi"),"w") \
-                as selected_central_grid:
+            with open(os.path.join(self.run_folder, "grid_input.roi"),"w") \
+                    as selected_central_grid:
                 with open(roi_file, "r") as entire_central_grid:
                     for i,line in enumerate(entire_central_grid):
                         if i in lines_to_write:
@@ -285,15 +270,16 @@ class DVC_runner(object):
             for subvolume_point in subvolume_points:
                 now = datetime.now()
                 dt_string = now.strftime("%d%m%Y_%H%M%S")
-                new_output_filename = "%s/dvc_result_%s" %( run_folder,dt_string)
-                config_filename = "%s/dvc_config_%s" %( run_folder,dt_string)
+                new_output_filename = "%s/dvc_result_%s" % (self.run_folder, dt_string)
+                config_filename = "%s/dvc_config_%s" % (self.run_folder, dt_string)
                 config_filename = config_filename + ".txt"
                 param_file = os.path.abspath(config_filename)
 
                 # copy the file grid_input.roi to grid_roi_<dt_string>.roi
                 try:
-                    grid_roi = os.path.join("{}/grid_roi_{}.roi".format( run_folder,dt_string))
-                    shutil.copyfile(os.path.join(os.path.abspath(run_folder), "grid_input.roi"), \
+                    grid_roi = os.path.join(
+                        "{}/grid_roi_{}.roi".format(self.run_folder, dt_string))
+                    shutil.copyfile(os.path.join(os.path.abspath(self.run_folder), "grid_input.roi"), \
                         grid_roi )
                 except OSError as oe:
                     # should raise a warning
@@ -348,8 +334,7 @@ class DVC_runner(object):
                 # process.waitForFinished(msecs=2147483647)
                 
                 self.processes.append( 
-                    ( exe_file, [ param_file ], run_folder , \
-                        required_runs, total_points ) 
+                    (exe_file, [ param_file ], required_runs, total_points)
                 )
         
     def run_dvc(self):
@@ -360,11 +345,13 @@ class DVC_runner(object):
         
         process = QtCore.QProcess()
         
-        exe_file, param_file, run_folder, required_runs,\
-             total_points = self.processes[self.process_num]
-        
+        # print("Processes: ", self.processes)
+        # print("num: ", self.process_num)        
 
-        process.setWorkingDirectory(run_folder)
+        exe_file, param_file, required_runs,\
+            total_points = self.processes[self.process_num]
+
+        process.setWorkingDirectory(os.getcwd())
         # process.finished.connect(partial(finished_run, main_window, 
         #             process = process, required_runs = required_runs, 
         #             run_succeeded = run_succeeded, finish_fn = finish_fn))
@@ -409,10 +396,10 @@ class DVC_runner(object):
         input_file = self.input_file
         finish_fn = self.finish_fn
         run_succeeded = self.run_succeeded
-        required_runs = self.processes[self.process_num][3]
+        required_runs = self.processes[self.process_num][2]
 
-        print ("finished {}/{} (or {}) with {} {}"\
-            .format(self.process_num, required_runs, \
+        print("finished {}/{} (or {}) with {} {}"
+              .format(self.process_num + 1, required_runs,
                 len(self.processes), exitCode, exitStatus))
         
         if exitStatus == 0:
