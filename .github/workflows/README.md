@@ -15,11 +15,11 @@ This github action builds and optionally publishes the documentation located in 
 
 The github action has two jobs:
 
-1. [build](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L12): 
+1. [build](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L12): 
 -  builds the documentation with sphinx
 -  uses upload-artifact to upload the html files which may then be used by **publish**
 
-2. [publish](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L27):
+2. [publish](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L27):
 -  uses download-artifact to retrieve the built html files
 -  pushes the html files to the gh-pages branch
 
@@ -28,7 +28,7 @@ When opening or modifying a pull request to master, `build` is run, but not `pub
 When pushing to master or tagging, the documentation is built *and* published (both the `build` and `publish` jobs are run).
 
 ### Viewing Built Documentation
-The `build` job builds the documentation and uploads it as an [artifact](https://github.com/TomographicImaging/iDVC/blob/39d2685395c36fa5acc93f38f9db37af10eb2f9c/.github/workflows/docs_build_and_publish.yml#L21),
+The `build` job builds the documentation and uploads it as an [artifact](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L21),
 in a folder named `DocumentationHTML`.
 This can be found by going to the ‘Actions’ tab, and selecting the appropriate run of `.github/workflows/docs_build_and_publish.yml`.
 
