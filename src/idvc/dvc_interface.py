@@ -4829,7 +4829,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                         search_button.clicked.connect(lambda: self.SelectImage(j,self.image))
                         self.e(
                         '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
-Please move the file back to this location and reload the session, select a different session to load or start a new session')
+Please select the new location of the file, or move it back to where it was originally saved and reload the session.')
                         error_title = "READ ERROR"
                         error_text = "Error reading file: ({filename})".format(filename=i)
                         self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button)
@@ -4860,7 +4860,7 @@ Please move the file back to this location and reload the session, select a diff
                                 search_button.clicked.connect(lambda: self.SelectImage(j,self.dvc_input_image))
                                 self.e(
                                 '', '', 'This file has been deleted or moved to another location. Therefore this session cannot be loaded. \
-        Please move the file back to this location and reload the session, select a different session to load or start a new session')
+        Please select the new location of the file, or move it back to where it was originally saved and reload the session.')
                                 error_title = "READ ERROR"
                                 error_text = "Error reading file: ({filename})".format(filename=i)
                                 self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button)
