@@ -194,7 +194,6 @@ class DVC_runner(object):
         # Change directory into the folder where the run will be saved:
         os.chdir(session_folder)
         self.run_folder = config['run_folder']
-        print ("We are here ", os.getcwd())
 
         #running the code:
 

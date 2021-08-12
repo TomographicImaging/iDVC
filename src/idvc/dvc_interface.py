@@ -774,7 +774,6 @@ It will be the first point in the file that is used as the reference point.")
 
             #bring image loading panel to front if it isnt already:          
             self.select_image_dock.raise_() 
-            print("Image visualised: ", self.image)
 
     def create_progress_window(self, title, text, max = 100, cancel = None):
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
@@ -3916,7 +3915,7 @@ This parameter has a strong effect on computation time, so be careful."
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
 
-            print(self.roi_files)
+            #print(self.roi_files)
 
             #print("DVC in: ", self.dvc_input_image)
             
@@ -4147,7 +4146,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         for r, d, f in os.walk(directory):
             for _file in f:
-                print("Looking at ", _file)
+                #print("Looking at ", _file)
                 if _file.endswith(".roi") and _file.startswith("_"):
                     self.result_widgets['pc_entry'].addItem((_file.split('_')[-1]).split('.')[0])
 
@@ -4540,7 +4539,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setLabelText("Closing")
             self.progress_window.setMaximum(100)
             self.progress_window.setValue(98)
-        print("removed temp", tempfile.tempdir)
+        #print("removed temp", tempfile.tempdir)
         shutil.rmtree(tempfile.tempdir)
 
         if hasattr(self, 'progress_window'):
@@ -4888,10 +4887,6 @@ Please select the new location of the file, or move it back to where it was orig
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
                 if 'gpu_size' in self.config and 'vis_size' in self.config:
-                    print("Config sizes: ",
-                          self.config['gpu_size'], self.config['vis_size'])
-                    print("Config sizes: ", self.settings.value(
-                        'gpu_size'), self.settings.value('vis_size'))
                     if float(self.settings.value('gpu_size')) != float(self.config['gpu_size']) \
                             or float(self.settings.value('vis_size')) != float(self.config['vis_size']):
 
