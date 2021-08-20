@@ -79,7 +79,7 @@ from ccpi.viewer.utils.io import ImageDataCreator
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
-from idvc.dvc_runner import DVC_runner
+from dvc_runner import DVC_runner #todo: add idvc
 
 from eqt.ui import FormDialog
 
@@ -5431,9 +5431,7 @@ class GraphsWindow(QMainWindow):
             del current_dock
 
     def CreateDockWidgets(self, displ_wrt_point0 = False):
-        file_list=[]
         result_list=[]
-        plot_titles = ["Objective Minimum", "Displacement in x", "Displacement in y", "Displacement in z", "Change in phi", "Change in theta", "Change in psi"]
         #print(results_folder[0])
         for f in listdir(self.results_folder):
             if f.endswith(".disp"):
@@ -5442,7 +5440,7 @@ class GraphsWindow(QMainWindow):
                 result = RunResults(file_path)
                 result_list.append(result)
         
-                GraphWidget = SingleRunResultsWidget(self, result, plot_titles, displ_wrt_point0)
+                GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
                 dock1 = QDockWidget(result.title,self)
                 dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
                 dock1.setWidget(GraphWidget)
@@ -5470,7 +5468,7 @@ class GraphsWindow(QMainWindow):
 class SingleRunResultsWidget(QtWidgets.QWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
-    def __init__(self, parent, plot_data, plot_titles, displ_wrt_point0 = False):
+    def __init__(self, parent, plot_data, displ_wrt_point0 = False):
         super().__init__()
         self.parent = parent
 
@@ -5484,16 +5482,9 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-        self.CreateHistogram(plot_data, plot_titles, displ_wrt_point0)
+        self.CreateHistogram(plot_data, displ_wrt_point0)
 
-    def CreateHistogram(self, result, plot_titles, displ_wrt_point0):
-        numGraphs = len(plot_titles)
-        if numGraphs <= 3:
-            numRows = 1
-        else:
-            numRows = np.round(np.sqrt(numGraphs))
-        numColumns = np.ceil(numGraphs/numRows)
-
+    def CreateHistogram(self, result, displ_wrt_point0):
         displ = np.asarray(
         PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
         )
@@ -5503,23 +5494,22 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
                 for i in range(3):
                     displ[count][i+6] = displ[count][i+6] - point0_disp[i]
 
-        obj_mins = displ[:, 5]
-        u_disp = displ[:, 6]
-        v_disp = displ[:, 7]
-        w_disp = displ[:, 8]
-        phi_disp = displ[:, 9]
-        theta_disp = displ[:, 10]
-        psi_disp = displ[:, 11]
-        points = np.shape(displ[0])
+        plot_data = [displ[:,i] for i in range(5, displ.shape[1])]
 
-        plot_data = [obj_mins, u_disp, v_disp, w_disp, phi_disp, theta_disp, psi_disp]
+        numGraphs = len(plot_data)
+        if numGraphs <= 3:
+            numRows = 1
+        else:
+            numRows = np.round(np.sqrt(numGraphs))
+        numColumns = np.ceil(numGraphs/numRows)
+
         plotNum = 0
         for array in plot_data:
             plotNum = plotNum + 1
             ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
             ax.set_ylabel("")
             #ax.set_xlabel(plot_titles[plotNum-1])
-            ax.set_title(plot_titles[plotNum-1])
+            ax.set_title(result.plot_titles[plotNum-1])
             ax.hist(array,20)
 
         plt.tight_layout() # Provides proper spacing between figures
@@ -5562,8 +5552,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.layout.addWidget(self.label,widgetno,1)
 
         self.combo = QComboBox(self)
-        self.var_list = ["Objective Minimum", "x displacement", "y displacement","z displacment", "phi", "theta", "psi"]
-        self.combo.addItems(self.var_list)
+        self.combo.addItems(result.plot_titles)
         self.layout.addWidget(self.combo,widgetno,2)  
         widgetno+=1
 
@@ -5716,29 +5705,10 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                     text = str(result.subvol_size) 
                 ax.set_ylabel(text + " " + self.combo1.currentText())
 
-            obj_mins = displacements[i][:, 5]
-            u_disp = displacements[i][:, 6]
-            v_disp = displacements[i][:, 7]
-            w_disp = displacements[i][:, 8]
-            phi_disp = displacements[i][:, 9]
-            theta_disp = displacements[i][:, 10]
-            psi_disp = displacements[i][:, 11]
+            plot_data = [displacements[i][:,k] for k in range(5, displacements[i].shape[1])]
 
             #get variable to display graphs for:
-            if self.combo.currentIndex()==0:
-                ax.hist(obj_mins,20)
-            elif self.combo.currentIndex()==1:
-                ax.hist(u_disp,20)
-            elif self.combo.currentIndex()==2:
-                ax.hist(v_disp,20)
-            elif self.combo.currentIndex()==3:
-                ax.hist(w_disp,20)
-            elif self.combo.currentIndex()==4:
-                ax.hist(phi_disp,20)
-            elif self.combo.currentIndex()==5:
-                ax.hist(theta_disp,20)
-            elif self.combo.currentIndex()==6:
-                ax.hist(psi_disp,20)
+            ax.hist(plot_data[self.combo.currentIndex()], 20)
 
         self.figure.suptitle(self.combo.currentText(),size ="large")
 
@@ -5747,7 +5717,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.canvas.draw()
         
 class RunResults(object):
-    def __init__(self,file_name):
+    def __init__(self, file_name):
         
         self.points = None
 
@@ -5785,6 +5755,16 @@ class RunResults(object):
                 #     self.subvol_aspect = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
                 count+=1
 
+        plot_titles_dict = {
+            'objmin': "Objective Minimum", 'u': "Displacement in x", 'v':"Displacement in y", 'w':"Displacement in z",
+            'phi':"Change in phi",'the':"Change in theta", 'psi':"Change in psi"}
+
+        with open(disp_file_name) as f:
+            # first 4 columns are: n, x, y, z, status - we don't want these
+            self.plot_titles = f.readline().split()[5:]
+            self.plot_titles = [plot_titles_dict.get(text, text) for text in self.plot_titles]
+
+        
         self.disp_file = disp_file_name
 
         self.title =  str(self.subvol_points) + " Points in Subvolume," + " Subvolume Size: " + str(self.subvol_size)
