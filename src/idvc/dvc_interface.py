@@ -5456,7 +5456,7 @@ class GraphsWindow(QMainWindow):
                     self.tabifyDockWidget(prev,current_dock)
                 prev= current_dock
         
-        SummaryTab = SummaryGraphsWidget(self, result_list)#, summary_plot_titles)
+        SummaryTab = SummaryGraphsWidget(self, result_list)
         dock = QDockWidget("Summary",self)
         dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
         dock.setWidget(SummaryTab)
@@ -5656,16 +5656,15 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             if no_points not in points_list:
                 points_list.append(no_points)
 
-            if index == 0: #compare all
-                resultsToPlot.append(result)
-            
             if index == 1: # Points in subvolume is compared
-                if result.subvol_size == float(self.secondParamCombo.currentText()):
-                    resultsToPlot.append(result)
+                if result.subvol_size != float(self.secondParamCombo.currentText()):
+                    pass
 
             elif index ==2:
-                if result.subvol_points == float(self.secondParamCombo.currentText()):
-                    resultsToPlot.append(result)
+                if result.subvol_points != float(self.secondParamCombo.currentText()):
+                    pass
+            
+            resultsToPlot.append(result)
             displacements.append(displ)
 
         points_list.sort()
