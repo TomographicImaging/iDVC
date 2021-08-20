@@ -79,7 +79,7 @@ from ccpi.viewer.utils.io import ImageDataCreator
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
-from dvc_runner import DVC_runner #todo: add idvc
+from idvc.dvc_runner import DVC_runner
 
 from eqt.ui import FormDialog
 
