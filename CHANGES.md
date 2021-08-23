@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 21.1.2
+* Only use relative filepaths to session files
+* This allows session folders to be transferred between computers
+* Display results graphs without hard-coding expected columns in .disp file
+* This fixes a bug with graphs not displaying after the update to ccp-dvc v21.1.0
+* Increases ccpi-viewer version requirement to 21.1.1
+
 ## v21.1.1
 * Increases ccpi-dvc version requirement to 21.1.0.
 * This fixes issue of missing DLLs when running DVC exe on windows
