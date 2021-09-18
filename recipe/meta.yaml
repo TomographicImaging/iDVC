@@ -36,9 +36,9 @@ requirements:
   
   build:
     - python 
-    - openmp                # [osx]
-    - cmake
+    - setuptools
     - numpy {{ numpy }}
+    - ripgrep
 
   run:
     - python
