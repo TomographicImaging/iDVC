@@ -7,7 +7,7 @@ source:
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
-
+  noarch: python
   preserve_egg_dir: False
 
   entry_points:
@@ -35,14 +35,12 @@ test:
 requirements:
   
   build:
-    - python 
-    - openmp                # [osx]
-    - cmake
+    - python {{ python }}
     - numpy {{ numpy }}
 
   run:
-    - python
-    - numpy
+    - python {{ python }}
+    - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
     - ccpi-viewer >=21.1.1
     - ccpi-dvc >=21.1.0
     - natsort
