@@ -7,6 +7,8 @@ import json
 import time
 import shutil
 import platform
+import sys
+from functools import partial
 
 count = 0
 runs_completed = 0
@@ -91,19 +93,7 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
             displayFileErrorDialog(main_window, line, "Error")
             process.kill()
             return
-    #sys.stdout.flush()
-
-def create_progress_window(main_window, title, text, max = 100, cancel = None):
-        main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
-        main_window.progress_window.setWindowTitle(title)
-        main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        main_window.progress_window.setMinimumDuration(0.1)
-        main_window.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
-        main_window.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
-        if cancel is None:
-            main_window.progress_window.setCancelButton(None)
-        else:
-            main_window.progress_window.canceled.connect(cancel)
+        sys.stdout.flush()
 
 def displayFileErrorDialog(main_window, message, title):
     msg = QMessageBox(main_window)
@@ -113,41 +103,6 @@ def displayFileErrorDialog(main_window, message, title):
     #msg.setDetailedText(main_window.e.ErrorMessage())
     msg.exec_()
 
-def cancel_run(main_window, process, run_succeeded):
-    
-    if not run_succeeded:
-        # print ("run cancelled?")
-        process.kill()
-        main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
-        main_window.alert.show()
-        run_succeeded = False
-    # else:
-    #     print ("all OK, all processes ended")
-
-
-def finished_run(main_window, exitCode, exitStatus, process = None, required_runs = 1, run_succeeded = False, finish_fn = None):
-    global runs_completed
-    runs_completed+=1
-    # print ("DVC command ended.", exitCode, exitStatus)
-    # print("Completed, ", runs_completed)
-
-    if run_succeeded:
-        if runs_completed == required_runs:
-            if hasattr(main_window, 'progress_window'):
-                main_window.progress_window.close()
-            main_window.alert = QMessageBox(QMessageBox.NoIcon,"Success","The DVC code ran successfully.", QMessageBox.Ok) 
-            main_window.alert.show()
-            if finish_fn is not None:
-                finish_fn()
-            runs_completed = 0
-            global count
-            count = 0
-    #print ("DVC command ended.", exitCode, exitStatus)
-    
-
-    # if( runs_completed >=  required_runs): #and  cancelled == False):
-    #     runs_completed = 0
-    # print("did")
 
 class DVC_runner(object):
     def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
@@ -342,20 +297,17 @@ class DVC_runner(object):
         finish_fn = self.finish_fn
         run_succeeded = self.run_succeeded
         
-        process = QtCore.QProcess()
-        
-        # print("Processes: ", self.processes)
-        # print("num: ", self.process_num)        
+        process = QtCore.QProcess()    
 
         exe_file, param_file, required_runs,\
             total_points = self.processes[self.process_num]
 
-        process.setWorkingDirectory(os.getcwd())
         # process.finished.connect(partial(finished_run, main_window, 
         #             process = process, required_runs = required_runs, 
         #             run_succeeded = run_succeeded, finish_fn = finish_fn))
         process.finished.connect(self.finished_run)
         process.started.connect(self.onStarted)
+        process.errorOccurred.connect(partial(self.display_crash_error, main_window, process))
         if self.process_num == 0:
             main_window.create_progress_window("Running", 
                 "Running DVC code {}/{}".format(self.process_num +1, len(self.processes)), 100,
@@ -367,9 +319,10 @@ class DVC_runner(object):
                 "Running DVC code {}/{}".format(self.process_num +1, len(self.processes))
             )
             main_window.progress_window.canceled.connect(lambda: self.onCancel(process))
-        process.readyRead.connect(
+        process.readyReadStandardOutput.connect(
             lambda: update_progress(main_window, process, total_points, required_runs,\
                                     run_succeeded))
+        process.readyReadStandardError.connect(lambda: self.display_crash_error(main_window, process, error="readyerror"))
         # process.finished.connect(self.run_dvc())
         process.start( exe_file , param_file )
 
@@ -421,4 +374,19 @@ class DVC_runner(object):
             self.process_num += 1
             self.run_dvc()
 
-            
+    def display_crash_error(self, main_window, process, error):
+        string = process.readAllStandardError()
+        line = str(string, "utf-8")
+        if line == "":
+            line = str(error) + process.errorString()
+        if hasattr(main_window, 'progress_window'):
+            main_window.progress_window.setValue(100)
+        if hasattr(main_window, 'alert'):
+            main_window.alert.close()
+        
+        self.run_succeeded = False
+        # Prevent any more attempts to run DVC code:
+        required_runs = self.processes[self.process_num][2]
+        self.process_num = required_runs-1
+        displayFileErrorDialog(main_window, line, "Error running the DVC")
+        

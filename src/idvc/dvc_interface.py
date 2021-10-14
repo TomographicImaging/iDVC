@@ -5820,7 +5820,7 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
 
 def main():
     err = vtk.vtkFileOutputWindow()
-    err.SetFileName("viewer.log")
+    err.SetFileName("../viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
 
     # log = open("dvc_interface.log", "a")
