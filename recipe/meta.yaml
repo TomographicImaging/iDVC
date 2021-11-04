@@ -50,7 +50,6 @@ requirements:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
-    - importlib_metadata    # [py<38]
 
 about:
   home: http://www.ccpi.ac.uk
