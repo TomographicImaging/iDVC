@@ -1,6 +1,9 @@
 # ChangeLog
 
-## 21.1.2
+## v21.#.#
+* Generate version.py from setup.py
+
+## v21.1.2
 * Only use relative filepaths to session files
 * This allows session folders to be transferred between computers
 * Display results graphs without hard-coding expected columns in .disp file

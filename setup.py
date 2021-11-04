@@ -18,9 +18,19 @@ from distutils.core import setup
 import subprocess
 
 cmd = 'git describe'
-dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:]
+dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:].rstrip()
 
 print ('version {}'.format(dversion))
+
+cwd = os.path.join(os.environ.get('RECIPE_DIR'),'..')
+
+# update the version string
+fname = os.path.join(cwd, 'src', 'idvc', 'version.py')
+
+if os.path.exists(fname):
+    os.remove(fname)
+with open(fname, 'w') as f:
+    f.write('version = \'{}\''.format(dversion))
 
 setup(
       name = "idvc",
