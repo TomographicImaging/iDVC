@@ -35,12 +35,12 @@ test:
 requirements:
   
   build:
-    - python {{ python }}
-    - numpy {{ numpy }}
+    - python
+    - numpy
 
   run:
-    - python {{ python }}
-    - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
+    - python
+    - numpy
     - ccpi-viewer >=21.1.1
     - ccpi-dvc >=21.1.0
     - natsort
