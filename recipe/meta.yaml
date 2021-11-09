@@ -7,7 +7,7 @@ source:
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER }}
-
+  noarch: python
   preserve_egg_dir: False
 
   entry_points:
@@ -35,10 +35,8 @@ test:
 requirements:
   
   build:
-    - python 
-    - openmp                # [osx]
-    - cmake
-    - numpy {{ numpy }}
+    - python
+    - numpy
 
   run:
     - python
