@@ -66,7 +66,7 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-from ccpi.viewer.utils.io import ImageDataCreator
+from idvc.io import ImageDataCreator
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
