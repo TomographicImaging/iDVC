@@ -2,6 +2,7 @@
 
 ## v21.#.#
 * Generate version.py from setup.py
+* Changed the directory structure for the configuration files for a single or bulk which are now saved at as same level subdirectories as Result/<run_name>/dvc_result_<run_number>. The Bulk run will launch a DVC execution consequently for each directory.
 
 ## v21.1.2
 * Only use relative filepaths to session files

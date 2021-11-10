@@ -39,7 +39,7 @@ requirements:
     - numpy
 
   run:
-    - python 
+    - python
     - numpy
     - ccpi-viewer >=21.1.2
     - ccpi-dvc >=21.1.0
