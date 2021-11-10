@@ -35,20 +35,20 @@ test:
 requirements:
   
   build:
-    - python {{ python }}
-    - numpy {{ numpy }}
+    - python
+    - numpy
 
   run:
-    - python {{ python }}
-    - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
-    - ccpi-viewer >=21.1.1
+    - python >=3.6
+    - numpy >=1.16
+    - ccpi-viewer >=21.1.2
     - ccpi-dvc >=21.1.0
     - natsort
     - docopt
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
-    - importlib_metadata    # [py<38]
+    # - importlib_metadata    # [py<38]
 
 about:
   home: http://www.ccpi.ac.uk
