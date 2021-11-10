@@ -39,8 +39,8 @@ requirements:
     - numpy
 
   run:
-    - python >=3.6
-    - numpy >=1.16
+    - python 
+    - numpy
     - ccpi-viewer >=21.1.2
     - ccpi-dvc >=21.1.0
     - natsort
