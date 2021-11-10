@@ -22,7 +22,10 @@ dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:].
 
 print ('version {}'.format(dversion))
 
-cwd = os.path.join(os.environ.get('RECIPE_DIR'),'..')
+if os.environ.get('CONDA_BUILD', '0') == '1':
+    cwd = os.path.join(os.environ.get('RECIPE_DIR'),'..')
+else:
+    cwd = os.path.dirname(__file__)
 
 # update the version string
 fname = os.path.join(cwd, 'src', 'idvc', 'version.py')
