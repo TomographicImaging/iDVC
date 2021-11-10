@@ -159,7 +159,8 @@ class DVC_runner(object):
 
         self.processes = []
         self.process_num = 0
-
+        
+        # created in dvc_interface create_run_config
         with open(input_file) as tmp:
             config = json.load(tmp)
 
@@ -193,6 +194,9 @@ class DVC_runner(object):
 
         # Change directory into the folder where the run will be saved:
         os.chdir(session_folder)
+        # this is the one directory we created where we will run the dvc command in
+        # we want to change this to create multiple directories first and then run through
+        # all the directory created https://github.com/TomographicImaging/iDVC/issues/37
         self.run_folder = config['run_folder']
 
         #running the code:
@@ -233,7 +237,7 @@ class DVC_runner(object):
         file_count = -1
         point0 = main_window.getPoint0WorldCoords()
             
-        for roi_file in roi_files:
+        for roi_num, roi_file in enumerate(roi_files):
             file_count +=1
             subvolume_size = int(subvolume_sizes[file_count])
             #print(roi_file)
@@ -259,44 +263,34 @@ class DVC_runner(object):
             sorted_list_index.sort()
             # this contains the indices of the sorted list
             lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
-            with open(os.path.join(self.run_folder, "grid_input.roi"),"w") \
-                    as selected_central_grid:
-                with open(roi_file, "r") as entire_central_grid:
-                    for i,line in enumerate(entire_central_grid):
-                        if i in lines_to_write:
-                            selected_central_grid.write(line)
 
-            for subvolume_point in subvolume_points:
+            for subv_num, subvolume_point in enumerate(subvolume_points):
                 now = datetime.now()
-                dt_string = now.strftime("%d%m%Y_%H%M%S")
-                new_output_filename = "%s/dvc_result_%s" % (self.run_folder, dt_string)
-                config_filename = "%s/dvc_config_%s" % (self.run_folder, dt_string)
-                config_filename = config_filename + ".txt"
-                param_file = os.path.abspath(config_filename)
-
-                # copy the file grid_input.roi to grid_roi_<dt_string>.roi
-                try:
-                    grid_roi = os.path.join(
-                        "{}/grid_roi_{}.roi".format(self.run_folder, dt_string))
-                    shutil.copyfile(os.path.join(os.path.abspath(self.run_folder), "grid_input.roi"), \
-                        grid_roi )
-                except OSError as oe:
-                    # should raise a warning
-                    print("Help OSError!, " , oe)
-                    break
-                except shutil.SameFileError as fee:
-                    print ("Destination file already exists", fee)
-                    break                    
+                # use a counter for both for loops
+                counter = subv_num + roi_num * len(subvolume_points)
+                # dt_string = now.strftime("%d%m%Y_%H%M%S")
+                # new_output_filename = "%s/dvc_result_%s" % (self.run_folder, dt_string)
+                # config_filename = "%s/dvc_config_%s" % (self.run_folder, dt_string)
+                # config_filename = config_filename + ".txt"
+                this_run_folder = os.path.join(self.run_folder, "dvc_result_{}".format(counter))
+                os.mkdir(this_run_folder)
+                output_filename = os.path.join(this_run_folder, "dvc_result_{}".format(counter))
+                config_filename = os.path.join(this_run_folder,"dvc_config.txt")
                 
-                outfile = new_output_filename
-                # TODO: allow file to be saved in base working directory
-                #print(outfile)
+                grid_roi_fname = os.path.join(this_run_folder, "grid_input.roi")
+                with open(grid_roi_fname,"w") \
+                    as selected_central_grid:
+                    with open(roi_file, "r") as entire_central_grid:
+                        for i,line in enumerate(entire_central_grid):
+                            if i in lines_to_write:
+                                selected_central_grid.write(line)
 
+                
                 config =  blank_config.format(
                     reference_filename=  reference_file, # reference tomography image volume
                     correlate_filename=  correlate_file, # correlation tomography image volume
-                    point_cloud_filename = grid_roi,
-                    output_filename= new_output_filename,
+                    point_cloud_filename = grid_roi_fname,
+                    output_filename= output_filename,
                     vol_bit_depth=  vol_bit_depth, # get from ref, 8 or 16
                     vol_hdr_lngth=vol_hdr_lngth,# get from ref, fixed-length header size, may be zero
                     vol_wide= dims[0], # number of x slices
@@ -318,7 +312,7 @@ class DVC_runner(object):
                     basin_radius='0.0',
                     subvol_aspect='1.0 1.0 1.0') # image spacing
                 time.sleep(1)
-                with open(param_file,"w") as config_file:
+                with open(config_filename,"w") as config_file:
                     config_file.write(config)
             
                 #if run_count == len( subvolume_points):
@@ -333,7 +327,7 @@ class DVC_runner(object):
                 # process.waitForFinished(msecs=2147483647)
                 
                 self.processes.append( 
-                    (exe_file, [ param_file ], required_runs, total_points)
+                    (exe_file, [ config_filename ], required_runs, total_points)
                 )
         
     def run_dvc(self):
