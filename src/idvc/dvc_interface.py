@@ -79,6 +79,10 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
+from idvc.dialogs import SettingsWindow
+
+from brem.ui import RemoteFileDialog
+from brem import AsyncCopyFromSSH
 
 __version__ = gui_version.version
 
@@ -223,6 +227,7 @@ class MainWindow(QMainWindow):
         self.dvc_input_image_in_session_folder = False    
         if hasattr(self, 'ref_image_data'):
             del self.ref_image_data
+        self.connection_details = None
 
 
 #Loading the DockWidgets:
@@ -499,7 +504,54 @@ It will be the first point in the file that is used as the reference point.")
         self.view_image()
         self.resetRegistration()
 
+
     def SelectImage(self, image_var, image, label=None, next_button=None): 
+        if self.connection_details is None:
+            return self.SelectImageLocal(image_var, image, label, next_button)
+        else:
+            return self.SelectImageRemote(image_var, image, label, next_button)
+    
+    def SelectImageRemote(self, image_var, image, label=None, next_button=None):     
+        # start the RemoteFileBrowser
+        logfile = os.path.join(os.getcwd(), "RemoteFileDialog.log")
+        dialog = RemoteFileDialog(self, logfile=logfile, port=self.connection_details['server_port'], 
+                                  host=self.connection_details['server_name'], 
+                                  username=self.connection_details['username'], 
+                                  private_key=self.connection_details['private_key'],
+                                  remote_os=self.connection_details['remote_os'])
+        dialog.Ok.clicked.connect(lambda: self.getSelected(dialog))
+        if hasattr(self, 'files_to_get'):
+            try:
+                dialog.widgets['lineEdit'].setText(self.files_to_get[0][0])
+            except:
+                pass
+        dialog.exec()
+    def getSelected(self, dialog):
+        if hasattr(dialog, 'selected'):
+            print (type(dialog.selected))
+            for el in dialog.selected:
+                print ("Return from dialogue", el)
+            self.files_to_get = list (dialog.selected)
+    def ResampleAndGetFileFromRemote(self):
+        # 1 download self.files_to_get
+        if len(self.files_to_get) == 1:
+            self.asyncCopy = AsyncCopyFromSSH()
+            if not hasattr(self, 'connection_details'):
+                self.statusBar().showMessage("define the connection")
+                return
+            username = self.connection_details['username']
+            port = self.connection_details['server_port']
+            host = self.connection_details['server_name']
+            private_key = self.connection_details['private_key']
+            
+            self.asyncCopy.setRemoteConnectionSettings(username=username, 
+                                        port=port, host=host, private_key=private_key)
+            self.asyncCopy.SetRemoteFileName(dirname=self.files_to_get[0][0], filename=self.files_to_get[0][1])
+            self.asyncCopy.SetDestinationDir(os.path.abspath(self.tempdir.name))
+            self.asyncCopy.signals.finished.connect(lambda: self.visualise())
+            self.asyncCopy.GetFile()
+
+    def SelectImageLocal(self, image_var, image, label=None, next_button=None): 
         #print("In select image")
         dialogue = QFileDialog()
         files = dialogue.getOpenFileNames(self,"Load Images")[0]
@@ -5021,123 +5073,7 @@ Please select the new location of the file, or move it back to where it was orig
 
 
 
-class SettingsWindow(QDialog):
 
-    def __init__(self, parent):
-        super(SettingsWindow, self).__init__(parent)
-
-        self.parent = parent
-
-        self.setWindowTitle("Settings")
-
-        self.dark_checkbox = QCheckBox("Dark Mode")
-
-        self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
-        self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
-        self.vis_size_entry = QDoubleSpinBox()
-
-        self.vis_size_entry.setMaximum(64.0)
-        self.vis_size_entry.setMinimum(0.01)
-        self.vis_size_entry.setSingleStep(0.01)
-
-        if self.parent.settings.value("vis_size") is not None:
-            self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
-
-        else:
-            self.vis_size_entry.setValue(1.0)
-
-
-        if self.parent.settings.value("dark_mode") is not None:
-            if self.parent.settings.value("dark_mode") == "true":
-                self.dark_checkbox.setChecked(True)
-            else:
-                self.dark_checkbox.setChecked(False)
-        else:
-            self.dark_checkbox.setChecked(True)
-
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Raised)
-        self.adv_settings_label = QLabel("Advanced")
-
-
-        self.gpu_label = QLabel("Please set the size of your GPU memory.")
-        self.gpu_size_label = QLabel("GPU Memory (GB): ")
-        self.gpu_size_entry = QDoubleSpinBox()
-
-
-        if self.parent.settings.value("gpu_size") is not None:
-            self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
-
-        else:
-            self.gpu_size_entry.setValue(1.0)
-
-        self.gpu_size_entry.setMaximum(64.0)
-        self.gpu_size_entry.setMinimum(0.00)
-        self.gpu_size_entry.setSingleStep(0.01)
-        self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
-        self.gpu_checkbox.setChecked(True) #gpu is default
-        if self.parent.settings.value("volume_mapper") == "cpu":
-            self.gpu_checkbox.setChecked(False)
-
-        if hasattr(self.parent, 'copy_files'):
-            self.copy_files_checkbox.setChecked(self.parent.copy_files)
-
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.dark_checkbox)
-        self.layout.addWidget(self.copy_files_checkbox)
-        self.layout.addWidget(self.vis_size_label)
-        self.layout.addWidget(self.vis_size_entry)
-        self.layout.addWidget(separator)
-        self.layout.addWidget(self.adv_settings_label)
-        self.layout.addWidget(self.gpu_checkbox)
-        self.layout.addWidget(self.gpu_label)
-        self.layout.addWidget(self.gpu_size_label)
-        self.layout.addWidget(self.gpu_size_entry)
-        self.buttons = QDialogButtonBox(
-           QDialogButtonBox.Save | QDialogButtonBox.Cancel,
-           Qt.Horizontal, self)
-        self.layout.addWidget(self.buttons)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.quit)
-
-    def accept(self):
-        #self.parent.settings.setValue("settings_chosen", 1)
-        if self.dark_checkbox.isChecked():
-            self.parent.settings.setValue("dark_mode", True)
-        else:
-            self.parent.settings.setValue("dark_mode", False)
-        self.parent.SetAppStyle()
-
-        if self.copy_files_checkbox.isChecked():
-            self.parent.copy_files = 1 # save for this session
-            self.parent.settings.setValue("copy_files", 1) #save for next time we open app
-        else:
-            self.parent.copy_files = 0
-            self.parent.settings.setValue("copy_files", 0)
-
-        if self.gpu_checkbox.isChecked():
-            self.parent.settings.setValue("volume_mapper", "gpu")
-            self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
-        else:
-            self.parent.settings.setValue("volume_mapper", "cpu")
-
-        self.parent.settings.setValue("gpu_size", float(self.gpu_size_entry.value()))
-        self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
-
-        if self.parent.settings.value("first_app_load") != "False":
-            self.parent.CreateSessionSelector("new window")
-            self.parent.settings.setValue("first_app_load", "False")
-            
-        self.close()
-
-
-        #print(self.parent.settings.value("copy_files"))
-    def quit(self):
-        if self.parent.settings.value("first_app_load") != "False":
-            self.parent.CreateSessionSelector("new window")
-            self.parent.settings.setValue("first_app_load", "False")
-        self.close()
         
 
 
