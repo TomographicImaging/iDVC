@@ -89,7 +89,9 @@ class SettingsWindow(QDialog):
         self.remote_button_entry.setText("Open Preferences")
         self.remote_button_entry.clicked.connect(self.openConfigRemote)
         fw.addWidget(self.remote_button_entry, 'Configure remote settings', 'remote_preferences')
-        fw.addWidget(QCheckBox(self), 'Connect to remote server', 'connect_to_remote')
+        cb = QCheckBox(self)
+        cb.setChecked(self.parent.connection_details is not None)
+        fw.addWidget(cb, 'Connect to remote server', 'connect_to_remote')
         self.fw = fw
         for k,v in fw.widgets.items():
             print ("fw", k)

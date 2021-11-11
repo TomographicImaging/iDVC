@@ -513,7 +513,7 @@ It will be the first point in the file that is used as the reference point.")
     
     def SelectImageRemote(self, image_var, image, label=None, next_button=None):     
         # start the RemoteFileBrowser
-        logfile = os.path.join(os.getcwd(), "RemoteFileDialog.log")
+        logfile = os.path.join(os.getcwd(), '..','..',"RemoteFileDialog.log")
         dialog = RemoteFileDialog(self, logfile=logfile, port=self.connection_details['server_port'], 
                                   host=self.connection_details['server_name'], 
                                   username=self.connection_details['username'], 
