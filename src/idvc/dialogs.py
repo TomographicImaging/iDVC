@@ -1,9 +1,12 @@
 from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtWidgets import QCheckBox, QLabel, QDoubleSpinBox, QFrame, QVBoxLayout, QDialogButtonBox, QPushButton, QDialog
+from PySide2.QtWidgets import QCheckBox, QLabel, QDoubleSpinBox, QFrame, QVBoxLayout,\
+     QDialogButtonBox, QPushButton, QDialog, QLineEdit
 from PySide2.QtCore import Qt
 import vtk
-from brem.ui import RemoteServerSettingDialog
+from brem.ui import RemoteServerSettingDialog, RemoteFileDialog
 from eqt.ui import UIFormFactory
+
+import os, posixpath
 
 class SettingsWindow(QDialog):
 
@@ -92,6 +95,13 @@ class SettingsWindow(QDialog):
         cb = QCheckBox(self)
         cb.setChecked(self.parent.connection_details is not None)
         fw.addWidget(cb, 'Connect to remote server', 'connect_to_remote')
+        select_remote_workdir = QPushButton(self)
+        select_remote_workdir.setText('Browse')
+        select_remote_workdir.clicked.connect(self.browseRemote)
+        fw.addWidget(select_remote_workdir, 'Select remote workdir', 'select_remote_workdir')
+        remote_workdir = QLineEdit(self)
+        fw.addWidget(remote_workdir, 'Remote workdir', 'remote_workdir')
+
         self.fw = fw
         for k,v in fw.widgets.items():
             print ("fw", k)
@@ -169,3 +179,33 @@ class SettingsWindow(QDialog):
         for k,v in dialog.connection_details.items():
             print (k,v)
         self.connection_details = dialog.connection_details
+
+
+    def browseRemote(self):     
+        # start the RemoteFileBrowser
+        logfile = os.path.join(os.getcwd(), '..','..',"RemoteFileDialog.log")
+        # logfile = None
+        dialog = RemoteFileDialog(self, logfile=logfile, port=self.connection_details['server_port'], 
+                                  host=self.connection_details['server_name'], 
+                                  username=self.connection_details['username'], 
+                                  private_key=self.connection_details['private_key'],
+                                  remote_os=self.connection_details['remote_os'])
+        dialog.Ok.clicked.connect(
+            lambda: self.getSelectedRemoteWorkdir(dialog)
+            )
+        if hasattr(self, 'files_to_get'):
+            try:
+                dialog.widgets['lineEdit'].setText(self.files_to_get[0][0])
+            except:
+                pass
+        dialog.exec()
+
+
+    def getSelectedRemoteWorkdir(self, dialog):
+        if hasattr(dialog, 'selected'):
+            print (type(dialog.selected))
+            for el in dialog.selected:
+                print ("Return from dialogue", el)
+            self.files_to_get = list (dialog.selected)
+            remote_workdir = posixpath.join(self.files_to_get[0][0], self.files_to_get[0][1])
+            self.fw.widgets['remote_workdir_field'].setText(remote_workdir)
