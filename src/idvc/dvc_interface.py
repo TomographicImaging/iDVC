@@ -574,6 +574,12 @@ It will be the first point in the file that is used as the reference point.")
             # this should also not be done like this.
             self.asyncCopy.threadpool.start(self.asyncCopy.worker)
 
+            # save into these variables for the remote run in create_run_config
+            if image_var == 0:
+                self.reference_file = remotepath
+            elif image_var == 1:
+                self.correlate_file = remotepath
+
             sleep(1)
 
             self.create_progress_window("Getting files from remote", "", 0, None, False)
@@ -3876,6 +3882,7 @@ This parameter has a strong effect on computation time, so be careful."
 
         #Add button functionality:
         rdvc_widgets['run_type_entry'].currentIndexChanged.connect(self.show_run_groupbox)
+        # if connected to remote do something else.
         rdvc_widgets['run_button'].clicked.connect(self.create_config_worker)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
@@ -3949,10 +3956,22 @@ This parameter has a strong effect on computation time, so be careful."
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
         # if single or bulk use the line below, if remote develop new functionality
-        self.config_worker.signals.result.connect(partial (self.run_external_code))
+        if not self.settings_window.fw['connect_to_remote'].isChecked():
+            self.config_worker.signals.result.connect(partial (self.run_external_code))
+        else:
+            # do not run the dvc locally but 
+            # 1 zip and 
+            # 2 upload the config to remote and then
+            # 3 run the code on the remote
+            self.config_worker.signals.result.connect(partial (self.ZipAndUploadConfigToRemote))
+            pass
+        
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
         
+    def ZipAndUploadConfigToRemote(self, **kwargs):
+        pass
+
 
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
@@ -4021,12 +4040,13 @@ This parameter has a strong effect on computation time, so be careful."
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
 
-            #print(self.roi_files)
-
-            #print("DVC in: ", self.dvc_input_image)
-            
-            self.reference_file = self.dvc_input_image[0][0]
-            self.correlate_file = self.dvc_input_image[1][0]
+            # if remote mode this should not be the local copy        
+            if self.settings_window.fw['connect_to_remote'].isChecked():
+                # this should point to the remote files set at the time of download
+                pass
+            else:
+                self.reference_file = self.dvc_input_image[0][0]
+                self.correlate_file = self.dvc_input_image[1][0]
 
             #print("REF: ", self.reference_file)
 
@@ -4100,8 +4120,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.cancelled = True
             return
             
-
-        
         self.run_succeeded = True
     
         # this command will call DVC_runner to create the directories
@@ -4109,6 +4127,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                                      self.finished_run, self.run_succeeded, tempfile.tempdir)
 
         self.dvc_runner.run_dvc()
+
 
     def update_progress(self, exe = None):
         if exe:
