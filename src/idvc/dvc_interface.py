@@ -575,6 +575,7 @@ It will be the first point in the file that is used as the reference point.")
 
             sleep(1)
 
+            self.create_progress_window("Getting files from remote", "", 0, None, False)
             self.updateUnknownProgressDialog = Worker(self.UnknownProgressUpdateDialog)
             self.updateUnknownProgressDialog.signals.finished.connect(self.StopUnknownProgressUpdate)
             self.threadpool.start(self.updateUnknownProgressDialog)
@@ -586,20 +587,20 @@ It will be the first point in the file that is used as the reference point.")
             #     )
 
     def UnknownProgressUpdateDialog(self, **kwargs):
-
         t0 = time.time()
         while True:
             tc = self.asyncCopy.threadpool.activeThreadCount()
-
             if tc == 0:
                 break
             # print (tc)
-            sleep(1)
-            self.statusBar().showMessage("Copying {} ... {}s".format(self.files_to_get[0][1], time.time()-t0))
-
+            sleep(0.25)
+            self.progress_window.setLabelText(
+                "Copying {} ... {:.1f} s".format(self.files_to_get[0][1], time.time()-t0)
+                )
+            
 
     def StopUnknownProgressUpdate(self):
-        self.statusBar().showMessage("File copied.")
+        self.progress_window.close()
         
 
     def SelectImageLocal(self, image_var, image, label=None, next_button=None): 
@@ -881,7 +882,7 @@ It will be the first point in the file that is used as the reference point.")
             #bring image loading panel to front if it isnt already:          
             self.select_image_dock.raise_() 
 
-    def create_progress_window(self, title, text, max = 100, cancel = None):
+    def create_progress_window(self, title, text, max = 100, cancel = None, autoClose = True):
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
         self.progress_window.setWindowTitle(title)
         
@@ -889,7 +890,7 @@ It will be the first point in the file that is used as the reference point.")
         self.progress_window.setMinimumDuration(0.01)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, True)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
-        self.progress_window.setAutoClose(True)
+        self.progress_window.setAutoClose(autoClose)
         if cancel is None:
             self.progress_window.setCancelButton(None)
         else:
