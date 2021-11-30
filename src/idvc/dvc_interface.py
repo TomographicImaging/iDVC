@@ -55,12 +55,8 @@ import tempfile
 import json
 import shutil
 import zipfile
-import zlib
-
-import csv
+from time import sleep
 from functools import reduce
-
-import subprocess
 
 import copy
 
@@ -82,7 +78,7 @@ from idvc import version as gui_version
 from idvc.dialogs import SettingsWindow
 
 from brem.ui import RemoteFileDialog
-from brem import AsyncCopyFromSSH
+from brem import AsyncCopyOverSSH
 
 __version__ = gui_version.version
 
@@ -190,9 +186,9 @@ class MainWindow(QMainWindow):
             temp_folder = os.path.join(working_directory, "DVC_Sessions")
 
         self.temp_folder = os.path.abspath(temp_folder)
-        tempfile.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
+        self.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
 
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.tempdir)
 
         # Creates folder in tempdir to save mask files in
         os.mkdir("Masks")
@@ -519,23 +515,34 @@ It will be the first point in the file that is used as the reference point.")
                                   username=self.connection_details['username'], 
                                   private_key=self.connection_details['private_key'],
                                   remote_os=self.connection_details['remote_os'])
-        dialog.Ok.clicked.connect(lambda: self.getSelected(dialog))
+        dialog.Ok.clicked.connect(
+            lambda: self.getSelectedDownloadAndUpdateUI(dialog, image_var, image, label, next_button)
+            )
         if hasattr(self, 'files_to_get'):
             try:
                 dialog.widgets['lineEdit'].setText(self.files_to_get[0][0])
             except:
                 pass
         dialog.exec()
-    def getSelected(self, dialog):
+    def getSelectedDownloadAndUpdateUI(self, dialog, image_var, image, label, next_button):
         if hasattr(dialog, 'selected'):
             print (type(dialog.selected))
             for el in dialog.selected:
                 print ("Return from dialogue", el)
             self.files_to_get = list (dialog.selected)
-    def ResampleAndGetFileFromRemote(self):
+            if len(self.files_to_get) == 1:
+                self.GetFileFromRemote(image_var, image, label, next_button)
+            else:
+                self.warningDialog("Sorry, currently we can only get one file.",
+                                   "Error: cannot handle multiple files")
+
+
+
+
+    def GetFileFromRemote(self, image_var, image, label, next_button):
         # 1 download self.files_to_get
         if len(self.files_to_get) == 1:
-            self.asyncCopy = AsyncCopyFromSSH()
+            self.asyncCopy = AsyncCopyOverSSH()
             if not hasattr(self, 'connection_details'):
                 self.statusBar().showMessage("define the connection")
                 return
@@ -546,16 +553,62 @@ It will be the first point in the file that is used as the reference point.")
             
             self.asyncCopy.setRemoteConnectionSettings(username=username, 
                                         port=port, host=host, private_key=private_key)
-            self.asyncCopy.SetRemoteFileName(dirname=self.files_to_get[0][0], filename=self.files_to_get[0][1])
-            self.asyncCopy.SetDestinationDir(os.path.abspath(self.tempdir.name))
-            self.asyncCopy.signals.finished.connect(lambda: self.visualise())
-            self.asyncCopy.GetFile()
+
+            
+            
+            files = [os.path.join(self.tempdir, self.files_to_get[0][1])]
+            remotepath = self.asyncCopy.remotepath.join(self.files_to_get[0][0], self.files_to_get[0][1])
+            
+            # this shouldn't be necessary, however the signals and the workers are created before the async copy
+            # object is created and then the local dir is not set in the worker.
+            self.asyncCopy.SetRemoteDir(self.files_to_get[0][0])
+            self.asyncCopy.SetCopyFromRemote()
+            self.asyncCopy.SetLocalDir(self.tempdir)
+            self.asyncCopy.SetRemoteDir(self.asyncCopy.remotepath.dirname(remotepath))
+            self.asyncCopy.SetFileName(self.asyncCopy.remotepath.basename(remotepath))
+
+            self.asyncCopy.signals.finished.connect(
+                lambda: self._UpdateSelectFileUI(files, image_var, image, label, next_button)
+                )
+            # this should also not be done like this.
+            self.asyncCopy.threadpool.start(self.asyncCopy.worker)
+
+            sleep(1)
+
+            self.updateUnknownProgressDialog = Worker(self.UnknownProgressUpdateDialog)
+            self.updateUnknownProgressDialog.signals.finished.connect(self.StopUnknownProgressUpdate)
+            self.threadpool.start(self.updateUnknownProgressDialog)
+
+            
+            # self.asyncCopy.GetFile( 
+            #     self.asyncCopy.remotepath.join(self.files_to_get[0][0], self.files_to_get[0][1]),
+            #     self.tempdir
+            #     )
+
+    def UnknownProgressUpdateDialog(self, **kwargs):
+
+        t0 = time.time()
+        while True:
+            tc = self.asyncCopy.threadpool.activeThreadCount()
+
+            if tc == 0:
+                break
+            # print (tc)
+            sleep(1)
+            self.statusBar().showMessage("Copying {} ... {}s".format(self.files_to_get[0][1], time.time()-t0))
+
+
+    def StopUnknownProgressUpdate(self):
+        self.statusBar().showMessage("File copied.")
+        
 
     def SelectImageLocal(self, image_var, image, label=None, next_button=None): 
         #print("In select image")
         dialogue = QFileDialog()
         files = dialogue.getOpenFileNames(self,"Load Images")[0]
+        self._UpdateSelectFileUI(files, image_var, image, label, next_button)
 
+    def _UpdateSelectFileUI(self, files, image_var, image, label=None, next_button=None):
         if len(files) > 0:
             if self.copy_files:
                 self.image_copied[image_var] = True
@@ -1575,13 +1628,13 @@ It is used as a global starting point and a translation reference."
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(self.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
             if previous_reg_box_extent != reg_box_extent:
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(self.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1599,7 +1652,7 @@ It is used as a global starting point and a translation reference."
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
         ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image,
-                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
+                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(self.tempdir))
 
     def completeRegistration(self):
         self.updatePoint0Display()
@@ -2163,7 +2216,7 @@ It is used as a global starting point and a translation reference."
         if mask:
             if ".mha" in mask:
                 filename = os.path.basename(mask)
-                shutil.copyfile(mask, os.path.join(tempfile.tempdir, "Masks", filename))
+                shutil.copyfile(mask, os.path.join(self.tempdir, "Masks", filename))
                 self.mask_parameters["masksList"].addItem(filename)
                 self.mask_parameters["masksList"].setCurrentText(filename)
                 self.clearMask()
@@ -2698,8 +2751,8 @@ The first point is significant, as it is used as a global starting point and ref
 
         if self.copy_files:
             filename = os.path.basename(self.roi)
-            shutil.copyfile(self.roi, os.path.join(tempfile.tempdir, filename))
-            self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+            shutil.copyfile(self.roi, os.path.join(self.tempdir, filename))
+            self.roi = os.path.abspath(os.path.join(self.tempdir, filename))
             self.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.pointcloud_parameters['pointcloudList'].setCurrentText(filename)
 
@@ -2712,7 +2765,7 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointcloud_worker.signals.finished.connect(self.DisplayPointCloud)
         elif type == "load selection":
             self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.loadPointCloud, os.path.join(tempfile.tempdir, self.pointcloud_parameters['pointcloudList'].currentText()))
+            self.pointcloud_worker = Worker(self.loadPointCloud, os.path.join(self.tempdir, self.pointcloud_parameters['pointcloudList'].currentText()))
             self.pointcloud_worker.signals.finished.connect(self.DisplayLoadedPointCloud)
         elif type == "load pointcloud file":
             self.clearPointCloud()
@@ -2727,7 +2780,7 @@ The first point is significant, as it is used as a global starting point and ref
         self.create_progress_window("Loading", "Loading Pointcloud")
         self.pointcloud_worker.signals.progress.connect(self.progress)
         self.progress_window.setValue(10)
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.tempdir)
         self.threadpool.start(self.pointcloud_worker)
 
         # Show error and allow re-selection of pointcloud if it can't be loaded:
@@ -3028,7 +3081,7 @@ Please select a replacement pointcloud file.')
                 array.append((count, *pp))
                 count += 1
 
-        np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+        np.savetxt(self.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = filename
 
         return(True)
@@ -3884,7 +3937,7 @@ This parameter has a strong effect on computation time, so be careful."
         
         folder_name = "_" + self.rdvc_widgets['name_entry'].text()
 
-        results_folder = os.path.join(tempfile.tempdir, "Results")
+        results_folder = os.path.join(self.tempdir, "Results")
 
         new_folder = os.path.join(results_folder, folder_name)
 
@@ -3903,12 +3956,12 @@ This parameter has a strong effect on computation time, so be careful."
         
 
     def create_run_config(self, **kwargs):
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.tempdir)
         progress_callback = kwargs.get('progress_callback', None)
         try:
             folder_name = "_" + self.rdvc_widgets['name_entry'].text()
 
-            results_folder = os.path.join(tempfile.tempdir, "Results")
+            results_folder = os.path.join(self.tempdir, "Results")
             os.mkdir(os.path.join(results_folder, folder_name))
 
             if self.singleRun_groupBox.isVisible():
@@ -4012,7 +4065,7 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['point0'] = self.getPoint0ImageCoords()
             suffix_text = "run_config"
 
-            self.run_config_file = os.path.join(tempfile.tempdir, "Results", folder_name, "_" + suffix_text + ".json")
+            self.run_config_file = os.path.join(self.tempdir, "Results", folder_name, "_" + suffix_text + ".json")
 
             with open(self.run_config_file, "w+") as tmp:
                 json.dump(run_config, tmp)
@@ -4054,7 +4107,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     
         # this command will call DVC_runner to create the directories
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
-                                     self.finished_run, self.run_succeeded, tempfile.tempdir)
+                                     self.finished_run, self.run_succeeded, self.tempdir)
 
         self.dvc_runner.run_dvc()
 
@@ -4190,7 +4243,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].clear()
         self.result_widgets['subvol_entry'].clear()
 
-        directory = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+        directory = os.path.join(self.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = directory
 
         file_list=[]
@@ -4236,7 +4289,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
 
             else:
-                results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+                results_folder = os.path.join(self.tempdir, "Results", self.result_widgets['run_entry'].currentText())
                 self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
                 #print("New roi is", self.roi)
                 self.results_folder = results_folder
@@ -4267,7 +4320,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def CreateGraphsWindow(self):
         #print("Create graphs")
         if self.result_widgets['run_entry'].currentText() is not "":
-            self.results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+            self.results_folder = os.path.join(self.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         else:
             self.results_folder = None
 
@@ -4403,11 +4456,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.config['dvc_input_image_in_session_folder'] = self.dvc_input_image_in_session_folder
 
             # print("ROI: ", self.roi)
-            # print("temp", tempfile.tempdir)
+            # print("temp", self.tempdir)
             if (self.roi):
                 self.roi = os.path.abspath(self.roi)
-                if os.path.abspath(tempfile.tempdir) in self.roi:
-                    self.config['roi_file'] =  self.roi[len(os.path.abspath(tempfile.tempdir))+1:]
+                if os.path.abspath(self.tempdir) in self.roi:
+                    self.config['roi_file'] =  self.roi[len(os.path.abspath(self.tempdir))+1:]
                     self.config['roi_ext'] = False
                 else:
                     self.config['roi_file'] = self.roi
@@ -4419,8 +4472,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             if hasattr(self, 'mask_file'):
                 self.config['mask_details']=self.mask_details
-                if tempfile.tempdir in os.path.abspath(self.mask_file):
-                    self.config['mask_file']=self.mask_file[len(os.path.abspath(tempfile.tempdir))+1:]
+                if self.tempdir in os.path.abspath(self.mask_file):
+                    self.config['mask_file']=self.mask_file[len(os.path.abspath(self.tempdir))+1:]
                     self.config['mask_ext'] = False
                 else:
                     self.config['mask_file']=self.mask_file
@@ -4491,10 +4544,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         suffix_text = "_" + user_string + "_" + now_string 
 
         os.chdir(self.temp_folder)
-        tempdir = shutil.move(tempfile.tempdir, suffix_text)
-        tempfile.tempdir = os.path.abspath(tempdir)
+        tempdir = shutil.move(self.tempdir, suffix_text)
+        self.tempdir = os.path.abspath(tempdir)
 
-        fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
+        fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = self.tempdir) #could not delete this using rmtree?
 
         with open(f, "w+") as tmp:
             json.dump(self.config, tmp)
@@ -4504,7 +4557,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         self.create_progress_window("Saving","Saving")
   
-        zip_worker = Worker(self.ZipDirectory, tempfile.tempdir, compress)
+        zip_worker = Worker(self.ZipDirectory, self.tempdir, compress)
         if type(event) == QCloseEvent:
             zip_worker.signals.finished.connect(lambda: self.RemoveTemp(event))
         else:
@@ -4513,47 +4566,47 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.threadpool.start(zip_worker)
         
         if compress:
-            self.ShowZipProgress(tempfile.tempdir, tempfile.tempdir +'.zip', 0.7)
+            self.ShowZipProgress(self.tempdir, self.tempdir +'.zip', 0.7)
         else:
-            self.ShowZipProgress(tempfile.tempdir, tempfile.tempdir +'.zip', 1)
+            self.ShowZipProgress(self.tempdir, self.tempdir +'.zip', 1)
 
         #give variables filepath including new name of temp folder:
-        # print("temp", tempfile.tempdir)
+        # print("temp", self.tempdir)
         # print("roi ext", self.config['roi_ext'])
         # print(self.roi, self.config['roi_file'])
         if (self.roi and not self.config['roi_ext']):
-            self.roi = os.path.join(os.path.abspath(tempfile.tempdir), self.config['roi_file'])
+            self.roi = os.path.join(os.path.abspath(self.tempdir), self.config['roi_file'])
             #print(self.roi)
 
         if hasattr(self, 'mask_file'):
             if 'mask_file' in self.config:
-                self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
+                self.mask_file = os.path.join(os.path.abspath(self.tempdir), self.config['mask_file'])
 
         count = 0
         for i in self.image[0]:
             if self.image_copied[0]:
-                # print(os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) )
-                self.image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) 
+                # print(os.path.join(os.path.abspath(self.tempdir), self.config['image'][0][count]) )
+                self.image[0][count] = os.path.join(os.path.abspath(self.tempdir), self.config['image'][0][count]) 
             count +=1
         count = 0
         for j in self.image[1]:
             if self.image_copied[1]:
-                self.image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][1][count]) 
+                self.image[1][count] = os.path.join(os.path.abspath(self.tempdir), self.config['image'][1][count]) 
             count += 1
 
         count = 0
         for i in self.dvc_input_image[0]:
             if self.image_copied[0] or self.dvc_input_image_in_session_folder:
-                self.dvc_input_image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][0][count]) 
+                self.dvc_input_image[0][count] = os.path.join(os.path.abspath(self.tempdir), self.config['dvc_input_image'][0][count]) 
             count+=1
 
         count=0    
         for j in self.dvc_input_image[1]:      
             if self.image_copied[1] or self.dvc_input_image_in_session_folder:
-                self.dvc_input_image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][1][count]) 
+                self.dvc_input_image[1][count] = os.path.join(os.path.abspath(self.tempdir), self.config['dvc_input_image'][1][count]) 
             count+=1
 
-        results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+        results_folder = os.path.join(self.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = results_folder
    
     def CloseSaveWindow(self):
@@ -4588,8 +4641,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setLabelText("Closing")
             self.progress_window.setMaximum(100)
             self.progress_window.setValue(98)
-        #print("removed temp", tempfile.tempdir)
-        shutil.rmtree(tempfile.tempdir)
+        #print("removed temp", self.tempdir)
+        shutil.rmtree(self.tempdir)
 
         if hasattr(self, 'progress_window'):
             self.progress_window.setValue(100)
@@ -4670,11 +4723,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             export_worker = Worker(self.exporter, export_location)
             export_worker.signals.finished.connect(self.progress_complete)
             self.threadpool.start(export_worker)
-            self.ShowExportProgress(tempfile.tempdir, export_location)
+            self.ShowExportProgress(self.tempdir, export_location)
 
     def exporter(self, *args, **kwargs):
         export_location = args[0]
-        shutil.copytree(tempfile.tempdir, export_location)
+        shutil.copytree(self.tempdir, export_location)
 
 #Dealing with loading sessions:
          
@@ -4786,17 +4839,17 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         if not results_folder_exists:
             os.mkdir(os.path.join(loaded_tempdir, "Results"))
         
-        #print(tempfile.tempdir)
+        #print(self.tempdir)
 
-        # if tempfile.tempdir != loaded_tempdir: # if we are not loading the same session that we already had open
-        #     shutil.rmtree(tempfile.tempdir) 
+        # if self.tempdir != loaded_tempdir: # if we are not loading the same session that we already had open
+        #     shutil.rmtree(self.tempdir) 
 
         if progress_callback is not None:
             progress_callback.emit(90)
 
-        tempfile.tempdir = loaded_tempdir
+        self.tempdir = loaded_tempdir
         #print("working tempdir")
-        #print(tempfile.tempdir)
+        #print(self.tempdir)
         #selected_file = ""
  
         json_filename = date_and_time + ".json"
@@ -4814,7 +4867,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             progress_callback.emit(100)
 
     def LoadSession(self):
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.tempdir)
         self.resetRegistration()
         
         self.loading_session = True
@@ -4836,12 +4889,12 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 # if 'roi_ext' in self.config:
                 #     if not self.config['roi_ext']:
                 #         self.roi = os.path.abspath(
-                #             os.path.join(tempfile.tempdir, self.roi))
+                #             os.path.join(self.tempdir, self.roi))
 
         #pointcloud files could still exist even if there wasn't a pointcloud displayed when the session was saved.
         pointcloud_files = []
         #get list of pointcloud files:
-        for r, d, f in os.walk(tempfile.tempdir):
+        for r, d, f in os.walk(self.tempdir):
             for _file in f:
                 if '.roi' in _file:
                     pointcloud_files.append(_file)
@@ -4883,7 +4936,7 @@ Please select the new location of the file, or move it back to where it was orig
 
                         #save paths to images to variable
                         if self.config['image_copied'][j]:
-                            path = os.path.abspath(os.path.join(tempfile.tempdir, i))
+                            path = os.path.abspath(os.path.join(self.tempdir, i))
                             # print("The DVC input path is")
                             # print(path)
                             self.dvc_input_image[j].append(path)
@@ -5004,7 +5057,7 @@ Please select the new location of the file, or move it back to where it was orig
 
         if 'mask_file' in self.config:
             self.mask_parameters['loadButton'].setEnabled(True)
-            mask_folder = os.path.join(tempfile.tempdir, "Masks")
+            mask_folder = os.path.join(self.tempdir, "Masks")
             mask_files = []
             #get list of mask files:
             #print(mask_folder)
@@ -5021,7 +5074,7 @@ Please select the new location of the file, or move it back to where it was orig
             self.mask_parameters['loadButton'].setEnabled(False)   
 
 
-        results_directory = os.path.join(tempfile.tempdir, "Results")
+        results_directory = os.path.join(self.tempdir, "Results")
         
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
@@ -5126,7 +5179,7 @@ class SaveObjectWindow(QtWidgets.QWidget):
             #Load Saved Session
             #print("Write mask to file, then carry on")
             filename = self.textbox.text() + ".mha"
-            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
+            shutil.copyfile(os.path.join(self.tempdir, self.parent.mask_file), os.path.join(self.tempdir, "Masks", filename))
             self.parent.mask_parameters['masksList'].addItem(filename)
             self.parent.mask_details[filename] = self.parent.mask_details['current']
             #print(self.parent.mask_details)
@@ -5147,7 +5200,7 @@ class SaveObjectWindow(QtWidgets.QWidget):
             
         if self.object == "pointcloud":
             filename = self.textbox.text() + ".roi"
-            shutil.copyfile(os.path.join(tempfile.tempdir, "latest_pointcloud.roi"), os.path.join(tempfile.tempdir, filename))
+            shutil.copyfile(os.path.join(self.tempdir, "latest_pointcloud.roi"), os.path.join(self.tempdir, filename))
 
             self.parent.pointcloud_parameters['loadButton'].setEnabled(True)
             self.parent.pointcloud_parameters['pointcloudList'].setEnabled(True)
