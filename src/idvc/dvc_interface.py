@@ -196,7 +196,8 @@ class MainWindow(QMainWindow):
         os.mkdir("Results")
 
     def OpenSettings(self):
-        self.settings_window = SettingsWindow(self)
+        if not hasattr(self, 'settings_window'):
+            self.settings_window = SettingsWindow(self)
         self.settings_window.show()
 
     def InitialiseSessionVars(self):
