@@ -1,3 +1,4 @@
+import pysnooper
 import os
 import sys
 from PySide2 import QtCore, QtGui, QtWidgets
@@ -542,6 +543,15 @@ It will be the first point in the file that is used as the reference point.")
     def GetFileFromRemote(self, image_var, image, label, next_button):
         '''Downloads a file from remote'''
         # 1 download self.files_to_get
+        if image_var == 1:
+            # let's not download the correlate image
+            if next_button is not None:
+                try:
+                    for el in next_button:
+                        el.setEnabled(True)
+                except:
+                    next_button.setEnabled(True)
+        
         if len(self.files_to_get) == 1:
             self.asyncCopy = AsyncCopyOverSSH()
             if not hasattr(self, 'connection_details'):
@@ -556,13 +566,18 @@ It will be the first point in the file that is used as the reference point.")
                                         port=port, host=host, private_key=private_key)
 
             
-            
-            files = [os.path.join(tempfile.tempdir, self.files_to_get[0][1])]
             remotepath = self.asyncCopy.remotepath.join(self.files_to_get[0][0], self.files_to_get[0][1])
+            if image_var == 1:
+                self.remote_correlate_image_fname = remotepath
+                return
+            else:
+                self.remote_reference_image_fname = remotepath
+
+            files = [os.path.join(tempfile.tempdir, self.files_to_get[0][1])]
+            
             
             # this shouldn't be necessary, however the signals and the workers are created before the async copy
             # object is created and then the local dir is not set in the worker.
-            self.asyncCopy.SetRemoteDir(self.files_to_get[0][0])
             self.asyncCopy.SetCopyFromRemote()
             self.asyncCopy.SetLocalDir(tempfile.tempdir)
             self.asyncCopy.SetRemoteDir(self.asyncCopy.remotepath.dirname(remotepath))
@@ -586,6 +601,8 @@ It will be the first point in the file that is used as the reference point.")
             self.updateUnknownProgressDialog = Worker(self.UnknownProgressUpdateDialog)
             self.updateUnknownProgressDialog.signals.finished.connect(self.StopUnknownProgressUpdate)
             self.threadpool.start(self.updateUnknownProgressDialog)
+            # make the progress dialog start after minimum 0.5 s
+            self.progress_window.setMinimumDuration(0.5)
 
             
 
@@ -643,7 +660,7 @@ It will be the first point in the file that is used as the reference point.")
                 else:
                     image[image_var].append(files[0])
                 if label is not None:
-                    label.setText(os.path.basename(files[0]))
+                    label.setText(files[0])
                 
             else:
                 # Make sure that the files are sorted 0 - end
@@ -664,7 +681,12 @@ It will be the first point in the file that is used as the reference point.")
                     label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
 
             if next_button is not None:
-                next_button.setEnabled(True)
+                try:
+                    for el in next_button:
+                        el.setEnabled(True)
+                except:
+                    next_button.setEnabled(True)
+
 
     def copy_file(self, **kwargs):
         
@@ -1159,7 +1181,7 @@ It is used as a global starting point and a translation reference."
         rp['translate_X_entry'].setValidator(validatorint)
         rp['translate_X_entry'].setText("0")
         rp['translate_X_entry'].setToolTip(translation_tooltip_text)
-        #rp['translate_X_entry'].setEnabled(False)
+        rp['translate_X_entry'].textEdited.connect(self._updateTranslateObject)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_X_entry'])
         widgetno += 1
         # Translate Y field
@@ -1171,7 +1193,7 @@ It is used as a global starting point and a translation reference."
         rp['translate_Y_entry'].setValidator(validatorint)
         rp['translate_Y_entry'].setText("0")
         rp['translate_Y_entry'].setToolTip(translation_tooltip_text)
-        #rp['translate_Y_entry'].setEnabled(False) 
+        rp['translate_Y_entry'].textEdited.connect(self._updateTranslateObject)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Y_entry'])
         widgetno += 1
         # Translate Z field
@@ -1183,9 +1205,11 @@ It is used as a global starting point and a translation reference."
         rp['translate_Z_entry'].setValidator(validatorint)
         rp['translate_Z_entry'].setText("0")
         rp['translate_Z_entry'].setToolTip(translation_tooltip_text)
-        #rp['translate_Z_entry'].setEnabled(False)
+        rp['translate_Y_entry'].textEdited.connect(self._updateTranslateObject)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Z_entry'])
         widgetno += 1
+
+        # self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
 
         # Add submit button
         rp['start_registration_button'] = QPushButton(groupBox)
@@ -1200,6 +1224,24 @@ It is used as a global starting point and a translation reference."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
         self.registration_parameters = rp
+
+    
+    def _updateTranslateObject(self, text, **kwargs):
+        rp = self.registration_parameters
+
+        
+        # setup the appropriate stuff to run the registration
+        if not hasattr(self, 'translate'):
+            self.translate = vtk.vtkImageTranslateExtent()
+        elif self.translate is None:
+            self.translate = vtk.vtkImageTranslateExtent()
+        
+        self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),
+                                      -int(rp['translate_Y_entry'].text()),
+                                      -int(rp['translate_Z_entry'].text())
+                                      )
+        
+
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -3956,23 +3998,32 @@ This parameter has a strong effect on computation time, so be careful."
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
         # if single or bulk use the line below, if remote develop new functionality
-        if not self.settings_window.fw['connect_to_remote'].isChecked():
+        if not self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
             self.config_worker.signals.result.connect(partial (self.run_external_code))
         else:
             # do not run the dvc locally but 
             # 1 zip and 
             # 2 upload the config to remote and then
             # 3 run the code on the remote
-            self.config_worker.signals.result.connect(partial (self.ZipAndUploadConfigToRemote))
+            self.config_worker.signals.finished.connect(partial (self.ZipAndUploadConfigToRemote))
             pass
         
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
+
+    @pysnooper.snoop()  
+    def ZipAndUploadConfigToRemote(self):
+        # this command will call DVC_runner to create the directories
+        self.run_succeeded = True
+        self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
+                                     self.finished_run, self.run_succeeded, tempfile.tempdir)
+        self.config_worker = Worker(self.dvc_runner.zip_workdir_and_upload)
+        self.create_progress_window("Zipping and uploading ", "Generating Run Config")
+        # self.config_worker.signals.progress.connect(self.progress)
+        self.threadpool.start(self.config_worker)
         
-    def ZipAndUploadConfigToRemote(self, **kwargs):
-        pass
-
-
+        
+    
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
         progress_callback = kwargs.get('progress_callback', None)
@@ -4041,9 +4092,10 @@ This parameter has a strong effect on computation time, so be careful."
                 #print("finished making pointclouds")
 
             # if remote mode this should not be the local copy        
-            if self.settings_window.fw['connect_to_remote'].isChecked():
+            if self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
                 # this should point to the remote files set at the time of download
-                pass
+                self.reference_file = self.remote_reference_image_fname
+                self.correlate_file = self.remote_correlate_image_fname
             else:
                 self.reference_file = self.dvc_input_image[0][0]
                 self.correlate_file = self.dvc_input_image[1][0]

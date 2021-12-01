@@ -2,11 +2,13 @@ import os
 import numpy as np
 from PySide2 import QtCore
 from datetime import datetime
-from PySide2.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox, QProgressDialog
 import json
 import time
 import shutil
 import platform
+import pysnooper
+from brem import AsyncCopyOverSSH, BasicRemoteExecutionManager
 
 count = 0
 runs_completed = 0
@@ -97,7 +99,7 @@ def create_progress_window(main_window, title, text, max = 100, cancel = None):
         main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
         main_window.progress_window.setWindowTitle(title)
         main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        main_window.progress_window.setMinimumDuration(0.1)
+        main_window.progress_window.setMinimumDuration(100)
         main_window.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
         main_window.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         if cancel is None:
@@ -150,6 +152,7 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
     # print("did")
 
 class DVC_runner(object):
+
     def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
         # print("The session folder is", session_folder)
         self.main_window = main_window
@@ -329,7 +332,56 @@ class DVC_runner(object):
                 self.processes.append( 
                     (exe_file, [ config_filename ], required_runs, total_points)
                 )
+
+    @pysnooper.snoop()
+    def zip_workdir_and_upload(self, **kwargs):
+        #param_file is a list with at least 1 item but we are interested in the first
+        # because we want to know the path to it and all files will be in the same directory
+        exe_file, param_file, required_runs,\
+            total_points = self.processes[0]
+        # config is in the directory
+
+        configdir = os.path.join(os.path.dirname(param_file[0]),'..')
+        zipped = shutil.make_archive(os.path.join(configdir, '..', 'remote_run'), 'zip',  configdir)
+
+        self.asyncCopy = AsyncCopyOverSSH()
+        if not hasattr(self.main_window, 'connection_details'):
+            self.main_window.statusBar().showMessage("define the connection")
+            return
+        username = self.main_window.connection_details['username']
+        port = self.main_window.connection_details['server_port']
+        host = self.main_window.connection_details['server_name']
+        private_key = self.main_window.connection_details['private_key']
         
+        self.asyncCopy.setRemoteConnectionSettings(username=username, 
+                                    port=port, host=host, private_key=private_key)
+
+        
+        
+        remote_dir = self.main_window.settings_window.fw.widgets['remote_workdir_field'].text()
+        # this shouldn't be necessary, however the signals and the workers are created before the async copy
+        # object is created and then the local dir is not set in the worker.
+        self.asyncCopy.SetRemoteDir(remote_dir)
+        self.asyncCopy.SetCopyToRemote()
+        self.asyncCopy.SetLocalDir(os.path.dirname(zipped))
+        self.asyncCopy.SetFileName(os.path.basename(zipped))
+
+        self.asyncCopy.signals.finished.connect(
+            lambda: self._unzip_on_remote(remote_dir, os.path.basename(zipped))
+            )
+        
+        self.asyncCopy.threadpool.start(self.asyncCopy.worker)
+
+
+    def _unzip_on_remote(self, workdir, filename, **kwargs):
+        
+        # 1 create a BasicRemoteExecutionManager
+        # 2 go to workdir
+        # 2 run 'unzip filename'
+        print("_unzip_on_remote")
+        
+
+
     def run_dvc(self):
         main_window = self.main_window
         input_file = self.input_file
