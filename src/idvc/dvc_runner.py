@@ -9,6 +9,8 @@ import shutil
 import platform
 import pysnooper
 from brem import AsyncCopyOverSSH, BasicRemoteExecutionManager
+import tempfile
+import ntpath, posixpath
 
 count = 0
 runs_completed = 0
@@ -153,7 +155,7 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
 
 class DVC_runner(object):
 
-    def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
+    def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder, remote_os=None):
         # print("The session folder is", session_folder)
         self.main_window = main_window
         self.input_file = input_file
@@ -289,6 +291,15 @@ class DVC_runner(object):
                                 selected_central_grid.write(line)
 
                 
+                if remote_os is not None:
+                    if remote_os == 'Windows':
+                        dpath = ntpath
+                    elif remote_os == 'POSIX':
+                        dpath = posixpath
+                    for f in [grid_roi_fname, output_filename]:
+                        f = dpath.abspath(f)
+                    
+
                 config =  blank_config.format(
                     reference_filename=  reference_file, # reference tomography image volume
                     correlate_filename=  correlate_file, # correlation tomography image volume
@@ -333,7 +344,6 @@ class DVC_runner(object):
                     (exe_file, [ config_filename ], required_runs, total_points)
                 )
 
-    @pysnooper.snoop()
     def zip_workdir_and_upload(self, **kwargs):
         #param_file is a list with at least 1 item but we are interested in the first
         # because we want to know the path to it and all files will be in the same directory
@@ -366,19 +376,30 @@ class DVC_runner(object):
         self.asyncCopy.SetLocalDir(os.path.dirname(zipped))
         self.asyncCopy.SetFileName(os.path.basename(zipped))
 
+        self.asyncCopy.signals.status.connect(print)
         self.asyncCopy.signals.finished.connect(
             lambda: self._unzip_on_remote(remote_dir, os.path.basename(zipped))
             )
-        
+
         self.asyncCopy.threadpool.start(self.asyncCopy.worker)
 
-
+    @pysnooper.snoop()
     def _unzip_on_remote(self, workdir, filename, **kwargs):
         
         # 1 create a BasicRemoteExecutionManager
+        username = self.main_window.connection_details['username']
+        port = self.main_window.connection_details['server_port']
+        host = self.main_window.connection_details['server_name']
+        private_key = self.main_window.connection_details['private_key']
+        remote_os = self.main_window.connection_details['remote_os']
+        logfile = os.path.join(tempfile.tempdir, 'ssh.log')
+        conn = BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
+        conn.login(passphrase=False)
         # 2 go to workdir
+        conn.changedir(workdir)
         # 2 run 'unzip filename'
-        print("_unzip_on_remote")
+        stdout, stderr = conn.run('cd {} && unzip {}'.format(workdir, filename))
+
         
 
 

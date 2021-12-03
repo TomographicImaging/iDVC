@@ -603,7 +603,7 @@ It will be the first point in the file that is used as the reference point.")
             self.updateUnknownProgressDialog.signals.finished.connect(self.StopUnknownProgressUpdate)
             self.threadpool.start(self.updateUnknownProgressDialog)
             # make the progress dialog start after minimum 0.5 s
-            self.progress_window.setMinimumDuration(0.5)
+            self.progress_window.setMinimumDuration(0)
 
             
 
@@ -4017,13 +4017,25 @@ This parameter has a strong effect on computation time, so be careful."
         # this command will call DVC_runner to create the directories
         self.run_succeeded = True
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
-                                     self.finished_run, self.run_succeeded, tempfile.tempdir)
+                                     self.finished_run, self.run_succeeded, tempfile.tempdir, remote_os=self.connection_details['remote_os'])
         self.config_worker = Worker(self.dvc_runner.zip_workdir_and_upload)
-        self.create_progress_window("Zipping and uploading ", "Generating Run Config")
-        # self.config_worker.signals.progress.connect(self.progress)
+        # self.create_progress_window("Connecting with remote", "Zipping and uploading", 0, None, False)
+        self.config_worker.signals.finished.connect( self.run_code_remote )
         self.threadpool.start(self.config_worker)
-        
-        
+
+    def run_code_remote(self):
+        print ("run_code_remote")
+        while True:
+            tc = self.dvc_runner.asyncCopy.threadpool.activeThreadCount()
+            if tc == 0:
+                break
+            # print (tc)
+            sleep(0.25)
+        self.unzip_worker = Worker(self.dvc_runner._unzip_on_remote, self.dvc_runner.asyncCopy.remotedir, self.dvc_runner.asyncCopy.filename)
+        self.create_progress_window("Connecting with remote", "Unzipping", 0, None, False)
+        self.unzip_worker.signals.finished.connect( self.progress_window.close )
+        self.threadpool.start(self.unzip_worker)
+    
     
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
