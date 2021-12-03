@@ -290,14 +290,14 @@ class DVC_runner(object):
                             if i in lines_to_write:
                                 selected_central_grid.write(line)
 
-                
+                newline = None    
                 if remote_os is not None:
-                    if remote_os == 'Windows':
-                        dpath = ntpath
-                    elif remote_os == 'POSIX':
-                        dpath = posixpath
-                    for f in [grid_roi_fname, output_filename]:
-                        f = dpath.abspath(f)
+                    if remote_os in ['Windows', 'POSIX'] :    
+                        # on remote we aim at running in the directory
+                        grid_roi_fname  = os.path.basename(grid_roi_fname)
+                        output_filename = os.path.basename(output_filename)
+                        if remote_os == 'POSIX':
+                            newline = "\n"
                     
 
                 config =  blank_config.format(
@@ -326,7 +326,9 @@ class DVC_runner(object):
                     basin_radius='0.0',
                     subvol_aspect='1.0 1.0 1.0') # image spacing
                 time.sleep(1)
-                with open(config_filename,"w") as config_file:
+
+
+                with open(config_filename,"w", newline=newline) as config_file:
                     config_file.write(config)
             
                 #if run_count == len( subvolume_points):
@@ -400,7 +402,36 @@ class DVC_runner(object):
         # 2 run 'unzip filename'
         stdout, stderr = conn.run('cd {} && unzip {}'.format(workdir, filename))
 
-        
+    @pysnooper.snoop()        
+    def run_dvc_on_remote(self, workdir, **kwargs):
+        # 1 create a BasicRemoteExecutionManager
+        username = self.main_window.connection_details['username']
+        port = self.main_window.connection_details['server_port']
+        host = self.main_window.connection_details['server_name']
+        private_key = self.main_window.connection_details['private_key']
+        remote_os = self.main_window.connection_details['remote_os']
+        logfile = os.path.join(tempfile.tempdir, 'ssh.log')
+
+        progress_callback = kwargs.get('progress_callback', None)
+
+        if remote_os == 'POSIX':
+                dpath = posixpath
+        else:
+            dpath = ntpath
+            
+        conn = BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
+        conn.login(passphrase=False)
+        # 2 go to workdir
+        conn.changedir(workdir)
+        for i,el in enumerate(self.processes):
+            if progress_callback is not None:
+                progress_callback.emit(i)
+
+            param_file = el[1][0]
+            
+            wdir = dpath.join(workdir, 'dvc_result_{}'.format(i))    
+            # 2 run 'unzip filename'
+            stdout, stderr = conn.run('cd {} && . ~/condarc && conda activate dvc && dvc dvc_config.txt'.format(wdir))
 
 
     def run_dvc(self):

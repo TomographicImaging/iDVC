@@ -4020,10 +4020,10 @@ This parameter has a strong effect on computation time, so be careful."
                                      self.finished_run, self.run_succeeded, tempfile.tempdir, remote_os=self.connection_details['remote_os'])
         self.config_worker = Worker(self.dvc_runner.zip_workdir_and_upload)
         # self.create_progress_window("Connecting with remote", "Zipping and uploading", 0, None, False)
-        self.config_worker.signals.finished.connect( self.run_code_remote )
+        self.config_worker.signals.finished.connect( self.unzip_on_remote )
         self.threadpool.start(self.config_worker)
 
-    def run_code_remote(self):
+    def unzip_on_remote(self):
         print ("run_code_remote")
         while True:
             tc = self.dvc_runner.asyncCopy.threadpool.activeThreadCount()
@@ -4033,9 +4033,17 @@ This parameter has a strong effect on computation time, so be careful."
             sleep(0.25)
         self.unzip_worker = Worker(self.dvc_runner._unzip_on_remote, self.dvc_runner.asyncCopy.remotedir, self.dvc_runner.asyncCopy.filename)
         self.create_progress_window("Connecting with remote", "Unzipping", 0, None, False)
-        self.unzip_worker.signals.finished.connect( self.progress_window.close )
+        self.unzip_worker.signals.finished.connect( self.run_code_on_remote  )
         self.threadpool.start(self.unzip_worker)
     
+    @pysnooper.snoop()
+    def run_code_on_remote(self):
+        self.progress_window.close()
+        self.dvc_worker = Worker(self.dvc_runner.run_dvc_on_remote, self.dvc_runner.asyncCopy.remotedir)
+        self.create_progress_window("Connecting with remote", "Running DVC remote", 0, None, False)
+        self.dvc_worker.signals.finished.connect( self.progress_window.close )
+        self.threadpool.start(self.dvc_worker)
+
     
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
