@@ -415,7 +415,7 @@ class DVC_runner(object):
         progress_callback = kwargs.get('progress_callback', None)
 
         if remote_os == 'POSIX':
-                dpath = posixpath
+            dpath = posixpath
         else:
             dpath = ntpath
             
