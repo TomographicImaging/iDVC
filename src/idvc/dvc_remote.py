@@ -1,5 +1,8 @@
 import os
 from brem import RemoteRunControl
+import brem
+from PySide2 import QtCore
+import ntpath, posixpath
 
 class PrepareDVCRemote(object):
     def __init__(self, parent):
@@ -25,13 +28,76 @@ class PrepareDVCRemote(object):
     def set_remote_workdir(self):
         self._remote_workdir = self.parent.settings_window
 
+
+class DVCRemoteRunControlSignals(QtCore.QObject):
+    status = QtCore.Signal(tuple)
+    job_id = QtCore.Signal(int)
+    progress = QtCore.Signal(int)
+
 class DVCRemoteRunControl(RemoteRunControl):
+    def __init__(self, connection_details):
+
+        super(DVCRemoteRunControl, self).__init__(connection_details=connection_details)
+        self.signals = DVCRemoteRunControlSignals()
+        self._num_runs = 0
+        self._workdir = None
+
+
+    def set_num_runs(self, value):
+        self._num_runs = value
+
+
+    def set_workdir(self, value):
+        self._workdir = value
+
+    
+    @property
+    def num_runs(self):
+        return self._num_runs
+
+
+    @property
+    def workir(self):
+        return self._workdir
+
+
+    @pysnooper.snoop()        
+    def run_dvc_on_remote(self, **kwargs):
+        # 1 create a BasicRemoteExecutionManager
+        username = self.connection_details['username']
+        port = self.connection_details['server_port']
+        host = self.connection_details['server_name']
+        private_key = self.connection_details['private_key']
+        remote_os = self.connection_details['remote_os']
+        logfile = os.path.join('ssh.log')
+
+        progress_callback = kwargs.get('progress_callback', None)
+
+        if remote_os == 'POSIX':
+            dpath = posixpath
+        else:
+            dpath = ntpath
+            
+        conn = brem.BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
+        conn.login(passphrase=False)
+        # 2 go to workdir
+        conn.changedir(self.workdir)
+        for i in range(self.num_runs):
+            if progress_callback is not None:
+                progress_callback.emit(i)
+            
+            wdir = dpath.join(self.workdir, 'dvc_result_{}'.format(i))    
+            # 2 run 'unzip filename'
+            stdout, stderr = conn.run('cd {} && . ~/condarc && conda activate dvc && dvc dvc_config.txt'.format(wdir))
+
+
+class DVCSLURMRemoteRunControl(RemoteRunControl):
     def __init__(self, connection_details=None, 
                  reference_filename=None, correlate_filename=None,
                  dvclog_filename=None,
                  dev_config=None):
 
-        super(DVCRemoteRunControl, self).__init__(connection_details=connection_details)
+        super(DVCSLURMRemoteRunControl, self).__init__(connection_details=connection_details)
         self.reference_fname    = reference_filename
         self.correlate_fname    = correlate_filename
         self.dvclog_fname       = dvclog_filename

@@ -80,6 +80,7 @@ from idvc.dialogs import SettingsWindow
 
 from brem.ui import RemoteFileDialog
 from brem import AsyncCopyOverSSH
+from idvc.dvc_remote import DVCRemoteRunControl
 
 __version__ = gui_version.version
 
@@ -4039,7 +4040,13 @@ This parameter has a strong effect on computation time, so be careful."
     @pysnooper.snoop()
     def run_code_on_remote(self):
         self.progress_window.close()
-        self.dvc_worker = Worker(self.dvc_runner.run_dvc_on_remote, self.dvc_runner.asyncCopy.remotedir)
+
+        self.dvc_remote_controller = DVCRemoteRunControl(self.connection_details)
+        self.dvc_remote_controller.set_workdir(self.dvc_runner.asyncCopy.remotedir)
+        self.dvc_remote_controller.set_num_runs(len(self.dvc_runner.processes))
+
+        # self.dvc_worker = Worker(self.dvc_runner.run_dvc_on_remote, self.dvc_runner.asyncCopy.remotedir)
+        self.dvc_worker = Worker(self.dvc_remote_controller.run_dvc_on_remote)
         self.create_progress_window("Connecting with remote", "Running DVC remote", 0, None, False)
         self.dvc_worker.signals.finished.connect( self.progress_window.close )
         self.threadpool.start(self.dvc_worker)
