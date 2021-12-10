@@ -599,13 +599,10 @@ It will be the first point in the file that is used as the reference point.")
 
             sleep(1)
 
-            self.create_progress_window("Getting files from remote", "", 0, None, False)
+            self.create_progress_window("Getting files from remote", "", 0, None, False, 0)
             self.updateUnknownProgressDialog = Worker(self.UnknownProgressUpdateDialog)
             self.updateUnknownProgressDialog.signals.finished.connect(self.StopUnknownProgressUpdate)
             self.threadpool.start(self.updateUnknownProgressDialog)
-            # make the progress dialog start after minimum 0.5 s
-            self.progress_window.setMinimumDuration(0)
-
             
 
     def UnknownProgressUpdateDialog(self, **kwargs):
@@ -910,12 +907,21 @@ It will be the first point in the file that is used as the reference point.")
             #bring image loading panel to front if it isnt already:          
             self.select_image_dock.raise_() 
 
-    def create_progress_window(self, title, text, max = 100, cancel = None, autoClose = True):
+    def create_progress_window(self, title, text, max = 100, cancel = None, autoClose = True, minimumDuration=4000):
+        '''Creates a QProgressDialog
+        
+        :param title: title
+        :param text: text in the dialog
+        :param max: max value of the progress, default 100. Minimum is set to 0.
+        :param cancel: if to show a cancel button, default None hence Cancel not shown.
+        :autoClose: if the dialog should close when max is reached
+        :minimumDuration: This property holds the time that must pass before the dialog appears, default 4000 ms
+        '''
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
         self.progress_window.setWindowTitle(title)
         
         self.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        self.progress_window.setMinimumDuration(0.01)
+        self.progress_window.setMinimumDuration(int(minimumDuration))
         self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, True)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         self.progress_window.setAutoClose(autoClose)
@@ -923,6 +929,7 @@ It will be the first point in the file that is used as the reference point.")
             self.progress_window.setCancelButton(None)
         else:
             self.progress_window.canceled.connect(cancel)
+        self.progress_window.show()
 
 
     def setup2DPointCloudPipeline(self):
@@ -4024,6 +4031,7 @@ This parameter has a strong effect on computation time, so be careful."
         self.config_worker.signals.finished.connect( self.unzip_on_remote )
         self.threadpool.start(self.config_worker)
 
+
     def unzip_on_remote(self):
         print ("run_code_remote")
         while True:
@@ -4035,8 +4043,29 @@ This parameter has a strong effect on computation time, so be careful."
         self.unzip_worker = Worker(self.dvc_runner._unzip_on_remote, self.dvc_runner.asyncCopy.remotedir, self.dvc_runner.asyncCopy.filename)
         self.create_progress_window("Connecting with remote", "Unzipping", 0, None, False)
         self.unzip_worker.signals.finished.connect( self.run_code_on_remote  )
+        self.unzip_worker.signals.status.connect( self.update_status)
+        self.unzip_worker.signals.error.connect( self.update_on_error)
+        
         self.threadpool.start(self.unzip_worker)
     
+    
+    def update_status(self, data):
+        print ("STDOUT", data[0])
+        print ("STDERR", data[1])
+
+
+    def update_on_error(self, data):
+        # traceback.print_exc()
+        # exctype, value = sys.exc_info()[:2]
+        # self.signals.error.emit((exctype, value, traceback.format_exc()))
+        print(data)
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowTitle("Remote execution Error")
+        msg.setText("exectype {}, value {}".format(data[0], data[1]))
+        msg.setDetailedText(data[2])
+        msg.exec_()
+
     @pysnooper.snoop()
     def run_code_on_remote(self):
         self.progress_window.close()
@@ -4048,9 +4077,14 @@ This parameter has a strong effect on computation time, so be careful."
         # self.dvc_worker = Worker(self.dvc_runner.run_dvc_on_remote, self.dvc_runner.asyncCopy.remotedir)
         self.dvc_worker = Worker(self.dvc_remote_controller.run_dvc_on_remote)
         self.create_progress_window("Connecting with remote", "Running DVC remote", 0, None, False)
-        self.dvc_worker.signals.finished.connect( self.progress_window.close )
+        self.dvc_worker.signals.finished.connect( self.retrieve_results_and_close_progress )
         self.threadpool.start(self.dvc_worker)
 
+    def retrieve_results_and_close_progress(self):
+        self.dvc_worker = Worker(self.dvc_remote_controller.retrieve_results, os.path.abspath(self.run_config_file))
+        self.dvc_worker.signals.finished.connect( self.progress_window.close )
+        self.threadpool.start(self.dvc_worker)
+        
     
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)

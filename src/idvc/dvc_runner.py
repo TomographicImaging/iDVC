@@ -400,7 +400,15 @@ class DVC_runner(object):
         # 2 go to workdir
         conn.changedir(workdir)
         # 2 run 'unzip filename'
-        stdout, stderr = conn.run('cd {} && unzip {}'.format(workdir, filename))
+        # -o forces to overwrite the files being unzipped
+        # unzip should be substituted with some python like
+        # import zipfile
+        # with zipfile.ZipFile("remote_run.zip", 'r') as mz:
+        #     mz.extractall()
+        stdout, stderr = conn.run('cd {} && unzip -o {}'.format(workdir, filename))
+        status_callback = kwargs.get('status_callback', None)
+        if status_callback is not None:
+            status_callback.emit((stdout, stderr))
 
     @pysnooper.snoop()        
     def run_dvc_on_remote(self, workdir, **kwargs):

@@ -3,6 +3,8 @@ from brem import RemoteRunControl
 import brem
 from PySide2 import QtCore
 import ntpath, posixpath
+import pysnooper
+import json
 
 class PrepareDVCRemote(object):
     def __init__(self, parent):
@@ -31,16 +33,17 @@ class PrepareDVCRemote(object):
 
 class DVCRemoteRunControlSignals(QtCore.QObject):
     status = QtCore.Signal(tuple)
-    job_id = QtCore.Signal(int)
     progress = QtCore.Signal(int)
 
-class DVCRemoteRunControl(RemoteRunControl):
+class DVCRemoteRunControl(object):
     def __init__(self, connection_details):
 
-        super(DVCRemoteRunControl, self).__init__(connection_details=connection_details)
+        super(DVCRemoteRunControl, self).__init__()
+        # self.signals is a property of RemoteRunControl
         self.signals = DVCRemoteRunControlSignals()
         self._num_runs = 0
         self._workdir = None
+        self.connection_details = connection_details
 
 
     def set_num_runs(self, value):
@@ -57,12 +60,10 @@ class DVCRemoteRunControl(RemoteRunControl):
 
 
     @property
-    def workir(self):
+    def workdir(self):
         return self._workdir
 
-
-    @pysnooper.snoop()        
-    def run_dvc_on_remote(self, **kwargs):
+    def _create_connection(self):
         # 1 create a BasicRemoteExecutionManager
         username = self.connection_details['username']
         port = self.connection_details['server_port']
@@ -71,17 +72,27 @@ class DVCRemoteRunControl(RemoteRunControl):
         remote_os = self.connection_details['remote_os']
         logfile = os.path.join('ssh.log')
 
+        conn = brem.BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
+        conn.login(passphrase=False)
+        # 2 go to workdir
+        conn.changedir(self.workdir)
+
+        return conn
+
+    @pysnooper.snoop()        
+    def run_dvc_on_remote(self, **kwargs):
+        # 1 create a BasicRemoteExecutionManager
+        
+        conn = self._create_connection()
+        remote_os = conn.remote_os
+        
         progress_callback = kwargs.get('progress_callback', None)
 
         if remote_os == 'POSIX':
             dpath = posixpath
         else:
             dpath = ntpath
-            
-        conn = brem.BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
-        conn.login(passphrase=False)
-        # 2 go to workdir
-        conn.changedir(self.workdir)
+        
         for i in range(self.num_runs):
             if progress_callback is not None:
                 progress_callback.emit(i)
@@ -89,6 +100,38 @@ class DVCRemoteRunControl(RemoteRunControl):
             wdir = dpath.join(self.workdir, 'dvc_result_{}'.format(i))    
             # 2 run 'unzip filename'
             stdout, stderr = conn.run('cd {} && . ~/condarc && conda activate dvc && dvc dvc_config.txt'.format(wdir))
+
+    @pysnooper.snoop()
+    def retrieve_results(self, config_file, **kwargs):
+
+        # created in dvc_interface create_run_config
+        with open(config_file) as tmp:
+            config = json.load(tmp)
+        run_folder = config['run_folder']
+
+        conn = self._create_connection()
+        remote_os = conn.remote_os
+        
+        progress_callback = kwargs.get('progress_callback', None)
+
+        if remote_os == 'POSIX':
+            dpath = posixpath
+        else:
+            dpath = ntpath
+
+        # retrieve the results in each directory and store it locally
+        for i in range(self.num_runs):
+            if progress_callback is not None:
+                progress_callback.emit(i)
+            fname = 'dvc_result_{}'.format(i)
+            
+            localdir = os.path.join(run_folder, "dvc_result_{}".format(i))
+
+            for extension in ['stat', 'disp']:
+                path_to_file = dpath.join(self.workdir, fname)
+                file_to_get = '{}.{}'.format(fname, extension)
+                conn.changedir(path_to_file)
+                conn.get_file(file_to_get, localdir)  
 
 
 class DVCSLURMRemoteRunControl(RemoteRunControl):
