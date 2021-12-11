@@ -4042,7 +4042,7 @@ This parameter has a strong effect on computation time, so be careful."
             sleep(0.25)
         self.unzip_worker = Worker(self.dvc_runner._unzip_on_remote, self.dvc_runner.asyncCopy.remotedir, self.dvc_runner.asyncCopy.filename)
         self.create_progress_window("Connecting with remote", "Unzipping", 0, None, False)
-        self.unzip_worker.signals.finished.connect( self.run_code_on_remote  )
+        self.unzip_worker.signals.finished.connect( self.remote_run_code )
         self.unzip_worker.signals.status.connect( self.update_status)
         self.unzip_worker.signals.error.connect( self.update_on_error)
         
@@ -4067,7 +4067,7 @@ This parameter has a strong effect on computation time, so be careful."
         msg.exec_()
 
     @pysnooper.snoop()
-    def run_code_on_remote(self):
+    def remote_run_code(self):
         self.progress_window.close()
 
         self.dvc_remote_controller = DVCRemoteRunControl(self.connection_details)
@@ -4077,14 +4077,18 @@ This parameter has a strong effect on computation time, so be careful."
         # self.dvc_worker = Worker(self.dvc_runner.run_dvc_on_remote, self.dvc_runner.asyncCopy.remotedir)
         self.dvc_worker = Worker(self.dvc_remote_controller.run_dvc_on_remote)
         self.create_progress_window("Connecting with remote", "Running DVC remote", 0, None, False)
-        self.dvc_worker.signals.finished.connect( self.retrieve_results_and_close_progress )
+        self.dvc_worker.signals.finished.connect( self.remote_retrieve_results )
         self.threadpool.start(self.dvc_worker)
 
-    def retrieve_results_and_close_progress(self):
+    def remote_retrieve_results(self):
         self.dvc_worker = Worker(self.dvc_remote_controller.retrieve_results, os.path.abspath(self.run_config_file))
-        self.dvc_worker.signals.finished.connect( self.progress_window.close )
+        self.dvc_worker.signals.finished.connect( self.remote_update_result_panel )
         self.threadpool.start(self.dvc_worker)
-        
+
+    def remote_update_result_panel(self):
+        self.run_succeeded = True
+        self.progress_window.close()
+        self.finished_run()
     
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
@@ -4191,7 +4195,7 @@ This parameter has a strong effect on computation time, so be careful."
             else:
                 run_config['rigid_trans']= "0.0 0.0 0.0"
 
-            self.run_folder = "Results/" + folder_name
+            self.run_folder = os.path.join("Results", folder_name)
             run_config['run_folder'] = self.run_folder
 
             #where is point0
@@ -4369,7 +4373,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
      
-
+    @pysnooper.snoop()
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
