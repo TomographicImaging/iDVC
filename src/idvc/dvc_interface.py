@@ -1376,7 +1376,7 @@ It is used as a global starting point and a translation reference."
         extent = [ p0[0] - reg_box_size//2, p0[0] + reg_box_size//2, 
                     p0[1] - reg_box_size//2, p0[1] + reg_box_size//2, 
                     p0[2] - reg_box_size//2, p0[2] + reg_box_size//2]
-        extent = [ round(el) if el > 0 else 0 for i, el in enumerate(extent) ] #TODO: add correction for upper bound as well
+        extent = [round(el) if el > 0 else 0 for el in extent] #TODO: add correction for upper bound as well
         self.registration_box_extent = extent
 
         return extent
@@ -1578,6 +1578,7 @@ It is used as a global starting point and a translation reference."
         data = self.getRegistrationVOIs()
         data1 = data[0]
         data2 = data[1]
+
         self.translate.SetInputData(data2)
         self.translate.Update()
         #progress_callback.emit(45)
@@ -1705,11 +1706,6 @@ It is used as a global starting point and a translation reference."
     def translate_image_reg(self, *args, **kwargs):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
         key_code, event = args
-        progress_callback = kwargs.get('progress_callback', None)
-        # notice that None should not be possible as progress_callback is
-        # added in Worker
-        if progress_callback is not None:
-            progress_callback.emit(10)
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         # print("Current slice", current_slice)
