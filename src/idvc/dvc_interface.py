@@ -41,6 +41,7 @@ from eqt.threading.QtThreading import ErrorObserver
 
 from natsort import natsorted
 import imghdr
+import glob
 
 # from vtk.numpy_interface import algorithms as algs
 # from vtk.numpy_interface import dataset_adapter as dsa
@@ -65,7 +66,7 @@ import copy
 
 from distutils.dir_util import copy_tree
 
-from ccpi.viewer.utils.io import ImageDataCreator
+from idvc.io import ImageDataCreator
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
@@ -3843,6 +3844,7 @@ This parameter has a strong effect on computation time, so be careful."
         self.config_worker = Worker(self.create_run_config)
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
+        # if single or bulk use the line below, if remote develop new functionality
         self.config_worker.signals.result.connect(partial (self.run_external_code))
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
@@ -3903,11 +3905,11 @@ This parameter has a strong effect on computation time, so be careful."
                 self.roi_files = []
                 #print(self.subvol_sizes)
                 subvol_size_count = 0
-                run_folder = "Results/" + folder_name + "/"
+                run_folder = os.path.join("Results" , folder_name)
                 for subvol_size in self.subvol_sizes:
                     #print(subvol_size)
                     subvol_size_count+=1
-                    filename = run_folder + "_" + str(subvol_size) + ".roi"
+                    filename = os.path.join( run_folder , "_{}.roi".format(str(subvol_size)))
                     #print(filename)
                     if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
                         return ("pointcloud error")
@@ -3995,11 +3997,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             return
             
 
-        python_file = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dvc_runner.py")
-        pythonCommand = "python " + '"' + os.path.abspath(python_file) + '" "' + os.path.abspath(self.run_config_file) + '"'
-
+        
         self.run_succeeded = True
-
+    
+        # this command will call DVC_runner to create the directories
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
                                      self.finished_run, self.run_succeeded, tempfile.tempdir)
 
@@ -4137,32 +4138,28 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].clear()
         self.result_widgets['subvol_entry'].clear()
 
-        directory = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
+        directory = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = directory
 
         file_list=[]
         self.result_list=[]
-        points_list=[]
-
-        for r, d, f in os.walk(directory):
-            for _file in f:
-                #print("Looking at ", _file)
-                if _file.endswith(".roi") and _file.startswith("_"):
-                    self.result_widgets['pc_entry'].addItem((_file.split('_')[-1]).split('.')[0])
-
-                if _file.endswith(".disp"):
-                    file_name= _file[:-5]
-                    file_path = directory + "/" + file_name
-                    result = RunResults(file_path)
-                    # print (result)
-                    self.result_list.append(result)
-                    #print(result.subvol_points)
-                    if str(result.subvol_points) not in points_list:
-                        points_list.append(str(result.subvol_points))
-                        #self.result_widgets['pc_entry'].addItem(str(result.subvol_size))
-                        # print ("Adding to points_list ", points_list[-1])
-
-        
+        points_list = []
+        subvol_list = []
+        for folder in glob.glob(os.path.join(directory, "dvc_result_*")):
+            file_path = os.path.join(folder, os.path.basename(folder))
+            result = RunResults(file_path)
+            # print (result)
+            self.result_list.append(result)
+            #print(result.subvol_points)
+            el = str(result.subvol_points)
+            if el not in points_list:
+                points_list.append(el)
+            el = str(result.subvol_size)
+            if el not in subvol_list:
+                subvol_list.append(el)
+                            
+        # update the interface
+        self.result_widgets['pc_entry'].addItems(subvol_list)
         self.result_widgets['subvol_entry'].addItems(points_list)
                
 
@@ -4187,7 +4184,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
 
             else:
-                results_folder = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
+                results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
                 self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
                 #print("New roi is", self.roi)
                 self.results_folder = results_folder
@@ -4218,7 +4215,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def CreateGraphsWindow(self):
         #print("Create graphs")
         if self.result_widgets['run_entry'].currentText() is not "":
-            self.results_folder = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
+            self.results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         else:
             self.results_folder = None
 
@@ -4504,7 +4501,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.dvc_input_image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][1][count]) 
             count+=1
 
-        results_folder = os.path.join(tempfile.tempdir, "Results", "_" + self.result_widgets['run_entry'].currentText())
+        results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = results_folder
    
     def CloseSaveWindow(self):
@@ -4977,10 +4974,9 @@ Please select the new location of the file, or move it back to where it was orig
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
 
-        for r, d, f in os.walk(results_directory):
-            for directory in d:
-                self.result_widgets['run_entry'].addItem(directory.split('_')[-1])
-        
+        for folder in glob.glob(os.path.join(results_directory,"*")):
+            if os.path.isdir(folder):
+                self.result_widgets['run_entry'].addItem(os.path.basename(folder))
 
         self.reg_load = False
         if 'point0' in self.config:
@@ -5430,18 +5426,16 @@ class GraphsWindow(QMainWindow):
     def CreateDockWidgets(self, displ_wrt_point0 = False):
         result_list=[]
         #print(results_folder[0])
-        for f in listdir(self.results_folder):
-            if f.endswith(".disp"):
-                file_name= f[:-5]
-                file_path = self.results_folder + "/" + file_name
-                result = RunResults(file_path)
-                result_list.append(result)
-        
-                GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
-                dock1 = QDockWidget(result.title,self)
-                dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-                dock1.setWidget(GraphWidget)
-                self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
+        for folder in glob.glob(os.path.join(self.results_folder, "dvc_result_*")):
+            file_path = os.path.join(folder, os.path.basename(folder))
+            result = RunResults(file_path)
+            result_list.append(result)
+    
+            GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
+            dock1 = QDockWidget(result.title,self)
+            dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+            dock1.setWidget(GraphWidget)
+            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
     
         prev = None
 
