@@ -1435,7 +1435,6 @@ It is used as a global starting point and a translation reference."
         #print("Center on point0")
         '''Centers the viewing slice where Point 0 is'''
         if hasattr(self, 'vis_widget_reg'):
-            rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
 
             if hasattr(self, 'point0_world_coords'):
@@ -1538,10 +1537,8 @@ It is used as a global starting point and a translation reference."
         extent = [ p0[0] - reg_box_size//2, p0[0] + reg_box_size//2, 
                     p0[1] - reg_box_size//2, p0[1] + reg_box_size//2, 
                     p0[2] - reg_box_size//2, p0[2] + reg_box_size//2]
-        extent = [ round(el) if el > 0 else 0 for i,el in enumerate(extent) ] #TODO: add correction for upper bound as well
-
+        extent = [round(el) if el > 0 else 0 for el in extent] #TODO: add correction for upper bound as well
         self.registration_box_extent = extent
-        #print("Full reg box extent: ", extent)
 
         return extent
 
@@ -1570,7 +1567,6 @@ It is used as a global starting point and a translation reference."
         if hasattr(self, 'vis_widget_reg'):
             self.UpdateViewerSettingsPanelForRegistration()
             rp = self.registration_parameters
-            vs_widgets = self.visualisation_setting_widgets
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
                 # print ("Start Registration Checked")
@@ -1650,8 +1646,6 @@ It is used as a global starting point and a translation reference."
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
         
     def LoadImagesAndCompleteRegistration(self):
-        rp = self.registration_parameters
-        v = self.vis_widget_reg.frame.viewer
 
         if hasattr(self, 'registration_box_extent'):
             previous_reg_box_extent = copy.deepcopy(self.registration_box_extent)
@@ -1667,7 +1661,6 @@ It is used as a global starting point and a translation reference."
         if target_z_extent[0] <0:
             target_z_extent[0] = 0
         target_z_extent = tuple(target_z_extent)
-        # print("Target z extent", target_z_extent)
 
         self.target_cropped_image_z_extent = target_z_extent
 
@@ -1746,7 +1739,7 @@ It is used as a global starting point and a translation reference."
         data = self.getRegistrationVOIs()
         data1 = data[0]
         data2 = data[1]
-            
+
         self.translate.SetInputData(data2)
         self.translate.Update()
         #progress_callback.emit(45)
@@ -1760,7 +1753,6 @@ It is used as a global starting point and a translation reference."
         cast2.SetInputConnection(self.translate.GetOutputPort())
         cast2.SetOutputScalarTypeToFloat()
         #progress_callback.emit(50)
-        
         subtract = vtk.vtkImageMathematics()
         subtract.SetOperationToSubtract()
         subtract.SetInputConnection(1,cast1.GetOutputPort())
@@ -1831,7 +1823,7 @@ It is used as a global starting point and a translation reference."
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
             current_slice = v.GetActiveSlice()
-        # print("About to set the input data")
+        
         v.setInputData(self.subtract.GetOutput())
         # print("Set the input data")
 
@@ -1852,22 +1844,13 @@ It is used as a global starting point and a translation reference."
 
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        #key_sym = interactor.GetKeySym()
-        # print('OnKeyPressEventForRegistration', key_code) #,event)
-        #print("Key sym", key_sym)
+        # print('OnKeyPressEventForRegistration', key_code)
+
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
-            self.translate_worker = Worker(self.translate_image_reg, key_code, event)
-            self.translate_worker.signals.finished.connect(self.reg_viewer_update)
-
-            # produces windows which don't close if buttons pressed in quick succession
-            # if rp['registration_box_size_entry'].value() >1000:
-            #     self.create_progress_window("Loading", "Translating Image")
-            #     self.translate_worker.signals.progress.connect(self.progress)
-            #self.progress_window.setValue(10)
-            
-            self.threadpool.start(self.translate_worker)
+            self.translate_image_reg(key_code, event)
+            self.reg_viewer_update()
 
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
@@ -1884,15 +1867,10 @@ It is used as a global starting point and a translation reference."
     def translate_image_reg(self, *args, **kwargs):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
         key_code, event = args
-        progress_callback = kwargs.get('progress_callback', None)
-        # notice that None should not be possible as progress_callback is
-        # added in Worker
-        progress_callback.emit(10)
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         # print("Current slice", current_slice)
         trans = list(self.translate.GetTranslation())
-        #print("Previous translation: ", trans)
         orientation = v.style.GetSliceOrientation()
         ij = [0,1]
         if orientation == SLICE_ORIENTATION_XY:
@@ -4456,7 +4434,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
     def CreateGraphsWindow(self):
         #print("Create graphs")
-        if self.result_widgets['run_entry'].currentText() is not "":
+        if self.result_widgets['run_entry'].currentText() != "":
             self.results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         else:
             self.results_folder = None
