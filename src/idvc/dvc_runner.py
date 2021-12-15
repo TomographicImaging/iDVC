@@ -347,6 +347,8 @@ class DVC_runner(object):
                 )
 
     def zip_workdir_and_upload(self, **kwargs):
+        # TODO this is already in a worker and does not need to run the AsyncCopyOverSSH
+        
         #param_file is a list with at least 1 item but we are interested in the first
         # because we want to know the path to it and all files will be in the same directory
         exe_file, param_file, required_runs,\
