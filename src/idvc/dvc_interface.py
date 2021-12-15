@@ -76,11 +76,11 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
-from idvc.dialogs import SettingsWindow
+from dialogs import SettingsWindow
 
 from brem.ui import RemoteFileDialog
 from brem import AsyncCopyOverSSH
-from idvc.dvc_remote import DVCRemoteRunControl
+from dvc_remote import DVCRemoteRunControl
 
 __version__ = gui_version.version
 
@@ -3992,7 +3992,7 @@ This parameter has a strong effect on computation time, so be careful."
                                message="Load a mask on the viewer first" )
                 return
         
-        folder_name = "_" + self.rdvc_widgets['name_entry'].text()
+        folder_name = self.rdvc_widgets['name_entry'].text()
 
         results_folder = os.path.join(tempfile.tempdir, "Results")
 
@@ -4094,7 +4094,7 @@ This parameter has a strong effect on computation time, so be careful."
         os.chdir(tempfile.tempdir)
         progress_callback = kwargs.get('progress_callback', None)
         try:
-            folder_name = "_" + self.rdvc_widgets['name_entry'].text()
+            folder_name = self.rdvc_widgets['name_entry'].text()
 
             results_folder = os.path.join(tempfile.tempdir, "Results")
             os.mkdir(os.path.join(results_folder, folder_name))
