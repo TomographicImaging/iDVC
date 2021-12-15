@@ -3950,6 +3950,7 @@ This parameter has a strong effect on computation time, so be careful."
         if self.roi:
             next_button.setEnabled(True)
 
+
     def create_config_worker(self):
         if hasattr(self, 'translate'):
             if self.translate is None:
@@ -3985,16 +3986,20 @@ This parameter has a strong effect on computation time, so be careful."
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
         # if single or bulk use the line below, if remote develop new functionality
-        if not hasattr(self, 'settings_window') and\
-           not self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
+        run_local = True
+        if hasattr(self, 'settings_window'):
+            if not self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
+                run_local = False
+        
+        if run_local:    
             self.config_worker.signals.result.connect(partial (self.run_external_code))
         else:
             # do not run the dvc locally but 
             # 1 zip and 
             # 2 upload the config to remote and then
             # 3 run the code on the remote
-            self.config_worker.signals.finished.connect(partial (self.ZipAndUploadConfigToRemote))
-            pass
+            self.config_worker.signals.finished.connect(self.ZipAndUploadConfigToRemote)
+            
         
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
@@ -4046,7 +4051,7 @@ This parameter has a strong effect on computation time, so be careful."
         msg.setDetailedText(data[2])
         msg.exec_()
 
-    @pysnooper.snoop()
+    
     def remote_run_code(self):
         self.progress_window.close()
 
@@ -4070,6 +4075,7 @@ This parameter has a strong effect on computation time, so be careful."
         self.progress_window.close()
         self.finished_run()
     
+
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
         progress_callback = kwargs.get('progress_callback', None)
@@ -4138,7 +4144,7 @@ This parameter has a strong effect on computation time, so be careful."
                 #print("finished making pointclouds")
 
             # if remote mode this should not be the local copy        
-            if self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
+            if hasattr(self, 'settings_window') and self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
                 # this should point to the remote files set at the time of download
                 self.reference_file = self.remote_reference_image_fname
                 self.correlate_file = self.remote_correlate_image_fname
