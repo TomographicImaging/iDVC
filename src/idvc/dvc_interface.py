@@ -76,11 +76,11 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
-from dialogs import SettingsWindow
+from idvc.dialogs import SettingsWindow
 
 from brem.ui import RemoteFileDialog
 from brem import AsyncCopyOverSSH
-from dvc_remote import DVCRemoteRunControl
+from idvc.dvc_remote import DVCRemoteRunControl
 
 __version__ = gui_version.version
 
