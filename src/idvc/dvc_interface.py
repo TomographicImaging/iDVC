@@ -3985,7 +3985,8 @@ This parameter has a strong effect on computation time, so be careful."
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
         # if single or bulk use the line below, if remote develop new functionality
-        if not self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
+        if not hasattr(self, 'settings_window') and\
+           not self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
             self.config_worker.signals.result.connect(partial (self.run_external_code))
         else:
             # do not run the dvc locally but 
