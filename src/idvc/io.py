@@ -760,7 +760,7 @@ def saveRawImageData(**kwargs):
     info_var["shape"] = shape
 
     if info_var is not None:
-        if typecode == 0 or 1:
+        if typecode == 0 or typecode == 1:
             info_var['vol_bit_depth'] = '8'
             bytes_per_element = 1
         else:
