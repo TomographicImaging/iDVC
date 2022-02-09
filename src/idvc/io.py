@@ -8,8 +8,8 @@ from functools import partial
 import numpy
 import vtk
 from ccpi.viewer.utils import Converter
-from ccpi.viewer.utils.conversion import (cilBaseCroppedReader,
-                                          cilBaseResampleReader,
+from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
+                                          cilRawResampleReader,
                                           cilMetaImageCroppedReader,
                                           cilMetaImageResampleReader,
                                           cilNumpyCroppedReader,
@@ -789,18 +789,14 @@ def saveRawImageData(**kwargs):
         return (errors)
 
     if resample:
-        reader = cilBaseResampleReader()
+        reader = cilRawResampleReader()
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
             getProgress, progress_callback=progress_callback))
         reader.SetFileName(fname)
         reader.SetTargetSize(int(target_size * 1024*1024*1024))
-        reader.SetBytesPerElement(bytes_per_element)
         reader.SetBigEndian(isBigEndian)
         reader.SetIsFortran(isFortran)
-        # typecode = numpy.dtype(main_window.raw_import_dialog['dtype'].currentText()).char
-        # reader.SetNumpyTypeCode(typecode)
-        # reader.SetOutputVTKType(Converter.numpy_dtype_char_to_vtkType[typecode])
-        reader.SetRawTypeCode(
+        reader.SetTypeCodeName(
             main_window.raw_import_dialog['dtype'].currentText())
         reader.SetStoredArrayShape(shape)
         # We have not set spacing or origin
@@ -820,19 +816,15 @@ def saveRawImageData(**kwargs):
             else:
                 info_var['sampled'] = True
     elif crop_image:
-        reader = cilBaseCroppedReader()
+        reader = cilRawCroppedReader()
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
             getProgress, progress_callback=progress_callback))
         reader.SetFileName(fname)
         reader.SetTargetZExtent(target_z_extent)
         reader.SetOrigin(tuple(origin))
-        reader.SetBytesPerElement(bytes_per_element)
         reader.SetBigEndian(isBigEndian)
         reader.SetIsFortran(isFortran)
-        # typecode = numpy.dtype(main_window.raw_import_dialog['dtype'].currentText()).char
-        # reader.SetNumpyTypeCode(typecode)
-        # reader.SetOutputVTKType(Converter.numpy_dtype_char_to_vtkType[typecode])
-        reader.SetRawTypeCode(
+        reader.SetTypeCodeName(
             main_window.raw_import_dialog['dtype'].currentText())
         reader.SetStoredArrayShape(shape)
         # We have not set spacing or origin
@@ -843,9 +835,7 @@ def saveRawImageData(**kwargs):
         #print ("Spacing ", output_image.GetSpacing())
         image_size = reader.GetStoredArrayShape(
         )[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
-        # target_size = reader.GetTargetSize()
         # print("array shape", image_size)
-        # print("target", target_size)
         if info_var is not None:
             info_var['cropped'] = True
 

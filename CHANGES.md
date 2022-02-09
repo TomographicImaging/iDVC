@@ -1,9 +1,12 @@
 # ChangeLog
 
-## v21.#.#
+## v22.0.0
+* Requires v22.0.0 of the CILViewer due to backwards incompatibility of reader restructuring, and requirement of vtk 8.1.2 in iDVC.
+* Fixes bug with incorrect bit depth being passed to dvc code if a int16 raw file is used.
 * Moved io.py from CILViewer to this package
 * Generate version.py from setup.py
 * Changed the directory structure for the configuration files for a single or bulk which are now saved at as same level subdirectories as Result/<run_name>/dvc_result_<run_number>. The Bulk run will launch a DVC execution consequently for each directory.
+
 
 ## v21.1.2
 * Only use relative filepaths to session files
