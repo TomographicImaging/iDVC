@@ -1,5 +1,8 @@
 # ChangeLog
 
+## v22.x.x
+* Correctly align help text
+
 ## v22.0.1
 * Requires >=v22.0.1 and <v22.1 of the CILViewer due to backwards incompatibility of reader restructuring, and requirement of vtk 8.1.2 in iDVC.
 
