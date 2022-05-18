@@ -251,6 +251,8 @@ class MainWindow(QMainWindow):
         self.viewer3D_dock.setObjectName("3DImageView")
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
         self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
+            QDockWidget.DockWidgetMovable)
         
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
@@ -258,6 +260,8 @@ class MainWindow(QMainWindow):
         first_dock = None
         docks = []
         for current_dock in self.findChildren(QDockWidget):
+            current_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
+                QDockWidget.DockWidgetMovable)
             if self.dockWidgetArea(current_dock) == QtCore.Qt.LeftDockWidgetArea:
                 if prev:
                     self.tabifyDockWidget(prev,current_dock)                    
