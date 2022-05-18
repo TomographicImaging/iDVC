@@ -4083,7 +4083,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         result_widgets['scale_vectors_entry'] = QDoubleSpinBox(groupBox)
         result_widgets['scale_vectors_entry'].setSingleStep(0.1)
-        result_widgets['scale_vectors_entry'].setMaximum(20)
+        result_widgets['scale_vectors_entry'].setMaximum(10000.)
         result_widgets['scale_vectors_entry'].setMinimum(0.1)
         result_widgets['scale_vectors_entry'].setValue(1.00)
         result_widgets['scale_vectors_entry'].setToolTip("Adjust the scaling of the vectors. 1 means true displacement.")
