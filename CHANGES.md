@@ -1,7 +1,9 @@
 # ChangeLog
 
+## v22.0.1
+* Requires >=v22.0.1 and <v22.1 of the CILViewer due to backwards incompatibility of reader restructuring, and requirement of vtk 8.1.2 in iDVC.
+
 ## v22.0.0
-* Requires v22.0.1 of the CILViewer due to backwards incompatibility of reader restructuring, and requirement of vtk 8.1.2 in iDVC.
 * Fixes bug with incorrect bit depth being passed to dvc code if a int16 raw file is used.
 * Moved io.py from CILViewer to this package
 * Generate version.py from setup.py
