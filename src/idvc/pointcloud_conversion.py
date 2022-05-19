@@ -329,7 +329,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
     def CalculatePointSpacing(self, overlap, mode=SPHERE):
         '''returns the ratio between the figure size (radius) and the distance between 2 figures centers in 3D'''
-        print ("CalculateDensity", overlap)
+        # print ("CalculateDensity", overlap)
 
         if isinstance (overlap, tuple) or isinstance(overlap, list):
             d = [self.distance_from_overlap(ovl, mode=mode) for ovl in overlap]

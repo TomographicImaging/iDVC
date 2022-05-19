@@ -4332,7 +4332,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         result_widgets['scale_vectors_entry'] = QDoubleSpinBox(groupBox)
         result_widgets['scale_vectors_entry'].setSingleStep(0.1)
-        result_widgets['scale_vectors_entry'].setMaximum(20)
+        result_widgets['scale_vectors_entry'].setMaximum(10000.)
         result_widgets['scale_vectors_entry'].setMinimum(0.1)
         result_widgets['scale_vectors_entry'].setValue(1.00)
         result_widgets['scale_vectors_entry'].setToolTip("Adjust the scaling of the vectors. 1 means true displacement.")
@@ -4368,7 +4368,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         directory = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = directory
 
-        file_list=[]
         self.result_list=[]
         points_list = []
         subvol_list = []
@@ -4409,33 +4408,32 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             if(subvol_points == ""):
                 self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
+                return
 
-            else:
-                results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
-                self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
-                #print("New roi is", self.roi)
-                self.results_folder = results_folder
 
-                if (self.result_widgets['vec_entry'].currentText() == "None"):
-                    self.PointCloudWorker("load pointcloud file")
+            results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+            self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
+            #print("New roi is", self.roi)
+            self.results_folder = results_folder
 
-                else: 
-                    # print("Result list", self.result_list, len(self.result_list))
-                    for result in self.result_list:
-                        # print("Subvolume size match? ", result.subvol_size, subvol_size)
-                        if result.subvol_size == subvol_size:
+            if (self.result_widgets['vec_entry'].currentText() == "None"):
+                self.PointCloudWorker("load pointcloud file")
+
+            else: 
+                # print("Result list", self.result_list, len(self.result_list))
+                for result in self.result_list:
+                    # print("Subvolume size match? ", result.subvol_size, subvol_size)
+                    if result.subvol_size == subvol_size:
+                        # print ("YES")
+                        # print("Subv points match? {} {}".format(result.subvol_points, subvol_points))
+                        if result.subvol_points == subvol_points:
                             # print ("YES")
-                            # print("Subv points match? {} {}".format(result.subvol_points, subvol_points))
-                            if result.subvol_points == subvol_points:
-                                # print ("YES")
-                                run_file = result.disp_file
-                                run_file = os.path.join(results_folder, os.path.basename(run_file))
-
-                                self.displayVectors(run_file, 2)
-                            # else:
-                            #     print ("NO")    
+                            run_file = result.disp_file
+                            self.displayVectors(run_file, 2)
                         # else:
-                        #     print ("NO")
+                        #     print ("NO")    
+                    # else:
+                    #     print ("NO")
 
 
 
@@ -5457,7 +5455,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
 
         if self.viewer == viewer3D:
-            self.frame.viewer.style.keyPress(interactor, 'KeyPressEvent')
+            self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
             # Depth peeling for volumes doesn't work as we would like when we have the vtk.vtkFixedPointVolumeRayCastMapper() instead of the vtk.vtkSmartVolumeMapper()
             # self.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
             # self.frame.viewer.ren.SetUseDepthPeeling(True)
