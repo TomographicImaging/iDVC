@@ -936,11 +936,6 @@ class MainWindow(QMainWindow):
         subv_glyph = self.cubesphere
 
         # # Spheres may be a bit complex to visualise if the spacing of the image is not homogeneous
-        # # get reference
-        sphere_source = self.sphere_source
-
-        # # get reference
-        cube_source = self.cube_source
 
         # # mapper for the glyphs
         sphere_mapper = vtk.vtkPolyDataMapper()
@@ -3197,9 +3192,13 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         if disp_wrt_point0:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-            for count in range(len(displ)):
-                for i in range(3):
+        for count in range(len(displ)):
+            for i in range(3):
+                if disp_wrt_point0:
                     displ[count][i+6] = (displ[count][i+6] - point0_disp[i])*multiplier
+                else:
+                    displ[count][i+6] *= multiplier
+
         return displ
 
     def createVectors2D(self, displ, viewer_widget):
