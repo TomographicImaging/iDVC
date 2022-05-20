@@ -251,6 +251,8 @@ class MainWindow(QMainWindow):
         self.viewer3D_dock.setObjectName("3DImageView")
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
         self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
+            QDockWidget.DockWidgetMovable)
         
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
@@ -258,6 +260,8 @@ class MainWindow(QMainWindow):
         first_dock = None
         docks = []
         for current_dock in self.findChildren(QDockWidget):
+            current_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
+                QDockWidget.DockWidgetMovable)
             if self.dockWidgetArea(current_dock) == QtCore.Qt.LeftDockWidgetArea:
                 if prev:
                     self.tabifyDockWidget(prev,current_dock)                    
@@ -4089,7 +4093,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         result_widgets['scale_vectors_entry'] = QDoubleSpinBox(groupBox)
         result_widgets['scale_vectors_entry'].setSingleStep(0.1)
-        result_widgets['scale_vectors_entry'].setMaximum(20)
+        result_widgets['scale_vectors_entry'].setMaximum(10000.)
         result_widgets['scale_vectors_entry'].setMinimum(0.1)
         result_widgets['scale_vectors_entry'].setValue(1.00)
         result_widgets['scale_vectors_entry'].setToolTip("Adjust the scaling of the vectors. 1 means true displacement.")
