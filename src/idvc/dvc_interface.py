@@ -393,23 +393,29 @@ class MainWindow(QMainWindow):
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["Please use 'raw' or 'npy' images.\n You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
+        self.help_text = ["Please use 'raw' or 'npy' images.\n"
+        "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
-        self.help_text.append("Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'. \n Once you are satisfied with the registration, make sure the point 0 \
-you have selected is the point you want the DVC to start from.")
+        self.help_text.append(
+            "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
+            "Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'.\n"
+            "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
+            )
         
-        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand. \n\
-When you are happy with your region click 'Create Mask'.")
+        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand.\n"
+            "When you are happy with your region click 'Create Mask'.")
 
-        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n\
-The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images. \n\
-If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n\
-If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code. \n\
-It will be the first point in the file that is used as the reference point.")
+        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
+            "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
+            "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
+            "If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
+            "It will be the first point in the file that is used as the reference point.")
 
-        self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results. You can access these options under 'File'.")
+        self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results."
+            "You can access these options under 'File'.")
 
-        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset. You may also scale the vectors to make them larger and easier to view.")
+        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset."
+            "You may also scale the vectors to make them larger and easier to view.")
 
         self.help_label = QLabel(groupBox)
         self.help_label.setWordWrap(True)

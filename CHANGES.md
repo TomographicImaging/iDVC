@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## v22.x.x
+* Correctly align help text
 * Make dockwidgets uncloseable, so that 3D viewer can't be lost.
 
 ## v22.0.1
