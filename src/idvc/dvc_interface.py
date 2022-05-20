@@ -251,6 +251,8 @@ class MainWindow(QMainWindow):
         self.viewer3D_dock.setObjectName("3DImageView")
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
         self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
+            QDockWidget.DockWidgetMovable)
         
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
@@ -258,6 +260,8 @@ class MainWindow(QMainWindow):
         first_dock = None
         docks = []
         for current_dock in self.findChildren(QDockWidget):
+            current_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
+                QDockWidget.DockWidgetMovable)
             if self.dockWidgetArea(current_dock) == QtCore.Qt.LeftDockWidgetArea:
                 if prev:
                     self.tabifyDockWidget(prev,current_dock)                    
@@ -389,23 +393,29 @@ class MainWindow(QMainWindow):
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["Please use 'raw' or 'npy' images.\n You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
+        self.help_text = ["Please use 'raw' or 'npy' images.\n"
+        "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
-        self.help_text.append("Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'. \n Once you are satisfied with the registration, make sure the point 0 \
-you have selected is the point you want the DVC to start from.")
+        self.help_text.append(
+            "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
+            "Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'.\n"
+            "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
+            )
         
-        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand. \n\
-When you are happy with your region click 'Create Mask'.")
+        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand.\n"
+            "When you are happy with your region click 'Create Mask'.")
 
-        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n\
-The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images. \n\
-If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n\
-If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code. \n\
-It will be the first point in the file that is used as the reference point.")
+        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
+            "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
+            "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
+            "If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
+            "It will be the first point in the file that is used as the reference point.")
 
-        self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results. You can access these options under 'File'.")
+        self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results."
+            "You can access these options under 'File'.")
 
-        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset. You may also scale the vectors to make them larger and easier to view.")
+        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset."
+            "You may also scale the vectors to make them larger and easier to view.")
 
         self.help_label = QLabel(groupBox)
         self.help_label.setWordWrap(True)
@@ -4082,7 +4092,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         result_widgets['scale_vectors_entry'] = QDoubleSpinBox(groupBox)
         result_widgets['scale_vectors_entry'].setSingleStep(0.1)
-        result_widgets['scale_vectors_entry'].setMaximum(20)
+        result_widgets['scale_vectors_entry'].setMaximum(10000.)
         result_widgets['scale_vectors_entry'].setMinimum(0.1)
         result_widgets['scale_vectors_entry'].setValue(1.00)
         result_widgets['scale_vectors_entry'].setToolTip("Adjust the scaling of the vectors. 1 means true displacement.")
