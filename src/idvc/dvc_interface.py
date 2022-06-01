@@ -37,7 +37,7 @@ import ccpi.viewer.viewerLinker as vlink
 
 # from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 from eqt.threading import Worker
-from eqt.threading.QtThreading import ErrorObserver
+from ccpi.viewer.utils.error_handling import ErrorObserver
 
 from natsort import natsorted
 import imghdr
