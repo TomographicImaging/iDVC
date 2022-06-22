@@ -1100,7 +1100,7 @@ It is used as a global starting point and a translation reference."
         # print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
         self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-        self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+        self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
 
         self.vis_widget_reg = VisualisationWidget(self, viewer2D)
         
@@ -1154,7 +1154,7 @@ It is used as a global starting point and a translation reference."
                 else:
                     if self.vis_widget_reg.getImageData() != self.ref_image_data:
                         self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-                        self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+                        self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
                         self.vis_widget_reg.setImageData(self.ref_image_data)
                         self.vis_widget_reg.displayImageData()
 
@@ -1666,7 +1666,7 @@ It is used as a global starting point and a translation reference."
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
-            current_slice = v.GetActiveSlice()
+            current_slice = v.getActiveSlice()
         
         v.setInputData(self.subtract.GetOutput())
         # print("Set the input data")
@@ -2742,7 +2742,7 @@ Please select a replacement pointcloud file.')
         self.pointCloud_shape =  shapes[self.subvolumeShapeValue.currentIndex()]
         
         #slice is read from the viewer
-        pointCloud.SetSlice(v.GetActiveSlice())
+        pointCloud.SetSlice(v.getActiveSlice())
         
         pointCloud.SetInputConnection(0, reader.GetOutputPort())
 
@@ -4318,7 +4318,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.config['image']=image
             self.config['image_copied']=self.image_copied
             self.config['image_orientation']=self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-            self.config['current_slice']=self.vis_widget_2D.frame.viewer.GetActiveSlice()
+            self.config['current_slice']=self.vis_widget_2D.frame.viewer.getActiveSlice()
 
             #we need to do the same for the dvc input image:
             dvc_input_image = [[],[]]
