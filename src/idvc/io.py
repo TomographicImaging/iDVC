@@ -503,8 +503,7 @@ def loadTif(*args, **kwargs):
 
         image_info['sampled'] = False
 
-        # TODO: save volume header length
-        progress_callback.emit(100)
+    progress_callback.emit(100)
 
 
 def getProgress(caller, event, progress_callback):
