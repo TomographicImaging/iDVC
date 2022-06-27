@@ -1488,7 +1488,7 @@ It is used as a global starting point and a translation reference."
                 self.updateCoordinates()
                 
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
-        
+    
     def LoadImagesAndCompleteRegistration(self):
 
         if hasattr(self, 'registration_box_extent'):
@@ -1513,8 +1513,7 @@ It is used as a global starting point and a translation reference."
         self.target_cropped_image_origin = origin
 
         self.unsampled_image_info = copy.deepcopy(self.image_info)
-                
-
+       
         if self.image_info['sampled']:
             
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):

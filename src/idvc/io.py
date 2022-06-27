@@ -14,7 +14,8 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilMetaImageResampleReader,
                                           cilNumpyCroppedReader,
                                           cilNumpyResampleReader,
-                                          vortexTIFFResampleReader)
+                                          vortexTIFFResampleReader,
+                                          vortexTIFFCroppedReader)
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
 from PySide2.QtCore import QThreadPool
@@ -86,12 +87,11 @@ class ImageDataCreator(object):
                                   crop_image=crop_image, origin=origin, target_z_extent=target_z_extent)
 
         elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
-            reader = vortexTIFFResampleReader()
-            reader.AddObserver("ErrorEvent", main_window.e)
             createProgressWindow(main_window, "Converting", "Converting Image")
             # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
-            image_worker = Worker(loadTif, image_files, reader, output_image,
-                                  convert_numpy=convert_numpy, image_info=info_var,resample=resample, target_size=target_size,
+            
+            image_worker = Worker(loadTif, image_files, output_image, convert_numpy=convert_numpy, 
+                                  image_info=info_var, resample=resample, crop_image=crop_image, target_size=target_size,
                                   origin=origin, target_z_extent=target_z_extent)
 
         elif file_extension in ['.raw']:
@@ -411,10 +411,11 @@ def loadTif(*args, **kwargs):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
     # var,resample=resample, target_size=target_size,
     # origin=origin, target_z_extent=target_z_extent
-    filenames, reader, output_image = args
+    filenames, output_image = args
     image_info = kwargs.get('image_info', None)
     progress_callback = kwargs.get('progress_callback')
     resample = kwargs.get('resample', False)
+    crop_image = kwargs.get('crop_image', False)
     target_size = kwargs.get('target_size', 0.125)
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
@@ -448,16 +449,17 @@ def loadTif(*args, **kwargs):
             else:
                 image_info['sampled'] = True
 
-    else:
-
-        sa = vtk.vtkStringArray()
-        for fname in filenames:
-            i = sa.InsertNextValue(fname)
-        print("read {} files".format(i))
-
+    elif crop_image:
+        reader = vortexTIFFCroppedReader()
+        reader.SetOrigin(tuple(origin))
+        reader.SetTargetZExtent(target_z_extent)
+        if image_info is not None:
+            image_info['sampled'] = False
+            image_info['cropped'] = True
+        
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
             getProgress, progress_callback=progress_callback))
-        reader.SetFileNames(sa)
+        reader.SetFileName(filenames)
 
         dtype = vtk.VTK_UNSIGNED_CHAR
 
