@@ -1099,7 +1099,7 @@ It is used as a global starting point and a translation reference."
     def createRegistrationViewer(self):
         # print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
-        self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+        self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
 
         self.vis_widget_reg = VisualisationWidget(self, viewer2D)
@@ -1153,7 +1153,7 @@ It is used as a global starting point and a translation reference."
                     self.createRegistrationViewer()
                 else:
                     if self.vis_widget_reg.getImageData() != self.ref_image_data:
-                        self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+                        self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
                         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
                         self.vis_widget_reg.setImageData(self.ref_image_data)
                         self.vis_widget_reg.displayImageData()
@@ -1908,7 +1908,7 @@ It is used as a global starting point and a translation reference."
         # pass the slice at which the lasso has to process
         sliceno = v.style.GetActiveSlice()
         lasso.SetSlicePoints(sliceno , pathpoints)
-        orientation = v.GetSliceOrientation()
+        orientation = v.getSliceOrientation()
         lasso.SetSliceOrientation(orientation)
         lasso.SetInformationInput(image_data)
 
@@ -2257,7 +2257,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         pc['pointcloud_dimensionality_entry'] = self.dimensionalityValue
 
         v = self.vis_widget_2D.frame.viewer
-        orientation = v.GetSliceOrientation()
+        orientation = v.getSliceOrientation()
 
         # Add Log Tree field
         overlap_tooltip_text = "Overlap as a fraction of the subvolume size."
@@ -2521,7 +2521,7 @@ The first point is significant, as it is used as a global starting point and ref
                     transform = vtk.vtkTransform()
 
                     v = self.vis_widget_2D.frame.viewer
-                    orientation = v.GetSliceOrientation()
+                    orientation = v.getSliceOrientation()
                     spacing = v.img3D.GetSpacing()
                     dimensions = v.img3D.GetDimensions()
                     origin = v.img3D.GetOrigin()
@@ -2604,7 +2604,7 @@ The first point is significant, as it is used as a global starting point and ref
 
     def updatePointCloudPanel(self):
         #updates which settings can be changed when orientation/dimensions of image changed
-        orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+        orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         dimensionality = self.dimensionalityValue.currentText()
 
         self.overlapXValueEntry.setEnabled(True)
@@ -2726,7 +2726,7 @@ Please select a replacement pointcloud file.')
             pointCloud = self.pointCloud
 
         v = self.vis_widget_2D.frame.viewer
-        orientation = v.GetSliceOrientation()
+        orientation = v.getSliceOrientation()
         pointCloud.SetOrientation(orientation)
                     
         shapes = [cilRegularPointCloudToPolyData.CUBE, cilRegularPointCloudToPolyData.SPHERE]  
@@ -3225,7 +3225,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             
             acolor = vtk.vtkDoubleArray()
 
-            orientation = viewer.GetSliceOrientation()
+            orientation = viewer.getSliceOrientation()
 
             for count in range(len(displ)):
                 p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
@@ -4316,7 +4316,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             self.config['image']=image
             self.config['image_copied']=self.image_copied
-            self.config['image_orientation']=self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+            self.config['image_orientation']=self.vis_widget_2D.frame.viewer.getSliceOrientation()
             self.config['current_slice']=self.vis_widget_2D.frame.viewer.getActiveSlice()
 
             #we need to do the same for the dvc input image:
@@ -5312,7 +5312,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         if hasattr(self.parent, 'orientation'):
                 orientation = self.parent.orientation
         else:
-            orientation = self.frame.viewer.GetSliceOrientation()
+            orientation = self.frame.viewer.getSliceOrientation()
         
         if orientation == SLICE_ORIENTATION_XZ:
             axis = 'y'
@@ -5325,7 +5325,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         if self.viewer == viewer2D:
             self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
             if self.parent.current_slice:
-                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
+                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
                     self.frame.viewer.displaySlice(self.parent.current_slice)
 
 
@@ -5339,7 +5339,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             # self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
     
             if self.parent.current_slice:
-                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
+                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
                     self.frame.viewer.style.SetActiveSlice(self.parent.current_slice)
                     self.frame.viewer.style.UpdatePipeline()
 
