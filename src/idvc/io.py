@@ -14,8 +14,8 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilMetaImageResampleReader,
                                           cilNumpyCroppedReader,
                                           cilNumpyResampleReader,
-                                          vortexTIFFResampleReader,
-                                          vortexTIFFCroppedReader)
+                                          cilTIFFResampleReader,
+                                          cilTIFFCroppedReader)
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
 from PySide2.QtCore import QThreadPool
@@ -424,7 +424,7 @@ def loadTif(*args, **kwargs):
     # progress_callback.emit(10)
     
     if resample:
-        reader = vortexTIFFResampleReader()
+        reader = cilTIFFResampleReader()
         reader.SetFileName(filenames)
         reader.SetTargetSize(int(target_size * 1024*1024*1024))
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
@@ -450,7 +450,7 @@ def loadTif(*args, **kwargs):
                 image_info['sampled'] = True
 
     elif crop_image:
-        reader = vortexTIFFCroppedReader()
+        reader = cilTIFFCroppedReader()
         reader.SetOrigin(tuple(origin))
         reader.SetTargetZExtent(target_z_extent)
         if image_info is not None:
