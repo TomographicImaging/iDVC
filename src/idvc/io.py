@@ -406,7 +406,6 @@ def loadNpyImage(**kwargs):
 
     #print("Loaded npy")
 
-
 def loadTif(*args, **kwargs):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
@@ -444,8 +443,6 @@ def loadTif(*args, **kwargs):
             image_size = reader.GetStoredArrayShape(
             )[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
             target_size = reader.GetTargetSize()
-            print("array shape", image_size)
-            print("target", target_size)
             if image_size <= target_size:
                 image_info['sampled'] = False
             else:
@@ -494,6 +491,9 @@ def loadTif(*args, **kwargs):
             reader = shiftScaler
         reader.Update()
 
+        shape = reader.GetStoredArrayShape()
+        vol_bit_depth = reader.GetBytesPerElement()*8
+
         progress_callback.emit(80)
 
         image_data = reader.GetOutput()
@@ -503,6 +503,9 @@ def loadTif(*args, **kwargs):
 
         image_info['sampled'] = False
 
+    if image_info is not None:
+        image_info["vol_bit_depth"] = vol_bit_depth
+        image_info["shape"] = shape
     progress_callback.emit(100)
 
 
