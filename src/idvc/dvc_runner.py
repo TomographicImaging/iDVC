@@ -7,6 +7,7 @@ import json
 import time
 import shutil
 import platform
+from .io import save_tiff_stack_as_raw
 
 count = 0
 runs_completed = 0
@@ -172,6 +173,18 @@ class DVC_runner(object):
         reference_file = config['reference_file']
         correlate_file = config['correlate_file']
         # Convert to raw if files are a list of tiffs
+        if isinstance(reference_file, (list, tuple)):
+            base = os.path.abspath(session_folder)
+            raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
+            save_tiff_stack_as_raw(reference_file, raw_reference_file_fname)
+            reference_file = raw_reference_file_fname
+        if isinstance(reference_file, (list, tuple)):
+            base = os.path.abspath(session_folder)
+            raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
+            save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname)
+            correlate_file = raw_correlate_file_fname
+            
+            
         vol_bit_depth = int(config['vol_bit_depth'])
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
@@ -198,6 +211,7 @@ class DVC_runner(object):
         # this is the one directory we created where we will run the dvc command in
         # we want to change this to create multiple directories first and then run through
         # all the directory created https://github.com/TomographicImaging/iDVC/issues/37
+        # see also https://github.com/TomographicImaging/iDVC/pull/69
         self.run_folder = config['run_folder']
 
         #running the code:

@@ -15,7 +15,8 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilNumpyCroppedReader,
                                           cilNumpyResampleReader,
                                           cilTIFFResampleReader,
-                                          cilTIFFCroppedReader)
+                                          cilTIFFCroppedReader, 
+                                          Converter)
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
 from PySide2.QtCore import QThreadPool
@@ -936,3 +937,16 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
     header += 'HeaderSize = {}\n'.format(header_size)
     header += 'ElementDataFile = {}'.format(os.path.basename(datafname))
     return header
+
+def save_tiff_stack_as_raw(filenames: list, output_fname: str) ->None :
+    '''Converts a TIFF stack to a raw file'''
+    reader = vtk.vtkTIFFReader()
+    reader.SetOrientationType(1) # TopLeft
+    with open(os.path.abspath(output_fname), 'wb') as f:
+        for el in filenames:
+            reader.SetFileName(el)
+            reader.Update()
+            slice_data = Converter.vtk2numpy(reader.GetOutput())
+            f.write(slice_data.tobytes())
+            
+
