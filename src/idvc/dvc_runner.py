@@ -171,6 +171,7 @@ class DVC_runner(object):
         roi_files = config['roi_files']
         reference_file = config['reference_file']
         correlate_file = config['correlate_file']
+        # Convert to raw if files are a list of tiffs
         vol_bit_depth = int(config['vol_bit_depth'])
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
