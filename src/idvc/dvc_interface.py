@@ -3908,7 +3908,11 @@ This parameter has a strong effect on computation time, so be careful."
             #print("DVC in: ", self.dvc_input_image)
             
             self.reference_file = self.dvc_input_image[0][0]
+            if len(self.dvc_input_image[0]) > 1:
+                self.reference_file = self.dvc_input_image[0]
             self.correlate_file = self.dvc_input_image[1][0]
+            if len(self.dvc_input_image[1]) > 1:
+                self.correlate_file = self.dvc_input_image[1]
 
             #print("REF: ", self.reference_file)
 
@@ -3959,7 +3963,6 @@ This parameter has a strong effect on computation time, so be careful."
             print(e)
             self.progress_window.close()
             #TODO: test this and see if we need to stop the worker, or if not returning anything is enough
-
 
     def run_external_code(self, error = None):
         if error == "subvolume error":
