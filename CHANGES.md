@@ -1,6 +1,8 @@
 # ChangeLog
 
 ## v22.x.x
+* Allows to load TIFF stacks to run DVC code
+* Requires CILViewer > 22.1.1
 * Correctly scales total displacement vectors 
 * Correctly align help text
 * Make dockwidgets uncloseable, so that 3D viewer can't be lost.
