@@ -631,7 +631,6 @@ class MainWindow(QMainWindow):
         finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
     def save_image_info(self, image_type):
-        #print("INFO: ", self.image_info)
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 

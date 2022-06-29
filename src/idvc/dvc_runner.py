@@ -180,19 +180,11 @@ class DVC_runner(object):
             raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
             save_tiff_stack_as_raw(reference_file, raw_reference_file_fname)
             reference_file = raw_reference_file_fname
-            config['reference_file'] = reference_file
-            with open(input_file, 'w') as tmp:
-                json.dump(config, tmp)
         if isinstance(correlate_file, (list, tuple)):
             base = os.path.abspath(session_folder)
             raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
             save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname)
             correlate_file = raw_correlate_file_fname
-            config['correlate_file'] = correlate_file
-            with open(input_file, 'w') as tmp:
-                config = json.dump(config, tmp)
-            
-        # the following is not in the config dict!
         vol_bit_depth = int(config['vol_bit_depth'])
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
