@@ -3035,7 +3035,7 @@ Please select a replacement pointcloud file.')
         self.setup2DPointCloudPipeline()
         self.setup3DPointCloudPipeline()
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
-        self.vis_widget_2D.frame.viewer.GetRenderWindow().Render()
+        self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
         #print(self.loading_session)
         self.progress_window.setValue(100)
@@ -3103,7 +3103,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         
 
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
-        self.vis_widget_2D.frame.viewer.GetRenderWindow().Render()
+        self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
 
         #print(self.pointCloudCreated)
@@ -3130,7 +3130,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             if hasattr(self.vis_widget_2D, 'PlaneClipper'):
                 self.vis_widget_2D.PlaneClipper.RemoveDataToClip(actor_name)
 
-            v2D.GetRenderWindow().Render()
+            v2D.getRenderWindow().Render()
 
         self.pointCloudLoaded = False
         self.pointCloudCreated = False
@@ -5349,7 +5349,8 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         # print("set input data for" + str(self.viewer))
 
         if self.viewer == viewer2D:
-            self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
+            self.PlaneClipper = cilPlaneClipper()
+            self.PlaneClipper.SetInteractorStyle(self.frame.viewer.style)
 
 
     def setImageData(self, image_data):
