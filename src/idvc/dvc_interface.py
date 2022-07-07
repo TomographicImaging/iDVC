@@ -1,5 +1,6 @@
 import os
 import sys
+import PySide2
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
                             QThreadPool)
@@ -12,7 +13,7 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QProgressDialog, QPushButton, QSpinBox,
                                QStatusBar, QStyle, QTabWidget, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
-                               QWidget, qApp)
+                               QWidget)
 import time
 import numpy as np
 import math
