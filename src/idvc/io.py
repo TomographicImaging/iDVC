@@ -13,7 +13,10 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilMetaImageCroppedReader,
                                           cilMetaImageResampleReader,
                                           cilNumpyCroppedReader,
-                                          cilNumpyResampleReader)
+                                          cilNumpyResampleReader,
+                                          cilTIFFResampleReader,
+                                          cilTIFFCroppedReader, 
+                                          Converter)
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
 from PySide2.QtCore import QThreadPool
@@ -85,12 +88,12 @@ class ImageDataCreator(object):
                                   crop_image=crop_image, origin=origin, target_z_extent=target_z_extent)
 
         elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
-            reader = vtk.vtkTIFFReader()
-            reader.AddObserver("ErrorEvent", main_window.e)
             createProgressWindow(main_window, "Converting", "Converting Image")
             # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
-            image_worker = Worker(loadTif, image_files, reader, output_image,
-                                  convert_numpy=convert_numpy, image_info=info_var)
+            
+            image_worker = Worker(loadTif, image_files, output_image, convert_numpy=convert_numpy, 
+                                  image_info=info_var, resample=resample, crop_image=crop_image, target_size=target_size,
+                                  origin=origin, target_z_extent=target_z_extent)
 
         elif file_extension in ['.raw']:
             if 'file_type' in info_var and info_var['file_type'] == 'raw':
@@ -404,46 +407,60 @@ def loadNpyImage(**kwargs):
 
     #print("Loaded npy")
 
-
 def loadTif(*args, **kwargs):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
-    filenames, reader, output_image = args
+    # var,resample=resample, target_size=target_size,
+    # origin=origin, target_z_extent=target_z_extent
+    filenames, output_image = args
     image_info = kwargs.get('image_info', None)
-    convert_numpy = kwargs.get('convert_numpy', False)
     progress_callback = kwargs.get('progress_callback')
+    resample = kwargs.get('resample', False)
+    crop_image = kwargs.get('crop_image', False)
+    target_size = kwargs.get('target_size', 0.125)
+    origin = kwargs.get('origin', (0, 0, 0))
+    target_z_extent = kwargs.get('target_z_extent', (0, 0))
 
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
-    resample = False
-
+    
     if resample:
-        reader = Converter.tiffStack2numpyEnforceBounds(
-            filenames=filenames, bounds=(12, 12, 12))
-        #reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback= progress_callback))
-        # reader.Update()
-        # output_image.ShallowCopy(reader.GetOutput())
-        #print ("Spacing ", output_image.GetSpacing())
-        #header_length = reader.GetFileHeaderLength()
-        #vol_bit_depth = reader.GetBytesPerElement()*8
-        #shape = reader.GetStoredArrayShape()
-        # if not reader.GetIsFortran():
-        #     shape = shape[::-1]
-
-        # image_info['isBigEndian'] = reader.GetBigEndian()
-        # print("Header", header_length)
-        # print("vol_bit_depth", vol_bit_depth)
-
-    else:
-
-        sa = vtk.vtkStringArray()
-        for fname in filenames:
-            i = sa.InsertNextValue(fname)
-        print("read {} files".format(i))
-
+        reader = cilTIFFResampleReader()
+        reader.SetFileName(filenames)
+        reader.SetTargetSize(int(target_size * 1024*1024*1024))
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
             getProgress, progress_callback=progress_callback))
-        reader.SetFileNames(sa)
+        reader.Update()
+        output_image.ShallowCopy(reader.GetOutput())
+        print("Spacing ", output_image.GetSpacing())
+        header_length = reader.GetFileHeaderLength()
+        print("Length of header: ", header_length)
+        vol_bit_depth = reader.GetBytesPerElement()*8
+        shape = reader.GetStoredArrayShape()
+        if not reader.GetIsFortran():
+            shape = shape[::-1]
+        if image_info is not None:
+            image_info['isBigEndian'] = reader.GetBigEndian()
+
+            image_size = reader.GetStoredArrayShape(
+            )[0] * reader.GetStoredArrayShape()[1]*reader.GetStoredArrayShape()[2]
+            target_size = reader.GetTargetSize()
+            if image_size <= target_size:
+                image_info['sampled'] = False
+            else:
+                image_info['sampled'] = True
+
+    elif crop_image:
+        reader = cilTIFFCroppedReader()
+        reader.SetOrigin(tuple(origin))
+        reader.SetTargetZExtent(target_z_extent)
+        if image_info is not None:
+            image_info['sampled'] = False
+            image_info['cropped'] = True
+        
+        reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
+            getProgress, progress_callback=progress_callback))
+        reader.SetFileName(filenames)
 
         dtype = vtk.VTK_UNSIGNED_CHAR
 
@@ -477,33 +494,22 @@ def loadTif(*args, **kwargs):
             reader = shiftScaler
         reader.Update()
 
-        progress_callback.emit(80)
+        shape = reader.GetStoredArrayShape()
+        vol_bit_depth = reader.GetBytesPerElement()*8
 
-        print("Convert np")
+        progress_callback.emit(80)
 
         image_data = reader.GetOutput()
         output_image.ShallowCopy(image_data)
 
         progress_callback.emit(90)
 
-        if convert_numpy:
-            filename = os.path.abspath(filenames[0])[:-4] + ".npy"
-            numpy_array = Converter.vtk2numpy(reader.GetOutput())
-            #numpy_array =  Converter.tiffStack2numpy(filenames = filenames)
-            numpy.save(filename, numpy_array)
-            image_info['numpy_file'] = filename
-
-            if image_info is not None:
-                if (isinstance(numpy_array[0][0][0], numpy.uint8)):
-                    image_info['vol_bit_depth'] = '8'
-                elif(isinstance(numpy_array[0][0][0], numpy.uint16)):
-                    image_info['vol_bit_depth'] = '16'
-                print(image_info['vol_bit_depth'])
-
         image_info['sampled'] = False
 
-        # TODO: save volume header length
-        progress_callback.emit(100)
+    if image_info is not None:
+        image_info["vol_bit_depth"] = vol_bit_depth
+        image_info["shape"] = shape
+    progress_callback.emit(100)
 
 
 def getProgress(caller, event, progress_callback):
@@ -931,3 +937,16 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
     header += 'HeaderSize = {}\n'.format(header_size)
     header += 'ElementDataFile = {}'.format(os.path.basename(datafname))
     return header
+
+def save_tiff_stack_as_raw(filenames: list, output_fname: str) ->None :
+    '''Converts a TIFF stack to a raw file'''
+    reader = vtk.vtkTIFFReader()
+    reader.SetOrientationType(1) # TopLeft
+    with open(os.path.abspath(output_fname), 'wb') as f:
+        for el in filenames:
+            reader.SetFileName(el)
+            reader.Update()
+            slice_data = Converter.vtk2numpy(reader.GetOutput())
+            f.write(slice_data.tobytes())
+            
+
