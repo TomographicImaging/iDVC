@@ -4,6 +4,8 @@
 * Correctly scales total displacement vectors 
 * Correctly align help text
 * Make dockwidgets uncloseable, so that 3D viewer can't be lost.
+* Add idvc entrypoint to the setup.py
+* Fix issue with importing qApp from PySide2
 * Fix bug wth viewer windows appearing outside of GUI on Linux
 
 ## v22.0.1

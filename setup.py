@@ -48,5 +48,5 @@ setup(
       license="Apache v2.0",
       keywords="Digital Volume Correlation",
       url="http://www.ccpi.ac.uk",   # project home page, if any
-      
+      entry_points= {'console_scripts': ['idvc = idvc.dvc_interface:main']}
 )
