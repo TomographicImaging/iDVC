@@ -5246,8 +5246,6 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.viewer = viewer
         self.interactorStyle = interactorStyle
         self.createEmptyFrame()
-
-        self.show()
         self.threadpool = QThreadPool()
 
     def getViewer(self):
