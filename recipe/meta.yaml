@@ -41,13 +41,14 @@ requirements:
   run:
     - python
     - numpy
-    - ccpi-viewer >=22.0.1, <22.1.0
+    - ccpi-viewer
     - ccpi-dvc >=21.1.0
     - natsort
     - docopt
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
+    - vtk=8.1.2
 
 about:
   home: http://www.ccpi.ac.uk
