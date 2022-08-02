@@ -1,6 +1,6 @@
 # ChangeLog
 
-## v22.x.x
+## v22.1.0
 * Correctly scales total displacement vectors 
 * Correctly align help text
 * Make dockwidgets uncloseable, so that 3D viewer can't be lost.
