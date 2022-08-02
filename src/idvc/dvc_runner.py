@@ -151,8 +151,6 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
     # print("did")
 
 class DVC_runner(object):
-    import pysnooper
-    @pysnooper.snoop()
     def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
         # print("The session folder is", session_folder)
         self.main_window = main_window
