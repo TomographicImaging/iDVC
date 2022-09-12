@@ -83,6 +83,11 @@ from idvc import version as gui_version
 
 __version__ = gui_version.version
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -3179,8 +3184,16 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.pc_no_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
+        logger.info('Adding vectors 2D')
         self.createVectors2D(displ, self.vis_widget_2D)
+        logger.info('Adding vectors 3D')
         self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
+
+        # add color bar in 2D/3D viewer
+        logger.info('Adding color bar 2D')
+        self._addColorBar(self.vis_widget_2D)
+        logger.info('Adding color bar 3D')
+        self._addColorBar(self.vis_widget_3D)
         
 
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
@@ -3199,6 +3212,36 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     displ[count][i+6] *= multiplier
 
         return displ
+
+    def _addColorBar(self, viewer_widget):
+        # get lookup table
+        lut2D = self.vectors_lut2D
+        lut3D = self.vectors_lut3D
+
+        # create the scalar_bar
+        scalar_bar = vtk.vtkScalarBarActor()
+        # scalar_bar.SetOrientationToHorizontal()
+        scalar_bar.SetOrientationToVertical()
+               
+        viewer = viewer_widget.frame.viewer
+        # print("CREATE VECTORS", viewer.GetSliceOrientation())
+        if isinstance(viewer, viewer2D):
+            scalar_bar.SetLookupTable(lut2D)
+            if hasattr(self, 'scalar_bar_2D'):
+                viewer.removeActor('scalar_bar')
+            self.scalar_bar_2D = scalar_bar
+            viewer.AddActor(scalar_bar, 'scalar_bar')
+        elif isinstance(viewer, viewer3D):
+            scalar_bar.SetLookupTable(lut3D)
+            if hasattr(self, 'scalar_bar_3D'):
+                viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
+            self.scalar_bar_3D = scalar_bar
+            viewer.addActor(scalar_bar)
+        else:
+            logger.info('Wrong viewer type {}'.format(type(viewer)))
+
+        
+
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
@@ -3381,7 +3424,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             # v.ren.AddActor(point_actor)
             # v.ren.AddActor(line_actor)
             # v.ren.AddActor(arrowhead_actor)
-            
+            self.vectors_lut2D = lut
+
             viewer.updatePipeline()
             
     
@@ -3474,6 +3518,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             v.ren.AddActor(arrow_actor)
             actor_list['arrow_pc_actor'] = pactor
             actor_list['arrows_actor'] = arrow_actor
+
+            self.vectors_lut3D = lut
+            
             v.updatePipeline()
 
 
