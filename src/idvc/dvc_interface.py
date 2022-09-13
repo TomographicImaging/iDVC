@@ -39,6 +39,7 @@ import ccpi.viewer.viewerLinker as vlink
 # from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 from eqt.threading import Worker
 from ccpi.viewer.utils.error_handling import ErrorObserver
+from ccpi.viewer.utils.colormaps import CILColorMaps
 
 from natsort import natsorted
 import imghdr
@@ -3193,6 +3194,13 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         logging.info('Adding color bar 3D')
         self._addColorBar(self.vis_widget_3D)
         
+    def _removeColormap(self):
+        '''remove vectors and colormap'''
+        if hasattr(self, 'scalar_bar_2D'):
+            self.vis_widget_2D.frame.viewer.removeActor('scalar_bar')
+
+        if hasattr(self, 'scalar_bar_3D'):
+            self.vis_widget_3D.frame.viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
 
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
         
@@ -3311,13 +3319,14 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
                 
-            lut = vtk.vtkLookupTable()
-            #print ("lut table range" , acolor.GetRange())
-            lut.SetTableRange(acolor.GetRange())
-            lut.SetNumberOfTableValues( 256 )
-            lut.SetHueRange( 240/360., 0. )
-            #lut.SetSaturationRange( 1, 1 )
-            lut.Build()
+            # lut = vtk.vtkLookupTable()
+            # #print ("lut table range" , acolor.GetRange())
+            # lut.SetTableRange(acolor.GetRange())
+            # lut.SetNumberOfTableValues( 256 )
+            # lut.SetHueRange( 240/360., 0. )
+            # #lut.SetSaturationRange( 1, 1 )
+            # lut.Build()
+            lut = self._createLookupTable()
 
             pointPolyData = vtk.vtkPolyData()
             pointPolyData.SetPoints( pc ) # (x,y,z)
@@ -3426,7 +3435,18 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
             viewer.updatePipeline()
             
-    
+    def _createLookupTable(self, cmap='magma'):
+        lut = vtk.vtkLookupTable()
+        
+        cmap = CILColorMaps.get_color_map('magma')
+        lut.SetNumberOfTableValues(len(cmap))
+        for i,el in enumerate(cmap):
+            lut.SetTableValue(i, *el, 1)
+
+        lut.Build()
+        
+        return lut
+
     def OnKeyPressEventForVectors(self, interactor, event):
         #Vectors have to be recreated on the 2D viewer when switching orientation
         key_code = interactor.GetKeyCode()
@@ -3461,13 +3481,14 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
                 acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
                 
-            lut = vtk.vtkLookupTable()
-            #print ("lut table range" , acolor.GetRange())
-            lut.SetTableRange(acolor.GetRange())
-            lut.SetNumberOfTableValues( 256 )
-            lut.SetHueRange( 240/360., 0. )
-            #lut.SetSaturationRange( 1, 1 )
-            lut.Build()
+            # lut = vtk.vtkLookupTable()
+            # #print ("lut table range" , acolor.GetRange())
+            # lut.SetTableRange(acolor.GetRange())
+            # lut.SetNumberOfTableValues( 256 )
+            # lut.SetHueRange( 240/360., 0. )
+            # #lut.SetSaturationRange( 1, 1 )
+            # lut.Build()
+            lut = self._createLookupTable()
 
         
             #2. Add the points to a vtkPolyData.
@@ -4225,6 +4246,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             if (self.result_widgets['vec_entry'].currentText() == "None"):
                 self.PointCloudWorker("load pointcloud file")
+                self._removeColormap()
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))
