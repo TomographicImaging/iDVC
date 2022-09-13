@@ -3244,7 +3244,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             self.scalar_bar_3D = scalar_bar
             viewer.addActor(scalar_bar)
         else:
-            logging.info('Wrong viewer type {}'.format(type(viewer)))
+            logging.warning('Wrong viewer type {}'.format(type(viewer)))
 
         
 
@@ -3319,13 +3319,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
                 
-            # lut = vtk.vtkLookupTable()
-            # #print ("lut table range" , acolor.GetRange())
-            # lut.SetTableRange(acolor.GetRange())
-            # lut.SetNumberOfTableValues( 256 )
-            # lut.SetHueRange( 240/360., 0. )
-            # #lut.SetSaturationRange( 1, 1 )
-            # lut.Build()
             lut = self._createLookupTable()
 
             pointPolyData = vtk.vtkPolyData()
@@ -3481,15 +3474,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
                 acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
                 
-            # lut = vtk.vtkLookupTable()
-            # #print ("lut table range" , acolor.GetRange())
-            # lut.SetTableRange(acolor.GetRange())
-            # lut.SetNumberOfTableValues( 256 )
-            # lut.SetHueRange( 240/360., 0. )
-            # #lut.SetSaturationRange( 1, 1 )
-            # lut.Build()
             lut = self._createLookupTable()
-
         
             #2. Add the points to a vtkPolyData.
             pointPolyData = vtk.vtkPolyData()
