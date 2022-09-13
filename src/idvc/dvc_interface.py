@@ -39,6 +39,7 @@ import ccpi.viewer.viewerLinker as vlink
 # from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 from eqt.threading import Worker
 from ccpi.viewer.utils.error_handling import ErrorObserver
+from ccpi.viewer.utils.colormaps import CILColorMaps
 
 from natsort import natsorted
 import imghdr
@@ -82,6 +83,9 @@ from qdarkstyle.light.palette import LightPalette
 from idvc import version as gui_version
 
 __version__ = gui_version.version
+
+import logging
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3179,9 +3183,24 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.pc_no_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
+        logging.info('Adding vectors 2D')
         self.createVectors2D(displ, self.vis_widget_2D)
+        logging.info('Adding vectors 3D')
         self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
+
+        # add color bar in 2D/3D viewer
+        logging.info('Adding color bar 2D')
+        self._addColorBar(self.vis_widget_2D)
+        logging.info('Adding color bar 3D')
+        self._addColorBar(self.vis_widget_3D)
         
+    def _removeColormap(self):
+        '''remove vectors and colormap'''
+        if hasattr(self, 'scalar_bar_2D'):
+            self.vis_widget_2D.frame.viewer.removeActor('scalar_bar')
+
+        if hasattr(self, 'scalar_bar_3D'):
+            self.vis_widget_3D.frame.viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
 
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
         
@@ -3199,6 +3218,36 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     displ[count][i+6] *= multiplier
 
         return displ
+
+    def _addColorBar(self, viewer_widget):
+        # get lookup table
+        lut2D = self.vectors_lut2D
+        lut3D = self.vectors_lut3D
+
+        # create the scalar_bar
+        scalar_bar = vtk.vtkScalarBarActor()
+        # scalar_bar.SetOrientationToHorizontal()
+        scalar_bar.SetOrientationToVertical()
+               
+        viewer = viewer_widget.frame.viewer
+        # print("CREATE VECTORS", viewer.GetSliceOrientation())
+        if isinstance(viewer, viewer2D):
+            scalar_bar.SetLookupTable(lut2D)
+            if hasattr(self, 'scalar_bar_2D'):
+                viewer.removeActor('scalar_bar')
+            self.scalar_bar_2D = scalar_bar
+            viewer.AddActor(scalar_bar, 'scalar_bar')
+        elif isinstance(viewer, viewer3D):
+            scalar_bar.SetLookupTable(lut3D)
+            if hasattr(self, 'scalar_bar_3D'):
+                viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
+            self.scalar_bar_3D = scalar_bar
+            viewer.addActor(scalar_bar)
+        else:
+            logging.warning('Wrong viewer type {}'.format(type(viewer)))
+
+        
+
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
@@ -3270,13 +3319,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
                 
-            lut = vtk.vtkLookupTable()
-            #print ("lut table range" , acolor.GetRange())
-            lut.SetTableRange(acolor.GetRange())
-            lut.SetNumberOfTableValues( 256 )
-            lut.SetHueRange( 240/360., 0. )
-            #lut.SetSaturationRange( 1, 1 )
-            lut.Build()
+            lut = self._createLookupTable()
 
             pointPolyData = vtk.vtkPolyData()
             pointPolyData.SetPoints( pc ) # (x,y,z)
@@ -3381,10 +3424,22 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             # v.ren.AddActor(point_actor)
             # v.ren.AddActor(line_actor)
             # v.ren.AddActor(arrowhead_actor)
-            
+            self.vectors_lut2D = lut
+
             viewer.updatePipeline()
             
-    
+    def _createLookupTable(self, cmap='magma'):
+        lut = vtk.vtkLookupTable()
+        
+        cmap = CILColorMaps.get_color_map('magma')
+        lut.SetNumberOfTableValues(len(cmap))
+        for i,el in enumerate(cmap):
+            lut.SetTableValue(i, *el, 1)
+
+        lut.Build()
+        
+        return lut
+
     def OnKeyPressEventForVectors(self, interactor, event):
         #Vectors have to be recreated on the 2D viewer when switching orientation
         key_code = interactor.GetKeyCode()
@@ -3419,14 +3474,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
                 acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
                 
-            lut = vtk.vtkLookupTable()
-            #print ("lut table range" , acolor.GetRange())
-            lut.SetTableRange(acolor.GetRange())
-            lut.SetNumberOfTableValues( 256 )
-            lut.SetHueRange( 240/360., 0. )
-            #lut.SetSaturationRange( 1, 1 )
-            lut.Build()
-
+            lut = self._createLookupTable()
         
             #2. Add the points to a vtkPolyData.
             pointPolyData = vtk.vtkPolyData()
@@ -3474,6 +3522,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             v.ren.AddActor(arrow_actor)
             actor_list['arrow_pc_actor'] = pactor
             actor_list['arrows_actor'] = arrow_actor
+
+            self.vectors_lut3D = lut
+            
             v.updatePipeline()
 
 
@@ -4180,6 +4231,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             if (self.result_widgets['vec_entry'].currentText() == "None"):
                 self.PointCloudWorker("load pointcloud file")
+                self._removeColormap()
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))
@@ -5802,9 +5854,6 @@ def main():
     err = vtk.vtkFileOutputWindow()
     err.SetFileName("../viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
-
-    # log = open("dvc_interface.log", "a")
-    # sys.stdout = log
 
     app = QtWidgets.QApplication([])
 
