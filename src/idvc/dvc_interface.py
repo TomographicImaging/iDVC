@@ -85,8 +85,6 @@ __version__ = gui_version.version
 
 import logging
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3184,15 +3182,15 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.pc_no_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
-        logger.info('Adding vectors 2D')
+        logging.info('Adding vectors 2D')
         self.createVectors2D(displ, self.vis_widget_2D)
-        logger.info('Adding vectors 3D')
+        logging.info('Adding vectors 3D')
         self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
 
         # add color bar in 2D/3D viewer
-        logger.info('Adding color bar 2D')
+        logging.info('Adding color bar 2D')
         self._addColorBar(self.vis_widget_2D)
-        logger.info('Adding color bar 3D')
+        logging.info('Adding color bar 3D')
         self._addColorBar(self.vis_widget_3D)
         
 
@@ -3238,7 +3236,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             self.scalar_bar_3D = scalar_bar
             viewer.addActor(scalar_bar)
         else:
-            logger.info('Wrong viewer type {}'.format(type(viewer)))
+            logging.info('Wrong viewer type {}'.format(type(viewer)))
 
         
 
@@ -5849,9 +5847,6 @@ def main():
     err = vtk.vtkFileOutputWindow()
     err.SetFileName("../viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
-
-    # log = open("dvc_interface.log", "a")
-    # sys.stdout = log
 
     app = QtWidgets.QApplication([])
 
