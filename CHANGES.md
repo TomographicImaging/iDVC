@@ -1,5 +1,8 @@
 # ChangeLog
 
+## v22.x.x
+* Add basic color bar when visualising the vectors in both 2D and 3D
+
 ## v22.1.0
 * Allows loading of TIFF stacks to run DVC code
 * Requires CILViewer >= 22.2.0 and VTK = 8.1.2
