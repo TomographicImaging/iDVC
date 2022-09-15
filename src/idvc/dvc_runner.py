@@ -65,6 +65,7 @@ rigid_trans		{rigid_trans}		### rigid body offset of target volume, in voxels
 basin_radius		{basin_radius}			### coarse-search resolution, in voxels, 0.0 = none
 subvol_aspect		{subvol_aspect}		### subvolume aspect ratio
 num_points_to_process   {num_points_to_process}  ### Number of points in the point cloud to process
+starting_point  {starting_point}    ### x,y,z location of starting point for DVC analysis
 '''
 
 def update_progress(main_window, process, total_points, required_runs, run_succeeded):
@@ -205,6 +206,7 @@ class DVC_runner(object):
         interp_type = config['interp_type']
 
         rigid_trans = config['rigid_trans']
+        starting_point = config['point0']
 
         # Change directory into the folder where the run will be saved:
         os.chdir(session_folder)
@@ -327,7 +329,8 @@ class DVC_runner(object):
                     rigid_trans= rigid_trans, #translation between ref and cor - determined from image registration
                     basin_radius='0.0',
                     subvol_aspect='1.0 1.0 1.0',# image spacing
-                    num_points_to_process=num_points_to_process) 
+                    num_points_to_process=num_points_to_process, 
+                    starting_point='{} {} {}'.format(*starting_point)) 
                 time.sleep(1)
                 with open(config_filename,"w") as config_file:
                     config_file.write(config)
