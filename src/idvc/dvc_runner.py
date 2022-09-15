@@ -64,6 +64,7 @@ interp_type		{interp_type}		### trilinear, tricubic
 rigid_trans		{rigid_trans}		### rigid body offset of target volume, in voxels
 basin_radius		{basin_radius}			### coarse-search resolution, in voxels, 0.0 = none
 subvol_aspect		{subvol_aspect}		### subvolume aspect ratio
+num_points_to_process   {num_points_to_process}  ### Number of points in the point cloud to process
 '''
 
 def update_progress(main_window, process, total_points, required_runs, run_succeeded):
@@ -168,6 +169,7 @@ class DVC_runner(object):
         subvolume_points = config['subvolume_points'] 
         subvolume_sizes = config['subvolume_sizes']
         points = int(config['points'])
+        num_points_to_process = points
 
         roi_files = config['roi_files']
         reference_file = config['reference_file']
@@ -256,26 +258,26 @@ class DVC_runner(object):
             #print(roi_file)
             distances = []
                 
-            with open(roi_file, "r") as entire_central_grid:
+            # with open(roi_file, "r") as entire_central_grid:
                 
-                for line in entire_central_grid:
-                    line_array = line.split()
+            #     for line in entire_central_grid:
+            #         line_array = line.split()
 
-                    distance = np.sqrt(np.square(float(line_array[1]) - point0[0]) + \
-                        np.square(float(line_array[2])-point0[1]) + np.square(float(line_array[3])-point0[2]))
+            #         distance = np.sqrt(np.square(float(line_array[1]) - point0[0]) + \
+            #             np.square(float(line_array[2])-point0[1]) + np.square(float(line_array[3])-point0[2]))
 
-                    distances.append(distance)
+            #         distances.append(distance)
                 
-            lines_to_write = []
+            # lines_to_write = []
 
-            # sort the points in euclidean distance to the point0
-            # add to the list of points to be run (selected_central_grid) by adding to 
-            # the point list only the files with index in lines_to_write
-            order = [ i for i in range(len(distances))]
-            sorted_list_index = [ el for el in zip(distances, order)]
-            sorted_list_index.sort()
-            # this contains the indices of the sorted list
-            lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
+            # # sort the points in euclidean distance to the point0
+            # # add to the list of points to be run (selected_central_grid) by adding to 
+            # # the point list only the files with index in lines_to_write
+            # order = [ i for i in range(len(distances))]
+            # sorted_list_index = [ el for el in zip(distances, order)]
+            # sorted_list_index.sort()
+            # # this contains the indices of the sorted list
+            # lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
 
             for subv_num, subvolume_point in enumerate(subvolume_points):
                 now = datetime.now()
@@ -295,7 +297,8 @@ class DVC_runner(object):
                     as selected_central_grid:
                     with open(roi_file, "r") as entire_central_grid:
                         for i,line in enumerate(entire_central_grid):
-                            if i in lines_to_write:
+                            # if i in lines_to_write:
+                            if True:
                                 selected_central_grid.write(line)
 
                 
@@ -323,7 +326,8 @@ class DVC_runner(object):
                     interp_type=  interp_type, #tricubic for test image
                     rigid_trans= rigid_trans, #translation between ref and cor - determined from image registration
                     basin_radius='0.0',
-                    subvol_aspect='1.0 1.0 1.0') # image spacing
+                    subvol_aspect='1.0 1.0 1.0',# image spacing
+                    num_points_to_process=num_points_to_process) 
                 time.sleep(1)
                 with open(config_filename,"w") as config_file:
                     config_file.write(config)
