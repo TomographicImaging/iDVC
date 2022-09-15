@@ -206,7 +206,7 @@ class DVC_runner(object):
         interp_type = config['interp_type']
 
         rigid_trans = config['rigid_trans']
-        starting_point = config['point0']
+        starting_point = config['point0_world_coordinate']
 
         # Change directory into the folder where the run will be saved:
         os.chdir(session_folder)
@@ -252,7 +252,7 @@ class DVC_runner(object):
 
 
         file_count = -1
-        point0 = main_window.getPoint0WorldCoords()
+        # point0 = main_window.getPoint0WorldCoords()
             
         for roi_num, roi_file in enumerate(roi_files):
             file_count +=1
