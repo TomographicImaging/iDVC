@@ -2,6 +2,9 @@
 
 ## v22.x.x
 * Add basic color bar when visualising the vectors in both 2D and 3D
+* Pass max number of points to be processed to dvc executable
+* Pass point 0 location to dvc executable
+* Add button to set the number of points in the run to all points in the pointcloud.
 
 ## v22.1.0
 * Allows loading of TIFF stacks to run DVC code
