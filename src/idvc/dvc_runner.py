@@ -259,50 +259,26 @@ class DVC_runner(object):
             subvolume_size = int(subvolume_sizes[file_count])
             #print(roi_file)
             distances = []
-                
-            # with open(roi_file, "r") as entire_central_grid:
-                
-            #     for line in entire_central_grid:
-            #         line_array = line.split()
-
-            #         distance = np.sqrt(np.square(float(line_array[1]) - point0[0]) + \
-            #             np.square(float(line_array[2])-point0[1]) + np.square(float(line_array[3])-point0[2]))
-
-            #         distances.append(distance)
-                
-            # lines_to_write = []
-
-            # # sort the points in euclidean distance to the point0
-            # # add to the list of points to be run (selected_central_grid) by adding to 
-            # # the point list only the files with index in lines_to_write
-            # order = [ i for i in range(len(distances))]
-            # sorted_list_index = [ el for el in zip(distances, order)]
-            # sorted_list_index.sort()
-            # # this contains the indices of the sorted list
-            # lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
 
             for subv_num, subvolume_point in enumerate(subvolume_points):
                 now = datetime.now()
                 # use a counter for both for loops
                 counter = subv_num + roi_num * len(subvolume_points)
-                # dt_string = now.strftime("%d%m%Y_%H%M%S")
-                # new_output_filename = "%s/dvc_result_%s" % (self.run_folder, dt_string)
-                # config_filename = "%s/dvc_config_%s" % (self.run_folder, dt_string)
-                # config_filename = config_filename + ".txt"
+                
                 this_run_folder = os.path.join(self.run_folder, "dvc_result_{}".format(counter))
                 os.mkdir(this_run_folder)
                 output_filename = os.path.join(this_run_folder, "dvc_result_{}".format(counter))
                 config_filename = os.path.join(this_run_folder,"dvc_config.txt")
                 
                 grid_roi_fname = os.path.join(this_run_folder, "grid_input.roi")
-                with open(grid_roi_fname,"w") \
-                    as selected_central_grid:
-                    with open(roi_file, "r") as entire_central_grid:
-                        for i,line in enumerate(entire_central_grid):
-                            # if i in lines_to_write:
-                            if True:
-                                selected_central_grid.write(line)
-
+                # copies the pointcloud file as a whole in the run directory
+                try:
+                    shutil.copyfile(roi_file, grid_roi_fname)
+                except Error as err:
+                    # this is not really a nice way to open an error message!
+                    mainwindow.displayFileErrorDialog(message=str(err), title="Error creating config files")
+                    return
+                
                 
                 config =  blank_config.format(
                     reference_filename=  reference_file, # reference tomography image volume

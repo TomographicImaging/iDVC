@@ -3999,7 +3999,7 @@ This parameter has a strong effect on computation time, so be careful."
 
             #where is point0
             run_config['point0'] = self.getPoint0ImageCoords()
-            # here we assume that the world coordinate are the same as the origina
+            # here we assume that the world coordinate are the same as the original
             # image coordinate because spacing is 1,1,1 and origin is 0,0,0 for the 
             # original input image
             run_config['point0_world_coordinate'] = self.point0_world_coords
