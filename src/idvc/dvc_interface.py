@@ -3563,6 +3563,18 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1  
 
+        rdvc_widgets['run_all_points_label'] = QLabel(groupBox)
+        rdvc_widgets['run_all_points_label'].setText("Run all Points in cloud:")
+        rdvc_widgets['run_all_points_label'].setToolTip("Run all of the points in the pointcloud.")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_all_points_label'])
+
+        rdvc_widgets['run_all_points_entry'] = QtWidgets.QPushButton(groupBox)
+        rdvc_widgets['run_all_points_entry'].setText("Set all points")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_all_points_entry'])
+        rdvc_widgets['run_all_points_entry'].clicked.connect(self._set_num_points_in_run_to_all)
+
+        widgetno +=1
+
         rdvc_widgets['run_points_label'] = QLabel(groupBox)
         rdvc_widgets['run_points_label'].setText("Points in Run:")
         rdvc_widgets['run_points_label'].setToolTip("Run on a selection of the points in the pointcloud.")
@@ -3570,7 +3582,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         rdvc_widgets['run_points_spinbox'] = QSpinBox(groupBox)
         rdvc_widgets['run_points_spinbox'].setMinimum(10)
-        # max should be the number in the point cloud
+        # max will be set to the number in the point cloud in DisplayNumberOfPointcloudPoints
         maxpoints = 10000
         rdvc_widgets['run_points_spinbox'].setMaximum(maxpoints)
         rdvc_widgets['run_points_spinbox'].setValue(100)
@@ -3814,6 +3826,14 @@ This parameter has a strong effect on computation time, so be careful."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
         self.rdvc_widgets = rdvc_widgets
+
+    def _set_num_points_in_run_to_all(self):
+        int(self.pc_no_points)
+        if hasattr(self, 'pc_no_points'):
+            maxpoints = int(self.pc_no_points)
+        else:
+            maxpoints = 10000
+        self.rdvc_widgets['run_points_spinbox'].setValue(maxpoints)
 
     def show_run_groupbox(self):
         if self.rdvc_widgets['run_type_entry'].currentIndex() == 0:
