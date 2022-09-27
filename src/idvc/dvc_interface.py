@@ -3887,6 +3887,20 @@ This parameter has a strong effect on computation time, so be careful."
                                message="Load a mask on the viewer first" )
                 return
         
+        run_name = str( self.rdvc_widgets['name_entry'].text() )
+        saved_run_names = []
+        
+        for i in range(self.result_widgets['run_entry'].count()):
+            saved_run_names.append( str(self.result_widgets['run_entry'].itemText(i)) )
+        if run_name in ['']:
+            self.warningDialog(window_title="Error",
+                message="Please set a run name")
+            return
+        elif run_name in saved_run_names:
+            self.warningDialog(window_title="Error",
+                message="Please set a run name not in the following list: {}".format(saved_run_names))
+            return
+
         folder_name = "_" + self.rdvc_widgets['name_entry'].text()
 
         results_folder = os.path.join(tempfile.tempdir, "Results")
@@ -5880,9 +5894,15 @@ def main():
     vtk.vtkOutputWindow.SetInstance(err)
 
     app = QtWidgets.QApplication([])
-
+    file_dir = os.path.dirname(__file__)
+    owl_file = os.path.join(file_dir, "DVCIconSquare.png")
+    owl = QtGui.QPixmap(owl_file)
+    splash = QtWidgets.QSplashScreen(owl)
+    splash.show()
     window = MainWindow()
+    
     window.show()
+    splash.finish(window)
 
     sys.exit(app.exec_())
 
