@@ -1,9 +1,20 @@
 # ChangeLog
 
 ## v22.x.x
+* Add basic color bar when visualising the vectors in both 2D and 3D
+* Pass max number of points to be processed to dvc executable
+* Pass point 0 location to dvc executable
+* Add button to set the number of points in the run to all points in the pointcloud.
+
+## v22.1.0
+* Allows loading of TIFF stacks to run DVC code
+* Requires CILViewer >= 22.2.0 and VTK = 8.1.2
 * Correctly scales total displacement vectors 
-* Correctly align help text
+* Correctly aligned help text
 * Make dockwidgets uncloseable, so that 3D viewer can't be lost.
+* Add idvc entrypoint to the setup.py
+* Fix issue with importing qApp from PySide2
+* Fix bug with viewer windows appearing outside of GUI on Linux
 
 ## v22.0.1
 * Requires >=v22.0.1 and <v22.1 of the CILViewer due to backwards incompatibility of reader restructuring, and requirement of vtk 8.1.2 in iDVC.

@@ -1,6 +1,7 @@
 import pysnooper
 import os
 import sys
+import PySide2
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
                             QThreadPool)
@@ -13,7 +14,7 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QProgressDialog, QPushButton, QSpinBox,
                                QStatusBar, QStyle, QTabWidget, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
-                               QWidget, qApp)
+                               QWidget)
 import time
 import numpy as np
 import math
@@ -38,7 +39,8 @@ import ccpi.viewer.viewerLinker as vlink
 
 # from ccpi.viewer.QtThreading import Worker, WorkerSignals, ErrorObserver #
 from eqt.threading import Worker
-from eqt.threading.QtThreading import ErrorObserver
+from ccpi.viewer.utils.error_handling import ErrorObserver
+from ccpi.viewer.utils.colormaps import CILColorMaps
 
 from natsort import natsorted
 import imghdr
@@ -83,6 +85,9 @@ from brem import AsyncCopyOverSSH
 from idvc.dvc_remote import DVCRemoteRunControl
 
 __version__ = gui_version.version
+
+import logging
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -762,7 +767,6 @@ class MainWindow(QMainWindow):
         finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
     def save_image_info(self, image_type):
-        #print("INFO: ", self.image_info)
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
@@ -1260,8 +1264,8 @@ It is used as a global starting point and a translation reference."
     def createRegistrationViewer(self):
         # print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
-        self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-        self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+        self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
+        self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
 
         self.vis_widget_reg = VisualisationWidget(self, viewer2D)
         
@@ -1314,8 +1318,8 @@ It is used as a global starting point and a translation reference."
                     self.createRegistrationViewer()
                 else:
                     if self.vis_widget_reg.getImageData() != self.ref_image_data:
-                        self.orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-                        self.current_slice = self.vis_widget_2D.frame.viewer.GetActiveSlice()
+                        self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
+                        self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
                         self.vis_widget_reg.setImageData(self.ref_image_data)
                         self.vis_widget_reg.displayImageData()
 
@@ -1649,7 +1653,7 @@ It is used as a global starting point and a translation reference."
                 self.updateCoordinates()
                 
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
-        
+    
     def LoadImagesAndCompleteRegistration(self):
 
         if hasattr(self, 'registration_box_extent'):
@@ -1674,8 +1678,7 @@ It is used as a global starting point and a translation reference."
         self.target_cropped_image_origin = origin
 
         self.unsampled_image_info = copy.deepcopy(self.image_info)
-                
-
+       
         if self.image_info['sampled']:
             
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
@@ -1827,7 +1830,7 @@ It is used as a global starting point and a translation reference."
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
-            current_slice = v.GetActiveSlice()
+            current_slice = v.getActiveSlice()
         
         v.setInputData(self.subtract.GetOutput())
         # print("Set the input data")
@@ -2070,7 +2073,7 @@ It is used as a global starting point and a translation reference."
         # pass the slice at which the lasso has to process
         sliceno = v.style.GetActiveSlice()
         lasso.SetSlicePoints(sliceno , pathpoints)
-        orientation = v.GetSliceOrientation()
+        orientation = v.getSliceOrientation()
         lasso.SetSliceOrientation(orientation)
         lasso.SetInformationInput(image_data)
 
@@ -2419,7 +2422,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         pc['pointcloud_dimensionality_entry'] = self.dimensionalityValue
 
         v = self.vis_widget_2D.frame.viewer
-        orientation = v.GetSliceOrientation()
+        orientation = v.getSliceOrientation()
 
         # Add Log Tree field
         overlap_tooltip_text = "Overlap as a fraction of the subvolume size."
@@ -2683,7 +2686,7 @@ The first point is significant, as it is used as a global starting point and ref
                     transform = vtk.vtkTransform()
 
                     v = self.vis_widget_2D.frame.viewer
-                    orientation = v.GetSliceOrientation()
+                    orientation = v.getSliceOrientation()
                     spacing = v.img3D.GetSpacing()
                     dimensions = v.img3D.GetDimensions()
                     origin = v.img3D.GetOrigin()
@@ -2766,7 +2769,7 @@ The first point is significant, as it is used as a global starting point and ref
 
     def updatePointCloudPanel(self):
         #updates which settings can be changed when orientation/dimensions of image changed
-        orientation = self.vis_widget_2D.frame.viewer.GetSliceOrientation()
+        orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         dimensionality = self.dimensionalityValue.currentText()
 
         self.overlapXValueEntry.setEnabled(True)
@@ -2888,7 +2891,7 @@ Please select a replacement pointcloud file.')
             pointCloud = self.pointCloud
 
         v = self.vis_widget_2D.frame.viewer
-        orientation = v.GetSliceOrientation()
+        orientation = v.getSliceOrientation()
         pointCloud.SetOrientation(orientation)
                     
         shapes = [cilRegularPointCloudToPolyData.CUBE, cilRegularPointCloudToPolyData.SPHERE]  
@@ -2903,7 +2906,7 @@ Please select a replacement pointcloud file.')
         self.pointCloud_shape =  shapes[self.subvolumeShapeValue.currentIndex()]
         
         #slice is read from the viewer
-        pointCloud.SetSlice(v.GetActiveSlice())
+        pointCloud.SetSlice(v.getActiveSlice())
         
         pointCloud.SetInputConnection(0, reader.GetOutputPort())
 
@@ -3197,7 +3200,7 @@ Please select a replacement pointcloud file.')
         self.setup2DPointCloudPipeline()
         self.setup3DPointCloudPipeline()
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
-        self.vis_widget_2D.frame.viewer.GetRenderWindow().Render()
+        self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
         #print(self.loading_session)
         self.progress_window.setValue(100)
@@ -3265,7 +3268,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         
 
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
-        self.vis_widget_2D.frame.viewer.GetRenderWindow().Render()
+        self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
 
         #print(self.pointCloudCreated)
@@ -3292,7 +3295,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             if hasattr(self.vis_widget_2D, 'PlaneClipper'):
                 self.vis_widget_2D.PlaneClipper.RemoveDataToClip(actor_name)
 
-            v2D.GetRenderWindow().Render()
+            v2D.getRenderWindow().Render()
 
         self.pointCloudLoaded = False
         self.pointCloudCreated = False
@@ -3341,9 +3344,24 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.pc_no_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
+        logging.info('Adding vectors 2D')
         self.createVectors2D(displ, self.vis_widget_2D)
+        logging.info('Adding vectors 3D')
         self.createVectors3D(displ, self.vis_widget_3D, self.actors_3D)
+
+        # add color bar in 2D/3D viewer
+        logging.info('Adding color bar 2D')
+        self._addColorBar(self.vis_widget_2D)
+        logging.info('Adding color bar 3D')
+        self._addColorBar(self.vis_widget_3D)
         
+    def _removeColormap(self):
+        '''remove vectors and colormap'''
+        if hasattr(self, 'scalar_bar_2D'):
+            self.vis_widget_2D.frame.viewer.removeActor('scalar_bar')
+
+        if hasattr(self, 'scalar_bar_3D'):
+            self.vis_widget_3D.frame.viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
 
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
         
@@ -3361,6 +3379,36 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     displ[count][i+6] *= multiplier
 
         return displ
+
+    def _addColorBar(self, viewer_widget):
+        # get lookup table
+        lut2D = self.vectors_lut2D
+        lut3D = self.vectors_lut3D
+
+        # create the scalar_bar
+        scalar_bar = vtk.vtkScalarBarActor()
+        # scalar_bar.SetOrientationToHorizontal()
+        scalar_bar.SetOrientationToVertical()
+               
+        viewer = viewer_widget.frame.viewer
+        # print("CREATE VECTORS", viewer.GetSliceOrientation())
+        if isinstance(viewer, viewer2D):
+            scalar_bar.SetLookupTable(lut2D)
+            if hasattr(self, 'scalar_bar_2D'):
+                viewer.removeActor('scalar_bar')
+            self.scalar_bar_2D = scalar_bar
+            viewer.AddActor(scalar_bar, 'scalar_bar')
+        elif isinstance(viewer, viewer3D):
+            scalar_bar.SetLookupTable(lut3D)
+            if hasattr(self, 'scalar_bar_3D'):
+                viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
+            self.scalar_bar_3D = scalar_bar
+            viewer.addActor(scalar_bar)
+        else:
+            logging.warning('Wrong viewer type {}'.format(type(viewer)))
+
+        
+
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
@@ -3387,7 +3435,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             
             acolor = vtk.vtkDoubleArray()
 
-            orientation = viewer.GetSliceOrientation()
+            orientation = viewer.getSliceOrientation()
 
             for count in range(len(displ)):
                 p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
@@ -3432,13 +3480,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
                 acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
                 
-            lut = vtk.vtkLookupTable()
-            #print ("lut table range" , acolor.GetRange())
-            lut.SetTableRange(acolor.GetRange())
-            lut.SetNumberOfTableValues( 256 )
-            lut.SetHueRange( 240/360., 0. )
-            #lut.SetSaturationRange( 1, 1 )
-            lut.Build()
+            lut = self._createLookupTable()
 
             pointPolyData = vtk.vtkPolyData()
             pointPolyData.SetPoints( pc ) # (x,y,z)
@@ -3543,10 +3585,22 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             # v.ren.AddActor(point_actor)
             # v.ren.AddActor(line_actor)
             # v.ren.AddActor(arrowhead_actor)
-            
+            self.vectors_lut2D = lut
+
             viewer.updatePipeline()
             
-    
+    def _createLookupTable(self, cmap='magma'):
+        lut = vtk.vtkLookupTable()
+        
+        cmap = CILColorMaps.get_color_map('magma')
+        lut.SetNumberOfTableValues(len(cmap))
+        for i,el in enumerate(cmap):
+            lut.SetTableValue(i, *el, 1)
+
+        lut.Build()
+        
+        return lut
+
     def OnKeyPressEventForVectors(self, interactor, event):
         #Vectors have to be recreated on the 2D viewer when switching orientation
         key_code = interactor.GetKeyCode()
@@ -3581,14 +3635,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
                 acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
                 
-            lut = vtk.vtkLookupTable()
-            #print ("lut table range" , acolor.GetRange())
-            lut.SetTableRange(acolor.GetRange())
-            lut.SetNumberOfTableValues( 256 )
-            lut.SetHueRange( 240/360., 0. )
-            #lut.SetSaturationRange( 1, 1 )
-            lut.Build()
-
+            lut = self._createLookupTable()
         
             #2. Add the points to a vtkPolyData.
             pointPolyData = vtk.vtkPolyData()
@@ -3636,6 +3683,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             v.ren.AddActor(arrow_actor)
             actor_list['arrow_pc_actor'] = pactor
             actor_list['arrows_actor'] = arrow_actor
+
+            self.vectors_lut3D = lut
+            
             v.updatePipeline()
 
 
@@ -3674,6 +3724,18 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1  
 
+        rdvc_widgets['run_all_points_label'] = QLabel(groupBox)
+        rdvc_widgets['run_all_points_label'].setText("Run all Points in cloud:")
+        rdvc_widgets['run_all_points_label'].setToolTip("Run all of the points in the pointcloud.")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_all_points_label'])
+
+        rdvc_widgets['run_all_points_entry'] = QtWidgets.QPushButton(groupBox)
+        rdvc_widgets['run_all_points_entry'].setText("Set all points")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_all_points_entry'])
+        rdvc_widgets['run_all_points_entry'].clicked.connect(self._set_num_points_in_run_to_all)
+
+        widgetno +=1
+
         rdvc_widgets['run_points_label'] = QLabel(groupBox)
         rdvc_widgets['run_points_label'].setText("Points in Run:")
         rdvc_widgets['run_points_label'].setToolTip("Run on a selection of the points in the pointcloud.")
@@ -3681,7 +3743,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         rdvc_widgets['run_points_spinbox'] = QSpinBox(groupBox)
         rdvc_widgets['run_points_spinbox'].setMinimum(10)
-        # max should be the number in the point cloud
+        # max will be set to the number in the point cloud in DisplayNumberOfPointcloudPoints
         maxpoints = 10000
         rdvc_widgets['run_points_spinbox'].setMaximum(maxpoints)
         rdvc_widgets['run_points_spinbox'].setValue(100)
@@ -3927,6 +3989,14 @@ This parameter has a strong effect on computation time, so be careful."
 
         self.rdvc_widgets = rdvc_widgets
 
+    def _set_num_points_in_run_to_all(self):
+        int(self.pc_no_points)
+        if hasattr(self, 'pc_no_points'):
+            maxpoints = int(self.pc_no_points)
+        else:
+            maxpoints = 10000
+        self.rdvc_widgets['run_points_spinbox'].setValue(maxpoints)
+
     def show_run_groupbox(self):
         if self.rdvc_widgets['run_type_entry'].currentIndex() == 0:
             self.bulkRun_groupBox.hide()
@@ -3980,17 +4050,21 @@ This parameter has a strong effect on computation time, so be careful."
                                message="Load a mask on the viewer first" )
                 return
         
-        folder_name = self.rdvc_widgets['name_entry'].text()
-
-        results_folder = os.path.join(tempfile.tempdir, "Results")
-
-        new_folder = os.path.join(results_folder, folder_name)
-
-        if os.path.exists(new_folder):
-            self.warningDialog(window_title="Error", 
-                                message="This directory already exists. Please choose a different name." )
+        run_name = str( self.rdvc_widgets['name_entry'].text() )
+        saved_run_names = []
+        
+        for i in range(self.result_widgets['run_entry'].count()):
+            saved_run_names.append( str(self.result_widgets['run_entry'].itemText(i)) )
+        if run_name in ['']:
+            self.warningDialog(window_title="Error",
+                message="Please set a run name")
+            return
+        elif run_name in saved_run_names:
+            self.warningDialog(window_title="Error",
+                message="Please set a run name not in the following list: {}".format(saved_run_names))
             return
 
+        
         self.config_worker = Worker(self.create_run_config)
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
@@ -4159,7 +4233,11 @@ This parameter has a strong effect on computation time, so be careful."
                 self.correlate_file = self.remote_correlate_image_fname
             else:
                 self.reference_file = self.dvc_input_image[0][0]
+                if len(self.dvc_input_image[0]) > 1:
+                    self.reference_file = self.dvc_input_image[0]
                 self.correlate_file = self.dvc_input_image[1][0]
+                if len(self.dvc_input_image[1]) > 1:
+                    self.correlate_file = self.dvc_input_image[1]
 
             #print("REF: ", self.reference_file)
 
@@ -4195,6 +4273,10 @@ This parameter has a strong effect on computation time, so be careful."
 
             #where is point0
             run_config['point0'] = self.getPoint0ImageCoords()
+            # here we assume that the world coordinate are the same as the original
+            # image coordinate because spacing is 1,1,1 and origin is 0,0,0 for the 
+            # original input image
+            run_config['point0_world_coordinate'] = self.point0_world_coords
             suffix_text = "run_config"
 
             self.run_config_file = os.path.join(tempfile.tempdir, "Results", folder_name, "_" + suffix_text + ".json")
@@ -4210,7 +4292,6 @@ This parameter has a strong effect on computation time, so be careful."
             print(e)
             self.progress_window.close()
             #TODO: test this and see if we need to stop the worker, or if not returning anything is enough
-
 
     def run_external_code(self, error = None):
         if error == "subvolume error":
@@ -4427,6 +4508,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             if (self.result_widgets['vec_entry'].currentText() == "None"):
                 self.PointCloudWorker("load pointcloud file")
+                self._removeColormap()
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))
@@ -4566,8 +4648,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             self.config['image']=image
             self.config['image_copied']=self.image_copied
-            self.config['image_orientation']=self.vis_widget_2D.frame.viewer.GetSliceOrientation()
-            self.config['current_slice']=self.vis_widget_2D.frame.viewer.GetActiveSlice()
+            self.config['image_orientation']=self.vis_widget_2D.frame.viewer.getSliceOrientation()
+            self.config['current_slice']=self.vis_widget_2D.frame.viewer.getActiveSlice()
 
             #we need to do the same for the dvc input image:
             dvc_input_image = [[],[]]
@@ -5378,8 +5460,6 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.viewer = viewer
         self.interactorStyle = interactorStyle
         self.createEmptyFrame()
-
-        self.show()
         self.threadpool = QThreadPool()
 
     def getViewer(self):
@@ -5446,7 +5526,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         if hasattr(self.parent, 'orientation'):
                 orientation = self.parent.orientation
         else:
-            orientation = self.frame.viewer.GetSliceOrientation()
+            orientation = self.frame.viewer.getSliceOrientation()
         
         if orientation == SLICE_ORIENTATION_XZ:
             axis = 'y'
@@ -5459,7 +5539,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         if self.viewer == viewer2D:
             self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
             if self.parent.current_slice:
-                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
+                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
                     self.frame.viewer.displaySlice(self.parent.current_slice)
 
 
@@ -5473,14 +5553,15 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             # self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
     
             if self.parent.current_slice:
-                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.GetSliceOrientation()*2+1]:
+                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
                     self.frame.viewer.style.SetActiveSlice(self.parent.current_slice)
                     self.frame.viewer.style.UpdatePipeline()
 
         # print("set input data for" + str(self.viewer))
 
         if self.viewer == viewer2D:
-            self.PlaneClipper = cilPlaneClipper(self.frame.viewer.style)
+            self.PlaneClipper = cilPlaneClipper()
+            self.PlaneClipper.SetInteractorStyle(self.frame.viewer.style)
 
 
     def setImageData(self, image_data):
@@ -5935,13 +6016,16 @@ def main():
     err.SetFileName("../viewer.log")
     vtk.vtkOutputWindow.SetInstance(err)
 
-    # log = open("dvc_interface.log", "a")
-    # sys.stdout = log
-
     app = QtWidgets.QApplication([])
-
+    file_dir = os.path.dirname(__file__)
+    owl_file = os.path.join(file_dir, "DVCIconSquare.png")
+    owl = QtGui.QPixmap(owl_file)
+    splash = QtWidgets.QSplashScreen(owl)
+    splash.show()
     window = MainWindow()
+    
     window.show()
+    splash.finish(window)
 
     sys.exit(app.exec_())
 

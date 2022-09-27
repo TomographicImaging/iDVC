@@ -11,6 +11,7 @@ import pysnooper
 from brem import AsyncCopyOverSSH, BasicRemoteExecutionManager
 import tempfile
 import ntpath, posixpath
+from .io import save_tiff_stack_as_raw
 
 count = 0
 runs_completed = 0
@@ -67,6 +68,8 @@ interp_type		{interp_type}		### trilinear, tricubic
 rigid_trans		{rigid_trans}		### rigid body offset of target volume, in voxels
 basin_radius		{basin_radius}			### coarse-search resolution, in voxels, 0.0 = none
 subvol_aspect		{subvol_aspect}		### subvolume aspect ratio
+num_points_to_process   {num_points_to_process}  ### Number of points in the point cloud to process
+starting_point  {starting_point}    ### x,y,z location of starting point for DVC analysis
 '''
 
 def update_progress(main_window, process, total_points, required_runs, run_succeeded):
@@ -172,10 +175,22 @@ class DVC_runner(object):
         subvolume_points = config['subvolume_points'] 
         subvolume_sizes = config['subvolume_sizes']
         points = int(config['points'])
+        num_points_to_process = points
 
         roi_files = config['roi_files']
         reference_file = config['reference_file']
         correlate_file = config['correlate_file']
+        # Convert to raw if files are a list of tiffs
+        if isinstance(reference_file, (list, tuple)):
+            base = os.path.abspath(session_folder)
+            raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
+            save_tiff_stack_as_raw(reference_file, raw_reference_file_fname)
+            reference_file = raw_reference_file_fname
+        if isinstance(correlate_file, (list, tuple)):
+            base = os.path.abspath(session_folder)
+            raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
+            save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname)
+            correlate_file = raw_correlate_file_fname
         vol_bit_depth = int(config['vol_bit_depth'])
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
@@ -196,12 +211,14 @@ class DVC_runner(object):
         interp_type = config['interp_type']
 
         rigid_trans = config['rigid_trans']
+        starting_point = config['point0_world_coordinate']
 
         # Change directory into the folder where the run will be saved:
         os.chdir(session_folder)
         # this is the one directory we created where we will run the dvc command in
         # we want to change this to create multiple directories first and then run through
         # all the directory created https://github.com/TomographicImaging/iDVC/issues/37
+        # see also https://github.com/TomographicImaging/iDVC/pull/69
         self.run_folder = config['run_folder']
 
         #running the code:
@@ -240,55 +257,32 @@ class DVC_runner(object):
 
 
         file_count = -1
-        point0 = main_window.getPoint0WorldCoords()
+        # point0 = main_window.getPoint0WorldCoords()
             
         for roi_num, roi_file in enumerate(roi_files):
             file_count +=1
             subvolume_size = int(subvolume_sizes[file_count])
             #print(roi_file)
             distances = []
-                
-            with open(roi_file, "r") as entire_central_grid:
-                
-                for line in entire_central_grid:
-                    line_array = line.split()
-
-                    distance = np.sqrt(np.square(float(line_array[1]) - point0[0]) + \
-                        np.square(float(line_array[2])-point0[1]) + np.square(float(line_array[3])-point0[2]))
-
-                    distances.append(distance)
-                
-            lines_to_write = []
-
-            # sort the points in euclidean distance to the point0
-            # add to the list of points to be run (selected_central_grid) by adding to 
-            # the point list only the files with index in lines_to_write
-            order = [ i for i in range(len(distances))]
-            sorted_list_index = [ el for el in zip(distances, order)]
-            sorted_list_index.sort()
-            # this contains the indices of the sorted list
-            lines_to_write = [ el for el in zip(*sorted_list_index) ] [1][:points]
 
             for subv_num, subvolume_point in enumerate(subvolume_points):
                 now = datetime.now()
                 # use a counter for both for loops
                 counter = subv_num + roi_num * len(subvolume_points)
-                # dt_string = now.strftime("%d%m%Y_%H%M%S")
-                # new_output_filename = "%s/dvc_result_%s" % (self.run_folder, dt_string)
-                # config_filename = "%s/dvc_config_%s" % (self.run_folder, dt_string)
-                # config_filename = config_filename + ".txt"
+                
                 this_run_folder = os.path.join(self.run_folder, "dvc_result_{}".format(counter))
                 os.mkdir(this_run_folder)
                 output_filename = os.path.join(this_run_folder, "dvc_result_{}".format(counter))
                 config_filename = os.path.join(this_run_folder,"dvc_config.txt")
                 
                 grid_roi_fname = os.path.join(this_run_folder, "grid_input.roi")
-                with open(grid_roi_fname,"w") \
-                    as selected_central_grid:
-                    with open(roi_file, "r") as entire_central_grid:
-                        for i,line in enumerate(entire_central_grid):
-                            if i in lines_to_write:
-                                selected_central_grid.write(line)
+                # copies the pointcloud file as a whole in the run directory
+                try:
+                    shutil.copyfile(roi_file, grid_roi_fname)
+                except Error as err:
+                    # this is not really a nice way to open an error message!
+                    mainwindow.displayFileErrorDialog(message=str(err), title="Error creating config files")
+                    return
 
                 newline = None    
                 if remote_os is not None:
@@ -300,6 +294,9 @@ class DVC_runner(object):
                             newline = "\n"
                     
 
+                
+                
+                
                 config =  blank_config.format(
                     reference_filename=  reference_file, # reference tomography image volume
                     correlate_filename=  correlate_file, # correlation tomography image volume
@@ -324,7 +321,9 @@ class DVC_runner(object):
                     interp_type=  interp_type, #tricubic for test image
                     rigid_trans= rigid_trans, #translation between ref and cor - determined from image registration
                     basin_radius='0.0',
-                    subvol_aspect='1.0 1.0 1.0') # image spacing
+                    subvol_aspect='1.0 1.0 1.0',# image spacing
+                    num_points_to_process=num_points_to_process, 
+                    starting_point='{} {} {}'.format(*starting_point)) 
                 time.sleep(1)
 
 

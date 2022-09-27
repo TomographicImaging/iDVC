@@ -17,8 +17,26 @@ import os
 from distutils.core import setup
 import subprocess
 
+def version2pep440(version):
+    '''normalises the version from git describe to pep440
+    
+    https://www.python.org/dev/peps/pep-0440/#id29
+    '''
+    if version[0] == 'v':
+        version = version[1:]
+
+    if u'-' in version:
+        v = version.split('-')
+        v_pep440 = "{}.dev{}".format(v[0], v[1])
+    else:
+        v_pep440 = version
+
+    return v_pep440
+
+
 cmd = 'git describe'
-dversion = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:].rstrip()
+git_version_string = subprocess.check_output(cmd, shell=True).strip().decode('utf-8')[1:].rstrip()
+dversion = version2pep440(git_version_string)
 
 print ('version {}'.format(dversion))
 
@@ -48,5 +66,5 @@ setup(
       license="Apache v2.0",
       keywords="Digital Volume Correlation",
       url="http://www.ccpi.ac.uk",   # project home page, if any
-      
+      entry_points= {'console_scripts': ['idvc = idvc.dvc_interface:main']}
 )
