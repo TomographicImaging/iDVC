@@ -791,7 +791,7 @@ class MainWindow(QMainWindow):
             self.select_image_dock.raise_() 
 
     def create_progress_window(self, title, text, max = 100, cancel = None):
-        self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
+        self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Dialog) 
         self.progress_window.setWindowTitle(title)
         
         self.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
