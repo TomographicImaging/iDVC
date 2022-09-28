@@ -86,6 +86,34 @@ __version__ = gui_version.version
 
 import logging
 
+def reduce_displ(raw_displ, min_size, max_size):
+    '''filter the diplacement vectors based on their size'''
+    sizes = []
+    dmin = np.inf
+    dmax = 0.
+    offset = 6 # 6 in the case of the iDVC
+    
+    for el in raw_displ:
+        size = 0
+        for i in range(3):
+            #calculate size of vector
+            size += el[i+offset]*el[i+offset]
+        size = np.sqrt(size)
+        if size > dmax:
+            dmax = size
+        if size < dmin:
+            dmin = size
+        sizes.append(size)
+    if min_size is None and max_size is None:
+        displ = raw_displ
+    else:
+        displ = []
+        for i in range(len(raw_displ)):
+            size = sizes[i]
+            if size > min_size  and size < max_size :
+                displ.append(raw_displ[i])
+        displ = np.asarray(displ)
+    return displ, dmin, dmax
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3201,12 +3229,36 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         if hasattr(self, 'scalar_bar_3D'):
             self.vis_widget_3D.frame.viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
+    
+    def _updateUIwithDisplacementVectorRange(self, dmin, dmax):
+        single_step = 1e-6
 
+        self.result_widgets['range_vectors_max_entry'].setSingleStep(single_step)
+        self.result_widgets['range_vectors_max_entry'].setMaximum(dmax)
+        self.result_widgets['range_vectors_max_entry'].setMinimum(dmin)
+        self.result_widgets['range_vectors_max_entry'].setValue(dmax)
+        self.result_widgets['range_vectors_max_entry'].setEnabled(True)
+
+        self.result_widgets['range_vectors_min_entry'].setSingleStep(single_step)
+        self.result_widgets['range_vectors_min_entry'].setMaximum(dmax)
+        self.result_widgets['range_vectors_min_entry'].setMinimum(dmin)
+        self.result_widgets['range_vectors_min_entry'].setValue(dmin)
+        self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+        
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
         
-        displ = np.asarray(
+        raw_displ = np.asarray(
             PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
         )
+
+        # min_size = self.result_widgets['range_vectors_min_entry'].value() 
+        # max_size = self.result_widgets['range_vectors_min_entry'].value()
+
+        displ, dmin, dmax = reduce_displ(raw_displ, None, None)
+
+        self._updateUIwithDisplacementVectorRange(dmin, dmax)
+                
+        displ = np.asarray(displ)
 
         if disp_wrt_point0:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
@@ -3317,7 +3369,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
 
-                acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
+                acolor.InsertNextValue(np.sqrt(
+                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)
+                    ) 
+                )#inserts u^2 + v^2 + w^2
                 
             lut = self._createLookupTable()
 
@@ -3472,7 +3527,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
                 new_points = displ[count][6:9]
                 # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
-                acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
+                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
         
@@ -4190,6 +4245,37 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['scale_vectors_entry'])
         widgetno += 1
 
+        result_widgets['range_vectors_min_label'] =  QLabel(groupBox)
+        result_widgets['range_vectors_min_label'].setText("Vector Range Min:")
+        result_widgets['range_vectors_min_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_min_label'])
+
+        single_step = 0.00001
+        result_widgets['range_vectors_min_entry'] = QDoubleSpinBox(groupBox)
+        result_widgets['range_vectors_min_entry'].setSingleStep(single_step)
+        result_widgets['range_vectors_min_entry'].setMaximum(1.-single_step)
+        result_widgets['range_vectors_min_entry'].setMinimum(0.0)
+        result_widgets['range_vectors_min_entry'].setValue(0.00)
+        result_widgets['range_vectors_min_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        result_widgets['range_vectors_min_entry'].setEnabled(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_min_entry'])
+        widgetno += 1
+
+        result_widgets['range_vectors_max_label'] =  QLabel(groupBox)
+        result_widgets['range_vectors_max_label'].setText("Vector Range Min:")
+        result_widgets['range_vectors_max_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_max_label'])
+
+        single_step = 0.00001
+        result_widgets['range_vectors_max_entry'] = QDoubleSpinBox(groupBox)
+        result_widgets['range_vectors_max_entry'].setSingleStep(single_step)
+        result_widgets['range_vectors_max_entry'].setMaximum(1.)
+        result_widgets['range_vectors_max_entry'].setMinimum(single_step)
+        result_widgets['range_vectors_max_entry'].setValue(1.00)
+        result_widgets['range_vectors_max_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        result_widgets['range_vectors_max_entry'].setEnabled(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_max_entry'])
+        widgetno += 1
         result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
         widgetno += 1
