@@ -3251,10 +3251,14 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
         )
 
-        # min_size = self.result_widgets['range_vectors_min_entry'].value() 
-        # max_size = self.result_widgets['range_vectors_min_entry'].value()
+        if self.result_widgets['range_vectors_min_entry'].isEnabled():
+            min_size = self.result_widgets['range_vectors_min_entry'].value() 
+            max_size = self.result_widgets['range_vectors_max_entry'].value()
+        else:
+            min_size = None
+            max_size = None
 
-        displ, dmin, dmax = reduce_displ(raw_displ, None, None)
+        displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size)
 
         self._updateUIwithDisplacementVectorRange(dmin, dmax)
                 
@@ -5975,16 +5979,19 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
 
 
 def main():
-    err = vtk.vtkFileOutputWindow()
-    err.SetFileName("../viewer.log")
-    vtk.vtkOutputWindow.SetInstance(err)
-
     app = QtWidgets.QApplication([])
+    
     file_dir = os.path.dirname(__file__)
     owl_file = os.path.join(file_dir, "DVCIconSquare.png")
     owl = QtGui.QPixmap(owl_file)
     splash = QtWidgets.QSplashScreen(owl)
     splash.show()
+    
+    err = vtk.vtkFileOutputWindow()
+    err.SetFileName("../viewer.log")
+    vtk.vtkOutputWindow.SetInstance(err)
+
+    
     window = MainWindow()
     
     window.show()
