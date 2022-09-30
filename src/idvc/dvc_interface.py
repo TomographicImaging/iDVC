@@ -86,33 +86,50 @@ __version__ = gui_version.version
 
 import logging
 
-def reduce_displ(raw_displ, min_size, max_size):
+
+def reduce_displ(raw_displ, min_size, max_size, pzero=False):
     '''filter the diplacement vectors based on their size'''
-    sizes = []
-    dmin = np.inf
-    dmax = 0.
     offset = 6 # 6 in the case of the iDVC
     
-    for el in raw_displ:
-        size = 0
-        for i in range(3):
-            #calculate size of vector
-            size += el[i+offset]*el[i+offset]
-        size = np.sqrt(size)
-        if size > dmax:
-            dmax = size
-        if size < dmin:
-            dmin = size
-        sizes.append(size)
+    # sizes = []
+    # dmin = np.inf
+    # dmax = 0.
+    # for el in raw_displ:
+    #     size = 0
+    #     for i in range(3):
+    #         #calculate size of vector
+    #         size += el[i+offset]*el[i+offset]
+    #     size = np.sqrt(size)
+    #     if size > dmax:
+    #         dmax = size
+    #     if size < dmin:
+    #         dmin = size
+    #     sizes.append(size)
+    vec = np.asarray(raw_displ)[:,offset:offset+3]
+    if pzero:
+        vec -= np.asarray(raw_displ[0][offset:offset+3])
+
+    sizes = np.sqrt( np.sum( np.power(vec, 2), axis=1) )
+
+    dmin = sizes.min()
+    dmax = sizes.max()
     if min_size is None and max_size is None:
         displ = raw_displ
     else:
         displ = []
-        for i in range(len(raw_displ)):
-            size = sizes[i]
-            if size > min_size  and size < max_size :
-                displ.append(raw_displ[i])
-        displ = np.asarray(displ)
+        if pzero:
+            for i in range(len(raw_displ)):
+                size = sizes[i]
+                if size > min_size  and size < max_size :
+                    line = raw_displ[i]
+                    line[offset:offset+3] -= vec[0]
+                    displ.append(line)
+        else:
+            for i in range(len(raw_displ)):
+                size = sizes[i]
+                if size > min_size  and size < max_size :
+                    displ.append(raw_displ[i])
+    displ = np.asarray(displ)
     return displ, dmin, dmax
 
 class MainWindow(QMainWindow):
@@ -3268,25 +3285,19 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         if self.result_widgets['range_vectors_min_entry'].isEnabled():
             min_size = self.result_widgets['range_vectors_min_entry'].value() 
             max_size = self.result_widgets['range_vectors_max_entry'].value()
-            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size)
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
         else:
             min_size = None
             max_size = None
-            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size)
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
             self._updateUIwithDisplacementVectorRange(dmin, dmax)
                 
         displ = np.asarray(displ)
 
-        if disp_wrt_point0:
-            point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
+        if multiplier != 1:
             for count in range(len(displ)):
                 for i in range(3):
-                    displ[count][i+6] = (displ[count][i+6] - point0_disp[i])*multiplier
-        else:
-            if multiplier != 1:
-                for count in range(len(displ)):
-                    for i in range(3):
-                        displ[count][i+6] *= multiplier
+                    displ[count][i+6] *= multiplier
 
         return displ
 
@@ -3530,7 +3541,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
             v = viewer
-            grid = vtk.vtkUnstructuredGrid()
             arrow = vtk.vtkDoubleArray()
             arrow.SetNumberOfComponents(3)
             acolor = vtk.vtkDoubleArray()
@@ -3544,8 +3554,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 vertices.InsertCellPoint(p)
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                new_points = displ[count][6:9]
-                # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
                 acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
@@ -4247,6 +4255,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         result_widgets['vec_entry'] = QComboBox(groupBox)
         result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
+        result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         widgetno += 1
 
@@ -4387,6 +4396,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             if (self.result_widgets['vec_entry'].currentText() == "None"):
                 self.PointCloudWorker("load pointcloud file")
                 self._removeColormap()
+                # reset the interface
+                self.result_widgets['range_vectors_max_entry'].setEnabled(False)
+                self.result_widgets['range_vectors_min_entry'].setEnabled(False)
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))
@@ -4404,7 +4416,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     # else:
                     #     print ("NO")
 
-
+    def _DVCResultsDisableRanges(self, index):
+        # reset the interface
+        self.result_widgets['range_vectors_max_entry'].setEnabled(False)
+        self.result_widgets['range_vectors_min_entry'].setEnabled(False)
 
     def CreateGraphsWindow(self):
         #print("Create graphs")
