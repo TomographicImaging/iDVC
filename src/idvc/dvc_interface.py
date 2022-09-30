@@ -3201,12 +3201,13 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
 
 
-    def displayVectors(self,disp_file, vector_dim):
+    def displayVectors(self,disp_file):
         self.clearPointCloud()
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
         self.disp_file = disp_file
         
-        displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2, multiplier = self.result_widgets['scale_vectors_entry'].value())
+        displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2, \
+                                                     multiplier = self.result_widgets['scale_vectors_entry'].value())
 
         self.pc_no_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
@@ -3230,6 +3231,17 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         if hasattr(self, 'scalar_bar_3D'):
             self.vis_widget_3D.frame.viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
     
+    def _setUIWithDisplacementVectorFullRange(self):
+    
+        self.result_widgets['range_vectors_max_entry'].setEnabled(True)
+        self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+        dmin = self.result_widgets['range_vectors_max_entry'].minimum()
+        dmax = self.result_widgets['range_vectors_max_entry'].maximum()
+        self.result_widgets['range_vectors_max_entry'].setValue(dmax)
+        self.result_widgets['range_vectors_min_entry'].setValue(dmin)
+    
+
+
     def _updateUIwithDisplacementVectorRange(self, dmin, dmax):
         single_step = 1e-6
 
@@ -3244,6 +3256,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_min_entry'].setMinimum(dmin)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
         self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+
+        self.result_widgets['range_vectors_all_entry'].setEnabled(True)
         
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
         
@@ -3254,24 +3268,25 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         if self.result_widgets['range_vectors_min_entry'].isEnabled():
             min_size = self.result_widgets['range_vectors_min_entry'].value() 
             max_size = self.result_widgets['range_vectors_max_entry'].value()
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size)
         else:
             min_size = None
             max_size = None
-
-        displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size)
-
-        self._updateUIwithDisplacementVectorRange(dmin, dmax)
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size)
+            self._updateUIwithDisplacementVectorRange(dmin, dmax)
                 
         displ = np.asarray(displ)
 
         if disp_wrt_point0:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-        for count in range(len(displ)):
-            for i in range(3):
-                if disp_wrt_point0:
+            for count in range(len(displ)):
+                for i in range(3):
                     displ[count][i+6] = (displ[count][i+6] - point0_disp[i])*multiplier
-                else:
-                    displ[count][i+6] *= multiplier
+        else:
+            if multiplier != 1:
+                for count in range(len(displ)):
+                    for i in range(3):
+                        displ[count][i+6] *= multiplier
 
         return displ
 
@@ -4249,6 +4264,18 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['scale_vectors_entry'])
         widgetno += 1
 
+        result_widgets['range_vectors_all_label'] =  QLabel(groupBox)
+        result_widgets['range_vectors_all_label'].setText("Display Vectors Full Range:")
+        result_widgets['range_vectors_all_label'].setToolTip("Show all displacement vectors")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_all_label'])
+
+        result_widgets['range_vectors_all_entry'] = QPushButton(groupBox)
+        result_widgets['range_vectors_all_entry'].setText("Reset to full range")
+        result_widgets['range_vectors_all_entry'].setEnabled(False)
+        result_widgets['range_vectors_all_entry'].clicked.connect(self._setUIWithDisplacementVectorFullRange)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_all_entry'])
+        widgetno += 1
+
         result_widgets['range_vectors_min_label'] =  QLabel(groupBox)
         result_widgets['range_vectors_min_label'].setText("Vector Range Min:")
         result_widgets['range_vectors_min_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
@@ -4266,7 +4293,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         widgetno += 1
 
         result_widgets['range_vectors_max_label'] =  QLabel(groupBox)
-        result_widgets['range_vectors_max_label'].setText("Vector Range Min:")
+        result_widgets['range_vectors_max_label'].setText("Vector Range Max:")
         result_widgets['range_vectors_max_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_max_label'])
 
@@ -4371,7 +4398,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                         if result.subvol_points == subvol_points:
                             # print ("YES")
                             run_file = result.disp_file
-                            self.displayVectors(run_file, 2)
+                            self.displayVectors(run_file)
                         # else:
                         #     print ("NO")    
                     # else:
