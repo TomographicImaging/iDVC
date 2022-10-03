@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## v22.x.x
+* Update DVC executable version to v22.0.0
 * Adds GUI elements to control the range of the displacement vectors displayed
 * Adds splash screen
 * Add basic color bar when visualising the vectors in both 2D and 3D
