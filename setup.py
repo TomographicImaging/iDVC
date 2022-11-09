@@ -57,7 +57,7 @@ setup(
       name = "idvc",
       description = 'CCPi DVC Configurator',
 	version = dversion,
-	packages = {'idvc'},
+	packages = {'idvc', 'idvc.ui'},
       package_dir = {'idvc': os.path.join('src','idvc')},
       package_data = {'idvc':['DVCIconSquare.png']},
       # metadata for upload to PyPI
