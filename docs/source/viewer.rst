@@ -9,6 +9,7 @@ The app currently works with the following image types:
 * raw
 * numpy (.npy)
 * metaimage (.mha or .mhd but only uncompressed mha files)
+* TIFF stacks
 
 You will need to select a reference and a correlate image. These must have the same dimensionality. Then click **View Image**.
 If you have chosen a raw image file then you will be asked for some extra information about the file:
