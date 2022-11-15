@@ -3910,7 +3910,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.rdvc_widgets = rdvc_widgets
 
     def _set_num_points_in_run_to_all(self):
-        int(self.pc_no_points)
         if hasattr(self, 'pc_no_points'):
             maxpoints = int(self.pc_no_points)
         else:

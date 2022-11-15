@@ -60,40 +60,40 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
     SPHERE = 'sphere'
     def __init__(self):
         VTKPythonAlgorithmBase.__init__(self, nInputPorts=1, nOutputPorts=1)
-        self.__Points = vtk.vtkPoints()
-        self.__Vertices = vtk.vtkCellArray()
-        self.__Orientation = 2
-        self.__Overlap = [0.2, 0.2, 0.2] #: 3D overlap
-        self.__Dimensionality = 3
-        self.__SliceNumber = 0
-        self.__Mode = self.CUBE
-        self.__SubVolumeRadius = 1 #: Radius of the subvolume in voxels
+        self._Points = vtk.vtkPoints()
+        self._Vertices = vtk.vtkCellArray()
+        self._Orientation = 2
+        self._Overlap = [0.2, 0.2, 0.2] #: 3D overlap
+        self._Dimensionality = 3
+        self._SliceNumber = 0
+        self._Mode = self.CUBE
+        self._SubVolumeRadius = 1 #: Radius of the subvolume in voxels
 
     def GetPoints(self):
         '''Returns the Points'''
-        return self.__Points
+        return self._Points
     def SetMode(self, value):
         '''Sets the shape mode'''
         if not value in [self.CIRCLE, self.SQUARE, self.CUBE, self.SPHERE]:
             raise ValueError('dimension must be in [circle, square, cube, sphere]. Got',
                              value)
 
-        if value != self.__Mode:
-            self.__Mode = value
+        if value != self._Mode:
+            self._Mode = value
             self.Modified()
 
     def GetMode(self):
-        return self.__Mode
+        return self._Mode
 
     def SetDimensionality(self, value):
         '''Whether the overlap is measured on 2D or 3D'''
         if not value in [2, 3]:
             raise ValueError('Dimensionality must be in [2, 3]. Got', value)
-        if self.__Dimensionality != value:
-            self.__Dimensionality = value
+        if self._Dimensionality != value:
+            self._Dimensionality = value
             self.Modified()
     def GetDimensionality(self):
-        return self.__Dimensionality
+        return self._Dimensionality
 
     def SetOverlap(self, dimension, value):
         '''Set the overlap between'''
@@ -101,11 +101,11 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
             raise ValueError('Overlap value must be a number. Got' , value)
         if not dimension in [0, 1, 2]:
             raise ValueError('dimension must be in [0, 1, 2]. Got' , value)
-        if value != self.__Overlap[dimension]:
-            self.__Overlap[dimension] = value
+        if value != self._Overlap[dimension]:
+            self._Overlap[dimension] = value
             self.Modified()
     def GetOverlap(self):
-        return self.__Overlap
+        return self._Overlap
 
     def SetSlice(self, value):
         '''For 2D represents the slice on the data where you want to get points laid out'''
@@ -113,26 +113,26 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
             raise ValueError('Slice must be a positive integer. Got', value)
         if not value >= 0:
             raise ValueError('Slice must be a positive integer. Got', value)
-        if self.__SliceNumber != value:
-            self.__SliceNumber = value
+        if self._SliceNumber != value:
+            self._SliceNumber = value
             self.Modified()
     def GetSlice(self):
-        return self.__SliceNumber
+        return self._SliceNumber
 
     def GetNumberOfPoints(self):
         '''returns the number of points in the point cloud'''
-        return self.__Points.GetNumberOfPoints()
+        return self._Points.GetNumberOfPoints()
 
     def SetOrientation(self, value):
         '''For 2D sets the orientation of the working plane'''
         if not value in [0, 1, 2]:
             raise ValueError('Orientation must be in [0,1,2]. Got', value)
-        if self.__Orientation != value:
-            self.__Orientation = value
+        if self._Orientation != value:
+            self._Orientation = value
             self.Modified()
 
     def GetOrientation(self):
-        return self.__Orientation
+        return self._Orientation
 
     def SetSubVolumeRadiusInVoxel(self, value):
         '''Set the radius of the subvolume in voxel'''
@@ -140,12 +140,12 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
             raise ValueError('SubVolumeRadius must be an integer or float larger than 1. Got', value)
         if not value > 1:
             raise ValueError('SubVolumeRadius must be larger than 1. Got', value)
-        if self.__SubVolumeRadius != value:
-            self.__SubVolumeRadius = value
+        if self._SubVolumeRadius != value:
+            self._SubVolumeRadius = value
             self.Modified()
 
     def GetSubVolumeRadiusInVoxel(self):
-        return self.__SubVolumeRadius
+        return self._SubVolumeRadius
 
     def FillInputPortInformation(self, port, info):
         if port == 0:
@@ -163,8 +163,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         pointPolyData = vtk.vtkPolyData.GetData(outInfo)
 
         # reset
-        self.__Points = vtk.vtkPoints()
-        self.__Vertices = vtk.vtkCellArray()
+        self._Points = vtk.vtkPoints()
+        self._Vertices = vtk.vtkCellArray()
         # print ("orientation", orientation)
         dimensionality = self.GetDimensionality()
         # print ("dimensionality", dimensionality)
@@ -187,8 +187,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
         self.FillCells()
 
-        pointPolyData.SetPoints(self.__Points)
-        pointPolyData.SetVerts(self.__Vertices)
+        pointPolyData.SetPoints(self._Points)
+        pointPolyData.SetVerts(self._Vertices)
         return 1
 
     def CreatePoints2D(self, point_spacing , sliceno, image_data, orientation):
@@ -203,7 +203,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
             vtkPoints
         '''
 
-        vtkPointCloud = self.__Points
+        vtkPointCloud = self._Points
         image_spacing = list ( image_data.GetSpacing() )
         image_origin  = list ( image_data.GetOrigin() )
         image_dimensions = list ( image_data.GetDimensions() )
@@ -270,7 +270,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         returns:
             vtkPoints
         '''
-        vtkPointCloud = self.__Points
+        vtkPointCloud = self._Points
         image_spacing = list ( image_data.GetSpacing() )
         image_origin  = list ( image_data.GetOrigin() )
         image_dimensions = list ( image_data.GetDimensions() )
@@ -320,7 +320,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
     def FillCells(self):
         '''Fills the Vertices'''
-        vertices = self.__Vertices
+        vertices = self._Vertices
         number_of_cells = vertices.GetNumberOfCells()
         for i in range(self.GetNumberOfPoints()):
             if i >= number_of_cells:
@@ -384,65 +384,65 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
     '''vtkAlgorithm to read a point cloud from a NumPy array
     '''
-    def __init__(main_window):
-        VTKPythonAlgorithmBase.__init__(main_window, nInputPorts=0, nOutputPorts=1)
-        main_window.__Points = vtk.vtkPoints()
-        main_window.__Vertices = vtk.vtkCellArray()
-        main_window.__Data = None
+    def __init__(self):
+        VTKPythonAlgorithmBase.__init__(self, nInputPorts=0, nOutputPorts=1)
+        self._Points = vtk.vtkPoints()
+        self._Vertices = vtk.vtkCellArray()
+        self._Data = None
 
 
-    def GetPoints(main_window):
+    def GetPoints(self):
         '''Returns the Points'''
-        return main_window.__Points
-    def SetData(main_window, value):
+        return self._Points
+    def SetData(self, value):
         '''Sets the points from a numpy array or list'''
         if not isinstance (value, numpy.ndarray) :
             raise ValueError('Data must be a numpy array. Got', value)
 
-        if not numpy.array_equal(value,main_window.__Data):
-            main_window.__Data = value
-            main_window.Modified()
+        if not numpy.array_equal(value,self._Data):
+            self._Data = value
+            self.Modified()
 
-    def GetData(main_window):
-        return main_window.__Data
+    def GetData(self):
+        return self._Data
 
 
-    def GetNumberOfPoints(main_window):
+    def GetNumberOfPoints(self):
         '''returns the number of points in the point cloud'''
-        return main_window.__Points.GetNumberOfPoints()
+        return self._Points.GetNumberOfPoints()
 
 
-    def FillInputPortInformation(main_window, port, info):
+    def FillInputPortInformation(self, port, info):
         # if port == 0:
         #    info.Set(vtk.vtkAlgorithm.INPUT_REQUIRED_DATA_TYPE(), "vtkImageData")
         return 1
 
-    def FillOutputPortInformation(main_window, port, info):
+    def FillOutputPortInformation(self, port, info):
         info.Set(vtk.vtkDataObject.DATA_TYPE_NAME(), "vtkPolyData")
         return 1
 
-    def RequestData(main_window, request, inInfo, outInfo):
+    def RequestData(self, request, inInfo, outInfo):
 
         # print ("Request Data")
         # output_image = vtk.vtkDataSet.GetData(inInfo[0])
         pointPolyData = vtk.vtkPolyData.GetData(outInfo)
-        vtkPointCloud = main_window.__Points
-        for point in main_window.GetData():
+        vtkPointCloud = self._Points
+        for point in self.GetData():
             # point = id, x, y, z
             vtkPointCloud.InsertNextPoint( point[1] , point[2] , point[3])
 
-        main_window.FillCells()
+        self.FillCells()
 
-        pointPolyData.SetPoints(main_window.__Points)
-        pointPolyData.SetVerts(main_window.__Vertices)
+        pointPolyData.SetPoints(self._Points)
+        pointPolyData.SetVerts(self._Vertices)
         return 1
 
 
-    def FillCells(main_window):
+    def FillCells(self):
         '''Fills the Vertices'''
-        vertices = main_window.__Vertices
+        vertices = self._Vertices
         number_of_cells = vertices.GetNumberOfCells()
-        for i in range(main_window.GetNumberOfPoints()):
+        for i in range(self.GetNumberOfPoints()):
             if i >= number_of_cells:
                 vertices.InsertNextCell(1)
                 vertices.InsertCellPoint(i)
