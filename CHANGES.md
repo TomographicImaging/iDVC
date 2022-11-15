@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v22.2.1
+
+* added build variants for VTK 8 and 9
+
 ## v22.2.0
 * Update DVC executable version to v22.0.0
 * Adds GUI elements to control the range of the displacement vectors displayed
