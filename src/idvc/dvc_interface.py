@@ -2520,7 +2520,7 @@ The first point is significant, as it is used as a global starting point and ref
 
         pc['subvolumes_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['subvolumes_check'].setText("Display Subvolume Regions")
-        pc['subvolumes_check'].setChecked(True)
+        pc['subvolumes_check'].setChecked(False)
         pc['subvolumes_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_actor') )
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolumes_check'])
         widgetno += 1
@@ -3083,6 +3083,9 @@ Please select a replacement pointcloud file.')
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
         self.setup3DPointCloudPipeline()
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
         self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
