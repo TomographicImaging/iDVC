@@ -74,7 +74,7 @@ from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyP
 
 from idvc.dvc_runner import DVC_runner
 
-from eqt.ui import FormDialog
+from eqt.ui import FormDialog, UIFormFactory
 
 import qdarkstyle
 from qdarkstyle.dark.palette import DarkPalette
@@ -2282,11 +2282,18 @@ It is used as a global starting point and a translation reference."
         pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
 
         # Add horizonal seperator
+        # Generate panel
         self.seperator = QFrame(self.graphParamsGroupBox)
         self.seperator.setFrameShape(QFrame.HLine)
         self.seperator.setFrameShadow(QFrame.Raised)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, self.seperator)
         widgetno += 1
+        # Load point cloud section 
+        # add a separator and title
+        generatePointCloudLabel = QLabel("Generate Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
+        widgetno += 1
+
 
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
@@ -2484,6 +2491,17 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.pointCloudDockWidget)
         widgetno += 1
 
+        # Load point cloud section 
+        # add a separator and title
+        seperator = QFrame(self.graphParamsGroupBox)
+        seperator.setFrameShape(QFrame.HLine)
+        seperator.setFrameShadow(QFrame.Raised)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, seperator)
+        widgetno += 1
+        generatePointCloudLabel = QLabel("Load Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
+        widgetno += 1
+
         pc['pointcloudList'] = QComboBox(self.graphParamsGroupBox)
         pc['pointcloudList'].setEnabled(False)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pointcloudList'])
@@ -2510,6 +2528,17 @@ Non-integer voxel locations are admitted, with reference volume interpolation us
 The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.")
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
+        widgetno += 1
+
+        # Display point cloud section 
+        # add a separator and title
+        seperator = QFrame(self.graphParamsGroupBox)
+        seperator.setFrameShape(QFrame.HLine)
+        seperator.setFrameShadow(QFrame.Raised)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, seperator)
+        widgetno += 1
+        generatePointCloudLabel = QLabel("Display Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
         widgetno += 1
 
         pc['clear_button'] = QPushButton(self.graphParamsGroupBox)
