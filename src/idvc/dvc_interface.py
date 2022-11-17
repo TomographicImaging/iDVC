@@ -3105,7 +3105,7 @@ Please select a replacement pointcloud file.')
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
-        self.result_widgets['pc_points_value'].setText(str(self.pc_no_points))
+        self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
         
 
@@ -3258,7 +3258,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2, \
                                                      multiplier = self.result_widgets['scale_vectors_entry'].value())
 
-        self.pc_no_points = np.shape(displ)[0]
+        self.num_processed_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
         logging.info('Adding vectors 2D')
