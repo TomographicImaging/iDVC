@@ -1,4 +1,6 @@
 # ChangeLog
+## v.x.x.x
+* Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
