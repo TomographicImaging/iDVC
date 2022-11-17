@@ -4094,8 +4094,9 @@ This parameter has a strong effect on computation time, so be careful."
                     #print(subvol_size)
                     subvol_size_count+=1
                     filename = os.path.join( run_folder , "_{}.roi".format(str(subvol_size)))
-                    #print(filename)
-                    if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
+                    # we will generate the same pointcloud for each subvolume size
+                    pc_subvol_size = self.pointcloud_parameters['pointcloud_size_entry'].text()
+                    if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size)):
                         return ("pointcloud error")
                     self.roi_files.append(filename)
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
