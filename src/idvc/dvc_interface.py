@@ -810,6 +810,7 @@ class MainWindow(QMainWindow):
                 self.PointCloudWorker("load pointcloud file")
                 self.pointCloudLoaded = True
                 self.no_mask_pc_load = False
+                self.pointcloud_is = 'loaded'
 
         if(self.reg_load):
             self.displayRegistrationViewer(registration_open = True)
@@ -2481,7 +2482,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         # Add submit button
         self.graphParamsSubmitButton = QPushButton(self.graphParamsGroupBox)
         self.graphParamsSubmitButton.setText("Generate Point Cloud")
-        self.graphParamsSubmitButton.clicked.connect(lambda: self.createSavePointCloudWindow(save_only=False))
+        self.graphParamsSubmitButton.clicked.connect(self._generatePointCloudClicked)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.graphParamsSubmitButton)
         widgetno += 1
         # Add elements to layout
@@ -2567,6 +2568,10 @@ The first point is significant, as it is used as a global starting point and ref
         pc['pc_points_value'] = QLabel("0")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
+
+    def _generatePointCloudClicked(self):
+        self.pointcloud_is = 'generated'
+        self.createSavePointCloudWindow(save_only=False)
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
@@ -2699,8 +2704,8 @@ The first point is significant, as it is used as a global starting point and ref
 
     def select_pointcloud(self): #, label):
         dialogue = QFileDialog()
+        self.roi = None
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
-        #print(self.roi)
         if self.roi:
             self.PointCloudWorker("load pointcloud file")
 
@@ -2710,6 +2715,9 @@ The first point is significant, as it is used as a global starting point and ref
             self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             self.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.pointcloud_parameters['pointcloudList'].setCurrentText(filename)
+        
+        if self.roi is not None:
+            self.pointcloud_is = 'loaded'
 
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
@@ -3126,6 +3134,7 @@ Please select a replacement pointcloud file.')
         self.pointCloudLoaded = True
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
+        self.pointcloud_is = 'loaded'
         
 
     def DisplayPointCloud(self):
@@ -3989,16 +3998,20 @@ This parameter has a strong effect on computation time, so be careful."
             self.warningDialog("Complete image registration first.", "Error")
             return
 
-        if self.singleRun_groupBox.isVisible():
+        if self.pointcloud_is == 'loaded':
             if not self.roi:
                 self.warningDialog(window_title="Error", 
                                message="Create or load a pointcloud on the viewer first." )
                 return
-        else:
+        elif self.pointcloud_is == 'generated':
             if not self.mask_reader:
                 self.warningDialog(window_title="Error", 
                                message="Load a mask on the viewer first" )
                 return
+        else:
+            self.warningDialog(window_title="Error", 
+                               message="Missing pointcloud_is parameter! Contact developers" )
+            return
         
         run_name = str( self.rdvc_widgets['name_entry'].text() )
         saved_run_names = []
@@ -4094,10 +4107,17 @@ This parameter has a strong effect on computation time, so be careful."
                     #print(subvol_size)
                     subvol_size_count+=1
                     filename = os.path.join( run_folder , "_{}.roi".format(str(subvol_size)))
-                    # we will generate the same pointcloud for each subvolume size
-                    pc_subvol_size = self.pointcloud_parameters['pointcloud_size_entry'].text()
-                    if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size)):
-                        return ("pointcloud error")
+                    if self.pointcloud_is == 'generated':
+                        # we will generate the same pointcloud for each subvolume size
+                        pc_subvol_size = self.pointcloud_parameters['pointcloud_size_entry'].text()
+                        if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size)):
+                            return ("pointcloud error")
+                    elif self.pointcloud_is == 'loaded':
+                        # we will use the file with the pointcloud for each subvol size
+                        shutil.copyfile(self.roi, filename)
+                    else:
+                        raise ValueError("pointcloud_is must be either 'generated' or 'loaded'")
+
                     self.roi_files.append(filename)
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
