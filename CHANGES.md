@@ -2,6 +2,9 @@
 ## v.x.x.x
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
 
+## vx.x.x
+* Create environment file for development of iDVC
+
 ## v22.2.0
 * Update DVC executable version to v22.0.0
 * Adds GUI elements to control the range of the displacement vectors displayed
