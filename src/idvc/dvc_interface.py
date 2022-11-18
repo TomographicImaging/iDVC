@@ -3113,8 +3113,9 @@ Please select a replacement pointcloud file.')
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
-        self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
+        if hasattr(self, 'num_processed_points'):
+            self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
         
 
     def DisplayLoadedPointCloud(self):
@@ -4306,7 +4307,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
         result_widgets['vec_entry'] = QComboBox(groupBox)
-        result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
+        result_widgets['vec_entry'].addItems(['Pointcloud', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
         result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         widgetno += 1
@@ -4445,12 +4446,15 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             #print("New roi is", self.roi)
             self.results_folder = results_folder
 
-            if (self.result_widgets['vec_entry'].currentText() == "None"):
+            if (self.result_widgets['vec_entry'].currentText() == "Pointcloud"):
                 self.PointCloudWorker("load pointcloud file")
                 self._removeColormap()
                 # reset the interface
                 self.result_widgets['range_vectors_max_entry'].setEnabled(False)
                 self.result_widgets['range_vectors_min_entry'].setEnabled(False)
+                # set the label of the number of points to the number of points in the pointcloud
+                self.num_processed_points = int( self.pc_no_points )
+                self.DisplayNumberOfPointcloudPoints()
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))
