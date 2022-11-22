@@ -64,7 +64,7 @@ class ImageDataCreator(object):
         else:
             for image in image_files:
                 file_extension = imghdr.what(image)
-                if file_extension != 'tiff':
+                if file_extension not in ['tiff', 'tif']:
                     main_window.e(
                         '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
@@ -118,11 +118,13 @@ class ImageDataCreator(object):
 
         main_window.progress_window.setValue(10)
 
-        image_worker.signals.progress.connect(
-            partial(progress, main_window.progress_window))
+        image_worker.signals.progress.connect(partial(progress, main_window.progress_window))
         if finish_fn is not None:
-            image_worker.signals.finished.connect(
-                lambda: finish_fn(*finish_fn_args, **finish_fn_kwargs))
+            image_worker.signals.finished.connect(lambda: finish_fn(*finish_fn_args, **finish_fn_kwargs))
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, main_window)
+        image_worker.signals.error.connect(ff)
+
         main_window.threadpool = QThreadPool()
         main_window.threadpool.start(image_worker)
         print("Started worker")
@@ -162,6 +164,33 @@ def displayFileErrorDialog(main_window, message, title):
     msg.setDetailedText(main_window.e.ErrorMessage())
     msg.exec_()
 
+def displayErrorDialogFromWorker(main_window, error):
+    '''This is a new version of displayFileErrorDialog that takes an error object as an argument.
+    This function is meant to be used with the Worker class, which passes the error object to the error signal.
+    
+    The error object is a tuple containing (exctype, value, traceback.format_exc())
+    https://github.com/paskino/qt-elements/blob/b34e7886f7e395683bbb618cc925ede8426fe8cd/eqt/threading/QtThreading.py#L83
+
+    Additionally, this function does not make use of the main_window.e.ErrorMessage() function of ErrorObserver.
+
+    Example Usage:
+    Suppose you have a Worker, any error that occurs in the worker will emit the error signal, which can be 
+    connected to this function.
+
+    ff = partial(displayErrorDialogFromWorker, main_window)
+    image_worker.signals.error.connect(ff)
+
+    '''
+    # (exctype, value, traceback.format_exc())
+    title='Caught Exception'
+    message = 'Except type {}\nvalue {}'.format(error[0], error[1])
+    detailed_message = str(error[2])
+    msg = QMessageBox(main_window)
+    msg.setIcon(QMessageBox.Critical)
+    msg.setWindowTitle(title)
+    msg.setText(message)
+    msg.setDetailedText(detailed_message)
+    msg.exec_()
 
 def warningDialog(main_window, message='', window_title='', detailed_text=''):
     dialog = QMessageBox(main_window)
@@ -420,7 +449,10 @@ def loadTif(*args, **kwargs):
     target_size = kwargs.get('target_size', 0.125)
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
+    bits_per_byte = 8
 
+    a=b
+    
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
     
@@ -435,7 +467,7 @@ def loadTif(*args, **kwargs):
         print("Spacing ", output_image.GetSpacing())
         header_length = reader.GetFileHeaderLength()
         print("Length of header: ", header_length)
-        vol_bit_depth = reader.GetBytesPerElement()*8
+        
         shape = reader.GetStoredArrayShape()
         if not reader.GetIsFortran():
             shape = shape[::-1]
@@ -495,8 +527,7 @@ def loadTif(*args, **kwargs):
         reader.Update()
 
         shape = reader.GetStoredArrayShape()
-        vol_bit_depth = reader.GetBytesPerElement()*8
-
+        
         progress_callback.emit(80)
 
         image_data = reader.GetOutput()
@@ -506,6 +537,9 @@ def loadTif(*args, **kwargs):
 
         image_info['sampled'] = False
 
+    # this is dangerous as reader might not be defined!!!
+    vol_bit_depth = reader.GetBytesPerElement() * bits_per_byte
+   
     if image_info is not None:
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
