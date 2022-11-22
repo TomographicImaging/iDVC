@@ -118,9 +118,17 @@ class ImageDataCreator(object):
 
         main_window.progress_window.setValue(10)
 
+        # connect singnals and slots
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, main_window)
+        image_worker.signals.error.connect(ff)
+
         image_worker.signals.progress.connect(partial(progress, main_window.progress_window))
+        # the "finished" signal will call the connected slot irrespectively of whether there was an error or not
+        # therefore we need to connect the "result" signal to a function that will check if there was an error
         if finish_fn is not None:
-            image_worker.signals.finished.connect(lambda: finish_fn(*finish_fn_args, **finish_fn_kwargs))
+            rif = partial(runIfFinishedCorrectly, main_window=main_window, finish_fn=finish_fn, *finish_fn_args, **finish_fn_kwargs)
+            image_worker.signals.result.connect(rif)
         # connect error signal to an ErrorDialog
         ff = partial(displayErrorDialogFromWorker, main_window)
         image_worker.signals.error.connect(ff)
@@ -129,6 +137,9 @@ class ImageDataCreator(object):
         main_window.threadpool.start(image_worker)
         print("Started worker")
 
+def runIfFinishedCorrectly(result, main_window=None, finish_fn=None, *args, **kwargs):
+    if result is not None and result == 0:
+        finish_fn(*args, **kwargs)
 
 # For progress bars:
 def createProgressWindow(main_window, title, text, max=100, cancel=None):
@@ -327,6 +338,8 @@ def loadMetaImage(**kwargs):
             image_info['header_length'] = len(header)
 
     progress_callback.emit(100)
+    # all good, return 0
+    return 0
 
 
 # def loadNpyImage(image_file, output_image, image_info = None, resample = False, target_size = 0.125, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), progress_callback=None):
@@ -433,8 +446,8 @@ def loadNpyImage(**kwargs):
         image_info["header_length"] = header_length
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
-
-    #print("Loaded npy")
+    # all good, return 0
+    return 0
 
 def loadTif(*args, **kwargs):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
@@ -451,8 +464,6 @@ def loadTif(*args, **kwargs):
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
     bits_per_byte = 8
 
-    a=b
-    
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
     
@@ -544,7 +555,8 @@ def loadTif(*args, **kwargs):
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
     progress_callback.emit(100)
-
+    # all good, return 0
+    return 0
 
 def getProgress(caller, event, progress_callback):
     progress_callback.emit(caller.GetProgress()*80)
