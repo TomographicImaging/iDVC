@@ -20,13 +20,11 @@ import math
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 from functools import partial
 from datetime import datetime
 
-from os import listdir
 
 import vtk
 from ccpi.viewer import viewer2D, viewer3D
@@ -57,16 +55,10 @@ import tempfile
 import json
 import shutil
 import zipfile
-import zlib
 
-import csv
 from functools import reduce
 
-import subprocess
-
 import copy
-
-from distutils.dir_util import copy_tree
 
 from idvc.io import ImageDataCreator
 
@@ -74,7 +66,7 @@ from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyP
 
 from idvc.dvc_runner import DVC_runner
 
-from eqt.ui import FormDialog, UIFormFactory
+from eqt.ui import FormDialog
 
 import qdarkstyle
 from qdarkstyle.dark.palette import DarkPalette
@@ -611,7 +603,9 @@ class MainWindow(QMainWindow):
                         return #prevents dialog showing for every single file by exiting the for loop
                 image[image_var] = filenames
                 if label is not None:
-                    label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+                    label.setText(
+                        os.path.dirname(self.image[image_var][0]) + "\n" +\
+                        os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
 
             if next_button is not None:
                 next_button.setEnabled(True)
@@ -1584,7 +1578,7 @@ It is used as a global starting point and a translation reference."
         else:
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 self.unsampled_ref_image_data = self.ref_image_data 
-                self.LoadCorrImageForReg()
+                self.LoadCorrImageForReg(crop_corr_image=True)
             else:
                 self.completeRegistration()
 
