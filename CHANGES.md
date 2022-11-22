@@ -1,5 +1,11 @@
 # ChangeLog
 
+## v22.2.1
+* On load of pointcloud display points only by default
+* Makes a few GUI bugfixes, such as fix number of pointcloud displayed wrongly here and there.
+* Catches exceptions on load of files and opens message boxes
+* Fix load of TIFF files
+
 ## v22.2.0
 * Update DVC executable version to v22.0.0
 * Adds GUI elements to control the range of the displacement vectors displayed
