@@ -1863,6 +1863,16 @@ It is used as a global starting point and a translation reference."
         formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
         widgetno += 1
 
+        # Add start tracing button
+        mp_widgets['start_tracing'] = QPushButton(groupBox)
+        mp_widgets['start_tracing'].setText("Start Tracing")
+        mp_widgets['start_tracing'].clicked.connect(self.ToggleTracing)
+        mp_widgets['start_tracing'].setCheckable(True)
+        mp_widgets['start_tracing'].setChecked(False)
+        # mp_widgets['start_tracing'].setToolTip("Press 't' and draw a region on the viewer to create a mask.")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['start_tracing'])
+        widgetno += 1
+
         # Add submit button
         mp_widgets['submitButton'] = QPushButton(groupBox)
         mp_widgets['submitButton'].setText("Create Mask")
@@ -1889,6 +1899,24 @@ It is used as a global starting point and a translation reference."
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
+
+    def ToggleTracing(self):
+        '''Toggles the tracing widget for tracing the mask'''
+        # notice that the viewer will capture the keypress event linked with activating the tracing
+        viewer = self.vis_widget_2D.getViewer()
+        mp_widgets = self.mask_parameters
+        # we come here after the user has clicked on the button:
+        # thins means that if the button is checked, it was not before,
+        # So the user expects to start tracing
+        if mp_widgets['start_tracing'].isChecked():
+            # enable tracing
+            mp_widgets['start_tracing'].setText("Stop Tracing")
+            viewer.imageTracer.On()
+        else:
+            # disable tracing
+            mp_widgets['start_tracing'].setText("Start Tracing")
+            viewer.imageTracer.Off()
+            
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer

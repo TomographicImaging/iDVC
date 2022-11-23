@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## v22.2.1
+* Added button to start tracing
 * On load of pointcloud display points only by default
 * Makes a few GUI bugfixes, such as fix number of pointcloud displayed wrongly here and there.
 * Catches exceptions on load of files and opens message boxes
