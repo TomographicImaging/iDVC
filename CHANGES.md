@@ -2,7 +2,7 @@
 
 ## v22.2.1
 * On load of pointcloud display points only by default
-* Makes a few GUI bugfixes, such as fix number of pointcloud displayed wrongly here and there.
+* Makes a few GUI bugfixes, such as fix number of points in the pointcloud displayed wrongly here and there.
 * Catches exceptions on load of files and opens message boxes
 * Fix load of TIFF files
 
