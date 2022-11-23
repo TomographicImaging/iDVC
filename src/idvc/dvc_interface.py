@@ -20,13 +20,11 @@ import math
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 from functools import partial
 from datetime import datetime
 
-from os import listdir
 
 import vtk
 from ccpi.viewer import viewer2D, viewer3D
@@ -57,16 +55,10 @@ import tempfile
 import json
 import shutil
 import zipfile
-import zlib
 
-import csv
 from functools import reduce
 
-import subprocess
-
 import copy
-
-from distutils.dir_util import copy_tree
 
 from idvc.io import ImageDataCreator
 
@@ -611,7 +603,9 @@ class MainWindow(QMainWindow):
                         return #prevents dialog showing for every single file by exiting the for loop
                 image[image_var] = filenames
                 if label is not None:
-                    label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+                    label.setText(
+                        os.path.dirname(self.image[image_var][0]) + "\n" +\
+                        os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
 
             if next_button is not None:
                 next_button.setEnabled(True)
@@ -810,6 +804,7 @@ class MainWindow(QMainWindow):
                 self.PointCloudWorker("load pointcloud file")
                 self.pointCloudLoaded = True
                 self.no_mask_pc_load = False
+                self.pointcloud_is = 'loaded'
 
         if(self.reg_load):
             self.displayRegistrationViewer(registration_open = True)
@@ -1583,7 +1578,7 @@ It is used as a global starting point and a translation reference."
         else:
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 self.unsampled_ref_image_data = self.ref_image_data 
-                self.LoadCorrImageForReg()
+                self.LoadCorrImageForReg(crop_corr_image=True)
             else:
                 self.completeRegistration()
 
@@ -2282,11 +2277,18 @@ It is used as a global starting point and a translation reference."
         pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
 
         # Add horizonal seperator
+        # Generate panel
         self.seperator = QFrame(self.graphParamsGroupBox)
         self.seperator.setFrameShape(QFrame.HLine)
         self.seperator.setFrameShadow(QFrame.Raised)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, self.seperator)
         widgetno += 1
+        # Load point cloud section 
+        # add a separator and title
+        generatePointCloudLabel = QLabel("Generate Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
+        widgetno += 1
+
 
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
@@ -2474,7 +2476,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         # Add submit button
         self.graphParamsSubmitButton = QPushButton(self.graphParamsGroupBox)
         self.graphParamsSubmitButton.setText("Generate Point Cloud")
-        self.graphParamsSubmitButton.clicked.connect(lambda: self.createSavePointCloudWindow(save_only=False))
+        self.graphParamsSubmitButton.clicked.connect(self._generatePointCloudClicked)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.graphParamsSubmitButton)
         widgetno += 1
         # Add elements to layout
@@ -2482,6 +2484,17 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.graphDockVL.addWidget(self.dockWidget)
         self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.pointCloudDockWidget)
+        widgetno += 1
+
+        # Load point cloud section 
+        # add a separator and title
+        seperator = QFrame(self.graphParamsGroupBox)
+        seperator.setFrameShape(QFrame.HLine)
+        seperator.setFrameShadow(QFrame.Raised)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, seperator)
+        widgetno += 1
+        generatePointCloudLabel = QLabel("Load Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
         widgetno += 1
 
         pc['pointcloudList'] = QComboBox(self.graphParamsGroupBox)
@@ -2512,6 +2525,17 @@ The first point is significant, as it is used as a global starting point and ref
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
 
+        # Display point cloud section 
+        # add a separator and title
+        seperator = QFrame(self.graphParamsGroupBox)
+        seperator.setFrameShape(QFrame.HLine)
+        seperator.setFrameShadow(QFrame.Raised)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, seperator)
+        widgetno += 1
+        generatePointCloudLabel = QLabel("Display Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
+        widgetno += 1
+
         pc['clear_button'] = QPushButton(self.graphParamsGroupBox)
         pc['clear_button'].setText("Clear Point Cloud")
         pc['clear_button'].clicked.connect(self.clearPointCloud)
@@ -2520,7 +2544,7 @@ The first point is significant, as it is used as a global starting point and ref
 
         pc['subvolumes_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['subvolumes_check'].setText("Display Subvolume Regions")
-        pc['subvolumes_check'].setChecked(True)
+        pc['subvolumes_check'].setChecked(False)
         pc['subvolumes_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_actor') )
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolumes_check'])
         widgetno += 1
@@ -2538,6 +2562,10 @@ The first point is significant, as it is used as a global starting point and ref
         pc['pc_points_value'] = QLabel("0")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
+
+    def _generatePointCloudClicked(self):
+        self.pointcloud_is = 'generated'
+        self.createSavePointCloudWindow(save_only=False)
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
@@ -2670,8 +2698,8 @@ The first point is significant, as it is used as a global starting point and ref
 
     def select_pointcloud(self): #, label):
         dialogue = QFileDialog()
+        self.roi = None
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
-        #print(self.roi)
         if self.roi:
             self.PointCloudWorker("load pointcloud file")
 
@@ -2681,6 +2709,9 @@ The first point is significant, as it is used as a global starting point and ref
             self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             self.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.pointcloud_parameters['pointcloudList'].setCurrentText(filename)
+        
+        if self.roi is not None:
+            self.pointcloud_is = 'loaded'
 
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
@@ -3076,13 +3107,17 @@ Please select a replacement pointcloud file.')
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
-        self.result_widgets['pc_points_value'].setText(str(self.pc_no_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
+        if hasattr(self, 'num_processed_points'):
+            self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
         
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
         self.setup3DPointCloudPipeline()
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
         self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
@@ -3094,6 +3129,7 @@ Please select a replacement pointcloud file.')
         self.pointCloudLoaded = True
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
+        self.pointcloud_is = 'loaded'
         
 
     def DisplayPointCloud(self):
@@ -3159,6 +3195,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         self.progress_window.setValue(100)
 
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
         self.warningDialog(window_title="Success", message="Point cloud created." )
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
@@ -3226,7 +3265,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2, \
                                                      multiplier = self.result_widgets['scale_vectors_entry'].value())
 
-        self.pc_no_points = np.shape(displ)[0]
+        self.num_processed_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
         logging.info('Adding vectors 2D')
@@ -3910,7 +3949,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.rdvc_widgets = rdvc_widgets
 
     def _set_num_points_in_run_to_all(self):
-        int(self.pc_no_points)
         if hasattr(self, 'pc_no_points'):
             maxpoints = int(self.pc_no_points)
         else:
@@ -3958,16 +3996,20 @@ This parameter has a strong effect on computation time, so be careful."
             self.warningDialog("Complete image registration first.", "Error")
             return
 
-        if self.singleRun_groupBox.isVisible():
+        if self.pointcloud_is == 'loaded':
             if not self.roi:
                 self.warningDialog(window_title="Error", 
                                message="Create or load a pointcloud on the viewer first." )
                 return
-        else:
+        elif self.pointcloud_is == 'generated':
             if not self.mask_reader:
                 self.warningDialog(window_title="Error", 
                                message="Load a mask on the viewer first" )
                 return
+        else:
+            self.warningDialog(window_title="Error", 
+                               message="Missing pointcloud_is parameter! Contact developers" )
+            return
         
         run_name = str( self.rdvc_widgets['name_entry'].text() )
         saved_run_names = []
@@ -4063,9 +4105,17 @@ This parameter has a strong effect on computation time, so be careful."
                     #print(subvol_size)
                     subvol_size_count+=1
                     filename = os.path.join( run_folder , "_{}.roi".format(str(subvol_size)))
-                    #print(filename)
-                    if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
-                        return ("pointcloud error")
+                    if self.pointcloud_is == 'generated':
+                        # we will generate the same pointcloud for each subvolume size
+                        pc_subvol_size = self.pointcloud_parameters['pointcloud_size_entry'].text()
+                        if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size)):
+                            return ("pointcloud error")
+                    elif self.pointcloud_is == 'loaded':
+                        # we will use the file with the pointcloud for each subvol size
+                        shutil.copyfile(self.roi, filename)
+                    else:
+                        raise ValueError("pointcloud_is must be either 'generated' or 'loaded'")
+
                     self.roi_files.append(filename)
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
@@ -4254,7 +4304,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
         result_widgets['vec_entry'] = QComboBox(groupBox)
-        result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
+        result_widgets['vec_entry'].addItems(['Pointcloud', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
         result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         widgetno += 1
@@ -4393,12 +4443,15 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             #print("New roi is", self.roi)
             self.results_folder = results_folder
 
-            if (self.result_widgets['vec_entry'].currentText() == "None"):
+            if (self.result_widgets['vec_entry'].currentText() == "Pointcloud"):
                 self.PointCloudWorker("load pointcloud file")
                 self._removeColormap()
                 # reset the interface
                 self.result_widgets['range_vectors_max_entry'].setEnabled(False)
                 self.result_widgets['range_vectors_min_entry'].setEnabled(False)
+                # set the label of the number of points to the number of points in the pointcloud
+                self.num_processed_points = int( self.pc_no_points )
+                self.DisplayNumberOfPointcloudPoints()
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))

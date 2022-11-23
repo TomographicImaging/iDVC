@@ -64,7 +64,7 @@ class ImageDataCreator(object):
         else:
             for image in image_files:
                 file_extension = imghdr.what(image)
-                if file_extension != 'tiff':
+                if file_extension.lower() not in ['tiff', 'tif']:
                     main_window.e(
                         '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
@@ -118,15 +118,25 @@ class ImageDataCreator(object):
 
         main_window.progress_window.setValue(10)
 
-        image_worker.signals.progress.connect(
-            partial(progress, main_window.progress_window))
+        # connect signals and slots
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, main_window)
+        image_worker.signals.error.connect(ff)
+
+        image_worker.signals.progress.connect(partial(progress, main_window.progress_window))
+        # the "finished" signal will call the connected slot irrespectively of whether there was an error or not
+        # therefore we need to connect the "result" signal to a function that will check if there was an error
         if finish_fn is not None:
-            image_worker.signals.finished.connect(
-                lambda: finish_fn(*finish_fn_args, **finish_fn_kwargs))
+            rif = partial(runIfFinishedCorrectly, main_window=main_window, finish_fn=finish_fn, *finish_fn_args, **finish_fn_kwargs)
+            image_worker.signals.result.connect(rif)
+        
         main_window.threadpool = QThreadPool()
         main_window.threadpool.start(image_worker)
         print("Started worker")
 
+def runIfFinishedCorrectly(result, main_window=None, finish_fn=None, *args, **kwargs):
+    if result is not None and result == 0:
+        finish_fn(*args, **kwargs)
 
 # For progress bars:
 def createProgressWindow(main_window, title, text, max=100, cancel=None):
@@ -162,6 +172,33 @@ def displayFileErrorDialog(main_window, message, title):
     msg.setDetailedText(main_window.e.ErrorMessage())
     msg.exec_()
 
+def displayErrorDialogFromWorker(main_window, error):
+    '''This is a new version of displayFileErrorDialog that takes an error object as an argument.
+    This function is meant to be used with the Worker class, which passes the error object to the error signal.
+    
+    The error object is a tuple containing (exctype, value, traceback.format_exc())
+    https://github.com/paskino/qt-elements/blob/b34e7886f7e395683bbb618cc925ede8426fe8cd/eqt/threading/QtThreading.py#L83
+
+    Additionally, this function does not make use of the main_window.e.ErrorMessage() function of ErrorObserver.
+
+    Example Usage:
+    Suppose you have a Worker, any error that occurs in the worker will emit the error signal, which can be 
+    connected to this function.
+
+    ff = partial(displayErrorDialogFromWorker, main_window)
+    image_worker.signals.error.connect(ff)
+
+    '''
+    # (exctype, value, traceback.format_exc())
+    title='Caught Exception'
+    message = 'Except type {}\nvalue {}'.format(error[0], error[1])
+    detailed_message = str(error[2])
+    msg = QMessageBox(main_window)
+    msg.setIcon(QMessageBox.Critical)
+    msg.setWindowTitle(title)
+    msg.setText(message)
+    msg.setDetailedText(detailed_message)
+    msg.exec_()
 
 def warningDialog(main_window, message='', window_title='', detailed_text=''):
     dialog = QMessageBox(main_window)
@@ -298,6 +335,8 @@ def loadMetaImage(**kwargs):
             image_info['header_length'] = len(header)
 
     progress_callback.emit(100)
+    # all good, return 0
+    return 0
 
 
 # def loadNpyImage(image_file, output_image, image_info = None, resample = False, target_size = 0.125, crop_image = False, origin = (0,0,0), target_z_extent = (0,0), progress_callback=None):
@@ -404,8 +443,8 @@ def loadNpyImage(**kwargs):
         image_info["header_length"] = header_length
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
-
-    #print("Loaded npy")
+    # all good, return 0
+    return 0
 
 def loadTif(*args, **kwargs):
     # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
@@ -420,6 +459,7 @@ def loadTif(*args, **kwargs):
     target_size = kwargs.get('target_size', 0.125)
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
+    bits_per_byte = 8
 
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
@@ -435,7 +475,7 @@ def loadTif(*args, **kwargs):
         print("Spacing ", output_image.GetSpacing())
         header_length = reader.GetFileHeaderLength()
         print("Length of header: ", header_length)
-        vol_bit_depth = reader.GetBytesPerElement()*8
+        
         shape = reader.GetStoredArrayShape()
         if not reader.GetIsFortran():
             shape = shape[::-1]
@@ -495,8 +535,7 @@ def loadTif(*args, **kwargs):
         reader.Update()
 
         shape = reader.GetStoredArrayShape()
-        vol_bit_depth = reader.GetBytesPerElement()*8
-
+        
         progress_callback.emit(80)
 
         image_data = reader.GetOutput()
@@ -506,11 +545,15 @@ def loadTif(*args, **kwargs):
 
         image_info['sampled'] = False
 
+    # this is dangerous as reader might not be defined!!!
+    vol_bit_depth = reader.GetBytesPerElement() * bits_per_byte
+
     if image_info is not None:
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
     progress_callback.emit(100)
-
+    # all good, return 0
+    return 0
 
 def getProgress(caller, event, progress_callback):
     progress_callback.emit(caller.GetProgress()*80)
