@@ -118,7 +118,7 @@ class ImageDataCreator(object):
 
         main_window.progress_window.setValue(10)
 
-        # connect singnals and slots
+        # connect signals and slots
         # connect error signal to an ErrorDialog
         ff = partial(displayErrorDialogFromWorker, main_window)
         image_worker.signals.error.connect(ff)
@@ -129,10 +129,7 @@ class ImageDataCreator(object):
         if finish_fn is not None:
             rif = partial(runIfFinishedCorrectly, main_window=main_window, finish_fn=finish_fn, *finish_fn_args, **finish_fn_kwargs)
             image_worker.signals.result.connect(rif)
-        # connect error signal to an ErrorDialog
-        ff = partial(displayErrorDialogFromWorker, main_window)
-        image_worker.signals.error.connect(ff)
-
+        
         main_window.threadpool = QThreadPool()
         main_window.threadpool.start(image_worker)
         print("Started worker")
@@ -550,7 +547,7 @@ def loadTif(*args, **kwargs):
 
     # this is dangerous as reader might not be defined!!!
     vol_bit_depth = reader.GetBytesPerElement() * bits_per_byte
-   
+
     if image_info is not None:
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
