@@ -1869,7 +1869,7 @@ It is used as a global starting point and a translation reference."
         mp_widgets['start_tracing'].clicked.connect(self.ToggleTracing)
         mp_widgets['start_tracing'].setCheckable(True)
         mp_widgets['start_tracing'].setChecked(False)
-        # mp_widgets['start_tracing'].setToolTip("Press 't' and draw a region on the viewer to create a mask.")
+        mp_widgets['start_tracing'].setToolTip("Begin drawing a region on the viewer to create a mask.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['start_tracing'])
         widgetno += 1
 
