@@ -2359,7 +2359,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.overlapXValueEntry.setMaximum(0.99)
         self.overlapXValueEntry.setMinimum(0.00)
         self.overlapXValueEntry.setSingleStep(0.01)
-        self.overlapXValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.overlapXValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self.overlapXValueEntry.valueChanged.connect(self.displaySubvolumePreview)
         self.overlapXValueEntry.setToolTip(overlap_tooltip_text)
         if orientation == 0:
@@ -2378,7 +2378,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.overlapYValueEntry.setMaximum(0.99)
         self.overlapYValueEntry.setMinimum(0.00)
         self.overlapYValueEntry.setSingleStep(0.01)
-        self.overlapYValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.overlapYValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self.overlapYValueEntry.valueChanged.connect(self.displaySubvolumePreview)
         self.overlapYValueEntry.setToolTip(overlap_tooltip_text)
         if orientation == 1:
@@ -2397,7 +2397,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.overlapZValueEntry.setMaximum(0.99)
         self.overlapZValueEntry.setMinimum(0.00)
         self.overlapZValueEntry.setSingleStep(0.01)
-        self.overlapZValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.overlapZValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self.overlapZValueEntry.valueChanged.connect(self.displaySubvolumePreview)
         self.overlapZValueEntry.setToolTip(overlap_tooltip_text)
         if orientation == 2:
@@ -3223,6 +3223,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         self.progress_window.setValue(100)
 
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
         self.warningDialog(window_title="Success", message="Point cloud created." )
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
