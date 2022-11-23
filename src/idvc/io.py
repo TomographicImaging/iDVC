@@ -64,7 +64,7 @@ class ImageDataCreator(object):
         else:
             for image in image_files:
                 file_extension = imghdr.what(image)
-                if file_extension not in ['tiff', 'tif']:
+                if file_extension.lower() not in ['tiff', 'tif']:
                     main_window.e(
                         '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
