@@ -1942,7 +1942,13 @@ It is used as a global starting point and a translation reference."
             
         self.create_progress_window("Loading", "Loading Mask")
         self.mask_worker.signals.progress.connect(self.progress)
-       
+
+        # disable tracing on the viewer
+        v.imageTracer.Off()
+        # set the button to unchecked and text to start tracing
+        self.mask_parameters['start_tracing'].setChecked(False)
+        self.mask_parameters['start_tracing'].setText("Start Tracing")    
+
         self.progress_window.setValue(10)
         self.threadpool.start(self.mask_worker)  
         self.mask_worker.signals.error.connect(self.select_mask)
