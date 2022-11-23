@@ -1,4 +1,9 @@
 # ChangeLog
+## v.x.x.x
+* Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
+
+## vx.x.x
+* Create environment file for development of iDVC
 
 ## v22.2.1
 * On load of pointcloud display points only by default
