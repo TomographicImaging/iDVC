@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
             "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
             )
         
-        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand.\n"
+        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing'.\n"
             "When you are happy with your region click 'Create Mask'.")
 
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
@@ -1943,11 +1943,9 @@ It is used as a global starting point and a translation reference."
         self.create_progress_window("Loading", "Loading Mask")
         self.mask_worker.signals.progress.connect(self.progress)
 
-        # disable tracing on the viewer
-        v.imageTracer.Off()
+        # disable tracing on the viewer and
         # set the button to unchecked and text to start tracing
-        self.mask_parameters['start_tracing'].setChecked(False)
-        self.mask_parameters['start_tracing'].setText("Start Tracing")    
+        self._disableTracingAndResetUI()
 
         self.progress_window.setValue(10)
         self.threadpool.start(self.mask_worker)  
@@ -2082,6 +2080,15 @@ It is used as a global starting point and a translation reference."
         self.setStatusTip('Done')
 
         progress_callback.emit(100)
+        self._disableTracingAndResetUI()
+
+    def _disableTracingAndResetUI(self):
+        # disable tracing on the viewer
+        v = self.vis_widget_2D.frame.viewer
+        v.imageTracer.Off()
+        # set the button to unchecked and text to start tracing
+        self.mask_parameters['start_tracing'].setChecked(False)
+        self.mask_parameters['start_tracing'].setText("Start Tracing")
 
     def copySlices(self, indata, fromslice, min, max, orientation, progress_callback):
 
