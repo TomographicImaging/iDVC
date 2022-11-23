@@ -648,7 +648,10 @@ class MainWindow(QMainWindow):
         msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle(title)
         msg.setText(message)
-        msg.setDetailedText(self.e.ErrorMessage())
+        try:
+            msg.setDetailedText(self.e.ErrorMessage())
+        except:
+            pass
         if action_button is not None:
             msg.addButton(action_button, msg.ActionRole)
         msg.exec_()
@@ -4967,7 +4970,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Ok.clicked.connect(self.load_session_load)
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
-            dialog.exec()
+            # Try to centre the load session window
+            # from PySide2.QtGui import QScreen
+            # geom = QScreen().availableGeometry()
+            # print (geom)
+            # centrex = geom.topRight().x() + geom.topLeft().x()
+            # centrey = geom.topRight().y() + geom.bottomRight().y()
+            # dialog.move(centrex/2,centrey/2)
+            dialog.open()
         
 
     def load_session_load(self):
