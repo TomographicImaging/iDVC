@@ -3199,6 +3199,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
 
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
+
     def clearPointCloud(self):
         self.clearPointCloud2D()
         self.clearPointCloud3D()
