@@ -21,13 +21,11 @@ import math
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 from functools import partial
 from datetime import datetime
 
-from os import listdir
 
 import vtk
 from ccpi.viewer import viewer2D, viewer3D
@@ -63,8 +61,6 @@ from functools import reduce
 
 import copy
 
-from distutils.dir_util import copy_tree
-
 from idvc.io import ImageDataCreator
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
@@ -88,6 +84,51 @@ __version__ = gui_version.version
 
 import logging
 
+
+def reduce_displ(raw_displ, min_size, max_size, pzero=False):
+    '''filter the diplacement vectors based on their size'''
+    offset = 6 # 6 in the case of the iDVC
+    
+    # sizes = []
+    # dmin = np.inf
+    # dmax = 0.
+    # for el in raw_displ:
+    #     size = 0
+    #     for i in range(3):
+    #         #calculate size of vector
+    #         size += el[i+offset]*el[i+offset]
+    #     size = np.sqrt(size)
+    #     if size > dmax:
+    #         dmax = size
+    #     if size < dmin:
+    #         dmin = size
+    #     sizes.append(size)
+    vec = np.asarray(raw_displ)[:,offset:offset+3]
+    if pzero:
+        vec -= np.asarray(raw_displ[0][offset:offset+3])
+
+    sizes = np.sqrt( np.sum( np.power(vec, 2), axis=1) )
+
+    dmin = sizes.min()
+    dmax = sizes.max()
+    if min_size is None and max_size is None:
+        displ = raw_displ
+    else:
+        displ = []
+        if pzero:
+            for i in range(len(raw_displ)):
+                size = sizes[i]
+                if size > min_size  and size < max_size :
+                    line = raw_displ[i]
+                    line[offset:offset+3] -= vec[0]
+                    displ.append(line)
+        else:
+            for i in range(len(raw_displ)):
+                size = sizes[i]
+                if size > min_size  and size < max_size :
+                    displ.append(raw_displ[i])
+    displ = np.asarray(displ)
+    return displ, dmin, dmax
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -411,7 +452,7 @@ class MainWindow(QMainWindow):
             "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
             )
         
-        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand.\n"
+        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
             "When you are happy with your region click 'Create Mask'.")
 
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
@@ -692,7 +733,9 @@ class MainWindow(QMainWindow):
                         return #prevents dialog showing for every single file by exiting the for loop
                 image[image_var] = filenames
                 if label is not None:
-                    label.setText(os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+                    label.setText(
+                        os.path.dirname(self.image[image_var][0]) + "\n" +\
+                        os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
 
             if next_button is not None:
                 try:
@@ -740,7 +783,10 @@ class MainWindow(QMainWindow):
         msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle(title)
         msg.setText(message)
-        msg.setDetailedText(self.e.ErrorMessage())
+        try:
+            msg.setDetailedText(self.e.ErrorMessage())
+        except:
+            pass
         if action_button is not None:
             msg.addButton(action_button, msg.ActionRole)
         msg.exec_()
@@ -896,6 +942,7 @@ class MainWindow(QMainWindow):
                 self.PointCloudWorker("load pointcloud file")
                 self.pointCloudLoaded = True
                 self.no_mask_pc_load = False
+                self.pointcloud_is = 'loaded'
 
         if(self.reg_load):
             self.displayRegistrationViewer(registration_open = True)
@@ -1699,7 +1746,7 @@ It is used as a global starting point and a translation reference."
         else:
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 self.unsampled_ref_image_data = self.ref_image_data 
-                self.LoadCorrImageForReg()
+                self.LoadCorrImageForReg(crop_corr_image=True)
             else:
                 self.completeRegistration()
 
@@ -1980,15 +2027,26 @@ It is used as a global starting point and a translation reference."
         mp_widgets['extendMaskCheck'].setText("Extend mask")
         mp_widgets['extendMaskCheck'].setToolTip("You may draw a second trace. Select extend mask to extend the mask to this second traced region.")
         mp_widgets['extendMaskCheck'].setEnabled(False)
+        mp_widgets['extendMaskCheck'].stateChanged.connect(self.warnIfUnchecking)
 
         formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
+        widgetno += 1
+
+        # Add start tracing button
+        mp_widgets['start_tracing'] = QPushButton(groupBox)
+        mp_widgets['start_tracing'].setText("Start Tracing")
+        mp_widgets['start_tracing'].clicked.connect(self.ToggleTracing)
+        mp_widgets['start_tracing'].setCheckable(True)
+        mp_widgets['start_tracing'].setChecked(False)
+        mp_widgets['start_tracing'].setToolTip("Begin drawing a region on the viewer to create a mask.")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['start_tracing'])
         widgetno += 1
 
         # Add submit button
         mp_widgets['submitButton'] = QPushButton(groupBox)
         mp_widgets['submitButton'].setText("Create Mask")
         mp_widgets['submitButton'].clicked.connect(lambda: self.MaskWorker("extend"))
-        mp_widgets['submitButton'].setToolTip("Press 't' and draw a region on the viewer to create a mask.")
+        mp_widgets['submitButton'].setToolTip("Press 'Start Tracing' button and draw a region on the viewer to create a mask.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['submitButton'])
         widgetno += 1
 
@@ -2010,6 +2068,31 @@ It is used as a global starting point and a translation reference."
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
+
+
+    def warnIfUnchecking(self):
+        if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
+            self.warningDialog(window_title="Attention", 
+                               message="If you do not clear the mask and draw again the app will be very sad!" )
+
+
+    def ToggleTracing(self):
+        '''Toggles the tracing widget for tracing the mask'''
+        # notice that the viewer will capture the keypress event linked with activating the tracing
+        viewer = self.vis_widget_2D.getViewer()
+        mp_widgets = self.mask_parameters
+        # we come here after the user has clicked on the button:
+        # thins means that if the button is checked, it was not before,
+        # So the user expects to start tracing
+        if mp_widgets['start_tracing'].isChecked():
+            # enable tracing
+            mp_widgets['start_tracing'].setText("Stop Tracing")
+            viewer.imageTracer.On()
+        else:
+            # disable tracing
+            mp_widgets['start_tracing'].setText("Start Tracing")
+            viewer.imageTracer.Off()
+
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -2035,7 +2118,11 @@ It is used as a global starting point and a translation reference."
             
         self.create_progress_window("Loading", "Loading Mask")
         self.mask_worker.signals.progress.connect(self.progress)
-       
+
+        # disable tracing on the viewer and
+        # set the button to unchecked and text to start tracing
+        self._disableTracingAndResetUI()
+
         self.progress_window.setValue(10)
         self.threadpool.start(self.mask_worker)  
         self.mask_worker.signals.error.connect(self.select_mask)
@@ -2053,8 +2140,9 @@ It is used as a global starting point and a translation reference."
         #we can easily get the image data v.image2 but would need a stencil?
 
         # print("Extend mask")
-        progress_callback = kwargs.get('progress_callback', None)
-        
+        progress_callback = kwargs.get('progress_callback', lambda x: logging.info("extendMask Progress: {}".format(x)))
+        # setup the progress bar
+        ui_update = partial(self.ui_progress_update, progress_callback)
         v = self.vis_widget_2D.frame.viewer
 
         poly = vtk.vtkPolyData()
@@ -2088,7 +2176,7 @@ It is used as a global starting point and a translation reference."
 
         #print(image_data.GetSpacing())
         
-        progress_callback.emit(40)
+        # progress_callback.emit(40)
 
 
         mask0 = Converter.numpy2vtkImage(np.zeros((dims[0],dims[1],dims[2]),order='F', 
@@ -2106,10 +2194,12 @@ It is used as a global starting point and a translation reference."
         stencil.SetBackgroundInputData(mask0)
 
         stencil.SetStencilConnection(lasso.GetOutputPort())
+
+        stencil.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         stencil.Update()
         dims = stencil.GetOutput().GetDimensions()
 
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
 
         #print("Stencil dims: " + str(dims))
 
@@ -2123,7 +2213,7 @@ It is used as a global starting point and a translation reference."
         #vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
         stencil_output = self.copySlices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
 
-        progress_callback.emit(85)
+        # progress_callback.emit(85)
 
         # save the mask to a file in temp folder
         writer = vtk.vtkMetaImageWriter()
@@ -2131,11 +2221,11 @@ It is used as a global starting point and a translation reference."
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         self.mask_file = "Masks/latest_selection.mha"
 
-        progress_callback.emit(90)
+        # progress_callback.emit(90)
 
         # if extend mask -> load temp saved mask
         if self.mask_parameters['extendMaskCheck'].isChecked():
-            self.setStatusTip('Extending mask')
+            # self.setStatusTip('Extending mask')
             if os.path.exists(os.path.join(tmpdir, "Masks", "latest_selection.mha")):
                 # print  ("extending mask ", os.path.join(tmpdir, "Masks/latest_selection.mha"))
                 reader = vtk.vtkMetaImageReader()
@@ -2149,11 +2239,13 @@ It is used as a global starting point and a translation reference."
                 math.SetInput2Data(reader.GetOutput())
                 math.Update()
 
+                progress_callback.emit(1)
                 threshold = vtk.vtkImageThreshold()
                 threshold.ThresholdBetween(1, 255)
                 threshold.ReplaceInOn()
                 threshold.SetInValue(1)
                 threshold.SetInputConnection(math.GetOutputPort())
+                threshold.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
                 threshold.Update()
 
                 writer.SetInputData(threshold.GetOutput())
@@ -2164,11 +2256,28 @@ It is used as a global starting point and a translation reference."
             writer.SetInputData(stencil_output)
             self.mask_data = stencil_output
 
+        # the writer only updates two values 0 and 1
+        # also it blocks the interface (why???)
+        # adding a pause allows the progress to update correctly
+        writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
+
+        progress_callback.emit(99)
+        import time
+        time.sleep(1)
         writer.Write() # writes to file.
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
-        self.setStatusTip('Done')
+        # self.setStatusTip('Done')
 
-        progress_callback.emit(100)
+        # progress_callback.emit(100)
+        self._disableTracingAndResetUI()
+
+    def _disableTracingAndResetUI(self):
+        # disable tracing on the viewer
+        v = self.vis_widget_2D.frame.viewer
+        v.imageTracer.Off()
+        # set the button to unchecked and text to start tracing
+        self.mask_parameters['start_tracing'].setChecked(False)
+        self.mask_parameters['start_tracing'].setText("Start Tracing")
 
     def copySlices(self, indata, fromslice, min, max, orientation, progress_callback):
 
@@ -2197,9 +2306,8 @@ It is used as a global starting point and a translation reference."
         load_session = kwargs.get('load_session', False)
         progress_callback = kwargs.get('progress_callback', None)
         time.sleep(0.1) #required so that progress window displays
-        progress_callback.emit(30)
-        #Appropriate modification to Point Cloud Panel
-        self.updatePointCloudPanel()
+        # progress_callback.emit(30)
+        
         
         v =  self.vis_widget_2D.frame.viewer
         if not isinstance(v.img3D, vtk.vtkImageData):
@@ -2212,7 +2320,7 @@ It is used as a global starting point and a translation reference."
         tmpdir = tempfile.gettempdir()
         if (load_session):
             self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
-            progress_callback.emit(40)
+            # progress_callback.emit(40)
         else:
             filename = self.mask_parameters["masksList"].currentText()
             self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", filename))
@@ -2229,16 +2337,20 @@ It is used as a global starting point and a translation reference."
                 self.axis = axis
 
                 self.sliceno = self.mask_details[filename][1]
-            progress_callback.emit(60)
-            
+            # progress_callback.emit(60)
+        
+        ui_update = partial(self.ui_progress_update, progress_callback)
+        self.mask_reader.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
+        
         self.mask_reader.Update()
-        #progress_callback.emit(50)
+        progress_callback.emit(50)
 
         writer = vtk.vtkMetaImageWriter()
        
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         writer.SetInputConnection(self.mask_reader.GetOutputPort())
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
+        writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         writer.Write()
         self.mask_file = "Masks/latest_selection.mha"
         
@@ -2249,8 +2361,16 @@ It is used as a global starting point and a translation reference."
         if not dims == self.mask_reader.GetOutput().GetDimensions():
             #print("Not compatible")
             return 
-
         self.mask_data = self.mask_reader.GetOutput()
+        progress_callback.emit(100)
+
+    def ui_progress_update(self, callback, vtkcaller, event):
+        '''connects the progress from a vtkAlgorithm to a Qt callback from eqt Worker'''
+        print ("{} progress {}".format(type(vtkcaller), vtkcaller.GetProgress()))
+        progress = vtkcaller.GetProgress()*100-1
+        if progress < 0:
+            progress = 0
+        callback.emit(progress)
 
     def select_mask(self): 
         dialogue = QFileDialog()
@@ -2269,6 +2389,7 @@ It is used as a global starting point and a translation reference."
 
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
+        self.mask_parameters['extendMaskCheck'].setChecked(False)
         self.mask_parameters['submitButton'].setText("Create Mask")
         self.vis_widget_2D.frame.viewer.setInputData2(vtk.vtkImageData()) #deletes mask
         self.mask_reader = None
@@ -2280,12 +2401,21 @@ It is used as a global starting point and a translation reference."
         #self.lasso = vtk.vtkLassoStencilSource()
         #self.vis_widget_2D.frame.viewer.imageTracer = vtk.vtkImageTracerWidget() #cause problems - as removes functionality
         #self.vis_widget_2D.frame.viewer.imageTracer.Modified()
-
+    
     def DisplayMask(self, type = None):
+        #Appropriate modification to Point Cloud Panel
+        self.updatePointCloudPanel()
+
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
         v = self.vis_widget_2D.frame.viewer
         if (hasattr(self,'mask_data')):
+            ui_update = partial(lambda dialog, vtkcaller, event: dialog.setValue(vtkcaller.GetProgress()*100), self.progress_window)
+            v.imageSlice.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
             v.setInputData2(self.mask_data)
+            # we loaded the mask, the app crashes if someone clicks on create mask
+            # without clearing the mask first unless extendMaskCheck is checked 
+            # Forcibly check extend mask checkbox
+            self.mask_parameters['extendMaskCheck'].setChecked(True)
         else:
             if v.img3D:
                 self.warningDialog( 
@@ -2398,11 +2528,18 @@ It is used as a global starting point and a translation reference."
         pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
 
         # Add horizonal seperator
+        # Generate panel
         self.seperator = QFrame(self.graphParamsGroupBox)
         self.seperator.setFrameShape(QFrame.HLine)
         self.seperator.setFrameShadow(QFrame.Raised)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, self.seperator)
         widgetno += 1
+        # Load point cloud section 
+        # add a separator and title
+        generatePointCloudLabel = QLabel("Generate Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
+        widgetno += 1
+
 
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
@@ -2445,7 +2582,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.overlapXValueEntry.setMaximum(0.99)
         self.overlapXValueEntry.setMinimum(0.00)
         self.overlapXValueEntry.setSingleStep(0.01)
-        self.overlapXValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.overlapXValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self.overlapXValueEntry.valueChanged.connect(self.displaySubvolumePreview)
         self.overlapXValueEntry.setToolTip(overlap_tooltip_text)
         if orientation == 0:
@@ -2464,7 +2601,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.overlapYValueEntry.setMaximum(0.99)
         self.overlapYValueEntry.setMinimum(0.00)
         self.overlapYValueEntry.setSingleStep(0.01)
-        self.overlapYValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.overlapYValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self.overlapYValueEntry.valueChanged.connect(self.displaySubvolumePreview)
         self.overlapYValueEntry.setToolTip(overlap_tooltip_text)
         if orientation == 1:
@@ -2483,7 +2620,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.overlapZValueEntry.setMaximum(0.99)
         self.overlapZValueEntry.setMinimum(0.00)
         self.overlapZValueEntry.setSingleStep(0.01)
-        self.overlapZValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.MinimumExpanding)
+        self.overlapZValueEntry.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
         self.overlapZValueEntry.valueChanged.connect(self.displaySubvolumePreview)
         self.overlapZValueEntry.setToolTip(overlap_tooltip_text)
         if orientation == 2:
@@ -2590,7 +2727,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         # Add submit button
         self.graphParamsSubmitButton = QPushButton(self.graphParamsGroupBox)
         self.graphParamsSubmitButton.setText("Generate Point Cloud")
-        self.graphParamsSubmitButton.clicked.connect(lambda: self.createSavePointCloudWindow(save_only=False))
+        self.graphParamsSubmitButton.clicked.connect(self._generatePointCloudClicked)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.graphParamsSubmitButton)
         widgetno += 1
         # Add elements to layout
@@ -2598,6 +2735,17 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.graphDockVL.addWidget(self.dockWidget)
         self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.pointCloudDockWidget)
+        widgetno += 1
+
+        # Load point cloud section 
+        # add a separator and title
+        seperator = QFrame(self.graphParamsGroupBox)
+        seperator.setFrameShape(QFrame.HLine)
+        seperator.setFrameShadow(QFrame.Raised)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, seperator)
+        widgetno += 1
+        generatePointCloudLabel = QLabel("Load Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
         widgetno += 1
 
         pc['pointcloudList'] = QComboBox(self.graphParamsGroupBox)
@@ -2628,6 +2776,17 @@ The first point is significant, as it is used as a global starting point and ref
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
 
+        # Display point cloud section 
+        # add a separator and title
+        seperator = QFrame(self.graphParamsGroupBox)
+        seperator.setFrameShape(QFrame.HLine)
+        seperator.setFrameShadow(QFrame.Raised)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.SpanningRole, seperator)
+        widgetno += 1
+        generatePointCloudLabel = QLabel("Display Pointcloud", self.graphParamsGroupBox)
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, generatePointCloudLabel)
+        widgetno += 1
+
         pc['clear_button'] = QPushButton(self.graphParamsGroupBox)
         pc['clear_button'].setText("Clear Point Cloud")
         pc['clear_button'].clicked.connect(self.clearPointCloud)
@@ -2636,7 +2795,7 @@ The first point is significant, as it is used as a global starting point and ref
 
         pc['subvolumes_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['subvolumes_check'].setText("Display Subvolume Regions")
-        pc['subvolumes_check'].setChecked(True)
+        pc['subvolumes_check'].setChecked(False)
         pc['subvolumes_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_actor') )
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolumes_check'])
         widgetno += 1
@@ -2654,6 +2813,10 @@ The first point is significant, as it is used as a global starting point and ref
         pc['pc_points_value'] = QLabel("0")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
+
+    def _generatePointCloudClicked(self):
+        self.pointcloud_is = 'generated'
+        self.createSavePointCloudWindow(save_only=False)
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
@@ -2786,8 +2949,8 @@ The first point is significant, as it is used as a global starting point and ref
 
     def select_pointcloud(self): #, label):
         dialogue = QFileDialog()
+        self.roi = None
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
-        #print(self.roi)
         if self.roi:
             self.PointCloudWorker("load pointcloud file")
 
@@ -2797,6 +2960,9 @@ The first point is significant, as it is used as a global starting point and ref
             self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
             self.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.pointcloud_parameters['pointcloudList'].setCurrentText(filename)
+        
+        if self.roi is not None:
+            self.pointcloud_is = 'loaded'
 
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
@@ -3192,13 +3358,17 @@ Please select a replacement pointcloud file.')
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
-        self.result_widgets['pc_points_value'].setText(str(self.pc_no_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
+        if hasattr(self, 'num_processed_points'):
+            self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
         
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
         self.setup3DPointCloudPipeline()
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
         #Update window so pointcloud is instantly visible without user having to interact with viewer first
         self.vis_widget_2D.frame.viewer.getRenderWindow().Render()
         self.vis_widget_3D.frame.viewer.getRenderWindow().Render()
@@ -3210,6 +3380,7 @@ Please select a replacement pointcloud file.')
         self.pointCloudLoaded = True
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
+        self.pointcloud_is = 'loaded'
         
 
     def DisplayPointCloud(self):
@@ -3275,6 +3446,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         self.progress_window.setValue(100)
 
+        # hide actor if user does not request to see it. Off by default
+        self.showHideActor(self.pointcloud_parameters['subvolumes_check'].isChecked(), actor_name='subvol_actor')
+        
         self.warningDialog(window_title="Success", message="Point cloud created." )
         self.pointCloud_details["latest_pointcloud.roi"] = [self.pointCloud_subvol_size, self.pointCloud_overlap, self.pointCloud_rotation, self.pointCloud_shape]
         self.DisplayNumberOfPointcloudPoints()
@@ -3334,14 +3508,15 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
 
 
-    def displayVectors(self,disp_file, vector_dim):
+    def displayVectors(self,disp_file):
         self.clearPointCloud()
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
         self.disp_file = disp_file
         
-        displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2, multiplier = self.result_widgets['scale_vectors_entry'].value())
+        displ = self.loadDisplacementFile(disp_file, disp_wrt_point0 = self.result_widgets['vec_entry'].currentIndex() == 2, \
+                                                     multiplier = self.result_widgets['scale_vectors_entry'].value())
 
-        self.pc_no_points = np.shape(displ)[0]
+        self.num_processed_points = np.shape(displ)[0]
         self.DisplayNumberOfPointcloudPoints()
 
         logging.info('Adding vectors 2D')
@@ -3362,20 +3537,56 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
         if hasattr(self, 'scalar_bar_3D'):
             self.vis_widget_3D.frame.viewer.getRenderer().RemoveActor(self.scalar_bar_3D)
+    
+    def _setUIWithDisplacementVectorFullRange(self):
+    
+        self.result_widgets['range_vectors_max_entry'].setEnabled(True)
+        self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+        dmin = self.result_widgets['range_vectors_max_entry'].minimum()
+        dmax = self.result_widgets['range_vectors_max_entry'].maximum()
+        self.result_widgets['range_vectors_max_entry'].setValue(dmax)
+        self.result_widgets['range_vectors_min_entry'].setValue(dmin)
+    
 
+
+    def _updateUIwithDisplacementVectorRange(self, dmin, dmax):
+        single_step = 1e-6
+
+        self.result_widgets['range_vectors_max_entry'].setSingleStep(single_step)
+        self.result_widgets['range_vectors_max_entry'].setMaximum(dmax)
+        self.result_widgets['range_vectors_max_entry'].setMinimum(dmin)
+        self.result_widgets['range_vectors_max_entry'].setValue(dmax)
+        self.result_widgets['range_vectors_max_entry'].setEnabled(True)
+
+        self.result_widgets['range_vectors_min_entry'].setSingleStep(single_step)
+        self.result_widgets['range_vectors_min_entry'].setMaximum(dmax)
+        self.result_widgets['range_vectors_min_entry'].setMinimum(dmin)
+        self.result_widgets['range_vectors_min_entry'].setValue(dmin)
+        self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+
+        self.result_widgets['range_vectors_all_entry'].setEnabled(True)
+        
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
         
-        displ = np.asarray(
+        raw_displ = np.asarray(
             PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
         )
 
-        if disp_wrt_point0:
-            point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-        for count in range(len(displ)):
-            for i in range(3):
-                if disp_wrt_point0:
-                    displ[count][i+6] = (displ[count][i+6] - point0_disp[i])*multiplier
-                else:
+        if self.result_widgets['range_vectors_min_entry'].isEnabled():
+            min_size = self.result_widgets['range_vectors_min_entry'].value() 
+            max_size = self.result_widgets['range_vectors_max_entry'].value()
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
+        else:
+            min_size = None
+            max_size = None
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
+            self._updateUIwithDisplacementVectorRange(dmin, dmax)
+                
+        displ = np.asarray(displ)
+
+        if multiplier != 1:
+            for count in range(len(displ)):
+                for i in range(3):
                     displ[count][i+6] *= multiplier
 
         return displ
@@ -3478,7 +3689,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
 
-                acolor.InsertNextValue(reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)) #inserts u^2 + v^2 + w^2
+                acolor.InsertNextValue(np.sqrt(
+                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)
+                    ) 
+                )#inserts u^2 + v^2 + w^2
                 
             lut = self._createLookupTable()
 
@@ -3617,7 +3831,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
             v = viewer
-            grid = vtk.vtkUnstructuredGrid()
             arrow = vtk.vtkDoubleArray()
             arrow.SetNumberOfComponents(3)
             acolor = vtk.vtkDoubleArray()
@@ -3631,9 +3844,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 vertices.InsertCellPoint(p)
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                new_points = displ[count][6:9]
-                # print(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)
-                acolor.InsertNextValue(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2) #inserts u^2 + v^2
+                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
         
@@ -3873,7 +4084,7 @@ This parameter has a strong effect on computation time, so be careful."
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
         rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
         rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
-        rdvc_widgets['subvol_points_spinbox'].setMaximum(10000)
+        rdvc_widgets['subvol_points_spinbox'].setValue(10000)
         rdvc_widgets['subvol_points_spinbox'].setToolTip(subvol_points_text)
 
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
@@ -3990,7 +4201,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.rdvc_widgets = rdvc_widgets
 
     def _set_num_points_in_run_to_all(self):
-        int(self.pc_no_points)
         if hasattr(self, 'pc_no_points'):
             maxpoints = int(self.pc_no_points)
         else:
@@ -4039,16 +4249,20 @@ This parameter has a strong effect on computation time, so be careful."
             self.warningDialog("Complete image registration first.", "Error")
             return
 
-        if self.singleRun_groupBox.isVisible():
+        if self.pointcloud_is == 'loaded':
             if not self.roi:
                 self.warningDialog(window_title="Error", 
                                message="Create or load a pointcloud on the viewer first." )
                 return
-        else:
+        elif self.pointcloud_is == 'generated':
             if not self.mask_reader:
                 self.warningDialog(window_title="Error", 
                                message="Load a mask on the viewer first" )
                 return
+        else:
+            self.warningDialog(window_title="Error", 
+                               message="Missing pointcloud_is parameter! Contact developers" )
+            return
         
         run_name = str( self.rdvc_widgets['name_entry'].text() )
         saved_run_names = []
@@ -4219,9 +4433,17 @@ This parameter has a strong effect on computation time, so be careful."
                     #print(subvol_size)
                     subvol_size_count+=1
                     filename = os.path.join( run_folder , "_{}.roi".format(str(subvol_size)))
-                    #print(filename)
-                    if not self.createPointCloud(filename=filename, subvol_size=int(subvol_size)):
-                        return ("pointcloud error")
+                    if self.pointcloud_is == 'generated':
+                        # we will generate the same pointcloud for each subvolume size
+                        pc_subvol_size = self.pointcloud_parameters['pointcloud_size_entry'].text()
+                        if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size)):
+                            return ("pointcloud error")
+                    elif self.pointcloud_is == 'loaded':
+                        # we will use the file with the pointcloud for each subvol size
+                        shutil.copyfile(self.roi, filename)
+                    else:
+                        raise ValueError("pointcloud_is must be either 'generated' or 'loaded'")
+
                     self.roi_files.append(filename)
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
@@ -4411,7 +4633,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
         result_widgets['vec_entry'] = QComboBox(groupBox)
-        result_widgets['vec_entry'].addItems(['None', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
+        result_widgets['vec_entry'].addItems(['Pointcloud', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
+        result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         widgetno += 1
 
@@ -4429,6 +4652,49 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['scale_vectors_entry'])
         widgetno += 1
 
+        result_widgets['range_vectors_all_label'] =  QLabel(groupBox)
+        result_widgets['range_vectors_all_label'].setText("Display Vectors Full Range:")
+        result_widgets['range_vectors_all_label'].setToolTip("Show all displacement vectors")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_all_label'])
+
+        result_widgets['range_vectors_all_entry'] = QPushButton(groupBox)
+        result_widgets['range_vectors_all_entry'].setText("Reset to full range")
+        result_widgets['range_vectors_all_entry'].setEnabled(False)
+        result_widgets['range_vectors_all_entry'].clicked.connect(self._setUIWithDisplacementVectorFullRange)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_all_entry'])
+        widgetno += 1
+
+        result_widgets['range_vectors_min_label'] =  QLabel(groupBox)
+        result_widgets['range_vectors_min_label'].setText("Vector Range Min:")
+        result_widgets['range_vectors_min_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_min_label'])
+
+        single_step = 0.00001
+        result_widgets['range_vectors_min_entry'] = QDoubleSpinBox(groupBox)
+        result_widgets['range_vectors_min_entry'].setSingleStep(single_step)
+        result_widgets['range_vectors_min_entry'].setMaximum(1.-single_step)
+        result_widgets['range_vectors_min_entry'].setMinimum(0.0)
+        result_widgets['range_vectors_min_entry'].setValue(0.00)
+        result_widgets['range_vectors_min_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        result_widgets['range_vectors_min_entry'].setEnabled(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_min_entry'])
+        widgetno += 1
+
+        result_widgets['range_vectors_max_label'] =  QLabel(groupBox)
+        result_widgets['range_vectors_max_label'].setText("Vector Range Max:")
+        result_widgets['range_vectors_max_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_max_label'])
+
+        single_step = 0.00001
+        result_widgets['range_vectors_max_entry'] = QDoubleSpinBox(groupBox)
+        result_widgets['range_vectors_max_entry'].setSingleStep(single_step)
+        result_widgets['range_vectors_max_entry'].setMaximum(1.)
+        result_widgets['range_vectors_max_entry'].setMinimum(single_step)
+        result_widgets['range_vectors_max_entry'].setValue(1.00)
+        result_widgets['range_vectors_max_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        result_widgets['range_vectors_max_entry'].setEnabled(False)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_max_entry'])
+        widgetno += 1
         result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
         widgetno += 1
@@ -4506,9 +4772,15 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             #print("New roi is", self.roi)
             self.results_folder = results_folder
 
-            if (self.result_widgets['vec_entry'].currentText() == "None"):
+            if (self.result_widgets['vec_entry'].currentText() == "Pointcloud"):
                 self.PointCloudWorker("load pointcloud file")
                 self._removeColormap()
+                # reset the interface
+                self.result_widgets['range_vectors_max_entry'].setEnabled(False)
+                self.result_widgets['range_vectors_min_entry'].setEnabled(False)
+                # set the label of the number of points to the number of points in the pointcloud
+                self.num_processed_points = int( self.pc_no_points )
+                self.DisplayNumberOfPointcloudPoints()
 
             else: 
                 # print("Result list", self.result_list, len(self.result_list))
@@ -4520,13 +4792,16 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                         if result.subvol_points == subvol_points:
                             # print ("YES")
                             run_file = result.disp_file
-                            self.displayVectors(run_file, 2)
+                            self.displayVectors(run_file)
                         # else:
                         #     print ("NO")    
                     # else:
                     #     print ("NO")
 
-
+    def _DVCResultsDisableRanges(self, index):
+        # reset the interface
+        self.result_widgets['range_vectors_max_entry'].setEnabled(False)
+        self.result_widgets['range_vectors_min_entry'].setEnabled(False)
 
     def CreateGraphsWindow(self):
         #print("Create graphs")
@@ -4980,7 +5255,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Ok.clicked.connect(self.load_session_load)
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
-            dialog.exec()
+            # Try to centre the load session window
+            # from PySide2.QtGui import QScreen
+            # geom = QScreen().availableGeometry()
+            # print (geom)
+            # centrex = geom.topRight().x() + geom.topLeft().x()
+            # centrey = geom.topRight().y() + geom.bottomRight().y()
+            # dialog.move(centrex/2,centrey/2)
+            dialog.open()
         
 
     def load_session_load(self):
@@ -5244,7 +5526,10 @@ Please select the new location of the file, or move it back to where it was orig
 
         else:
             self.subvolume_points = None 
-            self.rdvc_widgets['subvol_points_spinbox'].setValue(self.rdvc_widgets['subvol_points_spinbox'].minimum())
+            # set default to 10000 instead of minimum
+            # value = self.rdvc_widgets['subvol_points_spinbox'].minimum()
+            value = 10000
+            self.rdvc_widgets['subvol_points_spinbox'].setValue(value)
 
             self.points = None
             self.rdvc_widgets['run_points_spinbox'].setValue(self.rdvc_widgets['run_points_spinbox'].minimum())
@@ -5331,10 +5616,11 @@ Please select the new location of the file, or move it back to where it was orig
 
 # Loading and Error windows:
     def progress(self, value):
-        # print("progress emitted")
-        if int(value) > self.progress_window.value():
-            self.progress_window.setValue(value)
-
+        # print("progress emitted", value)
+        if int(value) == 0:
+            value = 1
+        self.progress_window.setValue(value)
+        
 
 
 
@@ -6012,16 +6298,19 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
 
 
 def main():
-    err = vtk.vtkFileOutputWindow()
-    err.SetFileName("../viewer.log")
-    vtk.vtkOutputWindow.SetInstance(err)
-
     app = QtWidgets.QApplication([])
+    
     file_dir = os.path.dirname(__file__)
     owl_file = os.path.join(file_dir, "DVCIconSquare.png")
     owl = QtGui.QPixmap(owl_file)
     splash = QtWidgets.QSplashScreen(owl)
     splash.show()
+    
+    err = vtk.vtkFileOutputWindow()
+    err.SetFileName("../viewer.log")
+    vtk.vtkOutputWindow.SetInstance(err)
+
+    
     window = MainWindow()
     
     window.show()

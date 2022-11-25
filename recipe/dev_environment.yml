@@ -1,0 +1,16 @@
+name: idvc_dev
+channels:
+  - ccpi
+  - paskino
+  - conda-forge
+dependencies:    
+    - python
+    - numpy
+    - ccpi::ccpi-viewer >=22.2.0
+    - ccpi::ccpi-dvc >=22.0.0
+    - natsort
+    - docopt
+    - matplotlib
+    - openmp                # [osx]
+    - qdarkstyle
+    - vtk=8.1.2

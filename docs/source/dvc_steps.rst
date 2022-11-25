@@ -52,13 +52,12 @@ Creating a mask
 ~~~~~~~~~~~~~~~
 
 A mask needs to be created to dictate where the point cloud will lie.
-To draw a mask, click on the 2D viewer and then press **t**.
-You can then trace a region freehand.
+To draw a mask, click on the **Start Tracing** button.
+This will allow you to trace a region freehand by left button clicking and dragging the mouse.
 
-To extend the mask above and below the current slice, you may adjust the **Slices Above** and **Slices Below** settings,
+To extend the mask in 3D, above and below the current slice, you may adjust the **Slices Above** and **Slices Below** settings,
 before clicking **create mask**.
 The **Slices Above** and **Slices Below** are in the coordinate system of the down-sampled image (if your image has been down-sampled).
-
 
 If you would like your mask to cover more than one area, or you would like to increase the area of the mask, tick the **Extend Mask** checkbox.
 Then you can draw another region and press **Extend Mask** to extend the mask to this region as well.

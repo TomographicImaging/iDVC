@@ -1,6 +1,17 @@
 # ChangeLog
+## v22.2.1
+* Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
+* Create environment file for development of iDVC
+* On load/creation of pointcloud display points only by default
+* Makes a few GUI bugfixes, such as fix number of points in the pointcloud displayed wrongly here and there.
+* Catches exceptions on load of files and opens message boxes
+* Fix load of TIFF files
+* Added button to start tracing
 
-## v22.x.x
+## v22.2.0
+* Update DVC executable version to v22.0.0
+* Adds GUI elements to control the range of the displacement vectors displayed
+* Adds splash screen
 * Add basic color bar when visualising the vectors in both 2D and 3D
 * Pass max number of points to be processed to dvc executable
 * Pass point 0 location to dvc executable
