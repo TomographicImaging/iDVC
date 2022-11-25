@@ -3919,7 +3919,7 @@ This parameter has a strong effect on computation time, so be careful."
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
         rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
         rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
-        rdvc_widgets['subvol_points_spinbox'].setMaximum(10000)
+        rdvc_widgets['subvol_points_spinbox'].setValue(10000)
         rdvc_widgets['subvol_points_spinbox'].setToolTip(subvol_points_text)
 
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
@@ -5283,7 +5283,10 @@ Please select the new location of the file, or move it back to where it was orig
 
         else:
             self.subvolume_points = None 
-            self.rdvc_widgets['subvol_points_spinbox'].setValue(self.rdvc_widgets['subvol_points_spinbox'].minimum())
+            # set default to 10000 instead of minimum
+            # value = self.rdvc_widgets['subvol_points_spinbox'].minimum()
+            value = 10000
+            self.rdvc_widgets['subvol_points_spinbox'].setValue(value)
 
             self.points = None
             self.rdvc_widgets['run_points_spinbox'].setValue(self.rdvc_widgets['run_points_spinbox'].minimum())
