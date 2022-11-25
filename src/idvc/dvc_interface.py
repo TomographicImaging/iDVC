@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
             "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
             )
         
-        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing'.\n"
+        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
             "When you are happy with your region click 'Create Mask'.")
 
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
@@ -1862,6 +1862,7 @@ It is used as a global starting point and a translation reference."
         mp_widgets['extendMaskCheck'].setText("Extend mask")
         mp_widgets['extendMaskCheck'].setToolTip("You may draw a second trace. Select extend mask to extend the mask to this second traced region.")
         mp_widgets['extendMaskCheck'].setEnabled(False)
+        mp_widgets['extendMaskCheck'].stateChanged.connect(self.warnIfUnchecking)
 
         formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
         widgetno += 1
@@ -1880,7 +1881,7 @@ It is used as a global starting point and a translation reference."
         mp_widgets['submitButton'] = QPushButton(groupBox)
         mp_widgets['submitButton'].setText("Create Mask")
         mp_widgets['submitButton'].clicked.connect(lambda: self.MaskWorker("extend"))
-        mp_widgets['submitButton'].setToolTip("Press 't' and draw a region on the viewer to create a mask.")
+        mp_widgets['submitButton'].setToolTip("Press 'Start Tracing' button and draw a region on the viewer to create a mask.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['submitButton'])
         widgetno += 1
 
@@ -1903,6 +1904,13 @@ It is used as a global starting point and a translation reference."
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
+
+    def warnIfUnchecking(self):
+        if not self.mask_parameters['extendMaskCheck'].isChecked():
+            self.warningDialog(window_title="Attention", 
+                               message="If you do not clear the mask and draw again the app will be very sad!" )
+
+
     def ToggleTracing(self):
         '''Toggles the tracing widget for tracing the mask'''
         # notice that the viewer will capture the keypress event linked with activating the tracing
@@ -1919,7 +1927,7 @@ It is used as a global starting point and a translation reference."
             # disable tracing
             mp_widgets['start_tracing'].setText("Start Tracing")
             viewer.imageTracer.Off()
-            
+
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -2209,6 +2217,10 @@ It is used as a global starting point and a translation reference."
         v = self.vis_widget_2D.frame.viewer
         if (hasattr(self,'mask_data')):
             v.setInputData2(self.mask_data)
+            # we loaded the mask, the app crashes if someone clicks on create mask
+            # without clearing the mask first unless extendMaskCheck is checked 
+            # Forcibly check extend mask checkbox
+            self.mask_parameters['extendMaskCheck'].setChecked(True)
         else:
             if v.img3D:
                 self.warningDialog( 
