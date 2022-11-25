@@ -2060,7 +2060,7 @@ It is used as a global starting point and a translation reference."
 
         # if extend mask -> load temp saved mask
         if self.mask_parameters['extendMaskCheck'].isChecked():
-            self.setStatusTip('Extending mask')
+            # self.setStatusTip('Extending mask')
             if os.path.exists(os.path.join(tmpdir, "Masks", "latest_selection.mha")):
                 # print  ("extending mask ", os.path.join(tmpdir, "Masks/latest_selection.mha"))
                 reader = vtk.vtkMetaImageReader()
@@ -2074,6 +2074,7 @@ It is used as a global starting point and a translation reference."
                 math.SetInput2Data(reader.GetOutput())
                 math.Update()
 
+                progress_callback.emit(1)
                 threshold = vtk.vtkImageThreshold()
                 threshold.ThresholdBetween(1, 255)
                 threshold.ReplaceInOn()
@@ -2090,10 +2091,17 @@ It is used as a global starting point and a translation reference."
             writer.SetInputData(stencil_output)
             self.mask_data = stencil_output
 
+        # the writer only updates two values 0 and 1
+        # also it blocks the interface (why???)
+        # adding a pause allows the progress to update correctly
         writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
+
+        progress_callback.emit(99)
+        import time
+        time.sleep(1)
         writer.Write() # writes to file.
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
-        self.setStatusTip('Done')
+        # self.setStatusTip('Done')
 
         # progress_callback.emit(100)
         self._disableTracingAndResetUI()
@@ -2134,8 +2142,7 @@ It is used as a global starting point and a translation reference."
         progress_callback = kwargs.get('progress_callback', None)
         time.sleep(0.1) #required so that progress window displays
         # progress_callback.emit(30)
-        #Appropriate modification to Point Cloud Panel
-        self.updatePointCloudPanel()
+        
         
         v =  self.vis_widget_2D.frame.viewer
         if not isinstance(v.img3D, vtk.vtkImageData):
@@ -2195,7 +2202,10 @@ It is used as a global starting point and a translation reference."
     def ui_progress_update(self, callback, vtkcaller, event):
         '''connects the progress from a vtkAlgorithm to a Qt callback from eqt Worker'''
         print ("{} progress {}".format(type(vtkcaller), vtkcaller.GetProgress()))
-        callback.emit(vtkcaller.GetProgress()*100-1)
+        progress = vtkcaller.GetProgress()*100-1
+        if progress < 0:
+            progress = 0
+        callback.emit(progress)
 
     def select_mask(self): 
         dialogue = QFileDialog()
@@ -2228,6 +2238,9 @@ It is used as a global starting point and a translation reference."
         #self.vis_widget_2D.frame.viewer.imageTracer.Modified()
     
     def DisplayMask(self, type = None):
+        #Appropriate modification to Point Cloud Panel
+        self.updatePointCloudPanel()
+
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
         v = self.vis_widget_2D.frame.viewer
         if (hasattr(self,'mask_data')):
@@ -5357,11 +5370,11 @@ Please select the new location of the file, or move it back to where it was orig
 
 # Loading and Error windows:
     def progress(self, value):
-        # print("progress emitted")
+        # print("progress emitted", value)
+        if int(value) == 0:
+            value = 1
         self.progress_window.setValue(value)
-        # if int(value) > self.progress_window.value():
-        #     self.progress_window.setValue(value)
-
+        
 
 
 class SettingsWindow(QDialog):
