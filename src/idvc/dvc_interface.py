@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
             "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
             )
         
-        self.help_text.append("Enable trace mode by clicking on the 2D viewer, then pressing 't'. Then you may draw a region freehand.\n"
+        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
             "When you are happy with your region click 'Create Mask'.")
 
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
@@ -648,7 +648,10 @@ class MainWindow(QMainWindow):
         msg.setIcon(QMessageBox.Critical)
         msg.setWindowTitle(title)
         msg.setText(message)
-        msg.setDetailedText(self.e.ErrorMessage())
+        try:
+            msg.setDetailedText(self.e.ErrorMessage())
+        except:
+            pass
         if action_button is not None:
             msg.addButton(action_button, msg.ActionRole)
         msg.exec_()
@@ -1859,15 +1862,26 @@ It is used as a global starting point and a translation reference."
         mp_widgets['extendMaskCheck'].setText("Extend mask")
         mp_widgets['extendMaskCheck'].setToolTip("You may draw a second trace. Select extend mask to extend the mask to this second traced region.")
         mp_widgets['extendMaskCheck'].setEnabled(False)
+        mp_widgets['extendMaskCheck'].stateChanged.connect(self.warnIfUnchecking)
 
         formLayout.setWidget(widgetno,QFormLayout.FieldRole, mp_widgets['extendMaskCheck'])
+        widgetno += 1
+
+        # Add start tracing button
+        mp_widgets['start_tracing'] = QPushButton(groupBox)
+        mp_widgets['start_tracing'].setText("Start Tracing")
+        mp_widgets['start_tracing'].clicked.connect(self.ToggleTracing)
+        mp_widgets['start_tracing'].setCheckable(True)
+        mp_widgets['start_tracing'].setChecked(False)
+        mp_widgets['start_tracing'].setToolTip("Begin drawing a region on the viewer to create a mask.")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['start_tracing'])
         widgetno += 1
 
         # Add submit button
         mp_widgets['submitButton'] = QPushButton(groupBox)
         mp_widgets['submitButton'].setText("Create Mask")
         mp_widgets['submitButton'].clicked.connect(lambda: self.MaskWorker("extend"))
-        mp_widgets['submitButton'].setToolTip("Press 't' and draw a region on the viewer to create a mask.")
+        mp_widgets['submitButton'].setToolTip("Press 'Start Tracing' button and draw a region on the viewer to create a mask.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['submitButton'])
         widgetno += 1
 
@@ -1889,6 +1903,31 @@ It is used as a global starting point and a translation reference."
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
+
+
+    def warnIfUnchecking(self):
+        if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
+            self.warningDialog(window_title="Attention", 
+                               message="If you do not clear the mask and draw again the app will be very sad!" )
+
+
+    def ToggleTracing(self):
+        '''Toggles the tracing widget for tracing the mask'''
+        # notice that the viewer will capture the keypress event linked with activating the tracing
+        viewer = self.vis_widget_2D.getViewer()
+        mp_widgets = self.mask_parameters
+        # we come here after the user has clicked on the button:
+        # thins means that if the button is checked, it was not before,
+        # So the user expects to start tracing
+        if mp_widgets['start_tracing'].isChecked():
+            # enable tracing
+            mp_widgets['start_tracing'].setText("Stop Tracing")
+            viewer.imageTracer.On()
+        else:
+            # disable tracing
+            mp_widgets['start_tracing'].setText("Start Tracing")
+            viewer.imageTracer.Off()
+
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -1914,7 +1953,11 @@ It is used as a global starting point and a translation reference."
             
         self.create_progress_window("Loading", "Loading Mask")
         self.mask_worker.signals.progress.connect(self.progress)
-       
+
+        # disable tracing on the viewer and
+        # set the button to unchecked and text to start tracing
+        self._disableTracingAndResetUI()
+
         self.progress_window.setValue(10)
         self.threadpool.start(self.mask_worker)  
         self.mask_worker.signals.error.connect(self.select_mask)
@@ -1932,8 +1975,9 @@ It is used as a global starting point and a translation reference."
         #we can easily get the image data v.image2 but would need a stencil?
 
         # print("Extend mask")
-        progress_callback = kwargs.get('progress_callback', None)
-        
+        progress_callback = kwargs.get('progress_callback', lambda x: logging.info("extendMask Progress: {}".format(x)))
+        # setup the progress bar
+        ui_update = partial(self.ui_progress_update, progress_callback)
         v = self.vis_widget_2D.frame.viewer
 
         poly = vtk.vtkPolyData()
@@ -1967,7 +2011,7 @@ It is used as a global starting point and a translation reference."
 
         #print(image_data.GetSpacing())
         
-        progress_callback.emit(40)
+        # progress_callback.emit(40)
 
 
         mask0 = Converter.numpy2vtkImage(np.zeros((dims[0],dims[1],dims[2]),order='F', 
@@ -1985,10 +2029,12 @@ It is used as a global starting point and a translation reference."
         stencil.SetBackgroundInputData(mask0)
 
         stencil.SetStencilConnection(lasso.GetOutputPort())
+
+        stencil.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         stencil.Update()
         dims = stencil.GetOutput().GetDimensions()
 
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
 
         #print("Stencil dims: " + str(dims))
 
@@ -2002,7 +2048,7 @@ It is used as a global starting point and a translation reference."
         #vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
         stencil_output = self.copySlices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
 
-        progress_callback.emit(85)
+        # progress_callback.emit(85)
 
         # save the mask to a file in temp folder
         writer = vtk.vtkMetaImageWriter()
@@ -2010,11 +2056,11 @@ It is used as a global starting point and a translation reference."
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         self.mask_file = "Masks/latest_selection.mha"
 
-        progress_callback.emit(90)
+        # progress_callback.emit(90)
 
         # if extend mask -> load temp saved mask
         if self.mask_parameters['extendMaskCheck'].isChecked():
-            self.setStatusTip('Extending mask')
+            # self.setStatusTip('Extending mask')
             if os.path.exists(os.path.join(tmpdir, "Masks", "latest_selection.mha")):
                 # print  ("extending mask ", os.path.join(tmpdir, "Masks/latest_selection.mha"))
                 reader = vtk.vtkMetaImageReader()
@@ -2028,11 +2074,13 @@ It is used as a global starting point and a translation reference."
                 math.SetInput2Data(reader.GetOutput())
                 math.Update()
 
+                progress_callback.emit(1)
                 threshold = vtk.vtkImageThreshold()
                 threshold.ThresholdBetween(1, 255)
                 threshold.ReplaceInOn()
                 threshold.SetInValue(1)
                 threshold.SetInputConnection(math.GetOutputPort())
+                threshold.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
                 threshold.Update()
 
                 writer.SetInputData(threshold.GetOutput())
@@ -2043,11 +2091,28 @@ It is used as a global starting point and a translation reference."
             writer.SetInputData(stencil_output)
             self.mask_data = stencil_output
 
+        # the writer only updates two values 0 and 1
+        # also it blocks the interface (why???)
+        # adding a pause allows the progress to update correctly
+        writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
+
+        progress_callback.emit(99)
+        import time
+        time.sleep(1)
         writer.Write() # writes to file.
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
-        self.setStatusTip('Done')
+        # self.setStatusTip('Done')
 
-        progress_callback.emit(100)
+        # progress_callback.emit(100)
+        self._disableTracingAndResetUI()
+
+    def _disableTracingAndResetUI(self):
+        # disable tracing on the viewer
+        v = self.vis_widget_2D.frame.viewer
+        v.imageTracer.Off()
+        # set the button to unchecked and text to start tracing
+        self.mask_parameters['start_tracing'].setChecked(False)
+        self.mask_parameters['start_tracing'].setText("Start Tracing")
 
     def copySlices(self, indata, fromslice, min, max, orientation, progress_callback):
 
@@ -2076,9 +2141,8 @@ It is used as a global starting point and a translation reference."
         load_session = kwargs.get('load_session', False)
         progress_callback = kwargs.get('progress_callback', None)
         time.sleep(0.1) #required so that progress window displays
-        progress_callback.emit(30)
-        #Appropriate modification to Point Cloud Panel
-        self.updatePointCloudPanel()
+        # progress_callback.emit(30)
+        
         
         v =  self.vis_widget_2D.frame.viewer
         if not isinstance(v.img3D, vtk.vtkImageData):
@@ -2091,7 +2155,7 @@ It is used as a global starting point and a translation reference."
         tmpdir = tempfile.gettempdir()
         if (load_session):
             self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
-            progress_callback.emit(40)
+            # progress_callback.emit(40)
         else:
             filename = self.mask_parameters["masksList"].currentText()
             self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", filename))
@@ -2108,16 +2172,20 @@ It is used as a global starting point and a translation reference."
                 self.axis = axis
 
                 self.sliceno = self.mask_details[filename][1]
-            progress_callback.emit(60)
-            
+            # progress_callback.emit(60)
+        
+        ui_update = partial(self.ui_progress_update, progress_callback)
+        self.mask_reader.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
+        
         self.mask_reader.Update()
-        #progress_callback.emit(50)
+        progress_callback.emit(50)
 
         writer = vtk.vtkMetaImageWriter()
        
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         writer.SetInputConnection(self.mask_reader.GetOutputPort())
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
+        writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         writer.Write()
         self.mask_file = "Masks/latest_selection.mha"
         
@@ -2128,8 +2196,16 @@ It is used as a global starting point and a translation reference."
         if not dims == self.mask_reader.GetOutput().GetDimensions():
             #print("Not compatible")
             return 
-
         self.mask_data = self.mask_reader.GetOutput()
+        progress_callback.emit(100)
+
+    def ui_progress_update(self, callback, vtkcaller, event):
+        '''connects the progress from a vtkAlgorithm to a Qt callback from eqt Worker'''
+        print ("{} progress {}".format(type(vtkcaller), vtkcaller.GetProgress()))
+        progress = vtkcaller.GetProgress()*100-1
+        if progress < 0:
+            progress = 0
+        callback.emit(progress)
 
     def select_mask(self): 
         dialogue = QFileDialog()
@@ -2148,6 +2224,7 @@ It is used as a global starting point and a translation reference."
 
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
+        self.mask_parameters['extendMaskCheck'].setChecked(False)
         self.mask_parameters['submitButton'].setText("Create Mask")
         self.vis_widget_2D.frame.viewer.setInputData2(vtk.vtkImageData()) #deletes mask
         self.mask_reader = None
@@ -2159,12 +2236,21 @@ It is used as a global starting point and a translation reference."
         #self.lasso = vtk.vtkLassoStencilSource()
         #self.vis_widget_2D.frame.viewer.imageTracer = vtk.vtkImageTracerWidget() #cause problems - as removes functionality
         #self.vis_widget_2D.frame.viewer.imageTracer.Modified()
-
+    
     def DisplayMask(self, type = None):
+        #Appropriate modification to Point Cloud Panel
+        self.updatePointCloudPanel()
+
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
         v = self.vis_widget_2D.frame.viewer
         if (hasattr(self,'mask_data')):
+            ui_update = partial(lambda dialog, vtkcaller, event: dialog.setValue(vtkcaller.GetProgress()*100), self.progress_window)
+            v.imageSlice.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
             v.setInputData2(self.mask_data)
+            # we loaded the mask, the app crashes if someone clicks on create mask
+            # without clearing the mask first unless extendMaskCheck is checked 
+            # Forcibly check extend mask checkbox
+            self.mask_parameters['extendMaskCheck'].setChecked(True)
         else:
             if v.img3D:
                 self.warningDialog( 
@@ -4926,7 +5012,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Ok.clicked.connect(self.load_session_load)
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
-            dialog.exec()
+            # Try to centre the load session window
+            # from PySide2.QtGui import QScreen
+            # geom = QScreen().availableGeometry()
+            # print (geom)
+            # centrex = geom.topRight().x() + geom.topLeft().x()
+            # centrey = geom.topRight().y() + geom.bottomRight().y()
+            # dialog.move(centrex/2,centrey/2)
+            dialog.open()
         
 
     def load_session_load(self):
@@ -5277,10 +5370,11 @@ Please select the new location of the file, or move it back to where it was orig
 
 # Loading and Error windows:
     def progress(self, value):
-        # print("progress emitted")
-        if int(value) > self.progress_window.value():
-            self.progress_window.setValue(value)
-
+        # print("progress emitted", value)
+        if int(value) == 0:
+            value = 1
+        self.progress_window.setValue(value)
+        
 
 
 class SettingsWindow(QDialog):

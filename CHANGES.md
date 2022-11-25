@@ -6,6 +6,7 @@
 * Makes a few GUI bugfixes, such as fix number of points in the pointcloud displayed wrongly here and there.
 * Catches exceptions on load of files and opens message boxes
 * Fix load of TIFF files
+* Added button to start tracing
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
