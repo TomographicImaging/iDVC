@@ -1975,8 +1975,9 @@ It is used as a global starting point and a translation reference."
         #we can easily get the image data v.image2 but would need a stencil?
 
         # print("Extend mask")
-        progress_callback = kwargs.get('progress_callback', None)
-        
+        progress_callback = kwargs.get('progress_callback', lambda x: logging.info("extendMask Progress: {}".format(x)))
+        # setup the progress bar
+        ui_update = partial(self.ui_progress_update, progress_callback)
         v = self.vis_widget_2D.frame.viewer
 
         poly = vtk.vtkPolyData()
@@ -2010,7 +2011,7 @@ It is used as a global starting point and a translation reference."
 
         #print(image_data.GetSpacing())
         
-        progress_callback.emit(40)
+        # progress_callback.emit(40)
 
 
         mask0 = Converter.numpy2vtkImage(np.zeros((dims[0],dims[1],dims[2]),order='F', 
@@ -2028,10 +2029,12 @@ It is used as a global starting point and a translation reference."
         stencil.SetBackgroundInputData(mask0)
 
         stencil.SetStencilConnection(lasso.GetOutputPort())
+
+        stencil.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         stencil.Update()
         dims = stencil.GetOutput().GetDimensions()
 
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
 
         #print("Stencil dims: " + str(dims))
 
@@ -2045,7 +2048,7 @@ It is used as a global starting point and a translation reference."
         #vtkutils.copyslices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
         stencil_output = self.copySlices(stencil.GetOutput(), sliceno , zmin, zmax, orientation, None)
 
-        progress_callback.emit(85)
+        # progress_callback.emit(85)
 
         # save the mask to a file in temp folder
         writer = vtk.vtkMetaImageWriter()
@@ -2053,7 +2056,7 @@ It is used as a global starting point and a translation reference."
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         self.mask_file = "Masks/latest_selection.mha"
 
-        progress_callback.emit(90)
+        # progress_callback.emit(90)
 
         # if extend mask -> load temp saved mask
         if self.mask_parameters['extendMaskCheck'].isChecked():
@@ -2076,6 +2079,7 @@ It is used as a global starting point and a translation reference."
                 threshold.ReplaceInOn()
                 threshold.SetInValue(1)
                 threshold.SetInputConnection(math.GetOutputPort())
+                threshold.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
                 threshold.Update()
 
                 writer.SetInputData(threshold.GetOutput())
@@ -2086,11 +2090,12 @@ It is used as a global starting point and a translation reference."
             writer.SetInputData(stencil_output)
             self.mask_data = stencil_output
 
+        writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         writer.Write() # writes to file.
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
         self.setStatusTip('Done')
 
-        progress_callback.emit(100)
+        # progress_callback.emit(100)
         self._disableTracingAndResetUI()
 
     def _disableTracingAndResetUI(self):
@@ -2128,7 +2133,7 @@ It is used as a global starting point and a translation reference."
         load_session = kwargs.get('load_session', False)
         progress_callback = kwargs.get('progress_callback', None)
         time.sleep(0.1) #required so that progress window displays
-        progress_callback.emit(30)
+        # progress_callback.emit(30)
         #Appropriate modification to Point Cloud Panel
         self.updatePointCloudPanel()
         
@@ -2143,7 +2148,7 @@ It is used as a global starting point and a translation reference."
         tmpdir = tempfile.gettempdir()
         if (load_session):
             self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
-            progress_callback.emit(40)
+            # progress_callback.emit(40)
         else:
             filename = self.mask_parameters["masksList"].currentText()
             self.mask_reader.SetFileName(os.path.join(tmpdir, "Masks", filename))
@@ -2160,16 +2165,20 @@ It is used as a global starting point and a translation reference."
                 self.axis = axis
 
                 self.sliceno = self.mask_details[filename][1]
-            progress_callback.emit(60)
-            
+            # progress_callback.emit(60)
+        
+        ui_update = partial(self.ui_progress_update, progress_callback)
+        self.mask_reader.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
+        
         self.mask_reader.Update()
-        #progress_callback.emit(50)
+        progress_callback.emit(50)
 
         writer = vtk.vtkMetaImageWriter()
        
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         writer.SetInputConnection(self.mask_reader.GetOutputPort())
-        progress_callback.emit(80)
+        # progress_callback.emit(80)
+        writer.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
         writer.Write()
         self.mask_file = "Masks/latest_selection.mha"
         
@@ -2180,8 +2189,13 @@ It is used as a global starting point and a translation reference."
         if not dims == self.mask_reader.GetOutput().GetDimensions():
             #print("Not compatible")
             return 
-
         self.mask_data = self.mask_reader.GetOutput()
+        progress_callback.emit(100)
+
+    def ui_progress_update(self, callback, vtkcaller, event):
+        '''connects the progress from a vtkAlgorithm to a Qt callback from eqt Worker'''
+        print ("{} progress {}".format(type(vtkcaller), vtkcaller.GetProgress()))
+        callback.emit(vtkcaller.GetProgress()*100-1)
 
     def select_mask(self): 
         dialogue = QFileDialog()
@@ -2212,11 +2226,13 @@ It is used as a global starting point and a translation reference."
         #self.lasso = vtk.vtkLassoStencilSource()
         #self.vis_widget_2D.frame.viewer.imageTracer = vtk.vtkImageTracerWidget() #cause problems - as removes functionality
         #self.vis_widget_2D.frame.viewer.imageTracer.Modified()
-
+    
     def DisplayMask(self, type = None):
         self.mask_parameters['extendMaskCheck'].setEnabled(True)
         v = self.vis_widget_2D.frame.viewer
         if (hasattr(self,'mask_data')):
+            ui_update = partial(lambda dialog, vtkcaller, event: dialog.setValue(vtkcaller.GetProgress()*100), self.progress_window)
+            v.imageSlice.AddObserver(vtk.vtkCommand.ProgressEvent, ui_update)
             v.setInputData2(self.mask_data)
             # we loaded the mask, the app crashes if someone clicks on create mask
             # without clearing the mask first unless extendMaskCheck is checked 
@@ -5342,8 +5358,9 @@ Please select the new location of the file, or move it back to where it was orig
 # Loading and Error windows:
     def progress(self, value):
         # print("progress emitted")
-        if int(value) > self.progress_window.value():
-            self.progress_window.setValue(value)
+        self.progress_window.setValue(value)
+        # if int(value) > self.progress_window.value():
+        #     self.progress_window.setValue(value)
 
 
 
