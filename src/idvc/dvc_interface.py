@@ -1906,7 +1906,7 @@ It is used as a global starting point and a translation reference."
 
 
     def warnIfUnchecking(self):
-        if not self.mask_parameters['extendMaskCheck'].isChecked():
+        if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
             self.warningDialog(window_title="Attention", 
                                message="If you do not clear the mask and draw again the app will be very sad!" )
 
@@ -2200,6 +2200,7 @@ It is used as a global starting point and a translation reference."
 
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
+        self.mask_parameters['extendMaskCheck'].setChecked(False)
         self.mask_parameters['submitButton'].setText("Create Mask")
         self.vis_widget_2D.frame.viewer.setInputData2(vtk.vtkImageData()) #deletes mask
         self.mask_reader = None
