@@ -83,11 +83,19 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
             # main_window.progress_window.setValue(count/(total_points+3*required_runs)*100)
 
             try:
+                # try to infer the number of points processed from the output of the dvc executable
                 num_processed_points = int(string.split('/')[0])
-                prog = int(num_processed_points/num_points_to_process*100)-1
-                etc = (time.time()-start_time) * num_points_to_process / num_processed_points / 1000
-            
-                ETC_line = "\nCurrent step ETC {:.2f}s num_processed_points {} prog {}".format(etc, num_processed_points, prog)
+                etcs = 0
+                prog = 0
+                if num_processed_points > 0:
+                    prog = int(num_processed_points/num_points_to_process*100)-1
+                    etcs = ((time.time()-start_time) * num_points_to_process / num_processed_points) - (time.time()-start_time)
+                try:
+                    etc = time.strftime("%H:%M:%S s", time.gmtime(etcs))
+                except:
+                    etc = 'Error estimating time to completion'
+
+                ETC_line = "\nEstimated time to completion of this step {} ".format(etc)
             except ValueError:
                 num_processed_points = 0
                 prog = 0
