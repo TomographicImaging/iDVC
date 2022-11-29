@@ -65,13 +65,11 @@ class ImageDataCreator(object):
             for image in image_files:
                 file_extension = imghdr.what(image)
                 if file_extension.lower() not in ['tiff', 'tif']:
-                    main_window.e(
-                        '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
                     error_text = "Error reading file: ({filename})".format(
                         filename=image)
-                    displayErrorDialogFromWorker(
-                        main_window, message=error_text, title=error_title)
+                    displayFileErrorDialog(
+                        main_window, message=error_text, title=error_title, detailed_message='When reading multiple files, all files must TIFF formatted.')
                     return
 
         if file_extension in ['.mha', '.mhd']:
