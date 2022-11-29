@@ -86,7 +86,7 @@ This is the diameter of a spherical subvolume region, or the side length of a cu
 
 :raw-html:`<br />`
 
-If you have ticked the option to **display the subvolume preview**, then it will display a preview of the size of each subvolume,
+If you have ticked the option to **display the subvolume preview**, then a preview of the size of each subvolume will be shown in the viewer,
 centred on the location of the reference point 0.
 
 If you select a **2D** point cloud, then the point cloud will only be created on the currently displayed slice of the image.
@@ -96,7 +96,7 @@ The overlap is the percentage overlap of the subvolume regions.
 You can also set a rotation of the subvolumes in degrees, relative to any of the three axes.
 
 You may choose to **erode** the mask.
-Without doing this, although all of the points will lie within the mask, areas of some of the subvolumes may lie outside of this.
+Without doing this, although all of the points will lie within the mask, parts of some of the subvolumes may lie outside of the mask.
 Eroding the mask will help to ensure the entirety of all of the subvolume regions lies within the mask.
 Be aware that this is quite a time consuming process.
 You may also adjust the multiplier on the erosion, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter to you if some subvolumes are partially outside of the mask.
@@ -128,6 +128,8 @@ Note that you may use non-integer coordinates.
 Note that the point cloud is in the coordinate system of the original image, and is not affected by the down-sampling, it is displayed at the true location of the points.
 Once you are happy with your point cloud, you can move on to the **Run DVC** panel.
 
+To delete a PointCloud you should press the `Clear Point Cloud` button.
+
 .. _Running DVC Analysis:
 
 Running the DVC Analysis
@@ -141,6 +143,7 @@ The settings you can change for your run are as follows:
 
 :raw-html:`<br />`
 
+**Run all Points in cloud** - clicking this button resets the **Points in run** to all the points in the point cloud.
 **Points in run** - the number of points you would like to perform the run on. This will automatically start off being set to the total number of points in the cloud you have created, but you may wish to run with less points to begin with, as a test for instance. If you choose less points than the total number in the cloud, and your reference point 0 lies within your point cloud, the points will be selected starting with point 0 and working outwards from there.
 
 
@@ -183,7 +186,10 @@ This parameter has a strong effect on computation time, so be careful.
 You can then either run a **Single** run, or a **Bulk** run:
 
 - A **single run** will run with the current point cloud you have generated, you only need to select the number of sampling points in the subvolume region.
-- If you select to run in **bulk**, this will generate multiple point clouds and perform runs on them, instead of your current point cloud. You can set the minimum and maximum subvolume size you would like, and the size of the step between these values, and similar for the sampling points. In the example above, this would perform runs on point clouds with sizes 30, 40 and 50, and number of sampling points 9000, 9500 and 10000, so 9 runs in total. Note that the other settings for the point clouds generated will be taken from what you selected on the point cloud panel, including the subvolume shape, dimensionality, overlaps and rotation angles.
+- If you select to run in **bulk**, this will use the loaded or generated point cloud and run dvc analysis changing the parameters **subvolume size** and 
+**sampling points in subvolume**. You can set the minimum and maximum subvolume size you would like, and the size of the step between these values, and similar
+ for the sampling points. In the example above, this would perform runs on point clouds with sizes 30, 40 and 50, and number of sampling points 1000, 2000, 3000,
+ 4000, 5000, 6000, 7000, 9000 and 10000, so 30 runs in total.
 
 For every run, any point clouds and input files to the DVC analysis code that are generated are saved in the session files, which you are able to access if you export your session (see :ref:`Exporting Sessions <Exporting Sessions>`).
 

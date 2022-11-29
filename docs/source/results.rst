@@ -32,7 +32,7 @@ Displacement Vectors
 ====================
 To view the displacements as vectors overlaid on the reference image, return to the main app.
 For each run you are able to select and visualise the different point clouds with different sizes and number of sampling points in the subvolumes.
-Then when viewing the vectors, you can select **None** to just view the point cloud, or you can select **Total Displacement** or **Displacement with respect to reference point 0**.
+Then when viewing the vectors, you can select **Point Cloud** to just view the point cloud, or you can select **Total Displacement** or **Displacement with respect to reference point 0**.
 Both of these latter options will display the displacements of each point in the cloud as arrows overlaid on the reference image, but **Total displacement** will show the displacement including the rigid translation set in the manual registration panel, whereas displacement with respect to point 0 will not. 
  
 If the vector scaling is set to 1, this will show the displacement vectors true to size, but you may modify this to make them easier to see. You will need to click **View Pointcloud/Vectors** once again to reload them with the new scaling.
@@ -44,6 +44,11 @@ Below is a comparison of some vectors shown in 2D compared to 3D.
 :raw-html:`<br />`
  
 The arrows are coloured according to their relative size. Red arrows are the largest and dark blue the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions. 
+
+Once total or relative displacement vectors are being displayed, you can also limit the range of the vector by changing the inputs **Vector range min** and **Vector range max**.
+Notice that this will have a different impact on the 3D and 2D viewers, as the 2D viewer is only taking into account the displacements in the current plane, 
+whereas the 3D viewer is taking into account all three components of the displacement.
+
 
 Results Files
 =============
