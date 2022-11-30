@@ -2859,14 +2859,14 @@ The first point is significant, as it is used as a global starting point and ref
         # Show error and allow re-selection of pointcloud if it can't be loaded:
         search_button = QPushButton('Select Pointcloud')
         search_button.clicked.connect(self.reselect_pointcloud)
-        self.e(
-            '', '', 'This file has been deleted or moved to another location, or cannot be read. Therefore this pointcloud cannot be loaded. \
-Please select a replacement pointcloud file.')
-        error_title = "READ ERROR"
-        error_text = "Error reading file: ({filename})".format(
-            filename=self.roi)
-        self.pointcloud_worker.signals.error.connect(
-            lambda: self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button))
+#         self.e(
+#             '', '', 'This file has been deleted or moved to another location, or cannot be read. Therefore this pointcloud cannot be loaded. \
+# Please select a replacement pointcloud file.')
+#         error_title = "READ ERROR"
+#         error_text = "Error reading file: ({filename})".format(
+#             filename=self.roi)
+#         self.pointcloud_worker.signals.error.connect(
+#             lambda: self.displayFileErrorDialog(message=error_text, title=error_title, action_button=search_button))
         # TODO: fix so that closing this window doesn't leave the progress bar going forever
 
     def reselect_pointcloud(self):

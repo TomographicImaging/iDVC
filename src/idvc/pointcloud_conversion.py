@@ -255,9 +255,9 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
                 n_c += 1
 
-                self.UpdateProgress((n_c + max_b * n_b )/ tot)
 
             n_b += 1
+            self.UpdateProgress(n_b / max_b)
 
         return 1
 
@@ -317,9 +317,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
                     vtkPointCloud.InsertNextPoint( x, y, z )
                     n_z += 1
 
-                    self.UpdateProgress((n_z + max_z * n_y + max_y * max_z * n_x )/ tot)
-
                 n_y += 1
+                self.UpdateProgress((n_z + max_z * n_y + max_y * max_z * n_x )/ tot)
 
             n_x += 1
 
