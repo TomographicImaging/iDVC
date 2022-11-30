@@ -231,6 +231,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         # Loop through points in plane bc
         n_b = offset[0]
 
+        # total number of steps
+        tot = max_b * max_c
         while n_b < max_b:
             n_c = offset[1]
 
@@ -252,6 +254,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
                     # print(a)
 
                 n_c += 1
+
+                self.UpdateProgress((n_c + max_b * n_b )/ tot)
 
             n_b += 1
 
@@ -297,6 +301,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
             offset[orientation] = sliceno % point_spacing[orientation]
         
         n_x=0
+        tot = max_x * max_y * max_z
 
         while n_x < max_x:
             # x axis
@@ -311,6 +316,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
 
                     vtkPointCloud.InsertNextPoint( x, y, z )
                     n_z += 1
+
+                    self.UpdateProgress((n_z + max_z * n_y + max_y * max_z * n_x )/ tot)
 
                 n_y += 1
 
