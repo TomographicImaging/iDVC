@@ -2052,6 +2052,7 @@ It is used as a global starting point and a translation reference."
 
         # save the mask to a file in temp folder
         writer = vtk.vtkMetaImageWriter()
+        writer.SetCompression(True)
         tmpdir = tempfile.gettempdir()
         writer.SetFileName(os.path.join(tmpdir, "Masks", "latest_selection.mha"))
         self.mask_file = "Masks/latest_selection.mha"
@@ -2883,7 +2884,7 @@ Please select a replacement pointcloud file.')
         origin = reader.GetOutput().GetOrigin()
         spacing = reader.GetOutput().GetSpacing()
         dimensions = reader.GetOutput().GetDimensions()  
-        
+
         if not self.pointCloudCreated:
             #print("Not created")
             pointCloud = cilRegularPointCloudToPolyData()
@@ -3099,8 +3100,7 @@ Please select a replacement pointcloud file.')
         #print("Points in mask now: ", polydata_masker)
         
         self.reader = reader
-        self.pointcloud = pointCloud
-
+        
         pointcloud = self.polydata_masker.GetOutputDataObject(0)
         array = []
         self.pc_no_points = pointcloud.GetNumberOfPoints()
