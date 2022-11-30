@@ -28,7 +28,7 @@ version = re.sub('^v', '', os.popen('git describe').read().strip())
 version = version.split('-')[0]
 
 rst_epilog = """
-.. |cil_viewer_version| replace:: 22.4.0
+.. |cil_viewer_version| replace:: 22.2.0
 """
 
 # -- General configuration ---------------------------------------------------
