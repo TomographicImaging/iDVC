@@ -8,6 +8,7 @@
 * Fix load of TIFF files
 * Added button to start tracing
 * Added estimated time to completion of DVC analysis
+* Do not allow registration box to extend over the edge of the image (previously this caused the app to crash)
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
