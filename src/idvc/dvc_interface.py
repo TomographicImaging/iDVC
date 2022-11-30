@@ -1475,7 +1475,7 @@ It is used as a global starting point and a translation reference."
                 current_slice = self.vis_widget_reg.frame.viewer.getActiveSlice()
                 extent_on_axis = self.vis_widget_reg.frame.viewer.img3D.GetExtent()[2*current_orientation+1] -1
 
-                max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])
+                max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])*2
 
                 # if we can't make the registration box with the set size, then update
                 # the size to the largest size possible:
