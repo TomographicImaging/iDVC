@@ -8,6 +8,7 @@
 * Fix load of TIFF files
 * Added button to start tracing
 * Added estimated time to completion of DVC analysis
+* Do not allow registration box to extend over the edge of the image (previously this caused the app to crash)
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
@@ -17,6 +18,7 @@
 * Pass max number of points to be processed to dvc executable
 * Pass point 0 location to dvc executable
 * Add button to set the number of points in the run to all points in the pointcloud.
+* Use v2.0.0 of conda build action
 
 ## v22.1.0
 * Allows loading of TIFF stacks to run DVC code
