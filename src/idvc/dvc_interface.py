@@ -681,9 +681,15 @@ class MainWindow(QMainWindow):
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
+            maximum_value = round((self.target_image_size**(1/3))*1024/3*int(self.vol_bit_depth)/8)
+            minimum_image_dimension = np.min(self.ref_image_data.GetDimensions())-1
+
+            if maximum_value > minimum_image_dimension:
+                maximum_value = minimum_image_dimension
+
             #Update registration box size according to target size and vol bit depth
-            self.registration_parameters['registration_box_size_entry'].setMaximum(round((self.target_image_size**(1/3))*1024/3*int(self.vol_bit_depth)/8))
-            self.registration_parameters['registration_box_size_entry'].setValue(round((self.target_image_size**(1/3))*1024/3*int(self.vol_bit_depth)/8))
+            self.registration_parameters['registration_box_size_entry'].setMaximum(maximum_value)
+            self.registration_parameters['registration_box_size_entry'].setValue(maximum_value)
         
         
         #Update mask slices above/below to be max extent of downsampled image
@@ -1460,6 +1466,22 @@ It is used as a global starting point and a translation reference."
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked():
+
+                # check if we can make registration box, by checking
+                # if the size of registration box is smaller than the difference 
+                # between the current slice and the extent on the current dimension:
+                registration_box_size = rp['registration_box_size_entry'].value()
+                current_orientation = self.vis_widget_reg.frame.viewer.style.GetSliceOrientation()
+                current_slice = self.vis_widget_reg.frame.viewer.getActiveSlice()
+                extent_on_axis = self.vis_widget_reg.frame.viewer.img3D.GetExtent()[2*current_orientation+1] -1
+
+                max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])
+
+                # if we can't make the registration box with the set size, then update
+                # the size to the largest size possible:
+                if max_size_of_box < registration_box_size:
+                    rp['registration_box_size_entry'].setValue(max_size_of_box)
+                
                 # print ("Start Registration Checked")
                 rp['start_registration_button'].setText("Confirm Registration")
                 rp['registration_box_size_entry'].setEnabled(False)
