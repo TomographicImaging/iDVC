@@ -60,7 +60,7 @@ from functools import reduce
 
 import copy
 
-from idvc.io import ImageDataCreator
+from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
@@ -78,6 +78,10 @@ __version__ = gui_version.version
 
 import logging
 
+class PrintCallback(object):
+    '''Class to handle the emit call when no callback is provided'''
+    def emit(self, *args, **kwargs):
+        print (args, kwargs)
 
 def reduce_displ(raw_displ, min_size, max_size, pzero=False):
     '''filter the diplacement vectors based on their size'''
@@ -2202,7 +2206,7 @@ It is used as a global starting point and a translation reference."
 
     def ui_progress_update(self, callback, vtkcaller, event):
         '''connects the progress from a vtkAlgorithm to a Qt callback from eqt Worker'''
-        print ("{} progress {}".format(type(vtkcaller), vtkcaller.GetProgress()))
+        # print ("{} progress {}".format(type(vtkcaller), vtkcaller.GetProgress()))
         progress = vtkcaller.GetProgress()*100-1
         if progress < 0:
             progress = 0
@@ -2806,21 +2810,24 @@ The first point is significant, as it is used as a global starting point and ref
             #if not self.pointCloudCreated:
             self.clearPointCloud()
             self.pointcloud_worker = Worker(self.createPointCloud, filename = "latest_pointcloud.roi")
-            self.pointcloud_worker.signals.finished.connect(self.DisplayPointCloud)
+            self.pointcloud_worker.signals.result.connect(self.DisplayPointCloud)
         elif type == "load selection":
             self.clearPointCloud()
             self.pointcloud_worker = Worker(self.loadPointCloud, os.path.join(tempfile.tempdir, self.pointcloud_parameters['pointcloudList'].currentText()))
-            self.pointcloud_worker.signals.finished.connect(self.DisplayLoadedPointCloud)
+            self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
         elif type == "load pointcloud file":
             self.clearPointCloud()
             self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
-            self.pointcloud_worker.signals.finished.connect(self.DisplayLoadedPointCloud)
+            self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
         elif type == "create without loading":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
             self.pointcloud_worker = Worker(self.createPointCloud, filename=filename)
             self.pointcloud_worker.signals.finished.connect(self.progress_complete)
             
+        ff = partial(displayErrorDialogFromWorker, self)
+        self.pointcloud_worker.signals.error.connect(ff)
+        self.pointcloud_worker.signals.message.connect(self.updateProgressDialogMessage)
         self.create_progress_window("Loading", "Loading Pointcloud")
         self.pointcloud_worker.signals.progress.connect(self.progress)
         self.progress_window.setValue(10)
@@ -2846,8 +2853,16 @@ Please select a replacement pointcloud file.')
         self.threadpool.start(self.pointcloud_worker)
 
     def progress_complete(self):
-        #print("FINISHED")
-        self.progress_window.setValue(100)
+        try:
+            self.progress_window.setValue(100)
+        except NameError as ne:
+            self.warningDialog(window_title="Warning", message="Error updating progress window progress: {message}".format(message=ne))
+    
+    def updateProgressDialogMessage(self, message):
+        try:
+            self.progress_window.setLabelText(message)
+        except NameError as ne:
+            self.warningDialog(window_title="Warning", message="Error updating progress window message: {message}".format(message=ne))
 
     def createSavePointCloudWindow(self, save_only):
         #print("Create save pointcloud window -----------------------------------------------------------------------------------")
@@ -2872,7 +2887,9 @@ Please select a replacement pointcloud file.')
         ## Create the PointCloud
         #print("Create point cloud")
         filename = kwargs.get('filename', "latest_pointcloud.roi")
-        progress_callback = kwargs.get('progress_callback', None)
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        message_callback = kwargs.get('message_callback', PrintCallback())
+
         subvol_size = kwargs.get('subvol_size',None)
         # Mask is read from temp file
         tmpdir = tempfile.gettempdir() 
@@ -2888,6 +2905,8 @@ Please select a replacement pointcloud file.')
         if not self.pointCloudCreated:
             #print("Not created")
             pointCloud = cilRegularPointCloudToPolyData()
+            # attach the progress update callback
+            pointCloud.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback=progress_callback))
             self.pointCloud = pointCloud
         else:
             pointCloud = self.pointCloud
@@ -2924,14 +2943,16 @@ Please select a replacement pointcloud file.')
         pointCloud.SetOverlap(1,float(self.overlapYValueEntry.text()))
         pointCloud.SetOverlap(2,float(self.overlapZValueEntry.text()))
         
+        message_callback.emit('Creating point cloud')
         pointCloud.Update()
         self.pointCloud_subvol_size = subvol_size
         self.pointCloud_overlap = [float(self.overlapXValueEntry.text()), float(self.overlapYValueEntry.text()), float(self.overlapZValueEntry.text())]
         
         #print ("pointCloud number of points", pointCloud.GetNumberOfPoints())
 
-        if pointCloud.GetNumberOfPoints() == 0: 
-            return         
+        if pointCloud.GetNumberOfPoints() == 0:
+            self.pointCloudCreated = False
+            raise ValueError("No points in pointcloud. Please check your settings and try again.")
 
         # Erode the transformed mask because we don't want to have subvolumes outside the mask
         if not self.pointCloudCreated:
@@ -3094,7 +3115,7 @@ Please select a replacement pointcloud file.')
         
         polydata_masker.SetInputConnection(0, t_filter.GetOutputPort())
         # polydata_masker.Modified()
-        
+        message_callback.emit('Applying mask to pointcloud')
         polydata_masker.Update()
 
         #print("Points in mask now: ", polydata_masker)
@@ -3105,8 +3126,8 @@ Please select a replacement pointcloud file.')
         array = []
         self.pc_no_points = pointcloud.GetNumberOfPoints()
         if(pointcloud.GetNumberOfPoints() == 0):
-            self.pointCloud = pointcloud
-            return (False)
+            raise ValueError('No points in pointcloud')
+            
         
         if int(mm) == 1: #if point0 is in the mask
             count = 2
@@ -3124,10 +3145,11 @@ Please select a replacement pointcloud file.')
                 array.append((count, *pp))
                 count += 1
 
+        message_callback.emit('Saving pointcloud')
         np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = filename
 
-        return(True)
+        return True
             
 
     def loadPointCloud(self, *args, **kwargs):
@@ -4127,13 +4149,15 @@ This parameter has a strong effect on computation time, so be careful."
         self.config_worker.signals.progress.connect(self.progress)
         # if single or bulk use the line below, if remote develop new functionality
         self.config_worker.signals.result.connect(partial (self.run_external_code))
+        self.config_worker.signals.message.connect(self.updateProgressDialogMessage)
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
         
 
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
-        progress_callback = kwargs.get('progress_callback', None)
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        message_callback = kwargs.get('message_callback', PrintCallback())
         try:
             folder_name = self.rdvc_widgets['name_entry'].text()
 
@@ -4194,7 +4218,8 @@ This parameter has a strong effect on computation time, so be careful."
                     if self.pointcloud_is == 'generated':
                         # we will generate the same pointcloud for each subvolume size
                         pc_subvol_size = self.pointcloud_parameters['pointcloud_size_entry'].text()
-                        if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size)):
+                        if not self.createPointCloud(filename=filename, subvol_size=int(pc_subvol_size), 
+                                                     progress_callback=progress_callback, message_callback=message_callback):
                             return ("pointcloud error")
                     elif self.pointcloud_is == 'loaded':
                         # we will use the file with the pointcloud for each subvol size
