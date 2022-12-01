@@ -10,6 +10,7 @@
 * Added estimated time to completion of DVC analysis
 * Do not allow registration box to extend over the edge of the image (previously this caused the app to crash)
 * Added more granular progress update from pointcloud creation step, and bugfixes
+* fix the build script for Windows
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
