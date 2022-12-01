@@ -188,7 +188,7 @@ You can then either run a **Single** run, or a **Bulk** run:
 - A **single run** will run with the current point cloud you have generated, you only need to select the number of sampling points in the subvolume region.
 - If you select to run in **bulk**, this will use the loaded or generated point cloud and run dvc analysis changing the parameters **subvolume size** and 
 **sampling points in subvolume**. You can set the minimum and maximum subvolume size you would like, and the size of the step between these values, and similar
- for the sampling points. In the example above, this would perform runs on point clouds with sizes 30, 40 and 50, and number of sampling points 1000, 2000, 3000,
+ for the sampling points. In the example above, this would perform runs on point clouds with subvolume sizes 30, 60 and 90, and number of sampling points 1000, 2000, 3000,
  4000, 5000, 6000, 7000, 9000 and 10000, so 30 runs in total.
 
 For every run, any point clouds and input files to the DVC analysis code that are generated are saved in the session files, which you are able to access if you export your session (see :ref:`Exporting Sessions <Exporting Sessions>`).
