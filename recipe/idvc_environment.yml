@@ -1,0 +1,7 @@
+name: idvc
+channels:
+  - ccpi
+  - paskino
+  - conda-forge
+dependencies:    
+    - idvc
