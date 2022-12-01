@@ -7,6 +7,7 @@
 * Catches exceptions on load of files and opens message boxes
 * Fix load of TIFF files
 * Added button to start tracing
+* Added estimated time to completion of DVC analysis
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
