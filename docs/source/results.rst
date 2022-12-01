@@ -45,7 +45,7 @@ Below is a comparison of some vectors shown in 2D compared to 3D.
  
 The arrows are coloured according to their relative size. White arrows are the largest and black the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions. 
 
-Once total or relative displacement vectors are being displayed, you can also limit the range of the vector by changing the inputs **Vector range min** and **Vector range max**.
+Once total or relative displacement vectors are being displayed, you can also limit the range of the vector by changing the inputs **Vector range min** and **Vector range max**, and clicking "View Pointcloud/Vectors" again.
 Notice that this will have a different impact on the 3D and 2D viewers, as the 2D viewer is only taking into account the displacements in the current plane, 
 whereas the 3D viewer is taking into account all three components of the displacement.
 
