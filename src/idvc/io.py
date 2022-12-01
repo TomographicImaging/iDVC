@@ -65,13 +65,11 @@ class ImageDataCreator(object):
             for image in image_files:
                 file_extension = imghdr.what(image)
                 if file_extension.lower() not in ['tiff', 'tif']:
-                    main_window.e(
-                        '', '', 'When reading multiple files, all files must TIFF formatted.')
                     error_title = "Read Error"
                     error_text = "Error reading file: ({filename})".format(
                         filename=image)
                     displayFileErrorDialog(
-                        main_window, message=error_text, title=error_title)
+                        main_window, message=error_text, title=error_title, detailed_message='When reading multiple files, all files must TIFF formatted.')
                     return
 
         if file_extension in ['.mha', '.mhd']:
@@ -107,13 +105,12 @@ class ImageDataCreator(object):
                 return
 
         else:
-            main_window.e(
-                '', '', 'File format is not supported. Accepted formats include: .mhd, .mha, .npy, .tif, .raw')
             error_title = "Error"
             error_text = "Error reading file: ({filename})".format(
                 filename=image)
             displayFileErrorDialog(
-                main_window, message=error_text, title=error_title)
+                main_window, message=error_text, title=error_title, 
+                detailed_message='File format is not supported. Accepted formats include: .mhd, .mha, .npy, .tif, .raw')
             return
 
         main_window.progress_window.setValue(10)
@@ -163,14 +160,27 @@ def progress(progress_window, value=None):
 
 # Display errors:
 
+def displayFileErrorDialog(main_window, message, title, detailed_message):
+    '''
+    Parameters
+    ---------
+    main_window : QMainWindow
+        The main window of the application
+    message : str
+        The message to display in the dialog
+    title : str
+        The title of the dialog
+    detailed_message : str
+        The detailed message to display in the dialog       
 
-def displayFileErrorDialog(main_window, message, title):
+    '''
     msg = QMessageBox(main_window)
     msg.setIcon(QMessageBox.Critical)
     msg.setWindowTitle(title)
     msg.setText(message)
-    msg.setDetailedText(main_window.e.ErrorMessage())
-    msg.exec_()
+    msg.setDetailedText(detailed_message)
+    msg.open()
+
 
 def displayErrorDialogFromWorker(main_window, error):
     '''This is a new version of displayFileErrorDialog that takes an error object as an argument.
@@ -701,7 +711,7 @@ def finishRawConversion(main_window, finish_fn, error=None):
             # : ({filename})".format(filename=error['hdrfname'])
             error_text = "Error writing to file"
             displayFileErrorDialog(
-                main_window, message=error_text, title=error_title)
+                main_window, message=error_text, title=error_title, detailed_message="")
             return
 
     if finish_fn is not None:
