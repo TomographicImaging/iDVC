@@ -89,6 +89,7 @@
 <li><p>raw</p></li>
 <li><p>numpy (.npy)</p></li>
 <li><p>metaimage (.mha or .mhd but only uncompressed mha files)</p></li>
+<li><p>TIFF stacks</p></li>
 </ul>
 <p>You will need to select a reference and a correlate image. These must have the same dimensionality. Then click <strong>View Image</strong>.
 If you have chosen a raw image file then you will be asked for some extra information about the file:</p>
@@ -102,7 +103,7 @@ The image shown on the viewer will most likely be down-sampled (depending on the
 Both viewers show the reference image, and are linked, so will show the same orientation and slice number.
 By default, the volume render is switched off on the 3D viewer, but to toggle it on/off, click on the 3D viewer and press <strong>v</strong>.</p>
 <p>To view all of the interactions for the viewers, click on one of the viewers and press <strong>h</strong> on your keyboard. Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
-The interactions for the viewers are as follows (correct as of version 21.0.1 of the <a class="reference external" href="https://github.com/vais-ral/CILViewer">CILViewer</a>)…</p>
+The interactions for the viewers are as follows (correct as of version &gt;=22.2.0 of the <a class="reference external" href="https://github.com/vais-ral/CILViewer">CILViewer</a>)…</p>
 <div class="section" id="d-viewer-interactions">
 <h3>2D Viewer Interactions<a class="headerlink" href="#d-viewer-interactions" title="Permalink to this headline">¶</a></h3>
 <p><strong>Mouse Interactions:</strong></p>
@@ -153,6 +154,8 @@ The interactions for the viewers are as follows (correct as of version 21.0.1 of
 <li><p>Toggle visibility of volume render: v</p></li>
 <li><p>Toggle visibility of slice: s</p></li>
 <li><p>Whole image Auto Window/Level: a</p></li>
+<li><p>Activate volume render clipping widget: c</p></li>
+<li><p>Display help: h</p></li>
 </ul>
 </div>
 </div>
@@ -189,7 +192,7 @@ You will have to click <strong>View Image</strong> on the Select Image panel to 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, UKRI STFC.</p>
+    <p>&#169; Copyright 2022, UKRI STFC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

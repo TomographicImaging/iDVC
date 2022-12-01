@@ -100,14 +100,17 @@ You can select to just compare for a certain subvolume size or number of samplin
 <h2>Displacement Vectors<a class="headerlink" href="#displacement-vectors" title="Permalink to this headline">¶</a></h2>
 <p>To view the displacements as vectors overlaid on the reference image, return to the main app.
 For each run you are able to select and visualise the different point clouds with different sizes and number of sampling points in the subvolumes.
-Then when viewing the vectors, you can select <strong>None</strong> to just view the point cloud, or you can select <strong>Total Displacement</strong> or <strong>Displacement with respect to reference point 0</strong>.
+Then when viewing the vectors, you can select <strong>Point Cloud</strong> to just view the point cloud, or you can select <strong>Total Displacement</strong> or <strong>Displacement with respect to reference point 0</strong>.
 Both of these latter options will display the displacements of each point in the cloud as arrows overlaid on the reference image, but <strong>Total displacement</strong> will show the displacement including the rigid translation set in the manual registration panel, whereas displacement with respect to point 0 will not.</p>
 <p>If the vector scaling is set to 1, this will show the displacement vectors true to size, but you may modify this to make them easier to see. You will need to click <strong>View Pointcloud/Vectors</strong> once again to reload them with the new scaling.
 On the 2D viewer, the vectors will be shown as 2D arrows, showing only the displacements in the current plane. E.g. if you pressed the ‘x’ key you would be viewing the YZ plane, so would just see the y and z components of the displacement. Whereas on the 3D viewer, it shows the total displacement, taking into account all components.
 Below is a comparison of some vectors shown in 2D compared to 3D.</p>
 <img alt="_images/2D_3D_vectors_lava.png" src="_images/2D_3D_vectors_lava.png" />
 <p><span class="raw-html"><br /></span></p>
-<p>The arrows are coloured according to their relative size. Red arrows are the largest and dark blue the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions.</p>
+<p>The arrows are coloured according to their relative size. White arrows are the largest and black the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions.</p>
+<p>Once total or relative displacement vectors are being displayed, you can also limit the range of the vector by changing the inputs <strong>Vector range min</strong> and <strong>Vector range max</strong>, and clicking “View Pointcloud/Vectors” again.
+Notice that this will have a different impact on the 3D and 2D viewers, as the 2D viewer is only taking into account the displacements in the current plane,
+whereas the 3D viewer is taking into account all three components of the displacement.</p>
 </div>
 <div class="section" id="results-files">
 <h2>Results Files<a class="headerlink" href="#results-files" title="Permalink to this headline">¶</a></h2>
@@ -144,7 +147,7 @@ The two files it produces for each run are as follows:</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, UKRI STFC.</p>
+    <p>&#169; Copyright 2022, UKRI STFC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a

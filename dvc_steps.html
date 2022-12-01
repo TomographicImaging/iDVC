@@ -151,14 +151,14 @@ Once you are satisfied with the mask, move on to the <strong>Point Cloud</strong
 This is the diameter of a spherical subvolume region, or the side length of a cubic one.</p>
 <img alt="_images/pointcloud_panel.png" src="_images/pointcloud_panel.png" />
 <p><span class="raw-html"><br /></span></p>
-<p>If you have ticked the option to <strong>display the subvolume preview</strong>, then it will display a preview of the size of each subvolume,
+<p>If you have ticked the option to <strong>display the subvolume preview</strong>, then a preview of the size of each subvolume will be shown in the viewer,
 centred on the location of the reference point 0.</p>
 <p>If you select a <strong>2D</strong> point cloud, then the point cloud will only be created on the currently displayed slice of the image.
 A <strong>3D</strong> point cloud will be created across the entire extent of the mask.</p>
 <p>The overlap is the percentage overlap of the subvolume regions.
 You can also set a rotation of the subvolumes in degrees, relative to any of the three axes.</p>
 <p>You may choose to <strong>erode</strong> the mask.
-Without doing this, although all of the points will lie within the mask, areas of some of the subvolumes may lie outside of this.
+Without doing this, although all of the points will lie within the mask, parts of some of the subvolumes may lie outside of the mask.
 Eroding the mask will help to ensure the entirety of all of the subvolume regions lies within the mask.
 Be aware that this is quite a time consuming process.
 You may also adjust the multiplier on the erosion, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter to you if some subvolumes are partially outside of the mask.</p>
@@ -180,6 +180,7 @@ Note that you may use non-integer coordinates.</p>
 <p><span class="raw-html"><br /></span></p>
 <p>Note that the point cloud is in the coordinate system of the original image, and is not affected by the down-sampling, it is displayed at the true location of the points.
 Once you are happy with your point cloud, you can move on to the <strong>Run DVC</strong> panel.</p>
+<p>To delete a PointCloud you should press the <cite>Clear Point Cloud</cite> button.</p>
 </div>
 </div>
 <div class="section" id="running-the-dvc-analysis">
@@ -189,7 +190,8 @@ This is how the run will be saved, and you will need to refer to this name later
 The settings you can change for your run are as follows:</p>
 <img alt="_images/run_dvc_panel.png" src="_images/run_dvc_panel.png" />
 <p><span class="raw-html"><br /></span></p>
-<p><strong>Points in run</strong> - the number of points you would like to perform the run on. This will automatically start off being set to the total number of points in the cloud you have created, but you may wish to run with less points to begin with, as a test for instance. If you choose less points than the total number in the cloud, and your reference point 0 lies within your point cloud, the points will be selected starting with point 0 and working outwards from there.</p>
+<p><strong>Run all Points in cloud</strong> - clicking this button resets the <strong>Points in run</strong> to all the points in the point cloud.
+<strong>Points in run</strong> - the number of points you would like to perform the run on. This will automatically start off being set to the total number of points in the cloud you have created, but you may wish to run with less points to begin with, as a test for instance. If you choose less points than the total number in the cloud, and your reference point 0 lies within your point cloud, the points will be selected starting with point 0 and working outwards from there.</p>
 <p><strong>Maximum displacement</strong> - defines the maximum displacement expected within the reference image volume. This is a very important parameter used for search process control and memory allocation. Set to a reasonable value just greater than the actual sample maximum displacement. Be cautious: large displacements make the search process slower and less reliable. It is best to reduce large rigid body displacements through image volume manipulation. Future code development will introduce methods for better management of large displacements.
 <code class="docutils literal notranslate"><span class="pre">Suitable</span> <span class="pre">values:</span> <span class="pre">1</span> <span class="pre">-&gt;</span> <span class="pre">smallest</span> <span class="pre">dimension</span> <span class="pre">of</span> <span class="pre">the</span> <span class="pre">image</span> <span class="pre">volumes</span></code></p>
 <p><strong>Number of degrees of freedom</strong> - defines the degree-of-freedom set for the final stage of the search. The actual search process introduces degrees-of-freedom in stages up to this value. Translation only suffices for a quick, preliminary investigation. Adding rotation will significantly improve displacement accuracy in most cases. Reserve strain degrees-of-freedom for cases when the highest precision is required.</p>
@@ -227,14 +229,14 @@ The settings you can change for your run are as follows:</p>
 You can then either run a <strong>Single</strong> run, or a <strong>Bulk</strong> run:</p>
 <ul class="simple">
 <li><p>A <strong>single run</strong> will run with the current point cloud you have generated, you only need to select the number of sampling points in the subvolume region.</p></li>
-<li><p>If you select to run in <strong>bulk</strong>, this will generate multiple point clouds and perform runs on them, instead of your current point cloud. You can set the minimum and maximum subvolume size you would like, and the size of the step between these values, and similar for the sampling points. In the example above, this would perform runs on point clouds with sizes 30, 40 and 50, and number of sampling points 9000, 9500 and 10000, so 9 runs in total. Note that the other settings for the point clouds generated will be taken from what you selected on the point cloud panel, including the subvolume shape, dimensionality, overlaps and rotation angles.</p></li>
+<li><p>If you select to run in <strong>bulk</strong>, this will use the loaded or generated point cloud and run dvc analysis changing the parameters <strong>subvolume size</strong> and <strong>sampling points in subvolume</strong>. You can set the minimum and maximum subvolume size you would like, and the size of the step between these values, and similar for the sampling points. In the example above, this would perform runs on point clouds with subvolume sizes 30, 60 and 90, and number of sampling points 1000, 2000, 3000, 4000, 5000, 6000, 7000, 9000 and 10000, so 30 runs in total.</p></li>
 </ul>
 <p>For every run, any point clouds and input files to the DVC analysis code that are generated are saved in the session files, which you are able to access if you export your session (see <a class="reference internal" href="saving.html#exporting-sessions"><span class="std std-ref">Exporting Sessions</span></a>).</p>
 <div class="section" id="run-progress">
 <h3>Run Progress<a class="headerlink" href="#run-progress" title="Permalink to this headline">¶</a></h3>
 <p>Whilst the DVC analysis is running, you will see updates on its progress, as below:</p>
 <img alt="_images/run_progress_bar.png" src="_images/run_progress_bar.png" />
-<p>The 1/8 on the first line indicates that it is on run 1 out of a total of 8 runs, and then on the next line it shows it is on point 26 out of a total of 191 for this run.
+<p>The 1/1 on the first line indicates that it is on run 1 out of a total of 1 run, and then on the next line it shows it is on point 20 out of a total of 4630 for this run.
 Following this we have:</p>
 <ul>
 <li><p><strong>[x,y,z] location</strong> of the point.</p></li>
@@ -264,7 +266,7 @@ Following this we have:</p>
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2021, UKRI STFC.</p>
+    <p>&#169; Copyright 2022, UKRI STFC.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
