@@ -21,14 +21,14 @@ import re
 import os
 
 project = 'iDVC'
-copyright = '2021, UKRI STFC'
+copyright = '2022, UKRI STFC'
 author = 'Edoardo Pasca and Laura Murgatroyd'
 
 version = re.sub('^v', '', os.popen('git describe').read().strip())
 version = version.split('-')[0]
 
 rst_epilog = """
-.. |cil_viewer_version| replace:: 21.0.1
+.. |cil_viewer_version| replace:: >=22.2.0
 """
 
 # -- General configuration ---------------------------------------------------

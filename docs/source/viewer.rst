@@ -80,6 +80,8 @@ The interactions for the viewers are as follows (correct as of version |cil_view
 * Toggle visibility of volume render: v
 * Toggle visibility of slice: s
 * Whole image Auto Window/Level: a
+* Activate volume render clipping widget: c
+* Display help: h
 
 .. _Viewer Settings:
 
