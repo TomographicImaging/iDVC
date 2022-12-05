@@ -1,7 +1,7 @@
 name: idvc_windows2
 channels:
-  - paskino
   - ccpi
+  - paskino
   - conda-forge
   - defaults
 dependencies:
