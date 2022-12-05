@@ -7,7 +7,7 @@ Installing the App
 ==================
 1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html 
 2.	Open an anaconda prompt (miniconda) and type... 
-3.	``conda create --name idvc idvc=22.3.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels``(or replace 22.3.0 with the latest version number)
+3.	``conda create --name idvc idvc=22.3.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels`` (or replace 22.3.0 with the latest version number)
 4.	``activate idvc``
 5.	``idvc``
 
