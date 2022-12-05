@@ -1,4 +1,4 @@
-name: idvc
+name: idvc_windows2
 channels:
   - paskino
   - ccpi
@@ -122,4 +122,3 @@ dependencies:
   - zstd=1.5.2=h7755175_4
   - pip:
     - cil-data==22.0.0
-prefix: D:\lhe97136\Miniconda3\envs\idvc22.3.0
