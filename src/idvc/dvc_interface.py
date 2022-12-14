@@ -3174,7 +3174,7 @@ The first point is significant, as it is used as a global starting point and ref
                 count += 1
 
         message_callback.emit('Saving pointcloud')
-        np.savetxt(tempfile.tempdir + "/" + filename, array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+        np.savetxt(os.path.join(tempfile.tempdir, filename), array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = filename
 
         return True
@@ -4204,7 +4204,7 @@ This parameter has a strong effect on computation time, so be careful."
                 self.subvolume_points = [self.rdvc_widgets['subvol_points_spinbox'].value()]
                 self.subvol_sizes = [self.pointcloud_parameters['pointcloud_size_entry'].text()]
                 self.roi_files = [self.roi]
-                pointcloud_new_file = results_folder + "/" + folder_name +  "/_" + str(self.pointcloud_parameters['pointcloud_size_entry'].text() + ".roi")
+                pointcloud_new_file = os.path.join(results_folder, folder_name, "_" + self.pointcloud_parameters['pointcloud_size_entry'].text() + ".roi")
                 shutil.copyfile(self.roi, pointcloud_new_file)
                 
             else:
@@ -5012,7 +5012,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         folder= dialogue.getExistingDirectory(self, "Select a Folder")
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y-%H-%M")
-        export_location = folder + "\_" + now_string
+        export_location = os.path.join(folder, "_" + now_string)
         if folder:
             self.create_progress_window("Exporting","Exporting Files",max=100)
             self.progress_window.setValue(5)
