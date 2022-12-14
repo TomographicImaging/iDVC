@@ -1,4 +1,8 @@
 # ChangeLog
+
+## vx.x.x
+* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
+
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
 * Create environment file for development of iDVC
