@@ -577,6 +577,9 @@ class MainWindow(QMainWindow):
 
         if len(files) > 0:
             if self.copy_files:
+                new_file_name = 'reference'
+                if image_var == 1:
+                    new_file_name = 'correlate'
                 self.image_copied[image_var] = True
                 self.create_progress_window("Copying", "Copying files", 100, None)
                 self.progress_window.setValue(1)
@@ -584,9 +587,9 @@ class MainWindow(QMainWindow):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
                     if file_ext == "mhd":
-                        new_file_dest = os.path.join(file_name[:-3] + "mha")
+                        new_file_dest = os.path.join(new_file_name + "mha")
                     else:
-                        new_file_dest = os.path.join(file_name)
+                        new_file_dest = os.path.join(new_file_name + "." + file_ext)
 
                     copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
                     self.threadpool.start(copy_worker)
