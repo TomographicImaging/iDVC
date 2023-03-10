@@ -2,6 +2,7 @@
 
 ## vx.x.x
 * Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
+* renames input files with names reference and correlate for the relative images, if data are copied in the session.
 
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
