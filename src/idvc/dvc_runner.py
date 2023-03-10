@@ -17,11 +17,15 @@ import os
 import numpy as np
 from PySide2 import QtCore
 from datetime import datetime
-from PySide2.QtWidgets import QMessageBox
+from PySide2.QtWidgets import QMessageBox, QProgressDialog
 import json
 import time
 import shutil
 import platform
+import pysnooper
+from brem import AsyncCopyOverSSH, BasicRemoteExecutionManager
+import tempfile
+import ntpath, posixpath
 from .io import save_tiff_stack_as_raw
 
 count = 0
@@ -136,7 +140,7 @@ def create_progress_window(main_window, title, text, max = 100, cancel = None):
         main_window.progress_window = QProgressDialog(text, "Cancel", 0,max, main_window, QtCore.Qt.Window) 
         main_window.progress_window.setWindowTitle(title)
         main_window.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        main_window.progress_window.setMinimumDuration(0.1)
+        main_window.progress_window.setMinimumDuration(100)
         main_window.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, False)
         main_window.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         if cancel is None:
@@ -189,7 +193,8 @@ def finished_run(main_window, exitCode, exitStatus, process = None, required_run
     # print("did")
 
 class DVC_runner(object):
-    def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder):
+
+    def __init__(self, main_window, input_file, finish_fn, run_succeeded, session_folder, remote_os=None):
         # print("The session folder is", session_folder)
         self.main_window = main_window
         self.input_file = input_file
@@ -314,6 +319,18 @@ class DVC_runner(object):
                     # this is not really a nice way to open an error message!
                     mainwindow.displayFileErrorDialog(message=str(err), title="Error creating config files")
                     return
+
+                newline = None    
+                if remote_os is not None:
+                    if remote_os in ['Windows', 'POSIX'] :    
+                        # on remote we aim at running in the directory
+                        grid_roi_fname  = os.path.basename(grid_roi_fname)
+                        output_filename = os.path.basename(output_filename)
+                        if remote_os == 'POSIX':
+                            newline = "\n"
+                    
+
+                
                 
                 
                 config =  blank_config.format(
@@ -344,7 +361,9 @@ class DVC_runner(object):
                     num_points_to_process=num_points_to_process, 
                     starting_point='{} {} {}'.format(*starting_point)) 
                 time.sleep(1)
-                with open(config_filename,"w") as config_file:
+
+
+                with open(config_filename,"w", newline=newline) as config_file:
                     config_file.write(config)
             
                 #if run_count == len( subvolume_points):
@@ -361,7 +380,105 @@ class DVC_runner(object):
                 self.processes.append( 
                     (exe_file, [ config_filename ], required_runs, total_points, num_points_to_process)
                 )
+
+    def zip_workdir_and_upload(self, **kwargs):
+        # TODO this is already in a worker and does not need to run the AsyncCopyOverSSH
         
+        #param_file is a list with at least 1 item but we are interested in the first
+        # because we want to know the path to it and all files will be in the same directory
+        exe_file, param_file, required_runs,\
+            total_points = self.processes[0]
+        # config is in the directory
+
+        configdir = os.path.join(os.path.dirname(param_file[0]),'..')
+        zipped = shutil.make_archive(os.path.join(configdir, '..', 'remote_run'), 'zip',  configdir)
+
+        self.asyncCopy = AsyncCopyOverSSH()
+        if not hasattr(self.main_window, 'connection_details'):
+            self.main_window.statusBar().showMessage("define the connection")
+            return
+        username = self.main_window.connection_details['username']
+        port = self.main_window.connection_details['server_port']
+        host = self.main_window.connection_details['server_name']
+        private_key = self.main_window.connection_details['private_key']
+        
+        self.asyncCopy.setRemoteConnectionSettings(username=username, 
+                                    port=port, host=host, private_key=private_key)
+
+        
+        
+        remote_dir = self.main_window.settings_window.fw.widgets['remote_workdir_field'].text()
+        # this shouldn't be necessary, however the signals and the workers are created before the async copy
+        # object is created and then the local dir is not set in the worker.
+        self.asyncCopy.SetRemoteDir(remote_dir)
+        self.asyncCopy.SetCopyToRemote()
+        self.asyncCopy.SetLocalDir(os.path.dirname(zipped))
+        self.asyncCopy.SetFileName(os.path.basename(zipped))
+
+        self.asyncCopy.signals.status.connect(print)
+        self.asyncCopy.signals.finished.connect(
+            lambda: self._unzip_on_remote(remote_dir, os.path.basename(zipped))
+            )
+
+        self.asyncCopy.threadpool.start(self.asyncCopy.worker)
+
+    @pysnooper.snoop()
+    def _unzip_on_remote(self, workdir, filename, **kwargs):
+        
+        # 1 create a BasicRemoteExecutionManager
+        username = self.main_window.connection_details['username']
+        port = self.main_window.connection_details['server_port']
+        host = self.main_window.connection_details['server_name']
+        private_key = self.main_window.connection_details['private_key']
+        remote_os = self.main_window.connection_details['remote_os']
+        logfile = os.path.join(tempfile.tempdir, 'ssh.log')
+        conn = BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
+        conn.login(passphrase=False)
+        # 2 go to workdir
+        conn.changedir(workdir)
+        # 2 run 'unzip filename'
+        # -o forces to overwrite the files being unzipped
+        # unzip should be substituted with some python like
+        # import zipfile
+        # with zipfile.ZipFile("remote_run.zip", 'r') as mz:
+        #     mz.extractall()
+        stdout, stderr = conn.run('cd {} && unzip -o {}'.format(workdir, filename))
+        status_callback = kwargs.get('status_callback', None)
+        if status_callback is not None:
+            status_callback.emit((stdout, stderr))
+
+    @pysnooper.snoop()        
+    def run_dvc_on_remote(self, workdir, **kwargs):
+        # 1 create a BasicRemoteExecutionManager
+        username = self.main_window.connection_details['username']
+        port = self.main_window.connection_details['server_port']
+        host = self.main_window.connection_details['server_name']
+        private_key = self.main_window.connection_details['private_key']
+        remote_os = self.main_window.connection_details['remote_os']
+        logfile = os.path.join(tempfile.tempdir, 'ssh.log')
+
+        progress_callback = kwargs.get('progress_callback', None)
+
+        if remote_os == 'POSIX':
+            dpath = posixpath
+        else:
+            dpath = ntpath
+            
+        conn = BasicRemoteExecutionManager(port, host, username, private_key, remote_os, logfile=logfile)
+        conn.login(passphrase=False)
+        # 2 go to workdir
+        conn.changedir(workdir)
+        for i,el in enumerate(self.processes):
+            if progress_callback is not None:
+                progress_callback.emit(i)
+
+            param_file = el[1][0]
+            
+            wdir = dpath.join(workdir, 'dvc_result_{}'.format(i))    
+            # 2 run 'unzip filename'
+            stdout, stderr = conn.run('cd {} && . ~/condarc && conda activate dvc && dvc dvc_config.txt'.format(wdir))
+
+
     def run_dvc(self):
         main_window = self.main_window
         input_file = self.input_file

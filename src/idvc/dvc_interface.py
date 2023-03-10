@@ -1,3 +1,4 @@
+import pysnooper
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -70,7 +71,7 @@ import tempfile
 import json
 import shutil
 import zipfile
-
+from time import sleep
 from functools import reduce
 
 import copy
@@ -88,6 +89,11 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
+from idvc.dialogs import SettingsWindow
+
+from brem.ui import RemoteFileDialog
+from brem import AsyncCopyOverSSH
+from idvc.dvc_remote import DVCRemoteRunControl
 
 __version__ = gui_version.version
 
@@ -256,7 +262,8 @@ class MainWindow(QMainWindow):
         os.mkdir("Results")
 
     def OpenSettings(self):
-        self.settings_window = SettingsWindow(self)
+        if not hasattr(self, 'settings_window'):
+            self.settings_window = SettingsWindow(self)
         self.settings_window.show()
 
     def InitialiseSessionVars(self):
@@ -284,6 +291,7 @@ class MainWindow(QMainWindow):
         self.dvc_input_image_in_session_folder = False    
         if hasattr(self, 'ref_image_data'):
             del self.ref_image_data
+        self.connection_details = None
 
 
 #Loading the DockWidgets:
@@ -570,11 +578,133 @@ class MainWindow(QMainWindow):
         self.view_image()
         self.resetRegistration()
 
+
     def SelectImage(self, image_var, image, label=None, next_button=None): 
+        if self.connection_details is None:
+            return self.SelectImageLocal(image_var, image, label, next_button)
+        else:
+            return self.SelectImageRemote(image_var, image, label, next_button)
+    
+    def SelectImageRemote(self, image_var, image, label=None, next_button=None):     
+        # start the RemoteFileBrowser
+        logfile = os.path.join(os.getcwd(), '..','..',"RemoteFileDialog.log")
+        dialog = RemoteFileDialog(self, logfile=logfile, port=self.connection_details['server_port'], 
+                                  host=self.connection_details['server_name'], 
+                                  username=self.connection_details['username'], 
+                                  private_key=self.connection_details['private_key'],
+                                  remote_os=self.connection_details['remote_os'])
+        dialog.Ok.clicked.connect(
+            lambda: self.getSelectedDownloadAndUpdateUI(dialog, image_var, image, label, next_button)
+            )
+        if hasattr(self, 'files_to_get'):
+            try:
+                dialog.widgets['lineEdit'].setText(self.files_to_get[0][0])
+            except:
+                pass
+        dialog.exec()
+    def getSelectedDownloadAndUpdateUI(self, dialog, image_var, image, label, next_button):
+        if hasattr(dialog, 'selected'):
+            print (type(dialog.selected))
+            for el in dialog.selected:
+                print ("Return from dialogue", el)
+            self.files_to_get = list (dialog.selected)
+            if len(self.files_to_get) == 1:
+                self.GetFileFromRemote(image_var, image, label, next_button)
+            else:
+                self.warningDialog("Sorry, currently we can only get one file.",
+                                   "Error: cannot handle multiple files")
+
+
+
+
+    def GetFileFromRemote(self, image_var, image, label, next_button):
+        '''Downloads a file from remote'''
+        # 1 download self.files_to_get
+        if image_var == 1:
+            # let's not download the correlate image
+            if next_button is not None:
+                try:
+                    for el in next_button:
+                        el.setEnabled(True)
+                except:
+                    next_button.setEnabled(True)
+        
+        if len(self.files_to_get) == 1:
+            self.asyncCopy = AsyncCopyOverSSH()
+            if not hasattr(self, 'connection_details'):
+                self.statusBar().showMessage("define the connection")
+                return
+            username = self.connection_details['username']
+            port = self.connection_details['server_port']
+            host = self.connection_details['server_name']
+            private_key = self.connection_details['private_key']
+            
+            self.asyncCopy.setRemoteConnectionSettings(username=username, 
+                                        port=port, host=host, private_key=private_key)
+
+            
+            remotepath = self.asyncCopy.remotepath.join(self.files_to_get[0][0], self.files_to_get[0][1])
+            if image_var == 1:
+                self.remote_correlate_image_fname = remotepath
+                return
+            else:
+                self.remote_reference_image_fname = remotepath
+
+            files = [os.path.join(tempfile.tempdir, self.files_to_get[0][1])]
+            
+            
+            # this shouldn't be necessary, however the signals and the workers are created before the async copy
+            # object is created and then the local dir is not set in the worker.
+            self.asyncCopy.SetCopyFromRemote()
+            self.asyncCopy.SetLocalDir(tempfile.tempdir)
+            self.asyncCopy.SetRemoteDir(self.asyncCopy.remotepath.dirname(remotepath))
+            self.asyncCopy.SetFileName(self.asyncCopy.remotepath.basename(remotepath))
+
+            self.asyncCopy.signals.finished.connect(
+                lambda: self._UpdateSelectFileUI(files, image_var, image, label, next_button)
+                )
+            # this should also not be done like this.
+            self.asyncCopy.threadpool.start(self.asyncCopy.worker)
+
+            # save into these variables for the remote run in create_run_config
+            if image_var == 0:
+                self.reference_file = remotepath
+            elif image_var == 1:
+                self.correlate_file = remotepath
+
+            sleep(1)
+
+            self.create_progress_window("Getting files from remote", "", 0, None, False, 0)
+            self.updateUnknownProgressDialog = Worker(self.UnknownProgressUpdateDialog)
+            self.updateUnknownProgressDialog.signals.finished.connect(self.StopUnknownProgressUpdate)
+            self.threadpool.start(self.updateUnknownProgressDialog)
+            
+
+    def UnknownProgressUpdateDialog(self, **kwargs):
+        '''Update the progress dialog where we don't know at what stage we are'''
+        t0 = time.time()
+        while True:
+            tc = self.asyncCopy.threadpool.activeThreadCount()
+            if tc == 0:
+                break
+            # print (tc)
+            sleep(0.25)
+            self.progress_window.setLabelText(
+                "Copying {} ... {:.1f} s".format(self.files_to_get[0][1], time.time()-t0)
+                )
+            
+
+    def StopUnknownProgressUpdate(self):
+        self.progress_window.close()
+        
+
+    def SelectImageLocal(self, image_var, image, label=None, next_button=None): 
         #print("In select image")
         dialogue = QFileDialog()
         files = dialogue.getOpenFileNames(self,"Load Images")[0]
+        self._UpdateSelectFileUI(files, image_var, image, label, next_button)
 
+    def _UpdateSelectFileUI(self, files, image_var, image, label=None, next_button=None):
         if len(files) > 0:
             if self.copy_files:
                 self.image_copied[image_var] = True
@@ -604,7 +734,7 @@ class MainWindow(QMainWindow):
                 else:
                     image[image_var].append(files[0])
                 if label is not None:
-                    label.setText(os.path.basename(files[0]))
+                    label.setText(files[0])
                 
             else:
                 # Make sure that the files are sorted 0 - end
@@ -627,7 +757,12 @@ class MainWindow(QMainWindow):
                         os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
 
             if next_button is not None:
-                next_button.setEnabled(True)
+                try:
+                    for el in next_button:
+                        el.setEnabled(True)
+                except:
+                    next_button.setEnabled(True)
+
 
     def copy_file(self, **kwargs):
         
@@ -858,19 +993,29 @@ class MainWindow(QMainWindow):
             #bring image loading panel to front if it isnt already:          
             self.select_image_dock.raise_() 
 
-    def create_progress_window(self, title, text, max = 100, cancel = None):
-        self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Dialog) 
+    def create_progress_window(self, title, text, max = 100, cancel = None, autoClose = True, minimumDuration=4000):
+        '''Creates a QProgressDialog
+        
+        :param title: title
+        :param text: text in the dialog
+        :param max: max value of the progress, default 100. Minimum is set to 0.
+        :param cancel: if to show a cancel button, default None hence Cancel not shown.
+        :autoClose: if the dialog should close when max is reached
+        :minimumDuration: This property holds the time that must pass before the dialog appears, default 4000 ms
+        '''
+        self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Window) 
         self.progress_window.setWindowTitle(title)
         
         self.progress_window.setWindowModality(QtCore.Qt.ApplicationModal) #This means the other windows can't be used while this is open
-        self.progress_window.setMinimumDuration(0.01)
+        self.progress_window.setMinimumDuration(int(minimumDuration))
         self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, True)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
-        self.progress_window.setAutoClose(True)
+        self.progress_window.setAutoClose(autoClose)
         if cancel is None:
             self.progress_window.setCancelButton(None)
         else:
             self.progress_window.canceled.connect(cancel)
+        self.progress_window.show()
 
 
     def setup2DPointCloudPipeline(self):
@@ -1126,7 +1271,7 @@ It is used as a global starting point and a translation reference."
         rp['translate_X_entry'].setValidator(validatorint)
         rp['translate_X_entry'].setText("0")
         rp['translate_X_entry'].setToolTip(translation_tooltip_text)
-        #rp['translate_X_entry'].setEnabled(False)
+        rp['translate_X_entry'].textEdited.connect(self._updateTranslateObject)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_X_entry'])
         widgetno += 1
         # Translate Y field
@@ -1138,7 +1283,7 @@ It is used as a global starting point and a translation reference."
         rp['translate_Y_entry'].setValidator(validatorint)
         rp['translate_Y_entry'].setText("0")
         rp['translate_Y_entry'].setToolTip(translation_tooltip_text)
-        #rp['translate_Y_entry'].setEnabled(False) 
+        rp['translate_Y_entry'].textEdited.connect(self._updateTranslateObject)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Y_entry'])
         widgetno += 1
         # Translate Z field
@@ -1150,9 +1295,11 @@ It is used as a global starting point and a translation reference."
         rp['translate_Z_entry'].setValidator(validatorint)
         rp['translate_Z_entry'].setText("0")
         rp['translate_Z_entry'].setToolTip(translation_tooltip_text)
-        #rp['translate_Z_entry'].setEnabled(False)
+        rp['translate_Y_entry'].textEdited.connect(self._updateTranslateObject)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['translate_Z_entry'])
         widgetno += 1
+
+        # self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
 
         # Add submit button
         rp['start_registration_button'] = QPushButton(groupBox)
@@ -1167,6 +1314,24 @@ It is used as a global starting point and a translation reference."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
         self.registration_parameters = rp
+
+    
+    def _updateTranslateObject(self, text, **kwargs):
+        rp = self.registration_parameters
+
+        
+        # setup the appropriate stuff to run the registration
+        if not hasattr(self, 'translate'):
+            self.translate = vtk.vtkImageTranslateExtent()
+        elif self.translate is None:
+            self.translate = vtk.vtkImageTranslateExtent()
+        
+        self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),
+                                      -int(rp['translate_Y_entry'].text()),
+                                      -int(rp['translate_Z_entry'].text())
+                                      )
+        
+
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -4066,6 +4231,7 @@ This parameter has a strong effect on computation time, so be careful."
 
         #Add button functionality:
         rdvc_widgets['run_type_entry'].currentIndexChanged.connect(self.show_run_groupbox)
+        # if connected to remote do something else.
         rdvc_widgets['run_button'].clicked.connect(self.create_config_worker)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
@@ -4111,6 +4277,7 @@ This parameter has a strong effect on computation time, so be careful."
         if self.roi:
             next_button.setEnabled(True)
 
+
     def create_config_worker(self):
         if hasattr(self, 'translate'):
             if self.translate is None:
@@ -4149,26 +4316,101 @@ This parameter has a strong effect on computation time, so be careful."
                 message="Please set a run name not in the following list: {}".format(saved_run_names))
             return
 
-        folder_name = "_" + self.rdvc_widgets['name_entry'].text()
-
-        results_folder = os.path.join(tempfile.tempdir, "Results")
-
-        new_folder = os.path.join(results_folder, folder_name)
-
-        if os.path.exists(new_folder):
-            self.warningDialog(window_title="Error", 
-                                message="This directory already exists. Please choose a different name." )
-            return
-
+        
         self.config_worker = Worker(self.create_run_config)
         self.create_progress_window("Loading", "Generating Run Config")
         self.config_worker.signals.progress.connect(self.progress)
         # if single or bulk use the line below, if remote develop new functionality
-        self.config_worker.signals.result.connect(partial (self.run_external_code))
-        self.config_worker.signals.message.connect(self.updateProgressDialogMessage)
+        run_local = True
+        if hasattr(self, 'settings_window'):
+            if not self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
+                run_local = False
+        
+        if run_local:    
+            self.config_worker.signals.result.connect(partial (self.run_external_code))
+            self.config_worker.signals.message.connect(self.updateProgressDialogMessage)
+        else:
+            # do not run the dvc locally but 
+            # 1 zip and 
+            # 2 upload the config to remote and then
+            # 3 run the code on the remote
+            self.config_worker.signals.finished.connect(self.ZipAndUploadConfigToRemote)
+            
+        
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
+
+    @pysnooper.snoop()  
+    def ZipAndUploadConfigToRemote(self):
+        # this command will call DVC_runner to create the directories
+        self.run_succeeded = True
+        self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
+                                     self.finished_run, self.run_succeeded, tempfile.tempdir, remote_os=self.connection_details['remote_os'])
+        self.config_worker = Worker(self.dvc_runner.zip_workdir_and_upload)
+        # self.create_progress_window("Connecting with remote", "Zipping and uploading", 0, None, False)
+        self.config_worker.signals.finished.connect( self.unzip_on_remote )
+        self.threadpool.start(self.config_worker)
+
+
+    def unzip_on_remote(self):
+        # TODO: keep this here and remove the async copy in dvc_runner
+        print ("run_code_remote")
+        while True:
+            tc = self.dvc_runner.asyncCopy.threadpool.activeThreadCount()
+            if tc == 0:
+                break
+            # print (tc)
+            sleep(0.25)
+        self.unzip_worker = Worker(self.dvc_runner._unzip_on_remote, self.dvc_runner.asyncCopy.remotedir, self.dvc_runner.asyncCopy.filename)
+        self.create_progress_window("Connecting with remote", "Unzipping", 0, None, False)
+        self.unzip_worker.signals.finished.connect( self.remote_run_code )
+        self.unzip_worker.signals.status.connect( self.update_status)
+        self.unzip_worker.signals.error.connect( self.update_on_error)
         
+        self.threadpool.start(self.unzip_worker)
+    
+    
+    def update_status(self, data):
+        print ("STDOUT", data[0])
+        print ("STDERR", data[1])
+
+
+    def update_on_error(self, data):
+        # traceback.print_exc()
+        # exctype, value = sys.exc_info()[:2]
+        # self.signals.error.emit((exctype, value, traceback.format_exc()))
+        print(data)
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowTitle("Remote execution Error")
+        msg.setText("exectype {}, value {}".format(data[0], data[1]))
+        msg.setDetailedText(data[2])
+        msg.exec_()
+
+    
+    def remote_run_code(self):
+        self.progress_window.close()
+
+        self.dvc_remote_controller = DVCRemoteRunControl(self.connection_details)
+        self.dvc_remote_controller.set_workdir(self.dvc_runner.asyncCopy.remotedir)
+        self.dvc_remote_controller.set_num_runs(len(self.dvc_runner.processes))
+
+        # self.dvc_worker = Worker(self.dvc_runner.run_dvc_on_remote, self.dvc_runner.asyncCopy.remotedir)
+        self.dvc_worker = Worker(self.dvc_remote_controller.run_dvc_on_remote)
+        self.create_progress_window("Connecting with remote", "Running DVC remote", 0, None, False)
+        self.dvc_worker.signals.finished.connect( self.remote_retrieve_results )
+        self.threadpool.start(self.dvc_worker)
+
+    def remote_retrieve_results(self):
+        self.dvc_worker = Worker(self.dvc_remote_controller.retrieve_results, os.path.abspath(self.run_config_file))
+        self.dvc_worker.signals.finished.connect( self.remote_update_result_panel )
+        self.threadpool.start(self.dvc_worker)
+
+    def remote_update_result_panel(self):
+        self.run_succeeded = True
+        self.progress_window.close()
+        self.finished_run()
+    
 
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
@@ -4247,16 +4489,18 @@ This parameter has a strong effect on computation time, so be careful."
                     progress_callback.emit(subvol_size_count/len(self.subvol_sizes)*90)
                 #print("finished making pointclouds")
 
-            #print(self.roi_files)
-
-            #print("DVC in: ", self.dvc_input_image)
-            
-            self.reference_file = self.dvc_input_image[0][0]
-            if len(self.dvc_input_image[0]) > 1:
-                self.reference_file = self.dvc_input_image[0]
-            self.correlate_file = self.dvc_input_image[1][0]
-            if len(self.dvc_input_image[1]) > 1:
-                self.correlate_file = self.dvc_input_image[1]
+            # if remote mode this should not be the local copy        
+            if hasattr(self, 'settings_window') and self.settings_window.fw.widgets['connect_to_remote_field'].isChecked():
+                # this should point to the remote files set at the time of download
+                self.reference_file = self.remote_reference_image_fname
+                self.correlate_file = self.remote_correlate_image_fname
+            else:
+                self.reference_file = self.dvc_input_image[0][0]
+                if len(self.dvc_input_image[0]) > 1:
+                    self.reference_file = self.dvc_input_image[0]
+                self.correlate_file = self.dvc_input_image[1][0]
+                if len(self.dvc_input_image[1]) > 1:
+                    self.correlate_file = self.dvc_input_image[1]
 
             #print("REF: ", self.reference_file)
 
@@ -4287,7 +4531,7 @@ This parameter has a strong effect on computation time, so be careful."
             else:
                 run_config['rigid_trans']= "0.0 0.0 0.0"
 
-            self.run_folder = "Results/" + folder_name
+            self.run_folder = os.path.join("Results", folder_name)
             run_config['run_folder'] = self.run_folder
 
             #where is point0
@@ -4333,8 +4577,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.cancelled = True
             return
             
-
-        
         self.run_succeeded = True
     
         # this command will call DVC_runner to create the directories
@@ -4342,6 +4584,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                                      self.finished_run, self.run_succeeded, tempfile.tempdir)
 
         self.dvc_runner.run_dvc()
+
 
     def update_progress(self, exe = None):
         if exe:
@@ -4513,7 +4756,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
      
-
+    @pysnooper.snoop()
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -5421,123 +5664,7 @@ Please select the new location of the file, or move it back to where it was orig
         
 
 
-class SettingsWindow(QDialog):
 
-    def __init__(self, parent):
-        super(SettingsWindow, self).__init__(parent)
-
-        self.parent = parent
-
-        self.setWindowTitle("Settings")
-
-        self.dark_checkbox = QCheckBox("Dark Mode")
-
-        self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
-        self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
-        self.vis_size_entry = QDoubleSpinBox()
-
-        self.vis_size_entry.setMaximum(64.0)
-        self.vis_size_entry.setMinimum(0.01)
-        self.vis_size_entry.setSingleStep(0.01)
-
-        if self.parent.settings.value("vis_size") is not None:
-            self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
-
-        else:
-            self.vis_size_entry.setValue(1.0)
-
-
-        if self.parent.settings.value("dark_mode") is not None:
-            if self.parent.settings.value("dark_mode") == "true":
-                self.dark_checkbox.setChecked(True)
-            else:
-                self.dark_checkbox.setChecked(False)
-        else:
-            self.dark_checkbox.setChecked(True)
-
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Raised)
-        self.adv_settings_label = QLabel("Advanced")
-
-
-        self.gpu_label = QLabel("Please set the size of your GPU memory.")
-        self.gpu_size_label = QLabel("GPU Memory (GB): ")
-        self.gpu_size_entry = QDoubleSpinBox()
-
-
-        if self.parent.settings.value("gpu_size") is not None:
-            self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
-
-        else:
-            self.gpu_size_entry.setValue(1.0)
-
-        self.gpu_size_entry.setMaximum(64.0)
-        self.gpu_size_entry.setMinimum(0.00)
-        self.gpu_size_entry.setSingleStep(0.01)
-        self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
-        self.gpu_checkbox.setChecked(True) #gpu is default
-        if self.parent.settings.value("volume_mapper") == "cpu":
-            self.gpu_checkbox.setChecked(False)
-
-        if hasattr(self.parent, 'copy_files'):
-            self.copy_files_checkbox.setChecked(self.parent.copy_files)
-
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.dark_checkbox)
-        self.layout.addWidget(self.copy_files_checkbox)
-        self.layout.addWidget(self.vis_size_label)
-        self.layout.addWidget(self.vis_size_entry)
-        self.layout.addWidget(separator)
-        self.layout.addWidget(self.adv_settings_label)
-        self.layout.addWidget(self.gpu_checkbox)
-        self.layout.addWidget(self.gpu_label)
-        self.layout.addWidget(self.gpu_size_label)
-        self.layout.addWidget(self.gpu_size_entry)
-        self.buttons = QDialogButtonBox(
-           QDialogButtonBox.Save | QDialogButtonBox.Cancel,
-           Qt.Horizontal, self)
-        self.layout.addWidget(self.buttons)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.quit)
-
-    def accept(self):
-        #self.parent.settings.setValue("settings_chosen", 1)
-        if self.dark_checkbox.isChecked():
-            self.parent.settings.setValue("dark_mode", True)
-        else:
-            self.parent.settings.setValue("dark_mode", False)
-        self.parent.SetAppStyle()
-
-        if self.copy_files_checkbox.isChecked():
-            self.parent.copy_files = 1 # save for this session
-            self.parent.settings.setValue("copy_files", 1) #save for next time we open app
-        else:
-            self.parent.copy_files = 0
-            self.parent.settings.setValue("copy_files", 0)
-
-        if self.gpu_checkbox.isChecked():
-            self.parent.settings.setValue("volume_mapper", "gpu")
-            self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
-        else:
-            self.parent.settings.setValue("volume_mapper", "cpu")
-
-        self.parent.settings.setValue("gpu_size", float(self.gpu_size_entry.value()))
-        self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
-
-        if self.parent.settings.value("first_app_load") != "False":
-            self.parent.CreateSessionSelector("new window")
-            self.parent.settings.setValue("first_app_load", "False")
-            
-        self.close()
-
-
-        #print(self.parent.settings.value("copy_files"))
-    def quit(self):
-        if self.parent.settings.value("first_app_load") != "False":
-            self.parent.CreateSessionSelector("new window")
-            self.parent.settings.setValue("first_app_load", "False")
-        self.close()
         
 
 

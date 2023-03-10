@@ -48,6 +48,7 @@ requirements:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
+    - brem
     - vtk=8.1.2
 
 about:

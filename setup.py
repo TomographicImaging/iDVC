@@ -57,8 +57,8 @@ with open(fname, 'w') as f:
 setup(
       name = "idvc",
       description = 'CCPi DVC Configurator',
-	version = dversion,
-	packages = {'idvc'},
+	  version = dversion,
+	  packages = {'idvc'},
       package_dir = {'idvc': os.path.join('src','idvc')},
       package_data = {'idvc':['DVCIconSquare.png']},
       # metadata for upload to PyPI
