@@ -1,3 +1,18 @@
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+#   Author: Laura Murgatroyd (UKRI-STFC)
+#   Author: Edoardo Pasca (UKRI-STFC)
+
 import os
 import numpy as np
 from PySide2 import QtCore
@@ -68,7 +83,7 @@ num_points_to_process   {num_points_to_process}  ### Number of points in the poi
 starting_point  {starting_point}    ### x,y,z location of starting point for DVC analysis
 '''
 
-def update_progress(main_window, process, total_points, required_runs, run_succeeded):
+def update_progress(main_window, process, total_points, required_runs, run_succeeded, start_time, num_points_to_process):
     # print("Required runs", required_runs)
     while(process.canReadLine()):
         #print("READ")
@@ -80,11 +95,32 @@ def update_progress(main_window, process, total_points, required_runs, run_succe
         #print("{:.0f} \n".format(count/(total_points+3*required_runs)*100))
         if hasattr(main_window, 'progress_window'):
             #print(count/(total_points+3*required_runs)*100)
-            main_window.progress_window.setValue(count/(total_points+3*required_runs)*100)
+            # main_window.progress_window.setValue(count/(total_points+3*required_runs)*100)
+
+            try:
+                # try to infer the number of points processed from the output of the dvc executable
+                num_processed_points = int(string.split('/')[0])
+                etcs = 0
+                prog = 0
+                if num_processed_points > 0:
+                    prog = int(num_processed_points/num_points_to_process*100)-1
+                    etcs = ((time.time()-start_time) * num_points_to_process / num_processed_points) - (time.time()-start_time)
+                try:
+                    etc = time.strftime("%H:%M:%S s", time.gmtime(etcs))
+                except:
+                    etc = 'Error estimating time to completion'
+
+                ETC_line = "\nEstimated time to completion of this step {} ".format(etc)
+            except ValueError:
+                num_processed_points = 0
+                prog = 0
+                ETC_line = ''
+                
+            main_window.progress_window.setValue(prog)
             label_text = main_window.progress_window.labelText().split("\n")[0]
             main_window.progress_window.setLabelText(
-                    "{}\n{}".format(label_text, line)
-                )
+                    "{}\n{}{}".format(label_text, line, ETC_line))
+                
         if line[:11] == "Input Error":
             run_succeeded = False
             if hasattr(main_window, 'progress_window'):
@@ -323,7 +359,7 @@ class DVC_runner(object):
                 # process.waitForFinished(msecs=2147483647)
                 
                 self.processes.append( 
-                    (exe_file, [ config_filename ], required_runs, total_points)
+                    (exe_file, [ config_filename ], required_runs, total_points, num_points_to_process)
                 )
         
     def run_dvc(self):
@@ -337,8 +373,11 @@ class DVC_runner(object):
         # print("Processes: ", self.processes)
         # print("num: ", self.process_num)        
 
+        # start time
+        start_time = time.time()
+
         exe_file, param_file, required_runs,\
-            total_points = self.processes[self.process_num]
+            total_points, num_points_to_process = self.processes[self.process_num]
 
         process.setWorkingDirectory(os.getcwd())
         # process.finished.connect(partial(finished_run, main_window, 
@@ -359,7 +398,7 @@ class DVC_runner(object):
             main_window.progress_window.canceled.connect(lambda: self.onCancel(process))
         process.readyRead.connect(
             lambda: update_progress(main_window, process, total_points, required_runs,\
-                                    run_succeeded))
+                                    run_succeeded, start_time, num_points_to_process))
         # process.finished.connect(self.run_dvc())
         process.start( exe_file , param_file )
 

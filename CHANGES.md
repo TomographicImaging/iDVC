@@ -1,5 +1,11 @@
 # ChangeLog
-## v22.2.1
+
+## vx.x.x
+* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
+* More efficient pointcloud creation by not shifting the pointcloud to the make such that point0 is one point of the 
+  created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid.
+
+## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
 * Create environment file for development of iDVC
 * On load/creation of pointcloud display points only by default
@@ -7,6 +13,12 @@
 * Catches exceptions on load of files and opens message boxes
 * Fix load of TIFF files
 * Added button to start tracing
+* Added estimated time to completion of DVC analysis
+* Do not allow registration box to extend over the edge of the image (previously this caused the app to crash)
+* Added more granular progress update from pointcloud creation step, and bugfixes
+* fix the build script for Windows
+* Update documentation to be consistent with this version.
+* Add environment file for installing iDVC : recipe/idvc_environment.yml
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0
@@ -16,6 +28,7 @@
 * Pass max number of points to be processed to dvc executable
 * Pass point 0 location to dvc executable
 * Add button to set the number of points in the run to all points in the pointcloud.
+* Use v2.0.0 of conda build action
 
 ## v22.1.0
 * Allows loading of TIFF stacks to run DVC code

@@ -1,3 +1,18 @@
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+#   Author: Laura Murgatroyd (UKRI-STFC)
+#   Author: Edoardo Pasca (UKRI-STFC)
+
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -21,14 +36,14 @@ import re
 import os
 
 project = 'iDVC'
-copyright = '2021, UKRI STFC'
+copyright = '2022, UKRI STFC'
 author = 'Edoardo Pasca and Laura Murgatroyd'
 
 version = re.sub('^v', '', os.popen('git describe').read().strip())
 version = version.split('-')[0]
 
 rst_epilog = """
-.. |cil_viewer_version| replace:: 21.0.1
+.. |cil_viewer_version| replace:: >=22.2.0
 """
 
 # -- General configuration ---------------------------------------------------
