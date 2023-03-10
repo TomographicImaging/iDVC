@@ -2938,7 +2938,10 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointCloud = pointCloud
         else:
             pointCloud = self.pointCloud
-
+        # instead of translating the point cloud so that point0 is in the point cloud
+        # we add point0 to the point cloud.
+        if hasattr(self, 'point0'):
+            pointCloud.SetPoint0(self.point0_world_coords)
         v = self.vis_widget_2D.frame.viewer
         orientation = v.getSliceOrientation()
         pointCloud.SetOrientation(orientation)
@@ -3056,6 +3059,7 @@ The first point is significant, as it is used as a global starting point and ref
         # Mask the point cloud with the eroded mask
         if not self.pointCloudCreated:
             polydata_masker = cilMaskPolyData()
+            polydata_masker.AddObserver(vtk.vtkCommand.ProgressEvent, partial(getProgress, progress_callback=progress_callback))
             # save reference
             self.polydata_masker = polydata_masker
         else:
@@ -3104,29 +3108,12 @@ The first point is significant, as it is used as a global starting point and ref
 
         mm = mask_data.GetScalarComponentAsDouble(int(self.point0_sampled_image_coords[0]),int(self.point0_sampled_image_coords[1]), int(self.point0_sampled_image_coords[2]), 0)
 
-        if int(mm) == 1: #if point0 is in the mask
-            #print("POINT 0 IN MASK")
-            #Translate pointcloud so that point 0 is in the cloud
-            if hasattr(self, 'point0'):
-                pointCloud_points = []
-                pointCloud_distances = []
-                #print("Point 0: ", self.point0_world_coords)
-                for i in range (0, pointCloud.GetNumberOfPoints()):
-                    current_point = pointCloud.GetPoints().GetPoint(i)
-                    pointCloud_points.append(current_point)
-                    pointCloud_distances.append((self.point0_world_coords[0]-current_point[0])**2+(self.point0_world_coords[1]-current_point[1])**2+(self.point0_world_coords[2]-current_point[2])**2)
-
-                lowest_distance_index = pointCloud_distances.index(min(pointCloud_distances))
-
-                #print("The point closest to point 0 is:", pointCloud_points[lowest_distance_index])
-
-                pointCloud_Translation = (self.point0_world_coords[0]-pointCloud_points[lowest_distance_index][0],self.point0_world_coords[1]-pointCloud_points[lowest_distance_index][1],self.point0_world_coords[2]-pointCloud_points[lowest_distance_index][2])
-
-                #print("Translation from it is:", pointCloud_Translation)
-
-                transform.Translate(pointCloud_Translation)
-        #else:
-            #print("POINT 0 NOT IN MASK")
+        if int(mm) == 1: 
+            #if point0 is in the mask and it has been added as first point to the point cloud
+            remove_point0 = False
+        else:
+            # should remove point0 from the mask
+            remove_point0 = True
 
         if self.pointCloudCreated:
             t_filter = self.t_filter
@@ -3145,7 +3132,7 @@ The first point is significant, as it is used as a global starting point and ref
         # polydata_masker.Modified()
         message_callback.emit('Applying mask to pointcloud')
         polydata_masker.Update()
-
+        message_callback.emit('Applying mask to pointcloud. Done')
         #print("Points in mask now: ", polydata_masker)
         
         self.reader = reader
@@ -3174,7 +3161,8 @@ The first point is significant, as it is used as a global starting point and ref
                 count += 1
 
         message_callback.emit('Saving pointcloud')
-        np.savetxt(os.path.join(tempfile.tempdir, filename), array, '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+        start = 0 if remove_point0 is False else 1
+        np.savetxt(tempfile.tempdir + "/" + filename, array[start:], '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = filename
 
         return True
