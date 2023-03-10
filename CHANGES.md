@@ -1,5 +1,9 @@
 # ChangeLog
-## v22.2.1
+
+## vx.x.x
+* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
+
+## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
 * Create environment file for development of iDVC
 * On load/creation of pointcloud display points only by default
@@ -10,6 +14,9 @@
 * Added estimated time to completion of DVC analysis
 * Do not allow registration box to extend over the edge of the image (previously this caused the app to crash)
 * Added more granular progress update from pointcloud creation step, and bugfixes
+* fix the build script for Windows
+* Update documentation to be consistent with this version.
+* Add environment file for installing iDVC : recipe/idvc_environment.yml
 
 ## v22.2.0
 * Update DVC executable version to v22.0.0

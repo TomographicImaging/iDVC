@@ -1,3 +1,18 @@
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+#   Author: Laura Murgatroyd (UKRI-STFC)
+#   Author: Edoardo Pasca (UKRI-STFC)
+
 import os
 import sys
 import PySide2
@@ -4177,7 +4192,7 @@ This parameter has a strong effect on computation time, so be careful."
                 self.subvolume_points = [self.rdvc_widgets['subvol_points_spinbox'].value()]
                 self.subvol_sizes = [self.pointcloud_parameters['pointcloud_size_entry'].text()]
                 self.roi_files = [self.roi]
-                pointcloud_new_file = results_folder + "/" + folder_name +  "/_" + str(self.pointcloud_parameters['pointcloud_size_entry'].text() + ".roi")
+                pointcloud_new_file = os.path.join(results_folder, folder_name, "_" + self.pointcloud_parameters['pointcloud_size_entry'].text() + ".roi")
                 shutil.copyfile(self.roi, pointcloud_new_file)
                 
             else:
@@ -4985,7 +5000,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         folder= dialogue.getExistingDirectory(self, "Select a Folder")
         now = datetime.now()
         now_string = now.strftime("%d-%m-%Y-%H-%M")
-        export_location = folder + "\_" + now_string
+        export_location = os.path.join(folder, "_" + now_string)
         if folder:
             self.create_progress_window("Exporting","Exporting Files",max=100)
             self.progress_window.setValue(5)

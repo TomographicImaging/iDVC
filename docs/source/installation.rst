@@ -7,7 +7,7 @@ Installing the App
 ==================
 1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html 
 2.	Open an anaconda prompt (miniconda) and type... 
-3.	``conda create --name idvc idvc -c ccpi -c paskino -c conda-forge -c defaults --override-channels``
+3.	``conda create --name idvc idvc=22.3.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels`` (or replace 22.3.0 with the latest version number)
 4.	``activate idvc``
 5.	``idvc``
 
@@ -18,8 +18,8 @@ Updating the App
 If you have previously installed the app, to get an updated version:
 
 1.	Open anaconda prompt (miniconda) and type…
-2.	``activate idvc`` (note that when you created your environment, if you called it something else you need to replace dvc-gui with your environment name.)
-3.	``conda install idvc=21.1.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels`` (or replace 21.1.0 with the latest version number)
+2.	``activate idvc`` (note that when you created your environment, if you called it something else you need to replace 'idvc' with your environment name.)
+3.	``conda install idvc=22.3.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels`` (or replace 22.3.0 with the latest version number)
 4.	Then use: ``idvc`` to open up the app, as normal
 
 Installing the DVC Executable Only
