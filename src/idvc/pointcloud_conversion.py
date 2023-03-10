@@ -1,3 +1,18 @@
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+
+#   http://www.apache.org/licenses/LICENSE-2.0
+
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+#   Author: Laura Murgatroyd (UKRI-STFC)
+#   Author: Edoardo Pasca (UKRI-STFC)
+
 import numpy
 import csv
 from numbers import Integral, Number
@@ -68,10 +83,20 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         self._SliceNumber = 0
         self._Mode = self.CUBE
         self._SubVolumeRadius = 1 #: Radius of the subvolume in voxels
+        self._Point0 = None
 
     def GetPoints(self):
         '''Returns the Points'''
         return self._Points
+
+    def SetPoint0(self, value):
+        if not isinstance(value, list):
+            raise ValueError('Point0 must be a list. Got', value)
+        if len(value) != 3:
+            raise ValueError('Point0 must be a list of 3 elements. Got', value)
+        self._Point0 = value
+        self.Modified()
+
     def SetMode(self, value):
         '''Sets the shape mode'''
         if not value in [self.CIRCLE, self.SQUARE, self.CUBE, self.SPHERE]:
@@ -212,6 +237,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         # print ("dimensions : ", image_dimensions)
         # print ("point spacing ", point_spacing)
 
+        if self._Point0 is not None:
+            vtkPointCloud.InsertNextPoint(*self._Point0)
         #label orientation axis as a, with plane being viewed labelled as bc
         
         # reduce to 2D on the proper orientation
@@ -231,6 +258,8 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         # Loop through points in plane bc
         n_b = offset[0]
 
+        # total number of steps
+        tot = max_b * max_c
         while n_b < max_b:
             n_c = offset[1]
 
@@ -254,6 +283,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
                 n_c += 1
 
             n_b += 1
+            self.UpdateProgress((n_c + max_b * n_b ) / tot)
 
         return 1
 
@@ -274,6 +304,9 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
         image_spacing = list ( image_data.GetSpacing() )
         image_origin  = list ( image_data.GetOrigin() )
         image_dimensions = list ( image_data.GetDimensions() )
+
+        if self._Point0 is not None:
+            vtkPointCloud.InsertNextPoint(*self._Point0)
 
         # the total number of points on X and Y axis
         max_x = image_dimensions[0] * image_spacing[0] / point_spacing[0]
@@ -297,6 +330,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
             offset[orientation] = sliceno % point_spacing[orientation]
         
         n_x=0
+        tot = max_x * max_y * max_z
 
         while n_x < max_x:
             # x axis
@@ -313,6 +347,7 @@ class cilRegularPointCloudToPolyData(VTKPythonAlgorithmBase):
                     n_z += 1
 
                 n_y += 1
+                self.UpdateProgress((n_z + max_z * n_y + max_y * max_z * n_x ) / tot)
 
             n_x += 1
 
