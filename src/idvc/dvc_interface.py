@@ -580,9 +580,16 @@ class MainWindow(QMainWindow):
                 new_file_name = 'reference'
                 if image_var == 1:
                     new_file_name = 'correlate'
-                self.image_copied[image_var] = True
+                # first of all we need to remove the files that were copied in the previous run
                 self.create_progress_window("Copying", "Copying files", 100, None)
                 self.progress_window.setValue(1)
+                
+                files_to_remove = glob.glob(new_file_name+"*")
+                for f in files_to_remove:
+                    os.remove(f)
+                self.progress_window.setValue(10)
+                
+                self.image_copied[image_var] = True
                 for file_num, f in enumerate(files):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
