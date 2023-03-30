@@ -588,7 +588,7 @@ class MainWindow(QMainWindow):
                     file_ext = file_name.split(".")[-1]
                     if len(files) == 1:
                         if file_ext == "mhd":
-                            new_file_dest = os.path.join(new_file_name + "mha")
+                            new_file_dest = os.path.join(new_file_name + "." + "mha")
                         else:
                             new_file_dest = os.path.join(new_file_name + "." + file_ext)
                     else:
