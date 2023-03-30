@@ -3,6 +3,8 @@
 ## vx.x.x
 * Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
 * renames input files with names reference and correlate for the relative images, if data are copied in the session.
+* More efficient pointcloud creation by not shifting the pointcloud to the make such that point0 is one point of the 
+  created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid.
 
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
