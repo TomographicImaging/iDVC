@@ -586,10 +586,13 @@ class MainWindow(QMainWindow):
                 for file_num, f in enumerate(files):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
-                    if file_ext == "mhd":
-                        new_file_dest = os.path.join(new_file_name + "mha")
+                    if len(files) == 1:
+                        if file_ext == "mhd":
+                            new_file_dest = os.path.join(new_file_name + "mha")
+                        else:
+                            new_file_dest = os.path.join(new_file_name + "." + file_ext)
                     else:
-                        new_file_dest = os.path.join(new_file_name + "." + file_ext)
+                        new_file_dest = os.path.join(new_file_name + "_" + str(file_num) + "." + file_ext)
 
                     copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
                     self.threadpool.start(copy_worker)
