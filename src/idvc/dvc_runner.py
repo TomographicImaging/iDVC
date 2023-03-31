@@ -310,9 +310,9 @@ class DVC_runner(object):
                 # copies the pointcloud file as a whole in the run directory
                 try:
                     shutil.copyfile(roi_file, grid_roi_fname)
-                except Error as err:
+                except Exception as err:
                     # this is not really a nice way to open an error message!
-                    mainwindow.displayFileErrorDialog(message=str(err), title="Error creating config files")
+                    main_window.displayFileErrorDialog(message=str(err), title="Error creating config files")
                     return
                 
                 
@@ -361,7 +361,8 @@ class DVC_runner(object):
                 self.processes.append( 
                     (exe_file, [ config_filename ], required_runs, total_points, num_points_to_process)
                 )
-        
+    import pysnooper
+    @pysnooper.snoop()
     def run_dvc(self):
         main_window = self.main_window
         input_file = self.input_file
@@ -370,6 +371,15 @@ class DVC_runner(object):
         
         process = QtCore.QProcess()
         
+        env = QtCore.QProcessEnvironment.systemEnvironment()
+        try:
+            nthreads = main_window.settings.value('omp_threads')
+        except Exception as err:
+            nthreads = '4'
+            print (err)
+        env.insert("OMP_NUM_THREADS", nthreads)
+        process.setProcessEnvironment(env)
+
         # print("Processes: ", self.processes)
         # print("num: ", self.process_num)        
 

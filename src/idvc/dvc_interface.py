@@ -5524,6 +5524,13 @@ class SettingsWindow(QDialog):
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
+        self.omp_threads_entry = QSpinBox(self)
+        self.omp_threads_entry.setValue(4)
+        self.omp_threads_entry.setRange(1, 16)
+        self.omp_threads_entry.setSingleStep(1)
+        self.omp_threads_label = QLabel("OMP Threads: ")
+
+
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.dark_checkbox)
         self.layout.addWidget(self.copy_files_checkbox)
@@ -5535,6 +5542,11 @@ class SettingsWindow(QDialog):
         self.layout.addWidget(self.gpu_label)
         self.layout.addWidget(self.gpu_size_label)
         self.layout.addWidget(self.gpu_size_entry)
+
+        self.layout.addWidget(self.omp_threads_label)
+        self.layout.addWidget(self.omp_threads_entry)
+
+
         self.buttons = QDialogButtonBox(
            QDialogButtonBox.Save | QDialogButtonBox.Cancel,
            Qt.Horizontal, self)
@@ -5570,6 +5582,7 @@ class SettingsWindow(QDialog):
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")
             
+        self.parent.settings.setValue("omp_threads", str(self.omp_threads_entry.value()))
         self.close()
 
 
