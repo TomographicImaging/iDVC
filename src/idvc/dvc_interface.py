@@ -75,7 +75,7 @@ from functools import reduce
 
 import copy
 
-from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker
+from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker, warningDialog
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
@@ -582,35 +582,44 @@ class MainWindow(QMainWindow):
                     new_file_name = 'correlate'
                 # first of all we need to remove the files that were copied in the previous run
                 self.create_progress_window("Copying", "Copying files", 100, None)
-                self.progress_window.setValue(1)
+                # self.progress_window.setValue(1)
                 
-                files_to_remove = glob.glob(new_file_name+"*")
-                for f in files_to_remove:
-                    os.remove(f)
-                self.progress_window.setValue(10)
-                
+
                 self.image_copied[image_var] = True
+                new_file_dest = []
                 for file_num, f in enumerate(files):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
                     if len(files) == 1:
                         if file_ext == "mhd":
-                            new_file_dest = os.path.join(new_file_name + "." + "mha")
+                            new_file_dest.append( os.path.join(new_file_name + "." + "mha") )
                         else:
-                            new_file_dest = os.path.join(new_file_name + "." + file_ext)
+                            new_file_dest.append( os.path.join(new_file_name + "." + file_ext) )
                     else:
-                        new_file_dest = os.path.join(new_file_name + "_" + str(file_num) + "." + file_ext)
+                        new_file_dest.append( os.path.join(new_file_name + "_" + str(file_num) + "." + file_ext) )
 
-                    copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
-                    self.threadpool.start(copy_worker)
-                    files[file_num] = new_file_dest
-                    if len(files) == 1:
-                        self.show_copy_progress(f, new_file_dest, 1, file_ext, len(files))
-                    else:
-                        self.progress_window.setValue((file_num+1)/len(files)*100)
+                    # files[file_num] = new_file_dest[-1]
+                copy_worker = Worker(self.copy_file, start_location=files, end_location=new_file_dest, image_var=image_var)
+                copy_worker.signals.progress.connect(self.progress_window.setValue)
+                copy_worker.signals.finished.connect(partial(self.update_interface_on_copy_complete, image, image_var, label, next_button))
+                copy_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
+                self.threadpool.start(copy_worker)
+                    
             else:
                 self.image_copied[image_var] = False
 
+    def worker_error(self, error, **kwargs):
+        if 'progress_dialog' in kwargs.keys():
+            kwargs['progress_dialog'].close()
+        dialog_retval = warningDialog(self, str(error[1]), "Error", str(error[2]))
+        
+    def update_interface_on_copy_complete(self, image, image_var, label, next_button):
+
+            new_file_name = 'reference'
+            if image_var == 1:
+                new_file_name = 'correlate'
+            files = glob.glob(new_file_name+"*")
+            
             if len(files) == 1: #@todo
                 if(image[image_var]):
                     image[image_var]= files
@@ -619,48 +628,62 @@ class MainWindow(QMainWindow):
                 if label is not None:
                     label.setText(os.path.basename(files[0]))
                 
-            else:
+            elif len(files) > 1:
                 # Make sure that the files are sorted 0 - end
                 filenames = natsorted(files)
-                # Basic test for tiff images
-                for f in filenames:
-                    ftype = imghdr.what(f)
-                    if ftype != 'tiff':
-                        # A non-TIFF file has been loaded, present error message and exit method
-                        self.e(
-                            '', '', 'When reading multiple files, all files must TIFF formatted.')
-                        error_title = "READ ERROR"
-                        error_text = "Error reading file: ({filename})".format(filename=f)
-                        self.displayFileErrorDialog(message=error_text, title=error_title)
-                        return #prevents dialog showing for every single file by exiting the for loop
+                
                 image[image_var] = filenames
                 if label is not None:
                     label.setText(
                         os.path.dirname(self.image[image_var][0]) + "\n" +\
                         os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+            else:
+                raise ValueError('Something went wrong with the file copy')
 
             if next_button is not None:
                 next_button.setEnabled(True)
 
-    def copy_file(self, **kwargs):
+    def copy_file(self, start_location, end_location, image_var, **kwargs):
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        # message_callback = kwargs.get('message_callback', PrintCallback())
+
+        # first of all we need to remove the files that were copied in the previous run
+        new_file_name = 'reference'
+        if image_var == 1:
+            new_file_name = 'correlate'
+        files_to_remove = glob.glob(new_file_name+"*")
+        N = len(files_to_remove)
+        for i,f in enumerate(files_to_remove):
+            progress_callback.emit(i/N*100)
+            os.remove(f)
+
+        self.image_copied[image_var] = True
         
-        start_location = kwargs.get('start_location')
-        end_location   = kwargs.get('end_location')
-        progress_callback = kwargs.get('progress_callback')
+        file_extension = os.path.splitext(start_location[0])[1]
 
-        file_extension = os.path.splitext(start_location)[1]
-
+        # if the file is a mhd file we have a header and the data blob, i.e. 2 files
         if file_extension == '.mhd':
+            progress_callback.emit(0)
             reader = vtk.vtkMetaImageReader()
-            reader.SetFileName(start_location)
+            reader.SetFileName(start_location[0])
             reader.Update()
+            progress_callback.emit(50)
             writer = vtk.vtkMetaImageWriter()
-            tmpdir = tempfile.gettempdir()
-            writer.SetFileName(end_location)
+            # tmpdir = tempfile.gettempdir()
+            writer.SetFileName(end_location[0])
             writer.SetInputData(reader.GetOutput())
             writer.Write()
+            progress_callback.emit(100)
         else:
-            shutil.copyfile(start_location, end_location)
+            N = len(start_location)
+            for i,fs in enumerate(zip(start_location, end_location)):
+                if N > 1:
+                    ftype = imghdr.what(fs[0])
+                    if ftype != 'tiff':
+                        raise ValueError('File type not supported: {}'.format(fs[0]))
+                progress_callback.emit(i/N*100)
+                shutil.copyfile(fs[0], fs[1])
+            progress_callback.emit(100)
 
     def show_copy_progress(self, _file, new_file_dest,ratio, file_type, num_files):
 
