@@ -607,41 +607,46 @@ class MainWindow(QMainWindow):
                     
             else:
                 self.image_copied[image_var] = False
-
+                self.update_interface_no_copy(files, image, image_var, label, next_button)
+                
     def worker_error(self, error, **kwargs):
         if 'progress_dialog' in kwargs.keys():
             kwargs['progress_dialog'].close()
         dialog_retval = warningDialog(self, str(error[1]), "Error", str(error[2]))
-        
+
     def update_interface_on_copy_complete(self, image, image_var, label, next_button):
 
-            new_file_name = 'reference'
-            if image_var == 1:
-                new_file_name = 'correlate'
-            files = glob.glob(new_file_name+"*")
-            
-            if len(files) == 1: #@todo
-                if(image[image_var]):
-                    image[image_var]= files
-                else:
-                    image[image_var].append(files[0])
-                if label is not None:
-                    label.setText(os.path.basename(files[0]))
-                
-            elif len(files) > 1:
-                # Make sure that the files are sorted 0 - end
-                filenames = natsorted(files)
-                
-                image[image_var] = filenames
-                if label is not None:
-                    label.setText(
-                        os.path.dirname(self.image[image_var][0]) + "\n" +\
-                        os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+        new_file_name = 'reference'
+        if image_var == 1:
+            new_file_name = 'correlate'
+        files = glob.glob(new_file_name+"*")
+        
+        self.update_interface_no_copy(files, image, image_var, label, next_button)
+    
+    def update_interface_no_copy(self, files, image, image_var, label, next_button):
+        
+        if len(files) == 1: #@todo
+            if(image[image_var]):
+                image[image_var]= files
             else:
-                raise ValueError('Something went wrong with the file copy')
+                image[image_var].append(files[0])
+            if label is not None:
+                label.setText(os.path.basename(files[0]))
+            
+        elif len(files) > 1:
+            # Make sure that the files are sorted 0 - end
+            filenames = natsorted(files)
+            
+            image[image_var] = filenames
+            if label is not None:
+                label.setText(
+                    os.path.dirname(self.image[image_var][0]) + "\n" +\
+                    os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+        else:
+            raise ValueError('Something went wrong with the file copy')
 
-            if next_button is not None:
-                next_button.setEnabled(True)
+        if next_button is not None:
+            next_button.setEnabled(True)
 
     def copy_file(self, start_location, end_location, image_var, **kwargs):
         progress_callback = kwargs.get('progress_callback', PrintCallback())
