@@ -88,6 +88,7 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
+import multiprocessing
 
 __version__ = gui_version.version
 
@@ -5525,8 +5526,21 @@ class SettingsWindow(QDialog):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
         self.omp_threads_entry = QSpinBox(self)
-        self.omp_threads_entry.setValue(4)
-        self.omp_threads_entry.setRange(1, 16)
+        # default OMP_THREADS based on the number of cores available
+        n_cores = int(multiprocessing.cpu_count())
+        if n_cores > 16:
+            omp_threads = 16
+        elif n_cores > 8:
+            omp_threads = 8
+        elif n_cores > 4:
+            omp_threads = 4
+        elif n_cores > 2:
+            omp_threads = 2
+        else:
+            omp_threads = 1
+        
+        self.omp_threads_entry.setValue(omp_threads)
+        self.omp_threads_entry.setRange(1, n_cores)
         self.omp_threads_entry.setSingleStep(1)
         self.omp_threads_label = QLabel("OMP Threads: ")
 
