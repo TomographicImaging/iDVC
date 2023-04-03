@@ -58,6 +58,8 @@ from natsort import natsorted
 import imghdr
 import glob
 
+from .ui.strain import StrainFactory
+
 # from vtk.numpy_interface import algorithms as algs
 # from vtk.numpy_interface import dataset_adapter as dsa
 # from vtk.util import numpy_support
@@ -305,6 +307,7 @@ class MainWindow(QMainWindow):
         self.CreatePointCloudPanel()
         self.CreateRunDVCPanel()
         self.CreateViewDVCResultsPanel()
+        self.CreateStrainPanel()
 
         self.viewer2D_dock = self.vis_widget_2D
 
@@ -4366,8 +4369,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def finished_run(self):
         if self.run_succeeded:
             self.result_widgets['run_entry'].addItem(self.rdvc_widgets['name_entry'].text())
+            self.strain_panel.getWidget('run').addItem(self.rdvc_widgets['name_entry'].text())
             self.show_run_pcs()
 
+
+
+    def CreateStrainPanel(self):
+        self.strain_panel = StrainFactory.getStrainQDockWidget(self)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.strain_panel)
 
 
 # DVC Results Panel:
@@ -5375,7 +5384,9 @@ Please select the new location of the file, or move it back to where it was orig
 
         for folder in glob.glob(os.path.join(results_directory,"*")):
             if os.path.isdir(folder):
-                self.result_widgets['run_entry'].addItem(os.path.basename(folder))
+                item = os.path.basename(folder)
+                self.result_widgets['run_entry'].addItem(item)
+                self.strain_panel.getWidget('run').addItem(item)
 
         self.reg_load = False
         if 'point0' in self.config:
