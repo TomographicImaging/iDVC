@@ -4341,7 +4341,12 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
                                      self.finished_run, self.run_succeeded, tempfile.tempdir)
 
-        self.dvc_runner.run_dvc()
+        setup = Worker(self.dvc_runner.set_up)
+        setup.signals.message.connect(self.updateProgressDialogMessage)
+        # should connect also the error message
+        setup.signals.finished.connect(self.dvc_runner.run_dvc())
+        self.threadpool.start(setup)
+        # self.dvc_runner.run_dvc()
 
     def update_progress(self, exe = None):
         if exe:
