@@ -41,7 +41,7 @@ requirements:
   run:
     - python
     - numpy
-    - ccpi-viewer >=22.2.0
+    - ccpi-viewer >=22.4.0
     - ccpi-dvc >=22.0.0
     - natsort
     - docopt
