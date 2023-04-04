@@ -109,3 +109,12 @@ Under File->Settings you can set the maximum down-sampled size of the image, whi
 For the volume render on the 3D viewer, it is recommended to use GPU volume rendering, otherwise the render will be very slow. You will need to set the memory of your GPU for this.
 If the memory of your GPU is lower than the maximum down-sampling size you have set, then it will be the size of your GPU that dictates how much the image will be down-sampled if you choose to use the GPU for volume rendering.
 You will have to click **View Image** on the Select Image panel to update the down-sampling of the image once you have saved the new settings.
+
+Setting the number of threads for the DVC analysis
+==================================================
+
+Under File->Settings you can set the number of threads to be used during DVC analysis, with the "OMP threads" input. 
+
+We observed that you should **not** exceed half of the 
+number of cores of your machine (especially if hyperthreading is active). In any case, it seems that exceeding 16 threads leads to a slowdown of the analysis
+probably due to issues accessing data (either because of CPU's cache memory, I/O).

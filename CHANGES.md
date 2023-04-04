@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Add setting to set the number of OperMP threads to use during DVC analysis
 * Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
 * renames input files with names reference and correlate for the relative images, if data are copied in the session.
 * More efficient pointcloud creation by not shifting the pointcloud to the make such that point0 is one point of the 

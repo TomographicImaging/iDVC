@@ -361,8 +361,7 @@ class DVC_runner(object):
                 self.processes.append( 
                     (exe_file, [ config_filename ], required_runs, total_points, num_points_to_process)
                 )
-    import pysnooper
-    @pysnooper.snoop()
+    
     def run_dvc(self):
         main_window = self.main_window
         input_file = self.input_file
