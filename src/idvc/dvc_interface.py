@@ -676,6 +676,7 @@ class MainWindow(QMainWindow):
             writer = vtk.vtkMetaImageWriter()
             # tmpdir = tempfile.gettempdir()
             writer.SetFileName(end_location[0])
+            writer.SetCompression(False)
             writer.SetInputData(reader.GetOutput())
             writer.Write()
             progress_callback.emit(100)
