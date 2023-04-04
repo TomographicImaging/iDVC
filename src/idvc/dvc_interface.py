@@ -4343,8 +4343,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         setup = Worker(self.dvc_runner.set_up)
         setup.signals.message.connect(self.updateProgressDialogMessage)
+        setup.signals.progress.connect(self.progress)
         # should connect also the error message
-        setup.signals.finished.connect(self.dvc_runner.run_dvc())
+        setup.signals.finished.connect(self.dvc_runner.run_dvc)
         self.threadpool.start(setup)
         # self.dvc_runner.run_dvc()
 
@@ -5075,6 +5076,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         config_worker = Worker(self.LoadConfigWorker, selected_text=self.SessionSelectionWindow.widgets['select_session_field'].currentText())
         self.create_progress_window("Loading", "Loading Session")
         config_worker.signals.progress.connect(self.progress)
+        config_worker.signals.message.connect(self.updateProgressDialogMessage)
         config_worker.signals.finished.connect(self.LoadSession)
         self.threadpool.start(config_worker)
         self.progress_window.setValue(10)
@@ -5098,7 +5100,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     
     def LoadConfigWorker(self, **kwargs): 
         selected_text = kwargs.get('selected_text', None)
-        progress_callback = kwargs.get('progress_callback', None)
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        message_callback = kwargs.get('message_callback', PrintCallback())
         date_and_time = selected_text.split(' ')[-1]
         #print(date_and_time)
         selected_folder = ""
@@ -5112,9 +5115,20 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     selected_folder =  os.path.join(self.temp_folder, _file)
                     break
         if progress_callback is not None:
-            progress_callback.emit(50)
+            progress_callback.emit(20)
         
-        shutil.unpack_archive(selected_folder, selected_folder[:-4])
+        message_callback.emit('Unpacking session file...')
+        import zipfile
+        
+        with zipfile.ZipFile(selected_folder, 'r') as zip_ref:
+            infolist = zip_ref.infolist()
+            start_progress = 20
+            end_progress = 70
+            for i,info in enumerate(infolist):
+                message_callback.emit('Extracting ' + info.filename)
+                zip_ref.extract(info.filename, selected_folder[:-4])
+                progress_callback.emit(int(start_progress + (end_progress - start_progress) * (i / len(infolist))))
+        # shutil.unpack_archive(selected_folder, selected_folder[:-4])
         loaded_tempdir = selected_folder[:-4]
         
         if progress_callback is not None:
@@ -5155,6 +5169,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     #print(file)
                     selected_file = os.path.join(loaded_tempdir, _file)
 
+        message_callback.emit('Loading session configuration')
         with open(selected_file) as tmp:
             self.config = json.load(tmp)
         

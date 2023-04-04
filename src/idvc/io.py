@@ -1006,15 +1006,17 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
     header += 'ElementDataFile = {}'.format(os.path.basename(datafname))
     return header
 
-def save_tiff_stack_as_raw(filenames: list, output_fname: str) ->None :
+def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback, start_progress, end_progress) ->None :
     '''Converts a TIFF stack to a raw file'''
     reader = vtk.vtkTIFFReader()
     reader.SetOrientationType(1) # TopLeft
     with open(os.path.abspath(output_fname), 'wb') as f:
+        steps = len(filenames)
         for el in filenames:
             reader.SetFileName(el)
             reader.Update()
             slice_data = Converter.vtk2numpy(reader.GetOutput())
             f.write(slice_data.tobytes())
+            progress_callback.emit(int(start_progress + (end_progress - start_progress) * (filenames.index(el) / steps)))
             
 

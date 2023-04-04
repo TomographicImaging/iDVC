@@ -24,6 +24,11 @@ import shutil
 import platform
 from .io import save_tiff_stack_as_raw
 
+class PrintCallback(object):
+    '''Class to handle the emit call when no callback is provided'''
+    def emit(self, *args, **kwargs):
+        print (args, kwargs)
+
 count = 0
 runs_completed = 0
 
@@ -195,12 +200,17 @@ class DVC_runner(object):
         self.input_file = input_file
         self.finish_fn = finish_fn
         self.run_succeeded = run_succeeded
+        self.session_folder = session_folder
+
+    def set_up(self, *args, **kwargs):
 
         self.processes = []
         self.process_num = 0
+        message_callback = kwargs.get('message_callback', PrintCallback())
+        progress_callback = kwargs.get('progress_callback', PrintCallback())  
         
         # created in dvc_interface create_run_config
-        with open(input_file) as tmp:
+        with open(self.input_file) as tmp:
             config = json.load(tmp)
 
         subvolume_points = config['subvolume_points'] 
@@ -211,17 +221,26 @@ class DVC_runner(object):
         roi_files = config['roi_files']
         reference_file = config['reference_file']
         correlate_file = config['correlate_file']
+        
+        progress_callback.emit(10)
         # Convert to raw if files are a list of tiffs
         if isinstance(reference_file, (list, tuple)):
-            base = os.path.abspath(session_folder)
+            message_callback.emit("Converting reference file to raw format")
+            base = os.path.abspath(self.session_folder)
             raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
-            save_tiff_stack_as_raw(reference_file, raw_reference_file_fname)
+            save_tiff_stack_as_raw(reference_file, raw_reference_file_fname, progress_callback, 10, 50)
             reference_file = raw_reference_file_fname
+        progress_callback.emit(50)
+
         if isinstance(correlate_file, (list, tuple)):
-            base = os.path.abspath(session_folder)
+            message_callback.emit("Converting correlate file to raw format")
+            base = os.path.abspath(self.session_folder)
             raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
-            save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname)
+            save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname, progress_callback, 50, 90)
             correlate_file = raw_correlate_file_fname
+        progress_callback.emit(90)
+
+        message_callback.emit("Creating run configurations")
         vol_bit_depth = int(config['vol_bit_depth'])
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
@@ -245,7 +264,7 @@ class DVC_runner(object):
         starting_point = config['point0_world_coordinate']
 
         # Change directory into the folder where the run will be saved:
-        os.chdir(session_folder)
+        os.chdir(self.session_folder)
         # this is the one directory we created where we will run the dvc command in
         # we want to change this to create multiple directories first and then run through
         # all the directory created https://github.com/TomographicImaging/iDVC/issues/37
@@ -286,7 +305,8 @@ class DVC_runner(object):
         #    required_runs, run_succeeded))
         
 
-
+        start_progress = 90
+        end_progress = 99
         file_count = -1
         # point0 = main_window.getPoint0WorldCoords()
             
@@ -310,9 +330,9 @@ class DVC_runner(object):
                 # copies the pointcloud file as a whole in the run directory
                 try:
                     shutil.copyfile(roi_file, grid_roi_fname)
-                except Error as err:
+                except Exception as err:
                     # this is not really a nice way to open an error message!
-                    mainwindow.displayFileErrorDialog(message=str(err), title="Error creating config files")
+                    self.main_window.displayFileErrorDialog(message=str(err), title="Error creating config files")
                     return
                 
                 
@@ -357,12 +377,14 @@ class DVC_runner(object):
                 # wait for process to finish before doing next run
                 
                 # process.waitForFinished(msecs=2147483647)
-                
                 self.processes.append( 
                     (exe_file, [ config_filename ], required_runs, total_points, num_points_to_process)
                 )
+                progress_callback.emit(int(start_progress + (end_progress - start_progress) * (subv_num / len(roi_files))))
+            progress_callback.emit(100)
+                
         
-    def run_dvc(self):
+    def run_dvc(self, **kwargs):
         main_window = self.main_window
         input_file = self.input_file
         finish_fn = self.finish_fn
