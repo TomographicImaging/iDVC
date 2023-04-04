@@ -117,4 +117,4 @@ Under File->Settings you can set the number of threads to be used during DVC ana
 
 We observed that you should **not** exceed half of the 
 number of cores of your machine (especially if hyperthreading is active). In any case, it seems that exceeding 16 threads leads to a slowdown of the analysis
-probably due to issues accessing data (either because of CPU's cache memory, I/O).
+probably due to issues accessing data (because of CPU's cache memory and/or I/O).
