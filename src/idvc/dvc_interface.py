@@ -75,7 +75,7 @@ from functools import reduce
 
 import copy
 
-from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker
+from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker, warningDialog
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
@@ -88,6 +88,7 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
+import multiprocessing
 
 __version__ = gui_version.version
 
@@ -577,77 +578,118 @@ class MainWindow(QMainWindow):
 
         if len(files) > 0:
             if self.copy_files:
-                self.image_copied[image_var] = True
+                new_file_name = 'reference'
+                if image_var == 1:
+                    new_file_name = 'correlate'
+                # first of all we need to remove the files that were copied in the previous run
                 self.create_progress_window("Copying", "Copying files", 100, None)
-                self.progress_window.setValue(1)
+                # self.progress_window.setValue(1)
+                
+
+                self.image_copied[image_var] = True
+                new_file_dest = []
                 for file_num, f in enumerate(files):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
-                    if file_ext == "mhd":
-                        new_file_dest = os.path.join(file_name[:-3] + "mha")
-                    else:
-                        new_file_dest = os.path.join(file_name)
-
-                    copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
-                    self.threadpool.start(copy_worker)
-                    files[file_num] = new_file_dest
                     if len(files) == 1:
-                        self.show_copy_progress(f, new_file_dest, 1, file_ext, len(files))
+                        if file_ext == "mhd":
+                            new_file_dest.append( os.path.join(new_file_name + "." + "mha") )
+                        else:
+                            new_file_dest.append( os.path.join(new_file_name + "." + file_ext) )
                     else:
-                        self.progress_window.setValue((file_num+1)/len(files)*100)
+                        new_file_dest.append( os.path.join(new_file_name + "_" + str(file_num) + "." + file_ext) )
+
+                    # files[file_num] = new_file_dest[-1]
+                copy_worker = Worker(self.copy_file, start_location=files, end_location=new_file_dest, image_var=image_var)
+                copy_worker.signals.progress.connect(self.progress_window.setValue)
+                copy_worker.signals.finished.connect(partial(self.update_interface_on_copy_complete, image, image_var, label, next_button))
+                copy_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
+                self.threadpool.start(copy_worker)
+                    
             else:
                 self.image_copied[image_var] = False
-
-            if len(files) == 1: #@todo
-                if(image[image_var]):
-                    image[image_var]= files
-                else:
-                    image[image_var].append(files[0])
-                if label is not None:
-                    label.setText(os.path.basename(files[0]))
+                self.update_interface_no_copy(files, image, image_var, label, next_button)
                 
-            else:
-                # Make sure that the files are sorted 0 - end
-                filenames = natsorted(files)
-                # Basic test for tiff images
-                for f in filenames:
-                    ftype = imghdr.what(f)
-                    if ftype != 'tiff':
-                        # A non-TIFF file has been loaded, present error message and exit method
-                        self.e(
-                            '', '', 'When reading multiple files, all files must TIFF formatted.')
-                        error_title = "READ ERROR"
-                        error_text = "Error reading file: ({filename})".format(filename=f)
-                        self.displayFileErrorDialog(message=error_text, title=error_title)
-                        return #prevents dialog showing for every single file by exiting the for loop
-                image[image_var] = filenames
-                if label is not None:
-                    label.setText(
-                        os.path.dirname(self.image[image_var][0]) + "\n" +\
-                        os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+    def worker_error(self, error, **kwargs):
+        if 'progress_dialog' in kwargs.keys():
+            kwargs['progress_dialog'].close()
+        dialog_retval = warningDialog(self, str(error[1]), "Error", str(error[2]))
 
-            if next_button is not None:
-                next_button.setEnabled(True)
+    def update_interface_on_copy_complete(self, image, image_var, label, next_button):
 
-    def copy_file(self, **kwargs):
+        new_file_name = 'reference'
+        if image_var == 1:
+            new_file_name = 'correlate'
+        files = glob.glob(new_file_name+"*")
         
-        start_location = kwargs.get('start_location')
-        end_location   = kwargs.get('end_location')
-        progress_callback = kwargs.get('progress_callback')
+        self.update_interface_no_copy(files, image, image_var, label, next_button)
+    
+    def update_interface_no_copy(self, files, image, image_var, label, next_button):
+        
+        if len(files) == 1: #@todo
+            if(image[image_var]):
+                image[image_var]= files
+            else:
+                image[image_var].append(files[0])
+            if label is not None:
+                label.setText(os.path.basename(files[0]))
+            
+        elif len(files) > 1:
+            # Make sure that the files are sorted 0 - end
+            filenames = natsorted(files)
+            
+            image[image_var] = filenames
+            if label is not None:
+                label.setText(
+                    os.path.dirname(self.image[image_var][0]) + "\n" +\
+                    os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+        else:
+            raise ValueError('Something went wrong with the file copy')
 
-        file_extension = os.path.splitext(start_location)[1]
+        if next_button is not None:
+            next_button.setEnabled(True)
 
+    def copy_file(self, start_location, end_location, image_var, **kwargs):
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        # message_callback = kwargs.get('message_callback', PrintCallback())
+
+        # first of all we need to remove the files that were copied in the previous run
+        new_file_name = 'reference'
+        if image_var == 1:
+            new_file_name = 'correlate'
+        files_to_remove = glob.glob(new_file_name+"*")
+        N = len(files_to_remove)
+        for i,f in enumerate(files_to_remove):
+            progress_callback.emit(i/N*100)
+            os.remove(f)
+
+        self.image_copied[image_var] = True
+        
+        file_extension = os.path.splitext(start_location[0])[1]
+
+        # if the file is a mhd file we have a header and the data blob, i.e. 2 files
         if file_extension == '.mhd':
+            progress_callback.emit(0)
             reader = vtk.vtkMetaImageReader()
-            reader.SetFileName(start_location)
+            reader.SetFileName(start_location[0])
             reader.Update()
+            progress_callback.emit(50)
             writer = vtk.vtkMetaImageWriter()
-            tmpdir = tempfile.gettempdir()
-            writer.SetFileName(end_location)
+            # tmpdir = tempfile.gettempdir()
+            writer.SetFileName(end_location[0])
             writer.SetInputData(reader.GetOutput())
             writer.Write()
+            progress_callback.emit(100)
         else:
-            shutil.copyfile(start_location, end_location)
+            N = len(start_location)
+            for i,fs in enumerate(zip(start_location, end_location)):
+                if N > 1:
+                    ftype = imghdr.what(fs[0])
+                    if ftype != 'tiff':
+                        raise ValueError('File type not supported: {}'.format(fs[0]))
+                progress_callback.emit(i/N*100)
+                shutil.copyfile(fs[0], fs[1])
+            progress_callback.emit(100)
 
     def show_copy_progress(self, _file, new_file_dest,ratio, file_type, num_files):
 
@@ -5483,6 +5525,26 @@ class SettingsWindow(QDialog):
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
+        self.omp_threads_entry = QSpinBox(self)
+        # default OMP_THREADS based on the number of cores available
+        n_cores = int(multiprocessing.cpu_count())
+        if n_cores > 16:
+            omp_threads = 16
+        elif n_cores > 8:
+            omp_threads = 8
+        elif n_cores > 4:
+            omp_threads = 4
+        elif n_cores > 2:
+            omp_threads = 2
+        else:
+            omp_threads = 1
+        
+        self.omp_threads_entry.setValue(omp_threads)
+        self.omp_threads_entry.setRange(1, n_cores)
+        self.omp_threads_entry.setSingleStep(1)
+        self.omp_threads_label = QLabel("OMP Threads: ")
+
+
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.dark_checkbox)
         self.layout.addWidget(self.copy_files_checkbox)
@@ -5494,6 +5556,11 @@ class SettingsWindow(QDialog):
         self.layout.addWidget(self.gpu_label)
         self.layout.addWidget(self.gpu_size_label)
         self.layout.addWidget(self.gpu_size_entry)
+
+        self.layout.addWidget(self.omp_threads_label)
+        self.layout.addWidget(self.omp_threads_entry)
+
+
         self.buttons = QDialogButtonBox(
            QDialogButtonBox.Save | QDialogButtonBox.Cancel,
            Qt.Horizontal, self)
@@ -5529,6 +5596,7 @@ class SettingsWindow(QDialog):
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")
             
+        self.parent.settings.setValue("omp_threads", str(self.omp_threads_entry.value()))
         self.close()
 
 
