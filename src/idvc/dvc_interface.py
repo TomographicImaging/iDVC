@@ -88,6 +88,7 @@ from qdarkstyle.dark.palette import DarkPalette
 from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
+import multiprocessing
 
 __version__ = gui_version.version
 
@@ -5525,6 +5526,26 @@ class SettingsWindow(QDialog):
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
+        self.omp_threads_entry = QSpinBox(self)
+        # default OMP_THREADS based on the number of cores available
+        n_cores = int(multiprocessing.cpu_count())
+        if n_cores > 16:
+            omp_threads = 16
+        elif n_cores > 8:
+            omp_threads = 8
+        elif n_cores > 4:
+            omp_threads = 4
+        elif n_cores > 2:
+            omp_threads = 2
+        else:
+            omp_threads = 1
+        
+        self.omp_threads_entry.setValue(omp_threads)
+        self.omp_threads_entry.setRange(1, n_cores)
+        self.omp_threads_entry.setSingleStep(1)
+        self.omp_threads_label = QLabel("OMP Threads: ")
+
+
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.dark_checkbox)
         self.layout.addWidget(self.copy_files_checkbox)
@@ -5536,6 +5557,11 @@ class SettingsWindow(QDialog):
         self.layout.addWidget(self.gpu_label)
         self.layout.addWidget(self.gpu_size_label)
         self.layout.addWidget(self.gpu_size_entry)
+
+        self.layout.addWidget(self.omp_threads_label)
+        self.layout.addWidget(self.omp_threads_entry)
+
+
         self.buttons = QDialogButtonBox(
            QDialogButtonBox.Save | QDialogButtonBox.Cancel,
            Qt.Horizontal, self)
@@ -5571,6 +5597,7 @@ class SettingsWindow(QDialog):
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")
             
+        self.parent.settings.setValue("omp_threads", str(self.omp_threads_entry.value()))
         self.close()
 
 
