@@ -87,6 +87,8 @@ __version__ = gui_version.version
 
 import logging
 
+from ccpi.viewer.ui.main_windows import ViewerMainWindowWithSessionManagement
+
 class PrintCallback(object):
     '''Class to handle the emit call when no callback is provided'''
     def emit(self, *args, **kwargs):
@@ -137,63 +139,21 @@ def reduce_displ(raw_displ, min_size, max_size, pzero=False):
     displ = np.asarray(displ)
     return displ, dmin, dmax
 
-class MainWindow(QMainWindow):
+class MainWindow(ViewerMainWindowWithSessionManagement):
     def __init__(self):
-        QMainWindow.__init__(self)
+        super(ViewerMainWindowWithSessionManagement, self).__init__(title="Digital Volume Correlation v{}".format(__version__),
+                                                                    app_name="iDVC", settings_name="iDVC_v23_settings", organisation_name="CCPi")
         
-        self.threadpool = QThreadPool()
-
-        self.temp_folder = None
-        
-
-        self.setWindowTitle("Digital Volume Correlation v{}".format(__version__))
+        # Add icon to window:
         DVCIcon = QtGui.QIcon()
         file_dir = os.path.dirname(__file__)
         DVCIcon.addFile(os.path.join(file_dir, "DVCIconSquare.png"))
-
         self.setWindowIcon(DVCIcon)
         
         self.InitialiseSessionVars()
 
         self.setDockNestingEnabled(True)
         self.CreateDockWindows()
-
-        # Menu
-        self.menu = self.menuBar()
-        self.file_menu = self.menu.addMenu("File")
-
-        #Settings QAction
-        settings_action = QAction("Settings", self)
-        #save_action.setShortcut(QKeySequence.Save)
-        settings_action.triggered.connect(self.OpenSettings)
-        self.file_menu.addAction(settings_action)
-
-        #Save QAction
-        save_action = QAction("Save", self)
-        save_action.triggered.connect(partial(self.CreateSaveWindow,"Cancel", lambda x: print(type(x))))
-        self.file_menu.addAction(save_action)
-
-        #New QAction
-        new_action = QAction("New Session", self)
-        new_action.triggered.connect(self.NewSession)
-        self.file_menu.addAction(new_action)
-
-        #Load QAction
-        load_action = QAction("Load Session", self)
-        #load_action.setShortcut(QKeySequence.Open)
-        load_action.triggered.connect(lambda: self.CreateSessionSelector("current window"))
-        self.file_menu.addAction(load_action)
-
-        #Export Session
-        export_action = QAction("Export Session", self)
-        export_action.triggered.connect(self.ExportSession)
-        self.file_menu.addAction(export_action)
-
-        # Exit QAction
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence.Quit)
-        exit_action.triggered.connect(self.close)
-        self.file_menu.addAction(exit_action)
              
         # # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
@@ -203,55 +163,52 @@ class MainWindow(QMainWindow):
 
         self.e = ErrorObserver()
 
-        self.CreateWorkingTempFolder()
+        self.addToMenu()
 
-        #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v20.7.2")
 
-        if self.settings.value("copy_files"):
-            self.copy_files = True
-        else:
-            self.copy_files = False
+    
 
-        self.SetAppStyle()
+    def loadSessionNew(self):
+        '''
+        Loads a new session
+        '''
 
-        if self.settings.value("first_app_load") != "False":
-            self.OpenSettings()
-            # self.settings.setValue("first_app_load", False)
+        # TODO: delete the old session if it exists before loading a new one
 
-        else:
-            self.CreateSessionSelector("new window")
-
-    def SetAppStyle(self):
-        if self.settings.value("dark_mode") is None:
-            self.settings.setValue("dark_mode", True)
-        if self.settings.value("dark_mode") == "true":
-            style = qdarkstyle.load_stylesheet(palette=DarkPalette)
-        else:
-            style = qdarkstyle.load_stylesheet(palette=LightPalette)
-        self.setStyleSheet(style)
-
-        
-#Setting up the session:
-    def CreateWorkingTempFolder(self):
-        temp_folder = os.path.join(working_directory, 'DVC_Sessions')
-        
-        if not os.path.isdir(temp_folder):
-            os.mkdir("DVC_Sessions")
-            temp_folder = os.path.join(working_directory, "DVC_Sessions")
-
-        self.temp_folder = os.path.abspath(temp_folder)
-        tempfile.tempdir = tempfile.mkdtemp(dir = self.temp_folder)
-
-        os.chdir(tempfile.tempdir)
+        super(MainWindow, self).loadSessionNew()
+        os.chdir(self.current_session_folder)
 
         # Creates folder in tempdir to save mask files in
         os.mkdir("Masks")
         os.mkdir("Results")
 
-    def OpenSettings(self):
-        self.settings_window = SettingsWindow(self)
-        self.settings_window.show()
+    def addToMenu(self):
+        '''
+        Adds to the file menu:
+        - New Session
+        - Load Session
+        - Export Session
+        '''
+
+        file_menu = self.menus['File']
+
+        
+        #New QAction
+        new_action = QAction("New Session", self)
+        new_action.triggered.connect(self.NewSession)
+        file_menu.insertAction(file_menu.actions()[2], new_action)
+
+        #Load QAction
+        load_action = QAction("Load Session", self)
+        #load_action.setShortcut(QKeySequence.Open)
+        load_action.triggered.connect(lambda: self.CreateSessionSelector("current window"))
+        file_menu.insertAction(file_menu.actions()[2], load_action)
+
+        #Export Session
+        export_action = QAction("Export Session", self)
+        export_action.triggered.connect(self.ExportSession)
+        file_menu.insertAction(file_menu.actions()[2], export_action)
+
 
     def InitialiseSessionVars(self):
         self.config={}
@@ -289,7 +246,6 @@ class MainWindow(QMainWindow):
         self.vis_widget_2D = VisualisationWidget(self, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle)#interactorStyle= CILInteractorStyle2D) #previously unliked for testing
         self.vis_widget_3D = VisualisationWidget(self, viewer=viewer3D, interactorStyle=vlink.Linked3DInteractorStyle) #interactorStyle= CILInteractorStyle3D)#previously unlinked for testing
 
-        self.CreateViewerSettingsPanel()
         self.CreateHelpPanel()
 
 
@@ -342,102 +298,25 @@ class MainWindow(QMainWindow):
 
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.help_dock)
 
-        self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_settings_dock)
+        self.viewer_coords_dock.setViewers([self.vis_widget_2D.frame.viewer, self.vis_widget_3D.frame.viewer])
+
+        self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_coords_dock)
+        
         
 
-    def CreateViewerSettingsPanel(self):
-        self.viewer_settings_panel = generateUIDockParameters(self, "Viewer Settings")
-        dockWidget = self.viewer_settings_panel[0]
-        dockWidget.setObjectName("ViewerSettingsPanel")
-        groupBox = self.viewer_settings_panel[5]
-        formLayout = self.viewer_settings_panel[6]
-        self.viewer_settings_dock = dockWidget
+    def updateViewerCoords(self):
 
-        vs_widgets = {}
-
-        widgetno = 0
-
-        vs_widgets['coords_info_label'] = QLabel(groupBox)
-        vs_widgets['coords_info_label'].setText("The viewer displays a downsampled image for visualisation purposes: ")
-        vs_widgets['coords_info_label'].setVisible(False)
-        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, vs_widgets['coords_info_label'])
-
-        widgetno+=1
-
-        vs_widgets['loaded_image_dims_label'] = QLabel(groupBox)
-        vs_widgets['loaded_image_dims_label'].setText("Loaded Image Size: ")
-        vs_widgets['loaded_image_dims_label'].setVisible(True)
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['loaded_image_dims_label'])
-
-        vs_widgets['loaded_image_dims_value'] = QLabel(groupBox)
-        vs_widgets['loaded_image_dims_value'].setText("")
-        vs_widgets['loaded_image_dims_value'].setVisible(False)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['loaded_image_dims_value'])
-
-        widgetno+=1
-
-        vs_widgets['displayed_image_dims_label'] = QLabel(groupBox)
-        vs_widgets['displayed_image_dims_label'].setText("Displayed Image Size: ")
-        vs_widgets['displayed_image_dims_label'].setVisible(False)
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['displayed_image_dims_label'])
-
-        vs_widgets['displayed_image_dims_value'] = QLabel(groupBox)
-        vs_widgets['displayed_image_dims_value'].setText("")
-        vs_widgets['displayed_image_dims_value'].setVisible(False)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['displayed_image_dims_value'])
-
-        widgetno+=1
-
-        vs_widgets['coords_label'] = QLabel(groupBox)
-        vs_widgets['coords_label'].setText("Display viewer coordinates in: ")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, vs_widgets['coords_label'])
-
-        vs_widgets['coords_combobox'] = QComboBox(groupBox)
-        vs_widgets['coords_combobox'].addItems(["Loaded Image", "Downsampled Image"])
-        vs_widgets['coords_combobox'].setEnabled(False)
-        vs_widgets['coords_combobox'].currentIndexChanged.connect(self.updateCoordinates)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_combobox'])
-
-        widgetno +=1
-
-        vs_widgets['coords_warning_label'] = QLabel(groupBox)
-        vs_widgets['coords_warning_label'].setText("Warning: These coordinates are approximate.")
-        vs_widgets['coords_warning_label'].setVisible(False)
-
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_warning_label'])
-
-        self.visualisation_setting_widgets = vs_widgets
-        
-
-    def updateCoordinates(self):
-        viewers_2D = [self.vis_widget_2D.frame.viewer]
-        vs_widgets = self.visualisation_setting_widgets
         if hasattr(self, 'vis_widget_reg'):
-            viewers_2D.append(self.vis_widget_reg.frame.viewer)
+            self.viewer_coords_dock.setViewers([self.vis_widget_2D.frame.viewer, self.vis_widget_3D.frame.viewer, self.vis_widget_reg.frame.viewer])
+        else:
+            self.viewer_coords_dock.setViewers([self.vis_widget_2D.frame.viewer, self.vis_widget_3D.frame.viewer])
+        
+        print(len(self.viewer_coords_dock.viewers))
+        print([type(viewer) for viewer in self.viewer_coords_dock.viewers])
+        super().updateViewerCoords()
 
-        for viewer in viewers_2D:
-            if hasattr(viewer, 'img3D'):
-                if viewer.img3D is not None:
-                    viewer.setVisualisationDownsampling(self.resample_rate)
-                    shown_resample_rate = self.resample_rate
-                    vs_widgets['loaded_image_dims_label'].setVisible(True)
-                    vs_widgets['loaded_image_dims_value'].setVisible(True)
-
-                    if vs_widgets['coords_combobox'].currentIndex() == 0:
-                        viewer.setDisplayUnsampledCoordinates(True)
-                        if shown_resample_rate != [1,1,1]:
-                            vs_widgets['coords_warning_label'].setVisible(True)
-                        else:
-                            vs_widgets['coords_warning_label'].setVisible(False)
-
-                    else:
-                        viewer.setDisplayUnsampledCoordinates(False)
-                        vs_widgets['coords_warning_label'].setVisible(False)
-
-                    if hasattr(self, 'point0_world_coords'):
-                        self.SetPoint0Text()
-
-                    viewer.updatePipeline()
+        if hasattr(self, 'point0_world_coords'):
+            self.SetPoint0Text()
 
 
     def CreateHelpPanel(self):
@@ -570,7 +449,7 @@ class MainWindow(QMainWindow):
         files = dialogue.getOpenFileNames(self,"Load Images")[0]
 
         if len(files) > 0:
-            if self.copy_files:
+            if int(self.settings.value("copy_files")):
                 self.image_copied[image_var] = True
                 self.create_progress_window("Copying", "Copying files", 100, None)
                 self.progress_window.setValue(1)
@@ -672,7 +551,7 @@ class MainWindow(QMainWindow):
     def view_image(self):
         self.ref_image_data = vtk.vtkImageData()
         self.image_info = dict()
-        if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
+        if self.settings.value("gpu_size") is not None and self.settings.value("use_gpu_volume_mapper") == "true":
             if self.settings.value("vis_size"):
                 if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
                     target_size = float(self.settings.value("vis_size"))
@@ -733,12 +612,12 @@ class MainWindow(QMainWindow):
             for i, value in enumerate(self.resample_rate):
                 self.resample_rate[i] = self.unsampled_image_dimensions[i]/(self.ref_image_data.GetDimensions()[i])
 
-            self.visualisation_setting_widgets['coords_warning_label'].setVisible(True)
+            self.viewer_coords_dock.getWidget('coords_warning').setVisible(True)
 
 
         else:
             self.unsampled_image_dimensions = list(self.ref_image_data.GetDimensions())
-            self.visualisation_setting_widgets['coords_warning_label'].setVisible(False)
+            self.viewer_coords_dock.getWidget('coords_warning').setVisible(False)
 
         if 'raw_file' in self.image_info:
             image_file = [self.image_info['raw_file']]
@@ -1336,7 +1215,7 @@ It is used as a global starting point and a translation reference."
 
     def SetPoint0Text(self):
         if hasattr(self, 'point0_world_coords'):
-            if self.visualisation_setting_widgets['coords_combobox'].currentIndex() == 0:
+            if self.viewer_coords_dock.getWidget('coords_combo').currentIndex() == 0:
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_world_coords[i]) for i in range(3)]))
             else:
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
@@ -1533,41 +1412,41 @@ It is used as a global starting point and a translation reference."
 
     def UpdateViewerSettingsPanelForRegistration(self):
         # print("UpdateViewerSettings")
-        vs_widgets = self.visualisation_setting_widgets
+        vs_widgets = self.viewer_coords_dock.getWidgets()
         rp = self.registration_parameters
         if rp['start_registration_button'].isChecked():
             self.current_coord_choice = copy.deepcopy(vs_widgets['coords_combobox'].currentIndex())
-            vs_widgets['coords_combobox'].setCurrentIndex(0)
-            vs_widgets['coords_combobox'].setEnabled(False)
-            vs_widgets['coords_warning_label'].setVisible(False)
+            vs_widgets['coords_combo_field'].setCurrentIndex(0)
+            vs_widgets['coords_combo_field'].setEnabled(False)
+            vs_widgets['coords_warning_field'].setVisible(False)
             vs_widgets['displayed_image_dims_label'].setVisible(False)
-            vs_widgets['displayed_image_dims_value'].setVisible(False)
+            vs_widgets['displayed_image_dims_field'].setVisible(False)
             self.vis_widget_reg.frame.viewer.setDisplayUnsampledCoordinates(False)
             self.vis_widget_reg.frame.viewer.setVisualisationDownsampling([1,1,1])
-            vs_widgets['coords_info_label'].setText("The viewer displays the original image:")
+            vs_widgets['coords_info_field'].setText("The viewer displays the original image:")
             #vs_widgets['loaded_image_dims_label'].setText("Image Size: ")
             
             self.SetPoint0Text()
         else:
             if hasattr(self, 'current_coord_choice'):
-                vs_widgets['coords_combobox'].setCurrentIndex(self.current_coord_choice)
+                vs_widgets['coords_combo_field'].setCurrentIndex(self.current_coord_choice)
                 
                 self.vis_widget_reg.frame.viewer.setDisplayUnsampledCoordinates(True)
                 self.vis_widget_reg.frame.viewer.setVisualisationDownsampling(self.resample_rate)
                 vs_widgets['coords_info_label'].setText("The viewer displays a downsampled image for visualisation purposes:")
                 if self.resample_rate != [1,1,1]:
-                    vs_widgets['coords_combobox'].setEnabled(True)
+                    vs_widgets['coords_combo_field'].setEnabled(True)
                     #vs_widgets['sample_level_value'].setText(str([round(self.resample_rate[i], 2) for i in range(3)]))
                     vs_widgets['displayed_image_dims_label'].setVisible(True)
-                    vs_widgets['displayed_image_dims_value'].setVisible(True)
+                    vs_widgets['displayed_image_dims_field'].setVisible(True)
                 else:
                     #vs_widgets['sample_level_value'].setText("None")
                     vs_widgets['displayed_image_dims_label'].setVisible(False)
-                    vs_widgets['displayed_image_dims_value'].setVisible(False)
-                    vs_widgets['coords_info_label'].setVisible(False)
+                    vs_widgets['displayed_image_dims_field'].setVisible(False)
+                    vs_widgets['coords_info_field'].setVisible(False)
                     
                 self.SetPoint0Text()
-                self.updateCoordinates()
+                self.updateViewerCoords()
                 
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
     
@@ -1602,13 +1481,13 @@ It is used as a global starting point and a translation reference."
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(self.current_session_folder), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
             if previous_reg_box_extent != reg_box_extent:
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(self.current_session_folder), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1626,7 +1505,7 @@ It is used as a global starting point and a translation reference."
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
         ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image,
-                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
+                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(self.current_session_folder))
 
     def completeRegistration(self):
         self.updatePoint0Display()
@@ -2249,7 +2128,7 @@ It is used as a global starting point and a translation reference."
         if mask:
             if ".mha" in mask:
                 filename = os.path.basename(mask)
-                shutil.copyfile(mask, os.path.join(tempfile.tempdir, "Masks", filename))
+                shutil.copyfile(mask, os.path.join(self.current_session_folder, "Masks", filename))
                 self.mask_parameters["masksList"].addItem(filename)
                 self.mask_parameters["masksList"].setCurrentText(filename)
                 self.clearMask()
@@ -2825,10 +2704,10 @@ The first point is significant, as it is used as a global starting point and ref
         if self.roi:
             self.PointCloudWorker("load pointcloud file")
 
-        if self.copy_files:
+        if int(self.settings.value("copy_files")):
             filename = os.path.basename(self.roi)
-            shutil.copyfile(self.roi, os.path.join(tempfile.tempdir, filename))
-            self.roi = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+            shutil.copyfile(self.roi, os.path.join(self.current_session_folder, filename))
+            self.roi = os.path.abspath(os.path.join(self.current_session_folder, filename))
             self.pointcloud_parameters['pointcloudList'].addItem(filename)
             self.pointcloud_parameters['pointcloudList'].setCurrentText(filename)
         
@@ -2844,7 +2723,7 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointcloud_worker.signals.result.connect(self.DisplayPointCloud)
         elif type == "load selection":
             self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.loadPointCloud, os.path.join(tempfile.tempdir, self.pointcloud_parameters['pointcloudList'].currentText()))
+            self.pointcloud_worker = Worker(self.loadPointCloud, os.path.join(self.current_session_folder, self.pointcloud_parameters['pointcloudList'].currentText()))
             self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
         elif type == "load pointcloud file":
             self.clearPointCloud()
@@ -2862,7 +2741,7 @@ The first point is significant, as it is used as a global starting point and ref
         self.create_progress_window("Loading", "Loading Pointcloud")
         self.pointcloud_worker.signals.progress.connect(self.progress)
         self.progress_window.setValue(10)
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.current_session_folder)
         self.threadpool.start(self.pointcloud_worker)
 
         # Show error and allow re-selection of pointcloud if it can't be loaded:
@@ -3156,7 +3035,7 @@ The first point is significant, as it is used as a global starting point and ref
 
         message_callback.emit('Saving pointcloud')
         start = 0 if remove_point0 is False else 1
-        np.savetxt(tempfile.tempdir + "/" + filename, array[start:], '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
+        np.savetxt(self.current_session_folder + "/" + filename, array[start:], '%d\t%.3f\t%.3f\t%.3f', delimiter=';')
         self.roi = filename
 
         return True
@@ -4145,7 +4024,7 @@ This parameter has a strong effect on computation time, so be careful."
 
         folder_name = "_" + self.rdvc_widgets['name_entry'].text()
 
-        results_folder = os.path.join(tempfile.tempdir, "Results")
+        results_folder = os.path.join(self.current_session_folder, "Results")
 
         new_folder = os.path.join(results_folder, folder_name)
 
@@ -4165,13 +4044,13 @@ This parameter has a strong effect on computation time, so be careful."
         
 
     def create_run_config(self, **kwargs):
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.current_session_folder)
         progress_callback = kwargs.get('progress_callback', PrintCallback())
         message_callback = kwargs.get('message_callback', PrintCallback())
         try:
             folder_name = self.rdvc_widgets['name_entry'].text()
 
-            results_folder = os.path.join(tempfile.tempdir, "Results")
+            results_folder = os.path.join(self.current_session_folder, "Results")
             os.mkdir(os.path.join(results_folder, folder_name))
 
             if self.singleRun_groupBox.isVisible():
@@ -4292,7 +4171,7 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['point0_world_coordinate'] = self.point0_world_coords
             suffix_text = "run_config"
 
-            self.run_config_file = os.path.join(tempfile.tempdir, "Results", folder_name, "_" + suffix_text + ".json")
+            self.run_config_file = os.path.join(self.current_session_folder, "Results", folder_name, "_" + suffix_text + ".json")
 
             with open(self.run_config_file, "w+") as tmp:
                 json.dump(run_config, tmp)
@@ -4333,7 +4212,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     
         # this command will call DVC_runner to create the directories
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
-                                     self.finished_run, self.run_succeeded, tempfile.tempdir)
+                                     self.finished_run, self.run_succeeded, self.current_session_folder)
 
         self.dvc_runner.run_dvc()
 
@@ -4513,7 +4392,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].clear()
         self.result_widgets['subvol_entry'].clear()
 
-        directory = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+        directory = os.path.join(self.current_session_folder, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = directory
 
         self.result_list=[]
@@ -4559,7 +4438,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 return
 
 
-            results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+            results_folder = os.path.join(self.current_session_folder, "Results", self.result_widgets['run_entry'].currentText())
             self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
             #print("New roi is", self.roi)
             self.results_folder = results_folder
@@ -4598,7 +4477,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def CreateGraphsWindow(self):
         #print("Create graphs")
         if self.result_widgets['run_entry'].currentText() != "":
-            self.results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+            self.results_folder = os.path.join(self.current_session_folder, "Results", self.result_widgets['run_entry'].currentText())
         else:
             self.results_folder = None
 
@@ -4703,8 +4582,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         #save values for select image panel:
         if len(self.image[0]) > 0: 
-            if(self.copy_files):
-                self.config['copy_files'] = self.copy_files
+            if(int(self.settings.value("copy_files"))):
+                self.config['copy_files'] = int(self.settings.value("copy_files"))
 
             #we need to change location of image to being the name of the image w/o directories
             image = [[],[]]
@@ -4734,11 +4613,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.config['dvc_input_image_in_session_folder'] = self.dvc_input_image_in_session_folder
 
             # print("ROI: ", self.roi)
-            # print("temp", tempfile.tempdir)
+            # print("temp", self.current_session_folder)
             if (self.roi):
                 self.roi = os.path.abspath(self.roi)
-                if os.path.abspath(tempfile.tempdir) in self.roi:
-                    self.config['roi_file'] =  self.roi[len(os.path.abspath(tempfile.tempdir))+1:]
+                if os.path.abspath(self.current_session_folder) in self.roi:
+                    self.config['roi_file'] =  self.roi[len(os.path.abspath(self.current_session_folder))+1:]
                     self.config['roi_ext'] = False
                 else:
                     self.config['roi_file'] = self.roi
@@ -4750,8 +4629,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             if hasattr(self, 'mask_file'):
                 self.config['mask_details']=self.mask_details
-                if tempfile.tempdir in os.path.abspath(self.mask_file):
-                    self.config['mask_file']=self.mask_file[len(os.path.abspath(tempfile.tempdir))+1:]
+                if self.current_session_folder in os.path.abspath(self.mask_file):
+                    self.config['mask_file']=self.mask_file[len(os.path.abspath(self.current_session_folder))+1:]
                     self.config['mask_ext'] = False
                 else:
                     self.config['mask_file']=self.mask_file
@@ -4821,11 +4700,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         
         suffix_text = "_" + user_string + "_" + now_string 
 
-        os.chdir(self.temp_folder)
-        tempdir = shutil.move(tempfile.tempdir, suffix_text)
-        tempfile.tempdir = os.path.abspath(tempdir)
+        os.chdir(self.sessions_directory)
+        tempdir = shutil.move(self.current_session_folder, suffix_text)
+        self.current_session_folder = os.path.abspath(tempdir)
 
-        fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = tempfile.tempdir) #could not delete this using rmtree?
+        fd, f = tempfile.mkstemp(suffix=suffix_text + ".json", dir = self.current_session_folder) #could not delete this using rmtree?
 
         with open(f, "w+") as tmp:
             json.dump(self.config, tmp)
@@ -4835,7 +4714,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         self.create_progress_window("Saving","Saving")
   
-        zip_worker = Worker(self.ZipDirectory, tempfile.tempdir, compress)
+        zip_worker = Worker(self.ZipDirectory, self.current_session_folder, compress)
         if type(event) == QCloseEvent:
             zip_worker.signals.finished.connect(lambda: self.RemoveTemp(event))
         else:
@@ -4844,47 +4723,47 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.threadpool.start(zip_worker)
         
         if compress:
-            self.ShowZipProgress(tempfile.tempdir, tempfile.tempdir +'.zip', 0.7)
+            self.ShowZipProgress(self.current_session_folder, self.current_session_folder +'.zip', 0.7)
         else:
-            self.ShowZipProgress(tempfile.tempdir, tempfile.tempdir +'.zip', 1)
+            self.ShowZipProgress(self.current_session_folder, self.current_session_folder +'.zip', 1)
 
         #give variables filepath including new name of temp folder:
-        # print("temp", tempfile.tempdir)
+        # print("temp", self.current_session_folder)
         # print("roi ext", self.config['roi_ext'])
         # print(self.roi, self.config['roi_file'])
         if (self.roi and not self.config['roi_ext']):
-            self.roi = os.path.join(os.path.abspath(tempfile.tempdir), self.config['roi_file'])
+            self.roi = os.path.join(os.path.abspath(self.current_session_folder), self.config['roi_file'])
             #print(self.roi)
 
         if hasattr(self, 'mask_file'):
             if 'mask_file' in self.config:
-                self.mask_file = os.path.join(os.path.abspath(tempfile.tempdir), self.config['mask_file'])
+                self.mask_file = os.path.join(os.path.abspath(self.current_session_folder), self.config['mask_file'])
 
         count = 0
         for i in self.image[0]:
             if self.image_copied[0]:
-                # print(os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) )
-                self.image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][0][count]) 
+                # print(os.path.join(os.path.abspath(self.current_session_folder), self.config['image'][0][count]) )
+                self.image[0][count] = os.path.join(os.path.abspath(self.current_session_folder), self.config['image'][0][count]) 
             count +=1
         count = 0
         for j in self.image[1]:
             if self.image_copied[1]:
-                self.image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['image'][1][count]) 
+                self.image[1][count] = os.path.join(os.path.abspath(self.current_session_folder), self.config['image'][1][count]) 
             count += 1
 
         count = 0
         for i in self.dvc_input_image[0]:
             if self.image_copied[0] or self.dvc_input_image_in_session_folder:
-                self.dvc_input_image[0][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][0][count]) 
+                self.dvc_input_image[0][count] = os.path.join(os.path.abspath(self.current_session_folder), self.config['dvc_input_image'][0][count]) 
             count+=1
 
         count=0    
         for j in self.dvc_input_image[1]:      
             if self.image_copied[1] or self.dvc_input_image_in_session_folder:
-                self.dvc_input_image[1][count] = os.path.join(os.path.abspath(tempfile.tempdir), self.config['dvc_input_image'][1][count]) 
+                self.dvc_input_image[1][count] = os.path.join(os.path.abspath(self.current_session_folder), self.config['dvc_input_image'][1][count]) 
             count+=1
 
-        results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
+        results_folder = os.path.join(self.current_session_folder, "Results", self.result_widgets['run_entry'].currentText())
         self.results_folder = results_folder
    
     def CloseSaveWindow(self):
@@ -4914,13 +4793,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
     def RemoveTemp(self, event):
         # ensure we are not 'in' a directory we will be deleting:
-        os.chdir(self.temp_folder)
+        os.chdir(self.sessions_directory)
         if hasattr(self, 'progress_window'):
             self.progress_window.setLabelText("Closing")
             self.progress_window.setMaximum(100)
             self.progress_window.setValue(98)
-        #print("removed temp", tempfile.tempdir)
-        shutil.rmtree(tempfile.tempdir)
+        #print("removed temp", self.current_session_folder)
+        shutil.rmtree(self.current_session_folder)
 
         if hasattr(self, 'progress_window'):
             self.progress_window.setValue(100)
@@ -5001,20 +4880,20 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             export_worker = Worker(self.exporter, export_location)
             export_worker.signals.finished.connect(self.progress_complete)
             self.threadpool.start(export_worker)
-            self.ShowExportProgress(tempfile.tempdir, export_location)
+            self.ShowExportProgress(self.current_session_folder, export_location)
 
     def exporter(self, *args, **kwargs):
         export_location = args[0]
-        shutil.copytree(tempfile.tempdir, export_location)
+        shutil.copytree(self.current_session_folder, export_location)
 
 #Dealing with loading sessions:
          
     def CreateSessionSelector(self, stage): 
         temp_folders = []
-        #print ("Session folder: ", self.temp_folder)
+        #print ("Session folder: ", self.sessions_directory)
 
-        if self.temp_folder is not None:
-            for r, d, f in os.walk(self.temp_folder):
+        if self.sessions_directory is not None:
+            for r, d, f in os.walk(self.sessions_directory):
                 for _file in f:
                     if '.zip' in _file:
                         array = _file.split("_")
@@ -5047,13 +4926,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Ok.clicked.connect(self.load_session_load)
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
-            # Try to centre the load session window
-            # from PySide2.QtGui import QScreen
-            # geom = QScreen().availableGeometry()
-            # print (geom)
-            # centrex = geom.topRight().x() + geom.topLeft().x()
-            # centrey = geom.topRight().y() + geom.bottomRight().y()
-            # dialog.move(centrex/2,centrey/2)
             dialog.open()
         
 
@@ -5092,13 +4964,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         #print(date_and_time)
         selected_folder = ""
 
-        for r, d, f in os.walk(self.temp_folder):
+        for r, d, f in os.walk(self.sessions_directory):
             for _file in f:
                 if date_and_time + '.zip' in _file:
                     
                     selected_folder_name = _file
                     #print(selected_folder_name)
-                    selected_folder =  os.path.join(self.temp_folder, _file)
+                    selected_folder =  os.path.join(self.sessions_directory, _file)
                     break
         if progress_callback is not None:
             progress_callback.emit(50)
@@ -5124,17 +4996,17 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         if not results_folder_exists:
             os.mkdir(os.path.join(loaded_tempdir, "Results"))
         
-        #print(tempfile.tempdir)
+        #print(self.current_session_folder)
 
-        # if tempfile.tempdir != loaded_tempdir: # if we are not loading the same session that we already had open
-        #     shutil.rmtree(tempfile.tempdir) 
+        # if self.current_session_folder != loaded_tempdir: # if we are not loading the same session that we already had open
+        #     shutil.rmtree(self.current_session_folder) 
 
         if progress_callback is not None:
             progress_callback.emit(90)
 
-        tempfile.tempdir = loaded_tempdir
+        self.current_session_folder = loaded_tempdir
         #print("working tempdir")
-        #print(tempfile.tempdir)
+        #print(self.current_session_folder)
         #selected_file = ""
  
         json_filename = date_and_time + ".json"
@@ -5152,7 +5024,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             progress_callback.emit(100)
 
     def LoadSession(self):
-        os.chdir(tempfile.tempdir)
+        os.chdir(self.current_session_folder)
         self.resetRegistration()
         
         self.loading_session = True
@@ -5174,12 +5046,12 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 # if 'roi_ext' in self.config:
                 #     if not self.config['roi_ext']:
                 #         self.roi = os.path.abspath(
-                #             os.path.join(tempfile.tempdir, self.roi))
+                #             os.path.join(self.current_session_folder, self.roi))
 
         #pointcloud files could still exist even if there wasn't a pointcloud displayed when the session was saved.
         pointcloud_files = []
         #get list of pointcloud files:
-        for r, d, f in os.walk(tempfile.tempdir):
+        for r, d, f in os.walk(self.current_session_folder):
             for _file in f:
                 if '.roi' in _file:
                     pointcloud_files.append(_file)
@@ -5221,7 +5093,7 @@ Please select the new location of the file, or move it back to where it was orig
 
                         #save paths to images to variable
                         if self.config['image_copied'][j]:
-                            path = os.path.abspath(os.path.join(tempfile.tempdir, i))
+                            path = os.path.abspath(os.path.join(self.current_session_folder, i))
                             # print("The DVC input path is")
                             # print(path)
                             self.dvc_input_image[j].append(path)
@@ -5345,7 +5217,7 @@ Please select the new location of the file, or move it back to where it was orig
 
         if 'mask_file' in self.config:
             self.mask_parameters['loadButton'].setEnabled(True)
-            mask_folder = os.path.join(tempfile.tempdir, "Masks")
+            mask_folder = os.path.join(self.current_session_folder, "Masks")
             mask_files = []
             #get list of mask files:
             #print(mask_folder)
@@ -5362,7 +5234,7 @@ Please select the new location of the file, or move it back to where it was orig
             self.mask_parameters['loadButton'].setEnabled(False)   
 
 
-        results_directory = os.path.join(tempfile.tempdir, "Results")
+        results_directory = os.path.join(self.current_session_folder, "Results")
         
         for i in range(self.result_widgets['run_entry'].count()):
             self.result_widgets['run_entry'].removeItem(i)
@@ -5415,123 +5287,123 @@ Please select the new location of the file, or move it back to where it was orig
         
 
 
-class SettingsWindow(QDialog):
+# class SettingsWindow(QDialog):
 
-    def __init__(self, parent):
-        super(SettingsWindow, self).__init__(parent)
+#     def __init__(self, parent):
+#         super(SettingsWindow, self).__init__(parent)
 
-        self.parent = parent
+#         self.parent = parent
 
-        self.setWindowTitle("Settings")
+#         self.setWindowTitle("Settings")
 
-        self.dark_checkbox = QCheckBox("Dark Mode")
+#         self.dark_checkbox = QCheckBox("Dark Mode")
 
-        self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
-        self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
-        self.vis_size_entry = QDoubleSpinBox()
+#         self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
+#         self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
+#         self.vis_size_entry = QDoubleSpinBox()
 
-        self.vis_size_entry.setMaximum(64.0)
-        self.vis_size_entry.setMinimum(0.01)
-        self.vis_size_entry.setSingleStep(0.01)
+#         self.vis_size_entry.setMaximum(64.0)
+#         self.vis_size_entry.setMinimum(0.01)
+#         self.vis_size_entry.setSingleStep(0.01)
 
-        if self.parent.settings.value("vis_size") is not None:
-            self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
+#         if self.parent.settings.value("vis_size") is not None:
+#             self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
 
-        else:
-            self.vis_size_entry.setValue(1.0)
-
-
-        if self.parent.settings.value("dark_mode") is not None:
-            if self.parent.settings.value("dark_mode") == "true":
-                self.dark_checkbox.setChecked(True)
-            else:
-                self.dark_checkbox.setChecked(False)
-        else:
-            self.dark_checkbox.setChecked(True)
-
-        separator = QFrame()
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Raised)
-        self.adv_settings_label = QLabel("Advanced")
+#         else:
+#             self.vis_size_entry.setValue(1.0)
 
 
-        self.gpu_label = QLabel("Please set the size of your GPU memory.")
-        self.gpu_size_label = QLabel("GPU Memory (GB): ")
-        self.gpu_size_entry = QDoubleSpinBox()
+#         if self.parent.settings.value("dark_mode") is not None:
+#             if self.parent.settings.value("dark_mode") == "true":
+#                 self.dark_checkbox.setChecked(True)
+#             else:
+#                 self.dark_checkbox.setChecked(False)
+#         else:
+#             self.dark_checkbox.setChecked(True)
+
+#         separator = QFrame()
+#         separator.setFrameShape(QFrame.HLine)
+#         separator.setFrameShadow(QFrame.Raised)
+#         self.adv_settings_label = QLabel("Advanced")
 
 
-        if self.parent.settings.value("gpu_size") is not None:
-            self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
+#         self.gpu_label = QLabel("Please set the size of your GPU memory.")
+#         self.gpu_size_label = QLabel("GPU Memory (GB): ")
+#         self.gpu_size_entry = QDoubleSpinBox()
 
-        else:
-            self.gpu_size_entry.setValue(1.0)
 
-        self.gpu_size_entry.setMaximum(64.0)
-        self.gpu_size_entry.setMinimum(0.00)
-        self.gpu_size_entry.setSingleStep(0.01)
-        self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
-        self.gpu_checkbox.setChecked(True) #gpu is default
-        if self.parent.settings.value("volume_mapper") == "cpu":
-            self.gpu_checkbox.setChecked(False)
+#         if self.parent.settings.value("gpu_size") is not None:
+#             self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
 
-        if hasattr(self.parent, 'copy_files'):
-            self.copy_files_checkbox.setChecked(self.parent.copy_files)
+#         else:
+#             self.gpu_size_entry.setValue(1.0)
 
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.dark_checkbox)
-        self.layout.addWidget(self.copy_files_checkbox)
-        self.layout.addWidget(self.vis_size_label)
-        self.layout.addWidget(self.vis_size_entry)
-        self.layout.addWidget(separator)
-        self.layout.addWidget(self.adv_settings_label)
-        self.layout.addWidget(self.gpu_checkbox)
-        self.layout.addWidget(self.gpu_label)
-        self.layout.addWidget(self.gpu_size_label)
-        self.layout.addWidget(self.gpu_size_entry)
-        self.buttons = QDialogButtonBox(
-           QDialogButtonBox.Save | QDialogButtonBox.Cancel,
-           Qt.Horizontal, self)
-        self.layout.addWidget(self.buttons)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.quit)
+#         self.gpu_size_entry.setMaximum(64.0)
+#         self.gpu_size_entry.setMinimum(0.00)
+#         self.gpu_size_entry.setSingleStep(0.01)
+#         self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
+#         self.gpu_checkbox.setChecked(True) #gpu is default
+#         if self.parent.settings.value("use_gpu_volume_mapper") == "false":
+#             self.gpu_checkbox.setChecked(False)
 
-    def accept(self):
-        #self.parent.settings.setValue("settings_chosen", 1)
-        if self.dark_checkbox.isChecked():
-            self.parent.settings.setValue("dark_mode", True)
-        else:
-            self.parent.settings.setValue("dark_mode", False)
-        self.parent.SetAppStyle()
+#         if hasattr(self.parent, 'copy_files'):
+#             self.copy_files_checkbox.setChecked(self.parent.copy_files)
 
-        if self.copy_files_checkbox.isChecked():
-            self.parent.copy_files = 1 # save for this session
-            self.parent.settings.setValue("copy_files", 1) #save for next time we open app
-        else:
-            self.parent.copy_files = 0
-            self.parent.settings.setValue("copy_files", 0)
+#         self.layout = QVBoxLayout(self)
+#         self.layout.addWidget(self.dark_checkbox)
+#         self.layout.addWidget(self.copy_files_checkbox)
+#         self.layout.addWidget(self.vis_size_label)
+#         self.layout.addWidget(self.vis_size_entry)
+#         self.layout.addWidget(separator)
+#         self.layout.addWidget(self.adv_settings_label)
+#         self.layout.addWidget(self.gpu_checkbox)
+#         self.layout.addWidget(self.gpu_label)
+#         self.layout.addWidget(self.gpu_size_label)
+#         self.layout.addWidget(self.gpu_size_entry)
+#         self.buttons = QDialogButtonBox(
+#            QDialogButtonBox.Save | QDialogButtonBox.Cancel,
+#            Qt.Horizontal, self)
+#         self.layout.addWidget(self.buttons)
+#         self.buttons.accepted.connect(self.accept)
+#         self.buttons.rejected.connect(self.quit)
 
-        if self.gpu_checkbox.isChecked():
-            self.parent.settings.setValue("volume_mapper", "gpu")
-            self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
-        else:
-            self.parent.settings.setValue("volume_mapper", "cpu")
+#     def accept(self):
+#         #self.parent.settings.setValue("settings_chosen", 1)
+#         if self.dark_checkbox.isChecked():
+#             self.parent.settings.setValue("dark_mode", True)
+#         else:
+#             self.parent.settings.setValue("dark_mode", False)
+#         self.parent.SetAppStyle()
 
-        self.parent.settings.setValue("gpu_size", float(self.gpu_size_entry.value()))
-        self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
+#         if self.copy_files_checkbox.isChecked():
+#             self.parent.copy_files = 1 # save for this session
+#             self.parent.settings.setValue("copy_files", 1) #save for next time we open app
+#         else:
+#             self.parent.copy_files = 0
+#             self.parent.settings.setValue("copy_files", 0)
 
-        if self.parent.settings.value("first_app_load") != "False":
-            self.parent.CreateSessionSelector("new window")
-            self.parent.settings.setValue("first_app_load", "False")
+#         if self.gpu_checkbox.isChecked():
+#             self.parent.settings.setValue("use_gpu_volume_mapper", True)
+#             self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
+#         else:
+#             self.parent.settings.setValue("use_gpu_volume_mapper", False)
+
+#         self.parent.settings.setValue("gpu_size", float(self.gpu_size_entry.value()))
+#         self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
+
+#         if self.parent.settings.value("first_app_load") != "False":
+#             self.parent.CreateSessionSelector("new window")
+#             self.parent.settings.setValue("first_app_load", "False")
             
-        self.close()
+#         self.close()
 
 
-        #print(self.parent.settings.value("copy_files"))
-    def quit(self):
-        if self.parent.settings.value("first_app_load") != "False":
-            self.parent.CreateSessionSelector("new window")
-            self.parent.settings.setValue("first_app_load", "False")
-        self.close()
+#         #print(self.parent.settings.value("copy_files"))
+#     def quit(self):
+#         if self.parent.settings.value("first_app_load") != "False":
+#             self.parent.CreateSessionSelector("new window")
+#             self.parent.settings.setValue("first_app_load", "False")
+#         self.close()
         
 
 
@@ -5584,7 +5456,7 @@ class SaveObjectWindow(QtWidgets.QWidget):
             #Load Saved Session
             #print("Write mask to file, then carry on")
             filename = self.textbox.text() + ".mha"
-            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
+            shutil.copyfile(os.path.join(self.current_session_folder, self.parent.mask_file), os.path.join(self.current_session_folder, "Masks", filename))
             self.parent.mask_parameters['masksList'].addItem(filename)
             self.parent.mask_details[filename] = self.parent.mask_details['current']
             #print(self.parent.mask_details)
@@ -5605,7 +5477,7 @@ class SaveObjectWindow(QtWidgets.QWidget):
             
         if self.object == "pointcloud":
             filename = self.textbox.text() + ".roi"
-            shutil.copyfile(os.path.join(tempfile.tempdir, "latest_pointcloud.roi"), os.path.join(tempfile.tempdir, filename))
+            shutil.copyfile(os.path.join(self.current_session_folder, "latest_pointcloud.roi"), os.path.join(self.current_session_folder, filename))
 
             self.parent.pointcloud_parameters['loadButton'].setEnabled(True)
             self.parent.pointcloud_parameters['pointcloudList'].setEnabled(True)
@@ -5679,39 +5551,39 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.createEmptyFrame()
         if self.viewer == viewer3D:
             #set volume mapper according to user settings:
-            if self.parent.settings.value("volume_mapper") == "cpu":
+            if self.parent.settings.value("use_gpu_volume_mapper") == "false":
                 self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
                 self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
         else:
             self.frame.viewer.setVisualisationDownsampling(self.parent.resample_rate)
             self.frame.viewer.setDisplayUnsampledCoordinates(True)
 
-            vs_widgets = self.parent.visualisation_setting_widgets
+            vs_widgets = self.parent.viewer_coords_dock.getWidgets()
 
-            vs_widgets['loaded_image_dims_value'].setVisible(True)
-            vs_widgets['loaded_image_dims_value'].setText(str(self.parent.unsampled_image_dimensions))
+            vs_widgets['loaded_image_dims_field'].setVisible(True)
+            vs_widgets['loaded_image_dims_field'].setText(str(self.parent.unsampled_image_dimensions))
 
             #print("resample rate: ", self.parent.resample_rate)
 
             if self.parent.resample_rate != [1,1,1]:
-                vs_widgets['displayed_image_dims_value'].setVisible(True)
+                vs_widgets['displayed_image_dims_field'].setVisible(True)
                 vs_widgets['displayed_image_dims_label'].setVisible(True)
                 #print("Disp image size ", [self.parent.ref_image_data.GetDimensions()[i] for i in range(3)])
-                vs_widgets['displayed_image_dims_value'].setText(str([round(self.parent.ref_image_data.GetDimensions()[i]) for i in range(3)]))
-                vs_widgets['coords_combobox'].setEnabled(True)
-                vs_widgets['coords_combobox'].setCurrentIndex(0)
-                vs_widgets['coords_warning_label'].setVisible(True)
-                vs_widgets['coords_info_label'].setVisible(True)
+                vs_widgets['displayed_image_dims_field'].setText(str([round(self.parent.ref_image_data.GetDimensions()[i]) for i in range(3)]))
+                vs_widgets['coords_combo_field'].setEnabled(True)
+                vs_widgets['coords_combo_field'].setCurrentIndex(0)
+                vs_widgets['coords_warning_field'].setVisible(True)
+                vs_widgets['coords_info_field'].setVisible(True)
 
             
             else:
-                vs_widgets['displayed_image_dims_value'].setVisible(False)
+                vs_widgets['displayed_image_dims_field'].setVisible(False)
                 vs_widgets['displayed_image_dims_label'].setVisible(False)
-                vs_widgets['coords_warning_label'].setVisible(False)
-                vs_widgets['coords_info_label'].setVisible(False)
+                vs_widgets['coords_warning_field'].setVisible(False)
+                vs_widgets['coords_info_field'].setVisible(False)
 
-                vs_widgets['coords_combobox'].setEnabled(False)
-                vs_widgets['coords_combobox'].setCurrentIndex(0)
+                vs_widgets['coords_combo_field'].setEnabled(False)
+                vs_widgets['coords_combo_field'].setCurrentIndex(0)
 
         self.frame.viewer.setInput3DData(self.image_data)  
         interactor = self.frame.viewer.getInteractor()
