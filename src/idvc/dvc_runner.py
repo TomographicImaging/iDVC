@@ -392,6 +392,15 @@ class DVC_runner(object):
         
         process = QtCore.QProcess()
         
+        env = QtCore.QProcessEnvironment.systemEnvironment()
+        try:
+            nthreads = main_window.settings.value('omp_threads')
+        except Exception as err:
+            nthreads = '4'
+            print (err)
+        env.insert("OMP_NUM_THREADS", nthreads)
+        process.setProcessEnvironment(env)
+
         # print("Processes: ", self.processes)
         # print("num: ", self.process_num)        
 
