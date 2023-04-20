@@ -215,6 +215,9 @@ def displayErrorDialogFromWorker(main_window, error):
 
     '''
     # (exctype, value, traceback.format_exc())
+    # close progress dialog if it is open:
+    if hasattr(main_window, 'progress_window') and main_window.progress_window is not None:
+        main_window.progress_window.close()
     title='Caught Exception'
     message = 'Except type {}\nvalue {}'.format(error[0], error[1])
     detailed_message = str(error[2])

@@ -642,7 +642,7 @@ class MainWindow(QMainWindow):
             if label is not None:
                 label.setText(
                     os.path.dirname(self.image[image_var][0]) + "\n" +\
-                    os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+                    os.path.basename(self.image[image_var][0]) + " + " + str(len(files)-1) + " more files.")
         else:
             raise ValueError('Something went wrong with the file copy')
 
@@ -677,6 +677,7 @@ class MainWindow(QMainWindow):
             writer = vtk.vtkMetaImageWriter()
             # tmpdir = tempfile.gettempdir()
             writer.SetFileName(end_location[0])
+            writer.SetCompression(False)
             writer.SetInputData(reader.GetOutput())
             writer.Write()
             progress_callback.emit(100)
