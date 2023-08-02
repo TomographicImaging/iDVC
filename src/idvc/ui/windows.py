@@ -14,7 +14,7 @@ import ccpi.viewer.viewerLinker as vlink
 from ccpi.viewer.utils.error_handling import ErrorObserver
 from ccpi.viewer.utils import *
 
-from idvc.ui.Widgets import *
+from idvc.ui.widgets import *
 
 
 class VisualisationWindow(QtWidgets.QMainWindow):
