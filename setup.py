@@ -57,8 +57,8 @@ with open(fname, 'w') as f:
 setup(
       name = "idvc",
       description = 'CCPi DVC Configurator',
-	version = dversion,
-	packages = {'idvc'},
+	  version = dversion,
+	  packages = {'idvc', 'idvc.ui'},
       package_dir = {'idvc': os.path.join('src','idvc')},
       package_data = {'idvc':['DVCIconSquare.png']},
       # metadata for upload to PyPI
@@ -67,5 +67,5 @@ setup(
       license="Apache v2.0",
       keywords="Digital Volume Correlation",
       url="http://www.ccpi.ac.uk",   # project home page, if any
-      entry_points= {'console_scripts': ['idvc = idvc.dvc_interface:main']}
+      entry_points= {'console_scripts': ['idvc = idvc.idvc:main']}
 )
