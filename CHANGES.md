@@ -8,6 +8,13 @@
   created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid.
 * Updates progress bar for setting up a DVC run configuration - previously this was hanging.
 * Improves progress reporting when loading a saved session, including displaying file names as they are loaded.
+* Make splash screen appear instantly when app is opened.
+* Restructure to create:
+  * ui/dialogs.py
+  * ui/widgets.py
+  * ui/windows.py
+  * utils.py
+  * idvc.py - which launches the app
 
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction

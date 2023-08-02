@@ -1,20 +1,24 @@
-import PySide2
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+import glob
 import os
+
+import ccpi.viewer.viewerLinker as vlink
+import PySide2
 import vtk
 from ccpi.viewer import viewer2D, viewer3D
-from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
 from ccpi.viewer.CILViewer2D import (SLICE_ORIENTATION_XY,
                                      SLICE_ORIENTATION_XZ,
                                      SLICE_ORIENTATION_YZ)
-import ccpi.viewer.viewerLinker as vlink
-from ccpi.viewer.utils.error_handling import ErrorObserver
+from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
 from ccpi.viewer.utils import *
+from ccpi.viewer.utils.error_handling import ErrorObserver
+from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 from idvc.ui.widgets import *
+
+from idvc.utilities import RunResults
 
 
 class VisualisationWindow(QtWidgets.QMainWindow):
