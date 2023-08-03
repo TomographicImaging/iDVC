@@ -15,6 +15,7 @@
   * ui/windows.py
   * utils.py
   * idvc.py - which launches the app
+* Revert to v1.4.4 of conda build action
 
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
