@@ -1,4 +1,4 @@
-name: idvc_dev2
+name: idvc_dev
 channels:
   - ccpi
   - conda-forge

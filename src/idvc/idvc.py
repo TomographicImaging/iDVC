@@ -3,7 +3,6 @@ from PySide2 import QtWidgets, QtGui
 import os, sys
 
 def main():
-    print("Running main")
     app = QtWidgets.QApplication([])
     
     file_dir = os.path.dirname(__file__)
