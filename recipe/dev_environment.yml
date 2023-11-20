@@ -1,7 +1,6 @@
-name: idvc_dev
+name: idvc_dev2
 channels:
   - ccpi
-  - paskino
   - conda-forge
 dependencies:    
     - python
