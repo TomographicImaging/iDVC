@@ -97,7 +97,7 @@ __version__ = gui_version.version
 
 import logging
 
-
+from idvc.utils.class_automatic_registration import automatic_registration
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -1834,36 +1834,32 @@ It is used as a global starting point and a translation reference."
 
 
     def automatic_reg_run(self):
-        
-        #get images full resolution and cropped 
-        [image0, image1] = self.getRegistrationVOIs(large=False) 
-        #rows, cols, _ = image0.GetDimensions()
-        #print(image0.GetDimensions())
-        #sc = image0.GetPointData().GetScalars()
-        #sc2=vtk.util.numpy_support.vtk_to_numpy(sc)
-        #a = sc2.reshape(rows, cols, -1)
-        a=Converter.vtk2numpy(image0)
-        print(a.shape) #not working
 
-        #get point zero
-        p3d_0 = np.array(self.getPoint0ImageCoords())
-        print(p3d_0)
+        #get images full resolution and cropped 
+        data = self.getRegistrationVOIs(large=False) 
+        [image0,image1]=[Converter.vtk2numpy(data[i]) for i in (0,1)]
+        print(image0[0].shape)
+        print(image1[0].shape)
+
+        
 
         #get size
         RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() #user input
-        print("DANI1"+str(RegBoxSize))
+        print("regboxsize"+str(RegBoxSize))
         extent=self.getRegistrationBoxExtentInWorldCoords()
-        size = np.array(extent)
-        print("DANI2"+str(size))
+        size = extent
+        size=np.array([[size[0],size[1]],[size[2],size[3]],[size[4],size[5]]])
+        print("size"+str(size))
 
-    # def convert_vtk_into_numpy(data):
-    #     img_scalar = data.GetPointData().GetScalars()
-    #     dims = data.GetDimensions()
-    #     n_comp = img_scalar.GetNumberOfComponents()
-    #     temp = vtk.util.numpy_support.vtk_to_numpy(img_scalar)
-    #     numpy_data = temp.reshape(dims[1],dims[0],n_comp)
-    #     numpy_data = numpy_data.transpose(0,1,2)
-    #     numpy_data = np.flipud(numpy_data)
+        #get point zero
+        point_zero = self.getPoint0ImageCoords()
+        print(point_zero)
+        p3d_0 = np.array([RegBoxSize//2+1,RegBoxSize//2+1,RegBoxSize//2+1])
+        print(p3d_0)
+        print(p3d_0.dtype)
+
+        #run code
+        automatic_registration(image0,image1, p3d_0, size, False)
 
 
 

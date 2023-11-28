@@ -144,8 +144,8 @@ if pointzero == False:
 
 
 #invoke the class
-#code = automatic_registration(image0,image1,p3d_0,size,centre3d_0, uservolume,datatype)
-code = automatic_registration_with_plotting(intermediate_plot,filename0,filename1,outputfolder,save, saveonlyfew, image0,image1,p3d_0,size,centre3d_0, uservolume,datatype)
+code = automatic_registration(image0,image1,p3d_0,size,uservolume)
+#code = automatic_registration_with_plotting(intermediate_plot,filename0,filename1,outputfolder,save, saveonlyfew, image0,image1,p3d_0,size, uservolume)
 image0 = code.image0
 image1 = code.image1
 

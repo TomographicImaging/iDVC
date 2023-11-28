@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle
 
 class automatic_registration:
 
-    def __init__(self, im0, im1, p3d_0, size, centre3d_0, uservolume, datatype): #delete datatype
+    def __init__(self, im0, im1, p3d_0, size, uservolume): 
         """
         Instances an object with property `image0` and `image1`, which are automatically registered from `im0` and `im1`.
 
@@ -28,14 +28,14 @@ class automatic_registration:
         self.p3d_0 = p3d_0
         self.size = size
         self.edge = self.calc_edge()
-        self.datatype = datatype
-        if self.datatype =='8':
+        datatype = im0.dtype
+        if datatype =='int8' or datatype == '>u1':
             self.datatype_slice = 'int16'
-        elif self.datatype == '16':
+        elif datatype == 'int16' or datatype == '>u2':
             self.datatype_slice ='int32'
         self.errthresh=2 #in untis of pixels, what error we allow on the alignment - 3D shift - in each direction
         self.threshold =0.002 #normally use 0.002, the larger this value the less accurate is the alignment
-        self.perform_automatic_registration(centre3d_0, uservolume)
+        self.perform_automatic_registration(uservolume)
 
     def calc_edge(self):
         edge=[] #store the rectangle edges information for the uservolume
@@ -96,32 +96,33 @@ class automatic_registration:
         diff : 2D numpy.array
             Difference between `sel0` and `sel1`.
         """
-        size=self.size
+        size = self.size
+        datatype_slice = self.datatype_slice
         #Select only one slice
 
         if uservolume == False:
 
             if dimension == 0:
-                sel0=im0[selectedslice,:,:].astype(self.datatype_slice)
-                sel1=im1[selectedslice,:,:].astype(self.datatype_slice)
+                sel0=im0[selectedslice,:,:].astype(datatype_slice)
+                sel1=im1[selectedslice,:,:].astype(datatype_slice)
             elif dimension==1:
-                sel0=im0[:,selectedslice,:].astype(self.datatype_slice)
-                sel1=im1[:,selectedslice,:].astype(self.datatype_slice)
+                sel0=im0[:,selectedslice,:].astype(datatype_slice)
+                sel1=im1[:,selectedslice,:].astype(datatype_slice)
             elif dimension==2:
-                sel0=im0[:,:,selectedslice].astype(self.datatype_slice)
-                sel1=im1[:,:,selectedslice].astype(self.datatype_slice)
+                sel0=im0[:,:,selectedslice].astype(datatype_slice)
+                sel1=im1[:,:,selectedslice].astype(datatype_slice)
 
         else:
 
             if dimension == 0:
-                sel0=im0[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(self.datatype_slice)
-                sel1=im1[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(self.datatype_slice)
+                sel0=im0[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
+                sel1=im1[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
             elif dimension==1:
-                sel0=im0[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(self.datatype_slice)
-                sel1=im1[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(self.datatype_slice)
+                sel0=im0[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
+                sel1=im1[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
             elif dimension==2:
-                sel0=im0[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(self.datatype_slice)
-                sel1=im1[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(self.datatype_slice)
+                sel0=im0[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
+                sel1=im1[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
 
         diff = sel0-sel1
 
@@ -300,7 +301,7 @@ class automatic_registration:
         "If sign of two numbers is the same return the minimum, otherwise return 0"
         return np.sign(a)*np.min(abs(np.array([a,b]))) if np.sign(a) == np.sign(b) else 0
     
-    def perform_automatic_registration(self, centre3d_0, uservolume):
+    def perform_automatic_registration(self, uservolume):
         """
         run the main code.
 
@@ -308,7 +309,6 @@ class automatic_registration:
         -----------------------
         image0 : 3D numpy.array
         image1 : 3D numpy.array
-        centre3d_0 : [int, int, int]
         errthresh : int
         save : bool
         uservolume : bool
@@ -325,6 +325,7 @@ class automatic_registration:
         err=[100,100,100]
         DD3d=np.array([])
         while SUM>self.threshold:# and DD3d.any() == 0:
+            centre3d_0=np.array([round(self.image0.shape[0]/2),round(self.image0.shape[1]/2),round(self.image0.shape[2]/2)])
             counter+=1
             print("\n\nCycle number "+str(counter)+".\n")
 
