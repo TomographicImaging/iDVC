@@ -3,3 +3,27 @@ docs/build/*
 docs/source/_build/*
 
 src/idvc/version.py
+build/lib/idvc/__init__.py
+build/lib/idvc/dvc_interface.py
+build/lib/idvc/dvc_runner.py
+build/lib/idvc/DVCIconSquare.png
+build/lib/idvc/idvc.py
+build/lib/idvc/io.py
+build/lib/idvc/pointcloud_conversion.py
+build/lib/idvc/utilities.py
+build/lib/idvc/version.py
+build/lib/idvc/ui/__init__.py
+build/lib/idvc/ui/dialogs.py
+build/lib/idvc/ui/widgets.py
+build/lib/idvc/ui/windows.py
+idvc.egg-info/dependency_links.txt
+idvc.egg-info/entry_points.txt
+idvc.egg-info/PKG-INFO
+idvc.egg-info/SOURCES.txt
+idvc.egg-info/top_level.txt
+src/idvc/utils/__pycache__/class_automatic_registration.cpython-37.pyc
+build/lib/idvc/utils/__init__.py
+build/lib/idvc/utils/Automatic_correlation_script_demo.py
+build/lib/idvc/utils/Automatic_registration_script_to_integrate.py
+build/lib/idvc/utils/class_automatic_registration.py
+build/lib/idvc/utils/plotting_functions.py
