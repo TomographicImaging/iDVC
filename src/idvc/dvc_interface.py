@@ -1638,6 +1638,8 @@ It is used as a global starting point and a translation reference."
         self.reg_viewer_update(type = 'starting registration')
         self.centerOnPointZero() 
 
+        self.automatic_reg_run()
+
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1703,10 +1705,11 @@ It is used as a global starting point and a translation reference."
         #progress_callback.emit(95)
 
 
-    def getRegistrationVOIs(self):            
+    def getRegistrationVOIs(self,large=False):            
 
         extent = self.getRegistrationBoxExtentInWorldCoords()
-
+        if large is True:
+            extent =  [3 * i for i in extent]
         #print("Registration box extent", extent )
 
         # get the selected ROI
@@ -1825,7 +1828,49 @@ It is used as a global starting point and a translation reference."
         self.subtract.Update()
         #print ("Translation", trans)
 
-            
+
+
+
+
+
+    def automatic_reg_run(self):
+        
+        #get images full resolution and cropped 
+        [image0, image1] = self.getRegistrationVOIs(large=False) 
+        #rows, cols, _ = image0.GetDimensions()
+        #print(image0.GetDimensions())
+        #sc = image0.GetPointData().GetScalars()
+        #sc2=vtk.util.numpy_support.vtk_to_numpy(sc)
+        #a = sc2.reshape(rows, cols, -1)
+        a=Converter.vtk2numpy(image0)
+        print(a.shape) #not working
+
+        #get point zero
+        p3d_0 = np.array(self.getPoint0ImageCoords())
+        print(p3d_0)
+
+        #get size
+        RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() #user input
+        print("DANI1"+str(RegBoxSize))
+        extent=self.getRegistrationBoxExtentInWorldCoords()
+        size = np.array(extent)
+        print("DANI2"+str(size))
+
+    # def convert_vtk_into_numpy(data):
+    #     img_scalar = data.GetPointData().GetScalars()
+    #     dims = data.GetDimensions()
+    #     n_comp = img_scalar.GetNumberOfComponents()
+    #     temp = vtk.util.numpy_support.vtk_to_numpy(img_scalar)
+    #     numpy_data = temp.reshape(dims[1],dims[0],n_comp)
+    #     numpy_data = numpy_data.transpose(0,1,2)
+    #     numpy_data = np.flipud(numpy_data)
+
+
+
+
+
+
+
 
 #Mask Panel:
     def CreateMaskPanel(self):
