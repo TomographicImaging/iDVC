@@ -1602,6 +1602,7 @@ It is used as a global starting point and a translation reference."
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
+                # below the target z extent is multiplied by 3
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
                                                  target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
