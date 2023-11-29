@@ -51,7 +51,8 @@ inputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_dataset\Dataset_ex
 #inputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_dataset\image_volumes\Set2'
 #inputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_dataset\image_volumes\Set3'
 
-outputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_output\image_volumes\Dataset_example2\point1_20231110'
+outputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_output\image_volumes\Dataset_example2\test'
+#outputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_output\image_volumes\Dataset_example2\point1_20231110'
 #outputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_output\image_volumes\Set2\uservolume_analysis_test_code2_20231109'
 #outputfolder = r'C:\Users\zvm34551\Coding_environment\DATA\DVC_output\image_volumes\Set3\uservolume_analysis_1_20231005'
 if not os.path.exists(outputfolder):
@@ -144,8 +145,10 @@ if pointzero == False:
 
 
 #invoke the class
-code = automatic_registration(image0,image1,p3d_0,size,uservolume)
-#code = automatic_registration_with_plotting(intermediate_plot,filename0,filename1,outputfolder,save, saveonlyfew, image0,image1,p3d_0,size, uservolume)
+code = automatic_registration(image0,image1,p3d_0,size)
+#code = automatic_registration_with_plotting(intermediate_plot,filename0,filename1,outputfolder,save, saveonlyfew, image0,image1,p3d_0,size)
+code.perform_automatic_registration()
+#code.plotting()
 image0 = code.image0
 image1 = code.image1
 

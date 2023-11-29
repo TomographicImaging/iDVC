@@ -5,7 +5,7 @@ from matplotlib.patches import Rectangle
 
 class automatic_registration:
 
-    def __init__(self, im0, im1, p3d_0, size, uservolume): 
+    def __init__(self, im0, im1, p3d_0, size): 
         """
         Instances an object with property `image0` and `image1`, which are automatically registered from `im0` and `im1`.
 
@@ -35,7 +35,7 @@ class automatic_registration:
             self.datatype_slice ='int32'
         self.errthresh=2 #in untis of pixels, what error we allow on the alignment - 3D shift - in each direction
         self.threshold =0.002 #normally use 0.002, the larger this value the less accurate is the alignment
-        self.perform_automatic_registration(uservolume)
+        
 
     def calc_edge(self):
         edge=[] #store the rectangle edges information for the uservolume
@@ -68,11 +68,11 @@ class automatic_registration:
         corr_img = scipy.signal.fftconvolve(sel0_gray, sel1_gray[::-1,::-1], mode='same')
         return corr_img
 
-    def func_slicing(self, im0, im1, selectedslice, dimension, uservolume):
+    def func_slicing_uservolume(self, im0, im1, selectedslice, dimension):
         """
-        Function to output the slices at position selected slice of two 3D images.
-        uservolume: selects the slice in a smaller volume defined by the user.
-        this function also changes the type of the data so the values can be signed when calculating the difference diff.
+        Function to output the slices at position `selectedslice` of two 3D images.
+        Selects the slice in a smaller volume defined by the user with `size`.
+        This function also changes the type of the data so the values can be signed when calculating the difference diff.
 
         Parameters
         ------------
@@ -83,9 +83,6 @@ class automatic_registration:
         dimension : int {`0`, `1`, `2`}
             represents one of the xyz spatial axis in the 3D images.
         size : np.array, [[int, int], [int, int], [int, int]]
-        uservolume : bool
-            if False it uses the full data, if True it crops the data defined in `size`.
-
 
         Returns
         --------
@@ -100,35 +97,62 @@ class automatic_registration:
         datatype_slice = self.datatype_slice
         #Select only one slice
 
-        if uservolume == False:
+        if dimension == 0:
+            sel0=im0[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
+            sel1=im1[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
+        elif dimension==1:
+            sel0=im0[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
+            sel1=im1[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
+        elif dimension==2:
+            sel0=im0[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
+            sel1=im1[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
 
-            if dimension == 0:
-                sel0=im0[selectedslice,:,:].astype(datatype_slice)
-                sel1=im1[selectedslice,:,:].astype(datatype_slice)
-            elif dimension==1:
-                sel0=im0[:,selectedslice,:].astype(datatype_slice)
-                sel1=im1[:,selectedslice,:].astype(datatype_slice)
-            elif dimension==2:
-                sel0=im0[:,:,selectedslice].astype(datatype_slice)
-                sel1=im1[:,:,selectedslice].astype(datatype_slice)
+        diff = sel0-sel1
 
-        else:
+        return sel0, sel1, diff
+    
+    def func_slicing(self, im0, im1, selectedslice, dimension):
+        """
+        Function to output the slices at position `selectedslice` of two 3D images.
+        This function also changes the type of the data so the values can be signed when calculating the difference diff.
 
-            if dimension == 0:
-                sel0=im0[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
-                sel1=im1[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
-            elif dimension==1:
-                sel0=im0[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
-                sel1=im1[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
-            elif dimension==2:
-                sel0=im0[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
-                sel1=im1[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
+        Parameters
+        ------------
+        im0 : 3D numpy.array
+        im1 : 3D numpy.array
+        selectedslice : int
+            along `dimension`, position of the element in the 3D arrays.
+        dimension : int {`0`, `1`, `2`}
+            represents one of the xyz spatial axis in the 3D images.
+        size : np.array, [[int, int], [int, int], [int, int]]
+
+        Returns
+        --------
+        sel0 : 2D numpy.array
+            Selected slice in `im0`.
+        sel1 : 2D numpy.array
+            Selected slice in `im1`.
+        diff : 2D numpy.array
+            Difference between `sel0` and `sel1`.
+        """
+        datatype_slice = self.datatype_slice
+        #Select only one slice
+
+        if dimension == 0:
+            sel0=im0[selectedslice,:,:].astype(datatype_slice)
+            sel1=im1[selectedslice,:,:].astype(datatype_slice)
+        elif dimension==1:
+            sel0=im0[:,selectedslice,:].astype(datatype_slice)
+            sel1=im1[:,selectedslice,:].astype(datatype_slice)
+        elif dimension==2:
+            sel0=im0[:,:,selectedslice].astype(datatype_slice)
+            sel1=im1[:,:,selectedslice].astype(datatype_slice)
 
         diff = sel0-sel1
 
         return sel0, sel1, diff
 
-    def func_2D_displacement(self, sel0, sel1): #this function is the same if uservolume is True or False
+    def func_2D_displacement(self, sel0, sel1): 
         """
         Calculates the maximum of the correlation matrix between two images and its position, 
         which could represent the displacement of two shifted images.
@@ -209,11 +233,11 @@ class automatic_registration:
                 p3d[dim]= p3d[dim]+shift3D[dim]
         return p3d
 
-    def iterative_func(self, im0, im1, err, uservolume):
-        DD3d, err = self.calc_shift(im0, im1, err, uservolume)
+    def iterative_func(self, im0, im1, err):
+        DD3d, err = self.calc_shift(im0, im1, err)
         return DD3d, err
 
-    def calc_shift(self, im0, im1, err, uservolume):
+    def calc_shift(self, im0, im1, err):
         """Calculates 
 
         Parameters
@@ -221,7 +245,6 @@ class automatic_registration:
         im0 : 3D numpy.array
         im1 : 3D numpy.array
         err : 
-        uservolume :
 
         Returns
         --------
@@ -242,7 +265,7 @@ class automatic_registration:
 
         max3d=[] # store max values of correlation matrices in the 3 directions
         for dim in range(0,3):
-            [sel0,sel1,diff] = self.func_slicing(im0,im1,self.p3d_0[dim],dim, uservolume)
+            [sel0,sel1,diff] = self.func_slicing_uservolume(im0,im1,self.p3d_0[dim],dim)
             [DD, max] = self.func_2D_displacement(sel0,sel1)
             max3d.append(max)
             DD6d.append(DD)
@@ -301,7 +324,7 @@ class automatic_registration:
         "If sign of two numbers is the same return the minimum, otherwise return 0"
         return np.sign(a)*np.min(abs(np.array([a,b]))) if np.sign(a) == np.sign(b) else 0
     
-    def perform_automatic_registration(self, uservolume):
+    def perform_automatic_registration(self):
         """
         run the main code.
 
@@ -311,7 +334,6 @@ class automatic_registration:
         image1 : 3D numpy.array
         errthresh : int
         save : bool
-        uservolume : bool
         """
 
         SUM=100 #initiliase SUM with large number to start the loop
@@ -336,7 +358,7 @@ class automatic_registration:
             
             SUM = err[0]/centre3d_0[0]+err[1]/centre3d_0[1]+err[2]/centre3d_0[2]
             
-            DD3d, err= self.iterative_func(self.image0,self.image1, err, uservolume)
+            DD3d, err= self.iterative_func(self.image0,self.image1, err)
 
             self.DD3d_accumulate=np.add(self.DD3d_accumulate,DD3d)
             
@@ -345,7 +367,7 @@ class automatic_registration:
             self.image0,self.image1=self.shift_3D_arrays(self.image0,self.image1,DD3d)
             self.p3d_0 = self.shift_point_zero(self.p3d_0,DD3d)
             print("New point zero is"+str(self.p3d_0)+".\n")
-        DD3d, err=self.iterative_func(self.image0,self.image1, err, uservolume)
+        DD3d, err=self.iterative_func(self.image0,self.image1, err)
         print("Error is "+str(SUM)+".\n\n\n\n\n")
     
         print("Overall shift after part user volume is"+str(self.DD3d_accumulate)+".\n")
@@ -363,17 +385,14 @@ class automatic_registration_with_plotting(automatic_registration):
         self.saveonlyfew = saveonlyfew
         super(automatic_registration_with_plotting, self).__init__(*args,**kwargs)
         
-        
-        self.plotting()
-        
-    def iterative_func(self,im0,im1, err, uservolume):
-        DD3d, err = self.calc_shift(im0, im1, err, uservolume)
-        self.plotplot(im0,im1,uservolume)
+    def iterative_func(self,im0,im1, err):
+        DD3d, err = self.calc_shift(im0, im1, err)
+        self.plotplot(im0,im1)
         #if self.saveonlyfew ==True:
         #    save = True
         return DD3d, err
 
-    def intensity_plot_array(self, a0,a1,a2,a3,dim,p3d_0, size, displacementpar,uservolume,rect00,rect10,filename0,filename1,outputfolder,save):
+    def intensity_plot_array(self, a0,a1,a2,a3,dim,p3d_0, size, displacementpar,rect00,rect10,filename0,filename1,outputfolder,save):
         """function to plot intensity - array of four images"""
         import matplotlib.pyplot as plt
         import matplotlib
@@ -385,7 +404,7 @@ class automatic_registration_with_plotting(automatic_registration):
         self.plt = plt
         fig, axs = plt.subplots(2, 2,sharex=False,sharey=False)
         fig.suptitle("Results after displacement of "+displacementpar+". Slice along dimension "+str(dim))
-        txt="\nImage0 = "+filename0+".\nImage1 = "+filename1+".\npoint zero = "+str(p3d_0) +". uservolume = "+str(size[0])+str(size[1])+str(size[2]) if uservolume==True else "\nImage0 = "+filename0+".\nImage1 = "+filename1+".\npoint zero = "+str(p3d_0) 
+        txt="\nImage0 = "+filename0+".\nImage1 = "+filename1+".\npoint zero = "+str(p3d_0) +". uservolume = "+str(size[0])+str(size[1])+str(size[2])
         plt.figtext(0.5, 0.01, txt, wrap=True, horizontalalignment='center', fontsize=8)
         fig.tight_layout(h_pad=2)
         ax00=axs[0, 0].imshow(a0, origin='lower', cmap='gray',vmin=np.min(a0),vmax=np.max(a0),interpolation='none')
@@ -407,28 +426,24 @@ class automatic_registration_with_plotting(automatic_registration):
         axs[1, 1].set_xlabel('Dimension '+str(np.mod(dim+2,3)))
         # resize the figure to match the aspect ratio of the Axes    
         fig.set_size_inches(10, 12, forward=True)
-        if uservolume==True:
-            axs[0, 0].add_patch(rect00)
-            axs[1, 0].add_patch(rect10)
+        axs[0, 0].add_patch(rect00)
+        axs[1, 0].add_patch(rect10)
         if save==True:
-            if uservolume==True:
-                fig.savefig(os.path.join(outputfolder,'full_figure_'+displacementpar+str(dim)+'.png'),dpi=600)
-            else:
-                fig.savefig(os.path.join(outputfolder,'full_figure_uservolume'+displacementpar+str(dim)+'.png'),dpi=600)
-            
+            fig.savefig(os.path.join(outputfolder,'full_figure_'+displacementpar+str(dim)+'.png'),dpi=600)
         return 
 
-    def plotplot(self,im0,im1,uservolume):
+    def plotplot(self,im0,im1):
         for dim in range(0,3):
-            [sel0,sel1,diff] = self.func_slicing(im0,im1,self.p3d_0[dim],dim, uservolume)
+            [sel0,sel1,diff] = self.func_slicing_uservolume(im0,im1,self.p3d_0[dim],dim)
             corr_img = self.cross_image(sel0,sel1) 
             if self.intermediate_plot==True:
-                [largesel0,largesel1,largediff]= self.func_slicing(im0,im1,self.p3d_0[dim],dim,False) #stored to plot the large images too
+                [largesel0,largesel1,largediff]= self.func_slicing(im0,im1,self.p3d_0[dim],dim) #stored to plot the large images too
                 rect1 = Rectangle((self.size[np.mod(dim+2,3),0], self.size[np.mod(dim+1,3),0]), self.edge[dim+2], self.edge[dim+1], linewidth=1,edgecolor='r', facecolor="none") #rect must be repeated otherwise it gives errors when plotting
                 rect2 = Rectangle((self.size[np.mod(dim+2,3),0], self.size[np.mod(dim+1,3),0]), self.edge[dim+2], self.edge[dim+1], linewidth=1,edgecolor='r', facecolor="none")
-                self.intensity_plot_array(largesel0,largesel1,corr_img,diff,dim,self.p3d_0,self.size,str(self.DD3d_accumulate),uservolume,rect1,rect2,self.filenames[0],self.filenames[1],self.outputfolder,self.save)
+                self.intensity_plot_array(largesel0,largesel1,corr_img,diff,dim,self.p3d_0,self.size,str(self.DD3d_accumulate),rect1,rect2,self.filenames[0],self.filenames[1],self.outputfolder,self.save)
 
     def plotting(self):
+         "This method shows all the plots on the screen."
          if self.intermediate_plot==True: 
             self.plt.show()
         

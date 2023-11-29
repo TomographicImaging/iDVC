@@ -1367,7 +1367,6 @@ It is used as a global starting point and a translation reference."
             else:
                 self.warningDialog("Choose a Point 0 first.", "Error")
 
-
     def displayRegistrationSelection(self):
         if hasattr(self, 'vis_widget_reg'):
             #print ("displayRegistrationSelection")
@@ -1643,13 +1642,14 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
+        self.automatic_reg_run()
+        self.manual_registration()
+
+    def manual_registration(self):
         self.updatePoint0Display()
         self.translateImages()
         self.reg_viewer_update(type = 'starting registration')
         self.centerOnPointZero() 
-
-        self.automatic_reg_run()
-
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1859,8 +1859,9 @@ It is used as a global starting point and a translation reference."
         RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() #user input
         print("regboxsize"+str(RegBoxSize))
         extent=self.getRegistrationBoxExtentInWorldCoords()
-        size = extent
-        size=np.array([[size[0],size[1]],[size[2],size[3]],[size[4],size[5]]])
+        #size = extent
+        #size=np.array([[size[0],size[1]],[size[2],size[3]],[size[4],size[5]]])
+        size=np.array([[RegBoxSize//2,3*RegBoxSize//2],[RegBoxSize//2,3*RegBoxSize//2],[RegBoxSize//2,3*RegBoxSize//2]])
         print("size"+str(size))
 
         #get point zero
@@ -1870,8 +1871,17 @@ It is used as a global starting point and a translation reference."
         print(p3d_0)
         print(p3d_0.dtype)
 
-        #run code
-        automatic_registration(image0,image1, p3d_0, size, False)
+        # #run code
+        automatic_registration_object = automatic_registration(image0,image1, p3d_0, size)
+        automatic_registration_object.perform_automatic_registration()
+        DD3d_accumulate=automatic_registration_object.DD3d_accumulate
+
+        #update widgets
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(DD3d_accumulate[2])) 
+        rp['translate_Y_entry'].setText(str(DD3d_accumulate[1])) 
+        rp['translate_Z_entry'].setText(str(DD3d_accumulate[0])) 
+
 
 
 
