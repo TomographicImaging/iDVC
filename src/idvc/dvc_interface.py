@@ -1586,10 +1586,7 @@ It is used as a global starting point and a translation reference."
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         point0 = self.getPoint0WorldCoords()
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
-
-        target_z_extent = [reg_box_extent[4], reg_box_extent[5]]
-        if target_z_extent[0] <0:
-            target_z_extent[0] = 0
+        target_z_extent = self.enlarge_extent(2)
         target_z_extent = tuple(target_z_extent)
 
         self.target_cropped_image_z_extent = target_z_extent
@@ -1623,6 +1620,19 @@ It is used as a global starting point and a translation reference."
                 self.LoadCorrImageForReg(crop_corr_image=True)
             else:
                 self.completeRegistration()
+
+    def enlarge_extent(self,dim):
+        point0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+        for i in (0,1):
+            if target_extent[i] < 0:
+                target_extent[i] = 0 
+            elif target_extent[i] > self.unsampled_image_dimensions[dim]:
+                target_extent[i] = self.unsampled_image_dimensions[dim] 
+            else:
+                target_extent[i] = target_extent[i] 
+        return target_extent
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
         origin = self.target_cropped_image_origin 
@@ -1705,11 +1715,10 @@ It is used as a global starting point and a translation reference."
         #progress_callback.emit(95)
 
 
-    def getRegistrationVOIs(self,large=False):            
+    def getRegistrationVOIs(self):            
 
         extent = self.getRegistrationBoxExtentInWorldCoords()
-        if large is True:
-            extent =  [3 * i for i in extent]
+
         #print("Registration box extent", extent )
 
         # get the selected ROI
@@ -1836,12 +1845,15 @@ It is used as a global starting point and a translation reference."
     def automatic_reg_run(self):
 
         #get images full resolution and cropped 
-        data = self.getRegistrationVOIs(large=False) 
+        data = [self.unsampled_ref_image_data,self.unsampled_corr_image_data]
         [image0,image1]=[Converter.vtk2numpy(data[i]) for i in (0,1)]
-        print(image0[0].shape)
-        print(image1[0].shape)
+        print(image0.shape)
+        print(image1.shape)
+        target_x_extent = self.enlarge_extent(0)
+        target_y_extent = self.enlarge_extent(1)
+        print(target_x_extent,target_y_extent)
+        [image0,image1] = [image0[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1],image1[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1]]
 
-        
 
         #get size
         RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() #user input
@@ -1854,7 +1866,7 @@ It is used as a global starting point and a translation reference."
         #get point zero
         point_zero = self.getPoint0ImageCoords()
         print(point_zero)
-        p3d_0 = np.array([RegBoxSize//2+1,RegBoxSize//2+1,RegBoxSize//2+1])
+        p3d_0 = np.array([RegBoxSize,RegBoxSize,RegBoxSize])
         print(p3d_0)
         print(p3d_0.dtype)
 
