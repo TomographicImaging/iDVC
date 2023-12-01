@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.signal
 import os
+import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
 class automatic_registration:
@@ -22,7 +23,7 @@ class automatic_registration:
             The shape is a right parallelepiped (edges not necessarily the same)
 
         """
-        # image0 and image1 are redefined in `perform_automatic_registration`
+        # image0 and image1 are redefined in `run()
         self.image0 = im0
         self.image1 = im1
         self.p3d_0 = p3d_0
@@ -324,7 +325,7 @@ class automatic_registration:
         "If sign of two numbers is the same return the minimum, otherwise return 0"
         return np.sign(a)*np.min(abs(np.array([a,b]))) if np.sign(a) == np.sign(b) else 0
     
-    def perform_automatic_registration(self):
+    def run(self):
         """
         run the main code.
 
@@ -376,26 +377,21 @@ class automatic_registration:
         print("test")
 
 class automatic_registration_with_plotting(automatic_registration):
-    def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, saveonlyfew, *args,**kwargs):
+    def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, *args,**kwargs):
         self.intermediate_plot = intermediate_plot
         self.filenames = [filename0,filename1]
         self.outputfolder = outputfolder
         self.save = save
-        print("Class plot")
-        self.saveonlyfew = saveonlyfew
         super(automatic_registration_with_plotting, self).__init__(*args,**kwargs)
         
     def iterative_func(self,im0,im1, err):
         DD3d, err = self.calc_shift(im0, im1, err)
-        self.plotplot(im0,im1)
-        #if self.saveonlyfew ==True:
-        #    save = True
+        self.plot_three_directions(im0,im1)
         return DD3d, err
 
     def intensity_plot_array(self, a0,a1,a2,a3,dim,p3d_0, size, displacementpar,rect00,rect10,filename0,filename1,outputfolder,save):
         """function to plot intensity - array of four images"""
-        import matplotlib.pyplot as plt
-        import matplotlib
+
         if dim==1: #needs transpose because dim 1 has inverted axes
             a0=np.transpose(a0)
             a1=np.transpose(a1)
@@ -409,17 +405,17 @@ class automatic_registration_with_plotting(automatic_registration):
         fig.tight_layout(h_pad=2)
         ax00=axs[0, 0].imshow(a0, origin='lower', cmap='gray',vmin=np.min(a0),vmax=np.max(a0),interpolation='none')
         axs[0, 0].set_title('Image 0')
-        fig.colorbar(mappable=ax00)
+        fig.colorbar(mappable=ax00,location='right',shrink=0.6)
 
         ax10=axs[1, 0].imshow(a1, origin='lower', cmap='gray',vmin=np.min(a1),interpolation='none')
         axs[1, 0].set_title('Image 1')
-        fig.colorbar(mappable=ax10)
+        fig.colorbar(mappable=ax10,location='right',shrink=0.6)
         ax01=axs[0, 1].imshow(a2, origin='lower', cmap='gray',vmin=np.min(a2),interpolation='none')
         axs[0, 1].set_title('Cross correlation')
-        fig.colorbar(mappable=ax01)
+        fig.colorbar(mappable=ax01,location='right',shrink=0.6)
         ax11=axs[1, 1].imshow(a3, origin='lower', cmap='gray',vmin=np.min(a3),interpolation='none')
         axs[1, 1].set_title('Diff')
-        fig.colorbar(mappable=ax11)
+        fig.colorbar(mappable=ax11,location='right',shrink=0.6)
         axs[0, 0].set_ylabel('Dimension '+str(np.mod(dim+1,3)))
         axs[1, 0].set_ylabel('Dimension '+str(np.mod(dim+1,3)))
         axs[1, 0].set_xlabel('Dimension '+str(np.mod(dim+2,3)))
@@ -432,7 +428,7 @@ class automatic_registration_with_plotting(automatic_registration):
             fig.savefig(os.path.join(outputfolder,'full_figure_'+displacementpar+str(dim)+'.png'),dpi=600)
         return 
 
-    def plotplot(self,im0,im1):
+    def plot_three_directions(self,im0,im1):
         for dim in range(0,3):
             [sel0,sel1,diff] = self.func_slicing_uservolume(im0,im1,self.p3d_0[dim],dim)
             corr_img = self.cross_image(sel0,sel1) 
@@ -442,7 +438,7 @@ class automatic_registration_with_plotting(automatic_registration):
                 rect2 = Rectangle((self.size[np.mod(dim+2,3),0], self.size[np.mod(dim+1,3),0]), self.edge[dim+2], self.edge[dim+1], linewidth=1,edgecolor='r', facecolor="none")
                 self.intensity_plot_array(largesel0,largesel1,corr_img,diff,dim,self.p3d_0,self.size,str(self.DD3d_accumulate),rect1,rect2,self.filenames[0],self.filenames[1],self.outputfolder,self.save)
 
-    def plotting(self):
+    def show_plots(self):
          "This method shows all the plots on the screen."
          if self.intermediate_plot==True: 
             self.plt.show()

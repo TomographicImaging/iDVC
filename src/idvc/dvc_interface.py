@@ -1642,8 +1642,9 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        self.automatic_reg_run()
         self.manual_registration()
+        self.automatic_reg_run()
+        
 
     def manual_registration(self):
         self.updatePoint0Display()
@@ -1871,12 +1872,12 @@ It is used as a global starting point and a translation reference."
         print(p3d_0)
         print(p3d_0.dtype)
 
-        # #run code
+        # run code
         automatic_registration_object = automatic_registration(image0,image1, p3d_0, size)
-        automatic_registration_object.perform_automatic_registration()
+        automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate
 
-        #update widgets
+        # update widgets
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(DD3d_accumulate[2])) 
         rp['translate_Y_entry'].setText(str(DD3d_accumulate[1])) 
