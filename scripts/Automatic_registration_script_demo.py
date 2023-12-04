@@ -3,7 +3,7 @@
 import os
 import sys
 import numpy as np
-from idvc.utils.class_automatic_registration import automatic_registration, automatic_registration_with_plotting
+from idvc.utils.classAutomaticRegistration import AutomaticRegistration, AutomaticRegistrationWithPlotting
 #from cil.utilities.display import show2D, show_geometry
 
 # Code introduction
@@ -151,11 +151,11 @@ if pointzero == False:
 #-----------------------------------------------------------------
 # create an object of the class or the class with plottings
 if intermediate_plot is False:
-    object = automatic_registration(image0,image1,p3d_0,size)
+    object = AutomaticRegistration(image0,image1,p3d_0,size)
     # run automatic registration
     object.run()
 else:
-    object  = automatic_registration_with_plotting(intermediate_plot,filename0,filename1,outputfolder,save, image0,image1,p3d_0,size)
+    object  = AutomaticRegistrationWithPlotting(intermediate_plot,filename0,filename1,outputfolder,save, image0,image1,p3d_0,size)
     # run automatic registration
     object.run()
     #visualise plots

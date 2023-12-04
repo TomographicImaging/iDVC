@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 
-class automatic_registration:
+class AutomaticRegistration:
 
     def __init__(self, im0, im1, p3d_0, size): 
         """
@@ -376,13 +376,13 @@ class automatic_registration:
         print("---------------End cycles part user volume.----------------------------\n\n\n\n\n")
         print("test")
 
-class automatic_registration_with_plotting(automatic_registration):
+class AutomaticRegistrationWithPlotting(AutomaticRegistration):
     def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, *args,**kwargs):
         self.intermediate_plot = intermediate_plot
         self.filenames = [filename0,filename1]
         self.outputfolder = outputfolder
         self.save = save
-        super(automatic_registration_with_plotting, self).__init__(*args,**kwargs)
+        super(AutomaticRegistrationWithPlotting, self).__init__(*args,**kwargs)
         
     def iterative_func(self,im0,im1, err):
         DD3d, err = self.calc_shift(im0, im1, err)

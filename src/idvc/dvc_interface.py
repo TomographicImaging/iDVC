@@ -97,7 +97,7 @@ __version__ = gui_version.version
 
 import logging
 
-from idvc.utils.class_automatic_registration import automatic_registration
+from idvc.utils.classAutomaticRegistration import AutomaticRegistration
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -1873,7 +1873,7 @@ It is used as a global starting point and a translation reference."
         print(p3d_0.dtype)
 
         # run code
-        automatic_registration_object = automatic_registration(image0,image1, p3d_0, size)
+        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size)
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate
 
