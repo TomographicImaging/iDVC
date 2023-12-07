@@ -30,7 +30,7 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilNumpyCroppedReader,
                                           cilNumpyResampleReader,
                                           cilTIFFResampleReader,
-                                          cilTIFFCroppedReader, 
+                                          cilTIFFCroppedReader,
                                           Converter)
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
@@ -103,8 +103,8 @@ class ImageDataCreator(object):
         elif file_extension in ['tif', 'tiff', '.tif', '.tiff']:
             createProgressWindow(main_window, "Converting", "Converting Image")
             # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
-            
-            image_worker = Worker(loadTif, image_files, output_image, convert_numpy=convert_numpy, 
+
+            image_worker = Worker(loadTif, image_files, output_image, convert_numpy=convert_numpy,
                                   image_info=info_var, resample=resample, crop_image=crop_image, target_size=target_size,
                                   origin=origin, target_z_extent=target_z_extent)
 
@@ -124,7 +124,7 @@ class ImageDataCreator(object):
             error_text = "Error reading file: ({filename})".format(
                 filename=image)
             displayFileErrorDialog(
-                main_window, message=error_text, title=error_title, 
+                main_window, message=error_text, title=error_title,
                 detailed_message='File format is not supported. Accepted formats include: .mhd, .mha, .npy, .tif, .raw')
             return
 
@@ -141,7 +141,7 @@ class ImageDataCreator(object):
         if finish_fn is not None:
             rif = partial(runIfFinishedCorrectly, main_window=main_window, finish_fn=finish_fn, *finish_fn_args, **finish_fn_kwargs)
             image_worker.signals.result.connect(rif)
-        
+
         main_window.threadpool = QThreadPool()
         main_window.threadpool.start(image_worker)
         print("Started worker")
@@ -186,7 +186,7 @@ def displayFileErrorDialog(main_window, message, title, detailed_message):
     title : str
         The title of the dialog
     detailed_message : str
-        The detailed message to display in the dialog       
+        The detailed message to display in the dialog
 
     '''
     msg = QMessageBox(main_window)
@@ -200,14 +200,14 @@ def displayFileErrorDialog(main_window, message, title, detailed_message):
 def displayErrorDialogFromWorker(main_window, error):
     '''This is a new version of displayFileErrorDialog that takes an error object as an argument.
     This function is meant to be used with the Worker class, which passes the error object to the error signal.
-    
+
     The error object is a tuple containing (exctype, value, traceback.format_exc())
-    https://github.com/paskino/qt-elements/blob/b34e7886f7e395683bbb618cc925ede8426fe8cd/eqt/threading/QtThreading.py#L83
+    https://github.com/TomographicImaging/eqt/blob/b34e7886f7e395683bbb618cc925ede8426fe8cd/eqt/threading/QtThreading.py#L83
 
     Additionally, this function does not make use of the main_window.e.ErrorMessage() function of ErrorObserver.
 
     Example Usage:
-    Suppose you have a Worker, any error that occurs in the worker will emit the error signal, which can be 
+    Suppose you have a Worker, any error that occurs in the worker will emit the error signal, which can be
     connected to this function.
 
     ff = partial(displayErrorDialogFromWorker, main_window)
@@ -491,7 +491,7 @@ def loadTif(*args, **kwargs):
 
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
-    
+
     if resample:
         reader = cilTIFFResampleReader()
         reader.SetFileName(filenames)
@@ -503,7 +503,7 @@ def loadTif(*args, **kwargs):
         print("Spacing ", output_image.GetSpacing())
         header_length = reader.GetFileHeaderLength()
         print("Length of header: ", header_length)
-        
+
         shape = reader.GetStoredArrayShape()
         if not reader.GetIsFortran():
             shape = shape[::-1]
@@ -525,7 +525,7 @@ def loadTif(*args, **kwargs):
         if image_info is not None:
             image_info['sampled'] = False
             image_info['cropped'] = True
-        
+
         reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
             getProgress, progress_callback=progress_callback))
         reader.SetFileName(filenames)
@@ -563,7 +563,7 @@ def loadTif(*args, **kwargs):
         reader.Update()
 
         shape = reader.GetStoredArrayShape()
-        
+
         progress_callback.emit(80)
 
         image_data = reader.GetOutput()
@@ -1021,5 +1021,3 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
             slice_data = Converter.vtk2numpy(reader.GetOutput())
             f.write(slice_data.tobytes())
             progress_callback.emit(int(start_progress + (end_progress - start_progress) * (filenames.index(el) / steps)))
-            
-

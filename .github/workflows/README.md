@@ -1,7 +1,7 @@
 # GitHub Actions
 
-## Building the Conda Package: [conda_build_and_publish](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/conda_build_and_publish.yml)
-This github action builds and tests the conda package, by using the [conda-package-publish-action](https://github.com/paskino/conda-package-publish-action)
+## Building the Conda Package: [conda_build_and_publish](./conda_build_and_publish.yml)
+This github action builds and tests the conda package, by using the [conda-package-publish-action](https://github.com/TomographicImaging/conda-package-publish-action)
 
 When pushing to master *all* variants are built and tested.
 
@@ -11,11 +11,11 @@ When opening or modifying a pull request to master, a single variant is built an
 
 ## Building/Publishing Documentation: [docs_build_and_publish](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml)
 
-This github action builds and optionally publishes the documentation located in [docs/source](https://github.com/TomographicImaging/iDVC/tree/master/docs/source). 
+This github action builds and optionally publishes the documentation located in [docs/source](https://github.com/TomographicImaging/iDVC/tree/master/docs/source).
 
 The github action has two jobs:
 
-1. [build](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L12): 
+1. [build](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L12):
 -  builds the documentation with sphinx
 -  uses upload-artifact to upload the html files which may then be used by **publish**
 
@@ -38,7 +38,7 @@ This allows you to preview the documentation site before it is published.
 
 ### Publication of the Documentation
 The documentation is hosted on the [github site](https://tomographicimaging.github.io/iDVC/) associated with the repository.
-This is built from the [gh-pages branch](https://github.com/TomographicImaging/iDVC/tree/gh-pages). 
+This is built from the [gh-pages branch](https://github.com/TomographicImaging/iDVC/tree/gh-pages).
 
 If you are an admin of the repository, you are able to see the settings for the site by going to `Settings->Pages`.
 
@@ -52,5 +52,3 @@ To get the action to work I first had to:
 3. [Set the source](https://github.com/TomographicImaging/iDVC/settings/pages) for our github pages to be the gh-pages branch.
 
 I followed the examples on the [sphinx build action page](https://github.com/marketplace/actions/sphinx-build), specifically this [example workflow](https://github.com/ammaraskar/sphinx-action-test/blob/master/.github/workflows/default.yml)
-
-
