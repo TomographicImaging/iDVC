@@ -9,17 +9,17 @@ When making an [annotated](https://git-scm.com/book/en/v2/Git-Basics-Tagging) ta
 
 When opening or modifying a pull request to master, a single variant is built and tested, but not published. This variant is `python=3.7` and `numpy=1.18`.
 
-## Building/Publishing Documentation: [docs_build_and_publish](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml)
+## Building/Publishing Documentation: [conda_build_and_publish](./conda_build_and_publish.yml)
 
-This github action builds and optionally publishes the documentation located in [docs/source](https://github.com/TomographicImaging/iDVC/tree/master/docs/source).
+This github action builds and optionally publishes the documentation located in [docs/source](../../docs/source).
 
 The github action has two jobs:
 
-1. [build](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L12):
+1. [docs](./conda_build_and_publish.yml#L29):
 -  builds the documentation with sphinx
 -  uses upload-artifact to upload the html files which may then be used by **publish**
 
-2. [publish](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L27):
+2. [publish](./conda_build_and_publish.yml#L42):
 -  uses download-artifact to retrieve the built html files
 -  pushes the html files to the gh-pages branch
 
@@ -28,9 +28,9 @@ When opening or modifying a pull request to master, `build` is run, but not `pub
 When pushing to master or tagging, the documentation is built *and* published (both the `build` and `publish` jobs are run).
 
 ### Viewing Built Documentation
-The `build` job builds the documentation and uploads it as an [artifact](https://github.com/TomographicImaging/iDVC/blob/master/.github/workflows/docs_build_and_publish.yml#L21),
+The `build` job builds the documentation and uploads it as an [artifact](./conda_build_and_publish.yml#L37),
 in a folder named `DocumentationHTML`.
-This can be found by going to the ‘Actions’ tab, and selecting the appropriate run of `.github/workflows/docs_build_and_publish.yml`.
+This can be found by going to the ‘Actions’ tab, and selecting the appropriate run of [conda_build_and_publish.yml](./conda_build_and_publish.yml).
 
 When viewing the summary for the run of the action, there is an `Artifact` section at the bottom of the page.
 Clicking on `DocumentationHTML` allows you to download a zip folder containing the built html files.
