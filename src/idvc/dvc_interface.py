@@ -1513,7 +1513,7 @@ It is used as a global starting point and a translation reference."
                     self.translate = vtk.vtkImageTranslateExtent()
                 elif self.translate is None:
                     self.translate = vtk.vtkImageTranslateExtent()
-                self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
+                #self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
 
                 self.LoadImagesAndCompleteRegistration()
                 
@@ -1644,7 +1644,7 @@ It is used as a global starting point and a translation reference."
     def completeRegistration(self):
         self.manual_registration()
         automatic_reg_worker = Worker(self.automatic_reg_run)
-        automatic_reg_worker.signals.result.connect(self.testtest2)
+        automatic_reg_worker.signals.result.connect(self.set_registration_widgets)
         #automatic_reg_worker.signals.progress.connect(self.progress_window.setValue)
         #automatic_reg_worker.signals.finished.connect(print("finished"))
         #automatic_reg_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
@@ -1656,23 +1656,39 @@ It is used as a global starting point and a translation reference."
         aa = 1+1
         print(aa)
 
-    def testtest2(self,result, **kwargs):
-        aa = 5
-        print(aa)
-        print(result)
+    def set_registration_widgets(self,result):
         DD3d_accumulate = result
         # update widgets
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(DD3d_accumulate[2])) 
         rp['translate_Y_entry'].setText(str(DD3d_accumulate[1])) 
         rp['translate_Z_entry'].setText(str(DD3d_accumulate[0]))
+        self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
+
+        self.reg_viewer_update(type = 'after automatic registration')
+        self.centerOnPointZero() 
+        self.updatePoint0Display()
+        self.translateImages()
+        #the following updates the viewer to the found automatic shift
+        self.reg_viewer_update(type = 'after automatic registration')
         
 
     def manual_registration(self):
+        rp = str(self.registration_parameters['translate_X_entry'].text())
+        print("first"+rp)
         self.updatePoint0Display()
+        rp = str(self.registration_parameters['translate_X_entry'].text())
+        print("s"+rp)
         self.translateImages()
+        rp = str(self.registration_parameters['translate_X_entry'].text())
+        print("t"+rp)
+        #reg viewer update makes the text 0
         self.reg_viewer_update(type = 'starting registration')
+        rp = str(self.registration_parameters['translate_X_entry'].text())
+        print("f"+rp)
         self.centerOnPointZero() 
+        rp = str(self.registration_parameters['translate_X_entry'].text())
+        print("fi"+rp)
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1779,10 +1795,14 @@ It is used as a global starting point and a translation reference."
         # print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
-        rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
-        rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
-        rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
-
+        if type == 'after automatic registration':
+            pass
+        else:
+            rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
+            rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
+            rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
+        printme = str(self.registration_parameters['translate_X_entry'].text())
+        print("after reg"+printme)
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
