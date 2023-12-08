@@ -374,7 +374,6 @@ class AutomaticRegistration:
         print("Overall shift after part user volume is"+str(self.DD3d_accumulate)+".\n")
         #print("The shift calculated in user volume is "+str(DD3d_accumulate-DD3d_accumulate_whole)+".\n")    
         print("---------------End cycles part user volume.----------------------------\n\n\n\n\n")
-        print("test")
 
 class AutomaticRegistrationWithPlotting(AutomaticRegistration):
     def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, *args,**kwargs):

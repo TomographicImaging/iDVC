@@ -1643,7 +1643,29 @@ It is used as a global starting point and a translation reference."
 
     def completeRegistration(self):
         self.manual_registration()
-        self.automatic_reg_run()
+        automatic_reg_worker = Worker(self.automatic_reg_run)
+        automatic_reg_worker.signals.result.connect(self.testtest2)
+        #automatic_reg_worker.signals.progress.connect(self.progress_window.setValue)
+        #automatic_reg_worker.signals.finished.connect(print("finished"))
+        #automatic_reg_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
+        self.threadpool.start(automatic_reg_worker)
+        #self.automatic_reg_run()
+
+        
+    def testtest(self,**kwargs):
+        aa = 1+1
+        print(aa)
+
+    def testtest2(self,result, **kwargs):
+        aa = 5
+        print(aa)
+        print(result)
+        DD3d_accumulate = result
+        # update widgets
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(DD3d_accumulate[2])) 
+        rp['translate_Y_entry'].setText(str(DD3d_accumulate[1])) 
+        rp['translate_Z_entry'].setText(str(DD3d_accumulate[0]))
         
 
     def manual_registration(self):
@@ -1843,7 +1865,7 @@ It is used as a global starting point and a translation reference."
 
 
 
-    def automatic_reg_run(self):
+    def automatic_reg_run(self, **kwargs):
 
         #get images full resolution and cropped 
         data = [self.unsampled_ref_image_data,self.unsampled_corr_image_data]
@@ -1875,13 +1897,9 @@ It is used as a global starting point and a translation reference."
         # run code
         automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size)
         automatic_registration_object.run()
-        DD3d_accumulate=automatic_registration_object.DD3d_accumulate
+        DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
 
-        # update widgets
-        rp = self.registration_parameters
-        rp['translate_X_entry'].setText(str(DD3d_accumulate[2])) 
-        rp['translate_Y_entry'].setText(str(DD3d_accumulate[1])) 
-        rp['translate_Z_entry'].setText(str(DD3d_accumulate[0])) 
+        return tuple(DD3d_accumulate)
 
 
 
