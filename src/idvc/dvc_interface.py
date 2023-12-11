@@ -1275,6 +1275,10 @@ It is used as a global starting point and a translation reference."
             self.createPoint0(p0l)
 
     def updatePoint0Display(self):
+        '''Updates the point 0 vtk.vtkCursor3D on the viewer to be centred
+        on the current value of self.point0_world_coords (returned by getPoint0WorldCoords()).
+        '''
+        #point0 , point0Mapper, point0Actor
         vox = self.getPoint0WorldCoords()
         for point0 in self.point0:
             point0[0].SetFocalPoint(*vox)
@@ -1346,8 +1350,12 @@ It is used as a global starting point and a translation reference."
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
     def centerOnPointZero(self):
-        #print("Center on point0")
-        '''Centers the viewing slice where Point 0 is'''
+        '''Centers the viewing slice on the registration viewer where Point 0 is.
+        This makes sure that the point 0 is visible on the viewer, in the slicing direction.
+        E.g. if point0 is at (5,6,7) and we are slicing in the Z direction, the viewer will 
+        display slice Z=7.
+        Produces a warning dialog if point0 has not yet been selected.
+        '''
         if hasattr(self, 'vis_widget_reg'):
             v = self.vis_widget_reg.frame.viewer
 
@@ -1445,6 +1453,11 @@ It is used as a global starting point and a translation reference."
         return reg_box_size
 
     def getRegistrationBoxExtentInWorldCoords(self):
+        '''
+        Sets self.registration_box_extent to the extent of the registration box in world coordinates.
+        The extent is a list of 6 values: [xmin, xmax, ymin, ymax, zmin, zmax]
+        Returns self.registration_box_extent
+        '''
         p0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
 
@@ -1478,11 +1491,25 @@ It is used as a global starting point and a translation reference."
         return p0
 
     def OnStartStopRegistrationPushed(self):
+        ''' This method is triggered by pressing the "Start Registration" button or the "Confirm Registration" button.
+        If "Start Registration" is pressed:
+        - the text on the button is changed to "Confirm Registration"
+        - the widgets for setting point0, the registration box size and the translation are disabled
+        - the size of the registration box may be updated to make sure it does not exceed the image extent
+        - sets up self.translate, which is a vtk.vtkImageTranslateExtent() object, with translation values linked to the values in the translation widgets
+        - calls LoadImagesAndCompleteRegistration()
+
+        
+        Alternatively if "Confirm Registration" is pressed:
+        - the text on the button is changed to "Start Registration"
+        - the widgets for setting point0, the registration box size and the translation are enabled
+        - the full dimension (possibly downsampled) reference image is displayed on the viewer.
+        '''
         if hasattr(self, 'vis_widget_reg'):
             self.UpdateViewerSettingsPanelForRegistration()
             rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
-            if rp['start_registration_button'].isChecked():
+            if rp['start_registration_button'].isChecked(): # "Start Registration" has been pressed
 
                 # check if we can make registration box, by checking
                 # if the size of registration box is smaller than the difference 
@@ -1519,7 +1546,7 @@ It is used as a global starting point and a translation reference."
                 self.LoadImagesAndCompleteRegistration()
                 
             
-            else:
+            else: # "Confirm Registration" has been pressed
                 # print ("Start Registration Unchecked")
                 rp['start_registration_button'].setText("Start Registration")
                 rp['registration_box_size_entry'].setEnabled(True)
@@ -1576,15 +1603,19 @@ It is used as a global starting point and a translation reference."
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
     
     def LoadImagesAndCompleteRegistration(self):
+        '''
+        1. Update self.unsampled_ref_image_data and self.unsampled_corr_image_data to contain the full resolution (unsampled) reference and correlate images,
+           cropped on the Z axis to the current registration box extent.
+        2. Run self.completeRegistration()
+        '''
 
         if hasattr(self, 'registration_box_extent'):
             previous_reg_box_extent = copy.deepcopy(self.registration_box_extent)
-            # print("Prev", previous_reg_box_extent)
         else:
             previous_reg_box_extent = None
 
-        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-        point0 = self.getPoint0WorldCoords()
+        # reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        # point0 = self.getPoint0WorldCoords()
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
 
         target_z_extent = [reg_box_extent[4], reg_box_extent[5]]
@@ -1610,7 +1641,7 @@ It is used as a global starting point and a translation reference."
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
-            if previous_reg_box_extent != reg_box_extent:
+            if previous_reg_box_extent != reg_box_extent: # If registration box is changed need to update the cropped images.
                 ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
                                                  target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
@@ -1625,6 +1656,11 @@ It is used as a global starting point and a translation reference."
                 self.completeRegistration()
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
+        '''
+        Loads the full resolution correlate image, cropped on the Z axis to the current registration box extent.
+        Saves the result in self.unsampled_corr_image_data.
+        Then runs self.completeRegistration()
+        '''
         origin = self.target_cropped_image_origin 
         z_extent = self.target_cropped_image_z_extent
 
@@ -1633,6 +1669,12 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
+        '''
+        1. Updates the point0 widget on the viewer to be centred on the location selected by the user.
+        2. Translates the correlate image by the translation values set in the translation widgets, and subtracts the reference image from the translated correlate image.
+        3. Updates the viewer to display the result of the subtraction.
+        4. Centres the viewer on the slice that contains point 0.
+        '''
         self.updatePoint0Display()
         self.translateImages()
         self.reg_viewer_update(type = 'starting registration')
@@ -1664,6 +1706,11 @@ It is used as a global starting point and a translation reference."
 
 
     def translateImages(self, progress_callback = None):
+        '''
+        Subtracts the reference image from the translated correlate image. Result is saved in self.subtract
+        To do this the images must be cast to float first, and self.cast contains a list of the vtkImageCast
+        objects set up for the reference and correlate images. 
+        '''
         #progress_callback.emit(10)
         data = self.getRegistrationVOIs()
         data1 = data[0]
@@ -1741,6 +1788,18 @@ It is used as a global starting point and a translation reference."
 
 
     def reg_viewer_update(self, type = None):
+        '''
+        Updates the translation widgets with the current translation on each axis.
+        Updates the registration viewer to display the result of the difference between
+        the reference and translated correlate image.
+
+        Parameters
+        ----------
+        type : str
+            If 'starting registration' then the registration viewer is centred on the slice that contains point 0.
+            This is the case if the "Start Registration" button is pressed. Otherwise, when type=None we are in the middle of 
+            manual registration and the viewer is centred on the current slice
+        '''
         # print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
