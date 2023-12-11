@@ -1614,8 +1614,6 @@ It is used as a global starting point and a translation reference."
         else:
             previous_reg_box_extent = None
 
-        # reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-        # point0 = self.getPoint0WorldCoords()
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
 
         target_z_extent = [reg_box_extent[4], reg_box_extent[5]]
