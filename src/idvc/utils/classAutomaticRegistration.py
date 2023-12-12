@@ -3,10 +3,12 @@ import scipy.signal
 import os
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
+import logging
+
 
 class AutomaticRegistration:
 
-    def __init__(self, im0, im1, p3d_0, size): 
+    def __init__(self, im0, im1, p3d_0, size, log_folder = None): 
         """
         Instances an object with property `image0` and `image1`, which are automatically registered from `im0` and `im1`.
 
@@ -36,7 +38,10 @@ class AutomaticRegistration:
             self.datatype_slice ='int32'
         self.errthresh=2 #in untis of pixels, what error we allow on the alignment - 3D shift - in each direction
         self.threshold =0.002 #normally use 0.002, the larger this value the less accurate is the alignment
-        
+        logname = r'C:\Users\zvm34551\Coding_environment\logfi.log'
+        if log_folder is not None:
+            self.log_folder = log_folder
+            logging.basicConfig(filename=log_folder+r'\automatic_registration_logging.log',format='%(asctime)s - %(message)s', level=logging.INFO)
 
     def calc_edge(self):
         edge=[] #store the rectangle edges information for the uservolume
@@ -255,8 +260,8 @@ class AutomaticRegistration:
             error allowed on shift calculation in untis of pixels
         """
 
-        print("Size of ref is "+str(np.shape(im0)))
-        print("Size of image 1 is "+str(np.shape(im1))+".\n")
+        logging.info("Size of ref is "+str(np.shape(im0)))
+        logging.info("Size of image 1 is "+str(np.shape(im1))+".\n")
         
         #find centre 3d of ref image'
         centre3d=np.array([round(im0.shape[0]/2),round(im0.shape[1]/2),round(im0.shape[2]/2)])
@@ -272,8 +277,8 @@ class AutomaticRegistration:
             DD6d.append(DD)
    
         DD6d =np.array(DD6d)
-        print("Array of displacements from the correlation images in 3 directions are \n"+str(DD6d)+".\n")
-        print("Couplets are "+str([DD6d[2,0],DD6d[1,0]])+str([DD6d[0,0],DD6d[2,1]])+str([DD6d[0,1],DD6d[1,1]])+".")
+        logging.info("Array of displacements from the correlation images in 3 directions are \n"+str(DD6d)+".\n")
+        logging.info("Couplets are "+str([DD6d[2,0],DD6d[1,0]])+str([DD6d[0,0],DD6d[2,1]])+str([DD6d[0,1],DD6d[1,1]])+".")
         # for dim in range(0,2):
         #     selection=np.array(max3d).argmax()
         #     print("selection is "+str(selection))
@@ -302,22 +307,22 @@ class AutomaticRegistration:
         #     DD3d=[DD6d[selection][0],DD6d[selection][1],0]
         if sum(abs(DD3d)) == 0:
             DD3d = self.calc_new_shift(DD3d,DD6d)
-        print("Calculated shift for this cycle is "+str(DD3d)+".\n")
+        logging.info("Calculated shift for this cycle is "+str(DD3d)+".\n")
         
         return DD3d, err
 
     def calc_new_shift(self,DD3d,DD6d):
-        print(DD3d)
+        logging.info(DD3d)
         tmp=np.array([
             self.choose_shift(DD6d[2,0],DD6d[1,0]),
             self.choose_shift(DD6d[0,0],DD6d[2,1]),
             self.choose_shift(DD6d[0,1],DD6d[1,1])])
         uDD3d=abs(tmp)
-        print(uDD3d)
+        logging.info(uDD3d)
         if sum(abs(uDD3d)) !=0:
             minval = np.min(uDD3d[np.nonzero(uDD3d)])
             index=np.where(uDD3d==minval)[0][0]
-            print(minval)
+            logging.info(minval)
             DD3d[index] =  tmp[index]
         return np.array(DD3d)
 
@@ -350,7 +355,7 @@ class AutomaticRegistration:
         while SUM>self.threshold:# and DD3d.any() == 0:
             centre3d_0=np.array([round(self.image0.shape[0]/2),round(self.image0.shape[1]/2),round(self.image0.shape[2]/2)])
             counter+=1
-            print("\n\nCycle number "+str(counter)+".\n")
+            logging.info("\n\nCycle number "+str(counter)+".\n")
 
             #if  sum(err) <=3 or counter>30:
             if counter>30:
@@ -363,18 +368,19 @@ class AutomaticRegistration:
 
             self.DD3d_accumulate=np.add(self.DD3d_accumulate,DD3d)
             
-            print("Error is "+str(SUM))
+            logging.info("Error is "+str(SUM))
 
             self.image0,self.image1=self.shift_3D_arrays(self.image0,self.image1,DD3d)
             self.p3d_0 = self.shift_point_zero(self.p3d_0,DD3d)
-            print("New point zero is"+str(self.p3d_0)+".\n")
+            logging.info("New point zero is"+str(self.p3d_0)+".\n")
         DD3d, err=self.iterative_func(self.image0,self.image1, err)
-        print("Error is "+str(SUM)+".\n\n\n\n\n")
+        logging.info("Error is "+str(SUM)+".\n\n\n\n\n")
     
-        print("Overall shift after part user volume is"+str(self.DD3d_accumulate)+".\n")
+        logging.info("Overall shift after part user volume is"+str(self.DD3d_accumulate)+".\n")
         #print("The shift calculated in user volume is "+str(DD3d_accumulate-DD3d_accumulate_whole)+".\n")    
-        print("---------------End cycles part user volume.----------------------------\n\n\n\n\n")
-
+        logging.info("---------------End cycles part user volume.----------------------------\n\n\n\n\n")
+        if self.log_folder is not None:
+            logging.shutdown()
 class AutomaticRegistrationWithPlotting(AutomaticRegistration):
     def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, *args,**kwargs):
         self.intermediate_plot = intermediate_plot

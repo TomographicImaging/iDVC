@@ -155,7 +155,7 @@ if intermediate_plot is False:
     # run automatic registration
     object.run()
 else:
-    object  = AutomaticRegistrationWithPlotting(intermediate_plot,filename0,filename1,outputfolder,save, image0,image1,p3d_0,size)
+    object  = AutomaticRegistrationWithPlotting(intermediate_plot,filename0,filename1,outputfolder,save, image0,image1,p3d_0,size,r'C:\Users\zvm34551\Coding_environment\iDVC')
     # run automatic registration
     object.run()
     #visualise plots

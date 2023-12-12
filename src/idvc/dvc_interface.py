@@ -2044,7 +2044,7 @@ It is used as a global starting point and a translation reference."
         print(p3d_0.dtype)
 
         # run code
-        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size)
+        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, os.path.join(working_directory, 'DVC_Sessions'))
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
 
