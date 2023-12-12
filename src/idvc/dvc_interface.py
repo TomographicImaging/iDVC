@@ -1169,21 +1169,11 @@ It is used as a global starting point and a translation reference."
         rp['cancel_auto_reg_label'].setText("Automatic registration [0, 0, 0]")
         rp['cancel_auto_reg_button'].setCheckable(True)
         rp['cancel_auto_reg_button'].setEnabled(True)
-        rp['cancel_auto_reg_button'].clicked.connect(self.cancel_automatic_registration)
-        formLayout.insertRow(widgetno, rp['cancel_auto_reg_label'] , rp['cancel_auto_reg_button'])
+        rp['cancel_auto_reg_button'].clicked.connect(self.cancelAutomaticRegistration)
+        formLayout.insertRow(widgetno-1, rp['cancel_auto_reg_label'] , rp['cancel_auto_reg_button'])
         widgetno += 1
         rp['cancel_auto_reg_button'].setVisible(False)
         rp['cancel_auto_reg_label'].setVisible(False)
-
-        # Add confirm registration button
-        rp['confirm_registration_button'] = QPushButton(groupBox)
-        rp['confirm_registration_button'].setText("confirm Registration b2")
-        rp['confirm_registration_button'].setCheckable(True)
-        rp['confirm_registration_button'].setEnabled(True)
-        #rp['confirm_registration_button'].clicked.connect(self.OnStartStopRegistrationPushed)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['confirm_registration_button'])
-        widgetno += 1
-        rp['confirm_registration_button'].setVisible(False)
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
@@ -1528,12 +1518,24 @@ It is used as a global starting point and a translation reference."
         - the widgets for setting point0, the registration box size and the translation are enabled
         - the full dimension (possibly downsampled) reference image is displayed on the viewer.
         '''
+        rp = self.registration_parameters
+        if "Restart registration" in rp['start_registration_button'].text():
+            print("reset in the string")
+            self.translate = None
+            rp['translate_X_entry'].setText("0")
+            rp['translate_Y_entry'].setText("0")
+            rp['translate_Z_entry'].setText("0")
+            if "Set to automatic registration" in rp['cancel_auto_reg_button'].text():
+                rp['cancel_auto_reg_button'].setText("Cancel automatic registration")
+                rp['cancel_auto_reg_button'].setChecked(False)
+        else:
+            print("wrong!")
+            print(rp['start_registration_button'].text())
+        
         if hasattr(self, 'vis_widget_reg'):
             self.UpdateViewerSettingsPanelForRegistration()
-            rp = self.registration_parameters
             v = self.vis_widget_reg.frame.viewer
             if rp['start_registration_button'].isChecked(): # "Start Registration" has been pressed
-
                 # check if we can make registration box, by checking
                 # if the size of registration box is smaller than the difference 
                 # between the current slice and the extent on the current dimension:
@@ -1549,9 +1551,11 @@ It is used as a global starting point and a translation reference."
                 if max_size_of_box < registration_box_size:
                     rp['registration_box_size_entry'].setValue(max_size_of_box)
                 
-                # print ("Start Registration Checked")
-                #rp['start_registration_button'].setText("Confirm Registration")
-                rp['start_registration_button'].setEnabled(False)
+                print ("Start Registration Checked")
+                print(rp['start_registration_button'].text())
+                self.registration_parameters['start_registration_button'].setText("Confirm Registration")
+                print(rp['start_registration_button'].text())
+        
                 rp['registration_box_size_entry'].setEnabled(False)
                 
                 rp['select_point_zero'].setChecked(False)
@@ -1559,8 +1563,6 @@ It is used as a global starting point and a translation reference."
                 rp['translate_X_entry'].setEnabled(False)
                 rp['translate_Y_entry'].setEnabled(False)
                 rp['translate_Z_entry'].setEnabled(False)
-
-                rp['confirm_registration_button'].setVisible(True)
 
                 # setup the appropriate stuff to run the registration
                 if not hasattr(self, 'translate'):
@@ -1573,8 +1575,10 @@ It is used as a global starting point and a translation reference."
                 
             
             else: # "Confirm Registration" has been pressed
-                # print ("Start Registration Unchecked")
-                rp['start_registration_button'].setText("Start Registration")
+                print ("Start Registration Unchecked")
+                print(rp['start_registration_button'].text())
+                self.registration_parameters['start_registration_button'].setText("Restart registration")
+                print(rp['start_registration_button'].text())
                 rp['registration_box_size_entry'].setEnabled(True)
                 rp['select_point_zero'].setCheckable(True)
 
@@ -1582,6 +1586,8 @@ It is used as a global starting point and a translation reference."
                 rp['translate_X_entry'].setEnabled(True)
                 rp['translate_Y_entry'].setEnabled(True)
                 rp['translate_Z_entry'].setEnabled(True)
+                rp['cancel_auto_reg_button'].setVisible(False)
+                rp['cancel_auto_reg_label'].setVisible(False)
                 
                 v.setInput3DData(self.ref_image_data)
                 v.style.UpdatePipeline()
@@ -1703,15 +1709,10 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        '''
-        1. Updates the point0 widget on the viewer to be centred on the location selected by the user.
-        2. Translates the correlate image by the translation values set in the translation widgets, and subtracts the reference image from the translated correlate image.
-        3. Updates the viewer to display the result of the subtraction.
-        4. Centres the viewer on the slice that contains point 0.
-        '''
-        self.manual_registration()
+        
+        self.manualRegistration()
         automatic_reg_worker = Worker(self.automatic_reg_run)
-        automatic_reg_worker.signals.result.connect(self.set_registration_widgets_from_worker)
+        automatic_reg_worker.signals.result.connect(self.setRegistrationWidgetsFromWorker)
         #automatic_reg_worker.signals.progress.connect(self.progress_window.setValue)
         #automatic_reg_worker.signals.finished.connect(print("finished"))
         #automatic_reg_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
@@ -1722,65 +1723,84 @@ It is used as a global starting point and a translation reference."
         aa = 1+1
         print(aa)
 
-    def set_registration_widgets_from_worker(self,result):
+    def setRegistrationWidgetsFromWorker(self,result):
+        '''
+        Flips the result from the automatic registration class as numpy and vtk have different conventions.
+        Updates widgets and viewer by calling `setRegistrationWidgets`.
+        Updates label in the cancel button.
+        MAkes the cancel button and its label visible.
+        '''
         
         self.auto_reg_result = np.flip(result)
-        self.set_registration_widgets(self.auto_reg_result)
+        self.setRegistrationWidgets(self.auto_reg_result)
         rp = self.registration_parameters
         rp['cancel_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
         rp['cancel_auto_reg_button'].setVisible(True)
         rp['cancel_auto_reg_label'].setVisible(True)
         
 
-    def set_registration_widgets(self,shift):
-        total_translation = self.get_registration_translation()
+    def setRegistrationWidgets(self,shift):
+        '''
+        Gets the total translation from the widgets by invoking `getRegistrationTranslation`.
+        Updates the widgets with the extra shift.
+        Translates the viewer with the shift.
+        '''
+        total_translation = self.getRegistrationTranslation()
         # update widgets
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
         rp['translate_Y_entry'].setText(str(total_translation[1] + shift[1])) 
         rp['translate_Z_entry'].setText(str(total_translation[2] + shift[2]))
         self.translate.SetTranslation(-int(shift[0]),-int(shift[1]),-int(shift[2]))
-        self.reg_viewer_update(type = 'after automatic registration')
+        #self.reg_viewer_update(type = 'after automatic registration')
         self.centerOnPointZero() 
         self.updatePoint0Display()
         self.translateImages()
         #the following updates the viewer to the found automatic shift
         self.reg_viewer_update(type = 'after automatic registration')
 
-    def get_registration_translation(self):
+    def getRegistrationTranslation(self):
         rp = self.registration_parameters
         current_shift = np.array([int(rp['translate_X_entry'].text()),int(rp['translate_Y_entry'].text()),int(rp['translate_Z_entry'].text())])
         return current_shift
         
-    def cancel_automatic_registration(self):
+    def cancelAutomaticRegistration(self):
         rp = self.registration_parameters
         if rp['cancel_auto_reg_button'].isChecked():
-            self.set_registration_widgets(-self.auto_reg_result)
+            print("checked")
+            self.setRegistrationWidgets(-self.auto_reg_result)
             #rp['cancel_auto_reg_button'].setEnabled(False)
             rp['cancel_auto_reg_button'].setText("Set to automatic registration")
             rp['cancel_auto_reg_button'].setChecked(True)
         else:
-            self.set_registration_widgets(self.auto_reg_result)
+            print("unchecked")
+            self.setRegistrationWidgets(self.auto_reg_result)
             rp['cancel_auto_reg_button'].setText("Cancel automatic registration")
             rp['cancel_auto_reg_button'].setChecked(False)
 
 
-    def manual_registration(self):
-        rp = str(self.registration_parameters['translate_X_entry'].text())
-        print("first"+rp)
+    def manualRegistration(self):
+        '''
+        1. Updates the point0 widget on the viewer to be centred on the location selected by the user.
+        2. Translates the correlate image by the translation values set in the translation widgets, and subtracts the reference image from the translated correlate image.
+        3. Updates the viewer to display the result of the subtraction.
+        4. Centres the viewer on the slice that contains point 0.
+        '''
+        rpst = str(self.registration_parameters['translate_X_entry'].text())
+        print("first"+rpst)
         self.updatePoint0Display()
-        rp = str(self.registration_parameters['translate_X_entry'].text())
-        print("s"+rp)
+        rpst = str(self.registration_parameters['translate_X_entry'].text())
+        print("s"+rpst)
         self.translateImages()
-        rp = str(self.registration_parameters['translate_X_entry'].text())
-        print("t"+rp)
+        rpst = str(self.registration_parameters['translate_X_entry'].text())
+        print("t"+rpst)
         #reg viewer update makes the text 0
         self.reg_viewer_update(type = 'starting registration')
-        rp = str(self.registration_parameters['translate_X_entry'].text())
-        print("f"+rp)
+        rpst = str(self.registration_parameters['translate_X_entry'].text())
+        print("f"+rpst)
         self.centerOnPointZero() 
-        rp = str(self.registration_parameters['translate_X_entry'].text())
-        print("fi"+rp)
+        rpst = str(self.registration_parameters['translate_X_entry'].text())
+        print("fi"+rpst)
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1906,7 +1926,7 @@ It is used as a global starting point and a translation reference."
         rp = self.registration_parameters
         if type == 'after automatic registration':
             pass
-        else:
+        if type == 'manual registration':
             rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
             rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
             rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
@@ -1943,7 +1963,7 @@ It is used as a global starting point and a translation reference."
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
             self.translate_image_reg(key_code, event)
-            self.reg_viewer_update()
+            self.reg_viewer_update(type = 'manual registration')
 
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
@@ -1954,7 +1974,7 @@ It is used as a global starting point and a translation reference."
 
         if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
             rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
-            self.completeRegistration()
+            self.manualRegistration()
 
         
     def translate_image_reg(self, *args, **kwargs):
