@@ -1,18 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Datasets &amp; Visualisation &mdash; iDVC  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>Datasets &amp; Visualisation &mdash; iDVC  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -40,7 +45,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Datasets &amp; Visualisation</a><ul>
@@ -86,10 +91,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="datasets-visualisation">
-<h1>Datasets &amp; Visualisation<a class="headerlink" href="#datasets-visualisation" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="image-selection">
-<h2>Image Selection<a class="headerlink" href="#image-selection" title="Permalink to this headline">¶</a></h2>
+  <section id="datasets-visualisation">
+<h1>Datasets &amp; Visualisation<a class="headerlink" href="#datasets-visualisation" title="Permalink to this heading"></a></h1>
+<section id="image-selection">
+<h2>Image Selection<a class="headerlink" href="#image-selection" title="Permalink to this heading"></a></h2>
 <p>The app currently works with the following image types:</p>
 <ul class="simple">
 <li><p>raw</p></li>
@@ -102,16 +107,16 @@ If you have chosen a raw image file then you will be asked for some extra inform
 <img alt="_images/raw_config_panel.png" src="_images/raw_config_panel.png" />
 <p>It is assumed that the info is the same for both the reference and correlate image.
 The image shown on the viewer will most likely be down-sampled (depending on the settings – see the <a class="reference internal" href="#viewer-settings">Viewer Settings</a> section), but the original, un-sampled image file will be used for running the DVC analysis.</p>
-</div>
-<div class="section" id="image-viewers">
-<h2>Image Viewers<a class="headerlink" href="#image-viewers" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="image-viewers">
+<h2>Image Viewers<a class="headerlink" href="#image-viewers" title="Permalink to this heading"></a></h2>
 <p>The app uses the <a class="reference external" href="https://github.com/vais-ral/CILViewer">CILViewer</a> for the 2D and 3D image display.
 Both viewers show the reference image, and are linked, so will show the same orientation and slice number.
 By default, the volume render is switched off on the 3D viewer, but to toggle it on/off, click on the 3D viewer and press <strong>v</strong>.</p>
 <p>To view all of the interactions for the viewers, click on one of the viewers and press <strong>h</strong> on your keyboard. Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
 The interactions for the viewers are as follows (correct as of version &gt;=22.2.0 of the <a class="reference external" href="https://github.com/vais-ral/CILViewer">CILViewer</a>)…</p>
-<div class="section" id="d-viewer-interactions">
-<h3>2D Viewer Interactions<a class="headerlink" href="#d-viewer-interactions" title="Permalink to this headline">¶</a></h3>
+<section id="d-viewer-interactions">
+<h3>2D Viewer Interactions<a class="headerlink" href="#d-viewer-interactions" title="Permalink to this heading"></a></h3>
 <p><strong>Mouse Interactions:</strong></p>
 <ul class="simple">
 <li><p>Slice: Mouse Scroll</p></li>
@@ -140,9 +145,9 @@ The interactions for the viewers are as follows (correct as of version &gt;=22.2
 <li><p>i: toggle interpolation of slice</p></li>
 <li><p>h: help</p></li>
 </ul>
-</div>
-<div class="section" id="id2">
-<h3>3D Viewer Interactions<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+</section>
+<section id="id2">
+<h3>3D Viewer Interactions<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
 <p><strong>Mouse Interactions:</strong></p>
 <ul class="simple">
 <li><p>Slice: Mouse Scroll</p></li>
@@ -163,10 +168,10 @@ The interactions for the viewers are as follows (correct as of version &gt;=22.2
 <li><p>Activate volume render clipping widget: c</p></li>
 <li><p>Display help: h</p></li>
 </ul>
-</div>
-</div>
-<div class="section" id="viewer-settings">
-<span id="id3"></span><h2>Viewer Settings<a class="headerlink" href="#viewer-settings" title="Permalink to this headline">¶</a></h2>
+</section>
+</section>
+<section id="viewer-settings">
+<span id="id3"></span><h2>Viewer Settings<a class="headerlink" href="#viewer-settings" title="Permalink to this heading"></a></h2>
 <p>The viewer settings panel shows how much the image has been down-sampled:</p>
 <img alt="_images/viewer_settings.png" src="_images/viewer_settings.png" />
 <p>If it has been down-sampled, the image will be interpolated, but you can turn this off by clicking on the viewer and then pressing <strong>i</strong>.
@@ -176,23 +181,23 @@ The <strong>Loaded Image Size</strong> is the original size of your chosen image
 You can choose to display the viewer coordinates in the loaded image or the down-sampled image.
 This will change how the slices and coordinates are labelled in the corner annotation of the 2D viewer.
 If the image has not been down-sampled then it will only display the <strong>Loaded Image Size</strong> which is the size of the image you selected.</p>
-</div>
-<div class="section" id="downsampling-settings">
-<h2>Downsampling Settings<a class="headerlink" href="#downsampling-settings" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="downsampling-settings">
+<h2>Downsampling Settings<a class="headerlink" href="#downsampling-settings" title="Permalink to this heading"></a></h2>
 <p>Under File-&gt;Settings you can set the maximum down-sampled size of the image, which limits how heavily the image is down-sampled. The settings appear as below:</p>
 <img alt="_images/idvc_settings_panel.png" src="_images/idvc_settings_panel.png" />
 <p>For the volume render on the 3D viewer, it is recommended to use GPU volume rendering, otherwise the render will be very slow. You will need to set the memory of your GPU for this.
 If the memory of your GPU is lower than the maximum down-sampling size you have set, then it will be the size of your GPU that dictates how much the image will be down-sampled if you choose to use the GPU for volume rendering.
 You will have to click <strong>View Image</strong> on the Select Image panel to update the down-sampling of the image once you have saved the new settings.</p>
-</div>
-<div class="section" id="setting-the-number-of-threads-for-the-dvc-analysis">
-<h2>Setting the number of threads for the DVC analysis<a class="headerlink" href="#setting-the-number-of-threads-for-the-dvc-analysis" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="setting-the-number-of-threads-for-the-dvc-analysis">
+<h2>Setting the number of threads for the DVC analysis<a class="headerlink" href="#setting-the-number-of-threads-for-the-dvc-analysis" title="Permalink to this heading"></a></h2>
 <p>Under File-&gt;Settings you can set the number of threads to be used during DVC analysis, with the “OMP threads” input.</p>
 <p>We observed that you should <strong>not</strong> exceed half of the
 number of cores of your machine (especially if hyperthreading is active). In any case, it seems that exceeding 16 threads leads to a slowdown of the analysis
 probably due to issues accessing data (because of CPU’s cache memory and/or I/O).</p>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>

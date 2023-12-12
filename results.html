@@ -1,18 +1,23 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DVC Results &mdash; iDVC  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <title>DVC Results &mdash; iDVC  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
   <!--[if lt IE 9]>
     <script src="_static/js/html5shiv.min.js"></script>
   <![endif]-->
-  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=4825356b"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -40,7 +45,7 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <p class="caption"><span class="caption-text">Contents:</span></p>
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="viewer.html">Datasets &amp; Visualisation</a></li>
@@ -80,13 +85,13 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="section" id="dvc-results">
-<h1>DVC Results<a class="headerlink" href="#dvc-results" title="Permalink to this headline">¶</a></h1>
+  <section id="dvc-results">
+<h1>DVC Results<a class="headerlink" href="#dvc-results" title="Permalink to this heading"></a></h1>
 <p>Once your run has completed, you can look at the results on the <strong>DVC Results</strong> panel.
 There are two ways of doing this – looking at graphs, and viewing the displacement vectors.
 First, you need to select the run you would like to view the results for from the dropdown list of all of the runs you have saved.</p>
-<div class="section" id="graphs-of-the-results">
-<h2>Graphs of the Results<a class="headerlink" href="#graphs-of-the-results" title="Permalink to this headline">¶</a></h2>
+<section id="graphs-of-the-results">
+<h2>Graphs of the Results<a class="headerlink" href="#graphs-of-the-results" title="Permalink to this heading"></a></h2>
 <p>Then click on <strong>Display Graphs</strong>.
 Another window will open (once you are done looking at the graphs you can either close or minimize this window and it will take you back to the main app just fine).
 It will start you off on the <strong>Summary</strong> tab.
@@ -100,9 +105,9 @@ and if you have done a bulk run then you can select a particular variable (such 
 You can select to just compare for a certain subvolume size or number of sampling points, or you can choose to compare them all (which is what is chosen in the image below).</p>
 <img alt="_images/graphs_bulk_run.png" src="_images/graphs_bulk_run.png" />
 <p><span class="raw-html"><br /></span></p>
-</div>
-<div class="section" id="displacement-vectors">
-<h2>Displacement Vectors<a class="headerlink" href="#displacement-vectors" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="displacement-vectors">
+<h2>Displacement Vectors<a class="headerlink" href="#displacement-vectors" title="Permalink to this heading"></a></h2>
 <p>To view the displacements as vectors overlaid on the reference image, return to the main app.
 For each run you are able to select and visualise the different point clouds with different sizes and number of sampling points in the subvolumes.
 Then when viewing the vectors, you can select <strong>Point Cloud</strong> to just view the point cloud, or you can select <strong>Total Displacement</strong> or <strong>Displacement with respect to reference point 0</strong>.
@@ -116,9 +121,9 @@ Below is a comparison of some vectors shown in 2D compared to 3D.</p>
 <p>Once total or relative displacement vectors are being displayed, you can also limit the range of the vector by changing the inputs <strong>Vector range min</strong> and <strong>Vector range max</strong>, and clicking “View Pointcloud/Vectors” again.
 Notice that this will have a different impact on the 3D and 2D viewers, as the 2D viewer is only taking into account the displacements in the current plane,
 whereas the 3D viewer is taking into account all three components of the displacement.</p>
-</div>
-<div class="section" id="results-files">
-<h2>Results Files<a class="headerlink" href="#results-files" title="Permalink to this headline">¶</a></h2>
+</section>
+<section id="results-files">
+<h2>Results Files<a class="headerlink" href="#results-files" title="Permalink to this heading"></a></h2>
 <p>The DVC analysis code generates two files for each run it performs.
 These aren’t directly accessible from the app, but you are able to access them if you export your session (see <a class="reference internal" href="saving.html#exporting-sessions"><span class="std std-ref">Exporting Sessions</span></a>).
 The two files it produces for each run are as follows:</p>
@@ -138,8 +143,8 @@ The two files it produces for each run are as follows:</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">phi,</span> <span class="pre">theta,</span> <span class="pre">psi</span></code> = subvolume rotation, if num_srch_dof = 6 or 12</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">exx</span> <span class="pre">eyy</span> <span class="pre">ezz</span> <span class="pre">exy</span> <span class="pre">eyz</span> <span class="pre">exz</span></code> = subvolume strain, if num_srch_dof = 12</p></li>
 </ul>
-</div>
-</div>
+</section>
+</section>
 
 
            </div>
