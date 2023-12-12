@@ -415,7 +415,8 @@ class MainWindow(QMainWindow):
 
         self.help_text.append(
             "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
-            "Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'.\n"
+            "Then click 'Start Registration'. First, the suggested registration is diplayed. The difference volume of the registered image is shown in the viewer. The mouse wheel spans in the third direction, the slicing orientation is controlled with the 'x', 'y' or 'z' keys:.\n"
+            "To furtherly adjust the registration manually, move the two images relative to each other using the keys: 'j' (up), 'n' (down), 'b' (right) and 'm' (left)."
             "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
             )
         
@@ -1161,6 +1162,29 @@ It is used as a global starting point and a translation reference."
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['start_registration_button'])
         widgetno += 1
 
+         # Add cancel automatic registration button
+        rp['cancel_auto_reg_button'] = QPushButton(groupBox)
+        rp['cancel_auto_reg_label'] = QLabel(groupBox)
+        rp['cancel_auto_reg_button'].setText("Cancel Automatic Registration")
+        rp['cancel_auto_reg_label'].setText("Automatic registration [0, 0, 0]")
+        rp['cancel_auto_reg_button'].setCheckable(True)
+        rp['cancel_auto_reg_button'].setEnabled(True)
+        rp['cancel_auto_reg_button'].clicked.connect(self.cancel_automatic_registration)
+        formLayout.insertRow(widgetno, rp['cancel_auto_reg_label'] , rp['cancel_auto_reg_button'])
+        widgetno += 1
+        rp['cancel_auto_reg_button'].setVisible(False)
+        rp['cancel_auto_reg_label'].setVisible(False)
+
+        # Add confirm registration button
+        rp['confirm_registration_button'] = QPushButton(groupBox)
+        rp['confirm_registration_button'].setText("confirm Registration b2")
+        rp['confirm_registration_button'].setCheckable(True)
+        rp['confirm_registration_button'].setEnabled(True)
+        #rp['confirm_registration_button'].clicked.connect(self.OnStartStopRegistrationPushed)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['confirm_registration_button'])
+        widgetno += 1
+        rp['confirm_registration_button'].setVisible(False)
+
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
@@ -1499,7 +1523,8 @@ It is used as a global starting point and a translation reference."
                     rp['registration_box_size_entry'].setValue(max_size_of_box)
                 
                 # print ("Start Registration Checked")
-                rp['start_registration_button'].setText("Confirm Registration")
+                #rp['start_registration_button'].setText("Confirm Registration")
+                rp['start_registration_button'].setEnabled(False)
                 rp['registration_box_size_entry'].setEnabled(False)
                 
                 rp['select_point_zero'].setChecked(False)
@@ -1507,6 +1532,8 @@ It is used as a global starting point and a translation reference."
                 rp['translate_X_entry'].setEnabled(False)
                 rp['translate_Y_entry'].setEnabled(False)
                 rp['translate_Z_entry'].setEnabled(False)
+
+                rp['confirm_registration_button'].setVisible(True)
 
                 # setup the appropriate stuff to run the registration
                 if not hasattr(self, 'translate'):
@@ -1644,34 +1671,59 @@ It is used as a global starting point and a translation reference."
     def completeRegistration(self):
         self.manual_registration()
         automatic_reg_worker = Worker(self.automatic_reg_run)
-        automatic_reg_worker.signals.result.connect(self.set_registration_widgets)
+        automatic_reg_worker.signals.result.connect(self.set_registration_widgets_from_worker)
         #automatic_reg_worker.signals.progress.connect(self.progress_window.setValue)
         #automatic_reg_worker.signals.finished.connect(print("finished"))
         #automatic_reg_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
         self.threadpool.start(automatic_reg_worker)
         #self.automatic_reg_run()
 
-        
     def testtest(self,**kwargs):
         aa = 1+1
         print(aa)
 
-    def set_registration_widgets(self,result):
-        DD3d_accumulate = result
+    def set_registration_widgets_from_worker(self,result):
+        
+        self.auto_reg_result = np.flip(result)
+        self.set_registration_widgets(self.auto_reg_result)
+        rp = self.registration_parameters
+        rp['cancel_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
+        rp['cancel_auto_reg_button'].setVisible(True)
+        rp['cancel_auto_reg_label'].setVisible(True)
+        
+
+    def set_registration_widgets(self,shift):
+        total_translation = self.get_registration_translation()
         # update widgets
         rp = self.registration_parameters
-        rp['translate_X_entry'].setText(str(DD3d_accumulate[2])) 
-        rp['translate_Y_entry'].setText(str(DD3d_accumulate[1])) 
-        rp['translate_Z_entry'].setText(str(DD3d_accumulate[0]))
-        self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
-
+        rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
+        rp['translate_Y_entry'].setText(str(total_translation[1] + shift[1])) 
+        rp['translate_Z_entry'].setText(str(total_translation[2] + shift[2]))
+        self.translate.SetTranslation(-int(shift[0]),-int(shift[1]),-int(shift[2]))
         self.reg_viewer_update(type = 'after automatic registration')
         self.centerOnPointZero() 
         self.updatePoint0Display()
         self.translateImages()
         #the following updates the viewer to the found automatic shift
         self.reg_viewer_update(type = 'after automatic registration')
+
+    def get_registration_translation(self):
+        rp = self.registration_parameters
+        current_shift = np.array([int(rp['translate_X_entry'].text()),int(rp['translate_Y_entry'].text()),int(rp['translate_Z_entry'].text())])
+        return current_shift
         
+    def cancel_automatic_registration(self):
+        rp = self.registration_parameters
+        if rp['cancel_auto_reg_button'].isChecked():
+            self.set_registration_widgets(-self.auto_reg_result)
+            #rp['cancel_auto_reg_button'].setEnabled(False)
+            rp['cancel_auto_reg_button'].setText("Set to automatic registration")
+            rp['cancel_auto_reg_button'].setChecked(True)
+        else:
+            self.set_registration_widgets(self.auto_reg_result)
+            rp['cancel_auto_reg_button'].setText("Cancel automatic registration")
+            rp['cancel_auto_reg_button'].setChecked(False)
+
 
     def manual_registration(self):
         rp = str(self.registration_parameters['translate_X_entry'].text())
@@ -1919,7 +1971,7 @@ It is used as a global starting point and a translation reference."
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
 
-        return tuple(DD3d_accumulate)
+        return DD3d_accumulate
 
 
 
