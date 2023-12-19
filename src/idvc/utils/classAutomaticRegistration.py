@@ -38,10 +38,15 @@ class AutomaticRegistration:
             self.datatype_slice ='int32'
         self.errthresh=2 #in untis of pixels, what error we allow on the alignment - 3D shift - in each direction
         self.threshold =0.002 #normally use 0.002, the larger this value the less accurate is the alignment
-        logname = r'C:\Users\zvm34551\Coding_environment\logfi.log'
-        #if log_folder is not None:
-        #    self.log_folder = log_folder
-        #    logging.FileHandler(filename=log_folder+r'\automatic_registration_logging.log',format='%(asctime)s - %(message)s', level=logging.INFO)
+        if log_folder is not None:
+            self.log_folder = log_folder
+            logger = logging.getLogger()
+            file_handler = logging.FileHandler(filename=log_folder+r'\automatic_registration_logging.log', mode='w')
+            formatter = logging.Formatter("%(asctime)s %(message)s")
+            file_handler.setFormatter(formatter)
+            #,format='%(asctime)s - %(message)s', 
+            logger.setLevel(logging.INFO)
+            logger.addHandler(file_handler)
 
     def calc_edge(self):
         edge=[] #store the rectangle edges information for the uservolume
@@ -379,8 +384,7 @@ class AutomaticRegistration:
         logging.info("Overall shift after part user volume is"+str(self.DD3d_accumulate)+".\n")
         #print("The shift calculated in user volume is "+str(DD3d_accumulate-DD3d_accumulate_whole)+".\n")    
         logging.info("---------------End cycles part user volume.----------------------------\n\n\n\n\n")
-        #if self.log_folder is not None:
-        #    logging.shutdown()
+
 class AutomaticRegistrationWithPlotting(AutomaticRegistration):
     def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, *args,**kwargs):
         self.intermediate_plot = intermediate_plot
