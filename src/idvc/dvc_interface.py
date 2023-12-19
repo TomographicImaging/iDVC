@@ -1751,11 +1751,16 @@ It is used as a global starting point and a translation reference."
         rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
         rp['translate_Y_entry'].setText(str(total_translation[1] + shift[1])) 
         rp['translate_Z_entry'].setText(str(total_translation[2] + shift[2]))
-        self.translate.SetTranslation(-int(shift[0]),-int(shift[1]),-int(shift[2]))
+#        self.manualRegistration()
+        #self.translate.SetTranslation(-int(shift[0]),-int(shift[1]),-int(shift[2]))
+        self.translate.SetTranslation(-int(total_translation[0] + shift[0]),-int(total_translation[1] + shift[1]),-int(total_translation[2] + shift[2]))
+        self.translate.Update()
+        self.subtract.Update()
         #self.reg_viewer_update(type = 'after automatic registration')
-        self.centerOnPointZero() 
-        self.updatePoint0Display()
-        self.translateImages()
+        #self.centerOnPointZero() 
+        #self.updatePoint0Display()
+        #self.translateImages()
+
         #the following updates the viewer to the found automatic shift
         self.reg_viewer_update(type = 'after automatic registration')
 
@@ -1942,13 +1947,14 @@ It is used as a global starting point and a translation reference."
 
         if type == 'starting registration':
             v.style.UpdatePipeline()
-            v.startRenderLoop()
+            # v.startRenderLoop()
             # print("About to center on point0")
             self.centerOnPointZero()
         else:
             v.style.SetActiveSlice(round(current_slice))
             v.style.UpdatePipeline()
-            v.startRenderLoop()
+            # v.startRenderLoop()
+            v.style.Render()
 
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
