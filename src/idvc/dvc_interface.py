@@ -415,8 +415,9 @@ class MainWindow(QMainWindow):
 
         self.help_text.append(
             "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
-            "Then click 'Start Registration'. First, the suggested registration is diplayed. The difference volume of the registered image is shown in the viewer. The mouse wheel spans in the third direction, the slicing orientation is controlled with the 'x', 'y' or 'z' keys:.\n"
-            "To furtherly adjust the registration manually, move the two images relative to each other using the keys: 'j' (up), 'n' (down), 'b' (right) and 'm' (left)."
+            "Then click 'Start Registration'. First, the suggested registration is displayed. The difference volume of the registered image is shown in the viewer. The mouse wheel spans in the third direction, the slicing orientation is controlled with the 'x', 'y' or 'z' keys.\n"
+            "To furtherly adjust the registration manually, click on the image and then move the two images relative to each other using the keys: 'j' (up), 'n' (down), 'b' (right) and 'm' (left)."
+            "You can cancel the registration by pressing 'Reset registration' or set to the automatic registration values.\n"
             "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
             )
         
@@ -1164,16 +1165,24 @@ It is used as a global starting point and a translation reference."
 
          # Add cancel automatic registration button
         rp['cancel_auto_reg_button'] = QPushButton(groupBox)
-        rp['cancel_auto_reg_label'] = QLabel(groupBox)
-        rp['cancel_auto_reg_button'].setText("Cancel Automatic Registration")
-        rp['cancel_auto_reg_label'].setText("Automatic registration [0, 0, 0]")
-        rp['cancel_auto_reg_button'].setCheckable(True)
+        rp['cancel_auto_reg_button'].setText("Reset")
         rp['cancel_auto_reg_button'].setEnabled(True)
         rp['cancel_auto_reg_button'].clicked.connect(self.cancelAutomaticRegistration)
-        formLayout.insertRow(widgetno-1, rp['cancel_auto_reg_label'] , rp['cancel_auto_reg_button'])
+        formLayout.insertRow(widgetno - 1, '', rp['cancel_auto_reg_button'])
         widgetno += 1
         rp['cancel_auto_reg_button'].setVisible(False)
-        rp['cancel_auto_reg_label'].setVisible(False)
+
+        # Add set to automatic registration button
+        rp['set_auto_reg_button'] = QPushButton(groupBox)
+        rp['set_auto_reg_label'] = QLabel(groupBox)
+        rp['set_auto_reg_button'].setText("Set to Automatic Registration")
+        rp['set_auto_reg_label'].setText("Automatic registration [0, 0, 0]")
+        rp['set_auto_reg_button'].setEnabled(True)
+        rp['set_auto_reg_button'].clicked.connect(self.setToAutomaticRegistration)
+        formLayout.insertRow(widgetno - 1, rp['set_auto_reg_label'] , rp['set_auto_reg_button'])
+        widgetno += 1
+        rp['set_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_label'].setVisible(False)
 
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
@@ -1525,13 +1534,7 @@ It is used as a global starting point and a translation reference."
             rp['translate_X_entry'].setText("0")
             rp['translate_Y_entry'].setText("0")
             rp['translate_Z_entry'].setText("0")
-            if "Set to automatic registration" in rp['cancel_auto_reg_button'].text():
-                rp['cancel_auto_reg_button'].setText("Cancel automatic registration")
-                rp['cancel_auto_reg_button'].setChecked(False)
-        else:
-            print("wrong!")
-            print(rp['start_registration_button'].text())
-        
+       
         if hasattr(self, 'vis_widget_reg'):
             self.UpdateViewerSettingsPanelForRegistration()
             v = self.vis_widget_reg.frame.viewer
@@ -1583,11 +1586,12 @@ It is used as a global starting point and a translation reference."
                 rp['select_point_zero'].setCheckable(True)
 
                 rp['select_point_zero'].setChecked(False)
-                rp['translate_X_entry'].setEnabled(True)
-                rp['translate_Y_entry'].setEnabled(True)
-                rp['translate_Z_entry'].setEnabled(True)
+                #rp['translate_X_entry'].setEnabled(True)
+                #rp['translate_Y_entry'].setEnabled(True)
+                #rp['translate_Z_entry'].setEnabled(True)
                 rp['cancel_auto_reg_button'].setVisible(False)
-                rp['cancel_auto_reg_label'].setVisible(False)
+                rp['set_auto_reg_button'].setVisible(False)
+                rp['set_auto_reg_label'].setVisible(False)
                 
                 v.setInput3DData(self.ref_image_data)
                 v.style.UpdatePipeline()
@@ -1730,16 +1734,34 @@ It is used as a global starting point and a translation reference."
         Updates label in the cancel button.
         MAkes the cancel button and its label visible.
         '''
-        
+        print(result)
         self.auto_reg_result = np.flip(result)
         self.setRegistrationWidgets(self.auto_reg_result)
+        print(result)
         rp = self.registration_parameters
-        rp['cancel_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
+        rp['set_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
         rp['cancel_auto_reg_button'].setVisible(True)
-        rp['cancel_auto_reg_label'].setVisible(True)
+        rp['set_auto_reg_label'].setVisible(True)
+        rp['set_auto_reg_button'].setVisible(True)
         
 
-    def setRegistrationWidgets(self,shift):
+    def setRegistrationWidgets(self, array):
+        '''
+        Updates the widgets with the array.
+        Translates the viewer to the array.
+        '''
+        # update widgets
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(array[0])) 
+        rp['translate_Y_entry'].setText(str(array[1])) 
+        rp['translate_Z_entry'].setText(str(array[2]))
+        # update viewer
+        self.translate.SetTranslation(-int(array[0]),-int(array[1]),-int(array[2]))
+        self.translate.Update()
+        self.subtract.Update()
+        self.reg_viewer_update(type = 'after automatic registration')
+
+    def setRegistrationWidgetsShift(self, shift):   
         '''
         Gets the total translation from the widgets by invoking `getRegistrationTranslation`.
         Updates the widgets with the extra shift.
@@ -1771,18 +1793,12 @@ It is used as a global starting point and a translation reference."
         
     def cancelAutomaticRegistration(self):
         rp = self.registration_parameters
-        if rp['cancel_auto_reg_button'].isChecked():
-            print("checked")
-            self.setRegistrationWidgets(-self.auto_reg_result)
-            #rp['cancel_auto_reg_button'].setEnabled(False)
-            rp['cancel_auto_reg_button'].setText("Set to automatic registration")
-            rp['cancel_auto_reg_button'].setChecked(True)
-        else:
-            print("unchecked")
-            self.setRegistrationWidgets(self.auto_reg_result)
-            rp['cancel_auto_reg_button'].setText("Cancel automatic registration")
-            rp['cancel_auto_reg_button'].setChecked(False)
+        self.setRegistrationWidgets(np.array([0,0,0]))
+        #rp['cancel_auto_reg_button'].setEnabled(False)
 
+    def setToAutomaticRegistration(self):
+        rp = self.registration_parameters
+        self.setRegistrationWidgets(self.auto_reg_result)
 
     def manualRegistration(self):
         '''

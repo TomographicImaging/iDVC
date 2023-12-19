@@ -44,7 +44,6 @@ class AutomaticRegistration:
             file_handler = logging.FileHandler(filename=log_folder+r'\automatic_registration_logging.log', mode='w')
             formatter = logging.Formatter("%(asctime)s %(message)s")
             file_handler.setFormatter(formatter)
-            #,format='%(asctime)s - %(message)s', 
             logger.setLevel(logging.INFO)
             logger.addHandler(file_handler)
 
