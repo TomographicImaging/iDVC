@@ -306,7 +306,6 @@ class MainWindow(QMainWindow):
 
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_settings_dock)
         
-
     def CreateViewerSettingsPanel(self):
         self.viewer_settings_panel = generateUIDockParameters(self, "Viewer Settings")
         dockWidget = self.viewer_settings_panel[0]
@@ -370,7 +369,6 @@ class MainWindow(QMainWindow):
 
         self.visualisation_setting_widgets = vs_widgets
         
-
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
         vs_widgets = self.visualisation_setting_widgets
@@ -400,7 +398,6 @@ class MainWindow(QMainWindow):
                         self.SetPoint0Text()
 
                     viewer.updatePipeline()
-
 
     def CreateHelpPanel(self):
         help_panel = generateUIDockParameters(self, "Help")
@@ -440,8 +437,6 @@ class MainWindow(QMainWindow):
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
         formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
-
-
 
     def displayHelp(self, open, panel_no = None):
         if open:
@@ -661,7 +656,6 @@ class MainWindow(QMainWindow):
                 
         self.progress_window.setValue(100)
 
-
     def displayFileErrorDialog(self, message, title, action_button=None):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Critical)
@@ -872,7 +866,6 @@ class MainWindow(QMainWindow):
         else:
             self.progress_window.canceled.connect(cancel)
 
-
     def setup2DPointCloudPipeline(self):
 
         self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_actor', self.polydata_masker.GetOutputPort())
@@ -983,7 +976,6 @@ class MainWindow(QMainWindow):
         self.vis_widget_2D.frame.viewer.AddActor(sphere_actor, 'subvol_actor')
         self.cubesphere.Update()
         
-
     def setup3DPointCloudPipeline(self):
         #polydata_masker = self.polydata_masker
 
@@ -1690,13 +1682,13 @@ It is used as a global starting point and a translation reference."
         point0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
-        for i in (0,1):
-            if target_extent[i] < 0:
-                target_extent[i] = 0 
-            elif target_extent[i] > self.unsampled_image_dimensions[dim]:
-                target_extent[i] = self.unsampled_image_dimensions[dim] 
+        for el in target_extent:
+            if el < 0:
+                el = 0 
+            elif el > self.unsampled_image_dimensions[dim]:
+                el = self.unsampled_image_dimensions[dim] 
             else:
-                target_extent[i] = target_extent[i] 
+                el = el
         return target_extent
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
@@ -1744,7 +1736,6 @@ It is used as a global starting point and a translation reference."
         rp['set_auto_reg_label'].setVisible(True)
         rp['set_auto_reg_button'].setVisible(True)
         
-
     def setRegistrationWidgets(self, array):
         '''
         Updates the widgets with the array.
@@ -1846,7 +1837,6 @@ It is used as a global starting point and a translation reference."
             if hasattr(self, 'point0_world_coords'):
                 del self.point0_world_coords
 
-
     def translateImages(self, progress_callback = None):
         '''
         Subtracts the reference image from the translated correlate image. Result is saved in self.subtract
@@ -1891,7 +1881,6 @@ It is used as a global starting point and a translation reference."
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
 
-
     def getRegistrationVOIs(self):            
 
         extent = self.getRegistrationBoxExtentInWorldCoords()
@@ -1927,7 +1916,6 @@ It is used as a global starting point and a translation reference."
         del voi
 
         return [data1, data2]
-
 
     def reg_viewer_update(self, type = None):
         '''
@@ -1976,7 +1964,6 @@ It is used as a global starting point and a translation reference."
             self.progress_window.setValue(100)
             self.progress_window.close()
         
-
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
         # print('OnKeyPressEventForRegistration', key_code)
@@ -1986,7 +1973,6 @@ It is used as a global starting point and a translation reference."
             rp['start_registration_button'].isChecked():
             self.translate_image_reg(key_code, event)
             self.reg_viewer_update(type = 'manual registration')
-
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
@@ -1998,7 +1984,6 @@ It is used as a global starting point and a translation reference."
             rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
             self.manualRegistration()
 
-        
     def translate_image_reg(self, *args, **kwargs):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
         key_code, event = args
@@ -2031,54 +2016,31 @@ It is used as a global starting point and a translation reference."
         self.subtract.Update()
         #print ("Translation", trans)
 
-
-
-
-
-
     def automatic_reg_run(self, **kwargs):
+        """Prepares the arguments for the class `automaticRegistration`. Gets the images in full resolution and cropps them. 
+        Evaluates the sizer of the box and the point zero in the box coordinate system. Calls the class and runs the automatic registration.
 
-        #get images full resolution and cropped 
+        Returns:
+        ----------------------------------------------------------------
+        DD3d_accumulate : np.array [int, int, int]
+            The calculated 3D shift to register the two volumes.
+        """
+        # get images
         data = [self.unsampled_ref_image_data,self.unsampled_corr_image_data]
-        [image0,image1]=[Converter.vtk2numpy(data[i]) for i in (0,1)]
-        print(image0.shape)
-        print(image1.shape)
+        [image0,image1]=[Converter.vtk2numpy(el) for el in data]
         target_x_extent = self.enlarge_extent(0)
         target_y_extent = self.enlarge_extent(1)
-        print(target_x_extent,target_y_extent)
-        [image0,image1] = [image0[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1],image1[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1]]
-
-
-        #get size
-        RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() #user input
-        print("regboxsize"+str(RegBoxSize))
-        extent=self.getRegistrationBoxExtentInWorldCoords()
-        #size = extent
-        #size=np.array([[size[0],size[1]],[size[2],size[3]],[size[4],size[5]]])
+        [image0,image1] = [el[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1] for el in [image0, image1]]
+        # get size in the box coordinate system
+        RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() 
         size=np.array([[RegBoxSize//2,3*RegBoxSize//2],[RegBoxSize//2,3*RegBoxSize//2],[RegBoxSize//2,3*RegBoxSize//2]])
-        print("size"+str(size))
-
-        #get point zero
-        point_zero = self.getPoint0ImageCoords()
-        print(point_zero)
+        # get point zero in the box coordinate system
         p3d_0 = np.array([RegBoxSize,RegBoxSize,RegBoxSize])
-        print(p3d_0)
-        print(p3d_0.dtype)
-
-        # run code
+        # run automatic registration class
         automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, os.path.join(working_directory, 'DVC_Sessions'))
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
-
         return DD3d_accumulate
-
-
-
-
-
-
-
-
 
 #Mask Panel:
     def CreateMaskPanel(self):
@@ -2196,12 +2158,10 @@ It is used as a global starting point and a translation reference."
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
-
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
             self.warningDialog(window_title="Attention", 
                                message="If you do not clear the mask and draw again the app will be very sad!" )
-
 
     def ToggleTracing(self):
         '''Toggles the tracing widget for tracing the mask'''
@@ -2219,7 +2179,6 @@ It is used as a global starting point and a translation reference."
             # disable tracing
             mp_widgets['start_tracing'].setText("Start Tracing")
             viewer.imageTracer.Off()
-
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -2513,7 +2472,6 @@ It is used as a global starting point and a translation reference."
                 self.MaskWorker("load mask")
             else:
                 self.warningDialog("Please select a .mha file", "Error")
-
 
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
@@ -3055,8 +3013,7 @@ The first point is significant, as it is used as a global starting point and ref
                             viewer_widget.frame.viewer.getRenderer().AddActor(subvol_actor)
                         self.actors_3D ['subvol_preview_actor'] = subvol_actor
                     viewer_widget.frame.viewer.style.UpdatePipeline()
-                # print("Added preview")
-        
+                # print("Added preview")  
 
     def updatePointCloudPanel(self):
         #updates which settings can be changed when orientation/dimensions of image changed
@@ -3091,7 +3048,6 @@ The first point is significant, as it is used as a global starting point and ref
         
         if self.roi is not None:
             self.pointcloud_is = 'loaded'
-
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
         if type == "create":
@@ -3418,7 +3374,6 @@ The first point is significant, as it is used as a global starting point and ref
 
         return True
             
-
     def loadPointCloud(self, *args, **kwargs):
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3485,7 +3440,6 @@ The first point is significant, as it is used as a global starting point and ref
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
         if hasattr(self, 'num_processed_points'):
             self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
-        
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
@@ -3506,7 +3460,6 @@ The first point is significant, as it is used as a global starting point and ref
         self.DisplayNumberOfPointcloudPoints()
         self.pointcloud_is = 'loaded'
         
-
     def DisplayPointCloud(self):
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
         if self.pointCloud.GetNumberOfPoints() == 0:
@@ -3631,7 +3584,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             if hasattr(self.vis_widget_2D, 'PlaneClipper'):
                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
 
-
     def displayVectors(self,disp_file):
         self.clearPointCloud()
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
@@ -3671,8 +3623,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_max_entry'].setValue(dmax)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
     
-
-
     def _updateUIwithDisplacementVectorRange(self, dmin, dmax):
         single_step = 1e-6
 
@@ -3741,9 +3691,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer.addActor(scalar_bar)
         else:
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
-
-        
-
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
@@ -4420,7 +4367,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
         
-
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
         progress_callback = kwargs.get('progress_callback', PrintCallback())
@@ -4619,12 +4565,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             self.progress_window.setValue(self.progress_window.value()+1)
 
-
     def finished_run(self):
         if self.run_succeeded:
             self.result_widgets['run_entry'].addItem(self.rdvc_widgets['name_entry'].text())
             self.show_run_pcs()
-
 
 
 # DVC Results Panel:
@@ -4770,7 +4714,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
      
-
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -4799,7 +4742,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].addItems(subvol_list)
         self.result_widgets['subvol_entry'].addItems(points_list)
                
-
     def LoadResultsOnViewer(self):
 
         #print("LOAD RESULTS")
@@ -4930,7 +4872,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, None)
 
-
     def save_quit_accepted(self):
         #Load Saved Session
         self.should_really_close = True
@@ -4938,7 +4879,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
         
-
     def save_quit_just_quit(self):
         event = QCloseEvent()
         self.SaveWindow.close()
@@ -4949,7 +4889,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def save_quit_rejected(self):
         self.should_really_close = False
         self.SaveWindow.close()
-
 
     def SaveSession(self, text_value, compress, event):
         # Save window geometry and state of dockwindows
@@ -5214,7 +5153,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setValue((float(zip_size)/(float(temp_size)*ratio))*100)
             time.sleep(0.1)
 
-    
     def ShowExportProgress(self, folder, new_file_dest):
         
         self.progress_window.setValue(10)
@@ -5319,7 +5257,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             # dialog.move(centrex/2,centrey/2)
             dialog.open()
         
-
     def load_session_load(self):
         #Load Saved Session
         self.InitialiseSessionVars()
@@ -5671,7 +5608,6 @@ Please select the new location of the file, or move it back to where it was orig
 
         #bring image loading panel to front if it isnt already:        
         self.select_image_dock.raise_()
-
 
     def warningDialog(self, message='', window_title='', detailed_text=''):
         dialog = QMessageBox(self)
