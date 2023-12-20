@@ -8,9 +8,9 @@ import logging
 
 class AutomaticRegistration:
 
-    def __init__(self, im0, im1, p3d_0, size, log_folder = None): 
+    def __init__(self, im0, im1, p3d_0, size, log_folder = None, err_thresh = 2, max_iterations = 30): 
         """
-        Instances an object with property `image0` and `image1`, which are automatically registered from `im0` and `im1`.
+        Instances an object with attributes `image0` and `image1`, which are automatically registered from `im0` and `im1`.
 
         Parameters
         ------------
@@ -19,13 +19,20 @@ class AutomaticRegistration:
         im1 : 3D numpy.array
             Image 1 (to perform DVC wrt to a reference image)
         p3d_0 : [int, int, int]
-            Point zero from which DVC starts. A good choice is a point which is known to be unchanged
+            Point zero from which DVC starts. A good choice is a point which is known to be unchanged.
         size : numpy.array [[int, int], [int, int], [int, int]]
             Size of the volume in which the registration is performed. Usually a volume which is known to be unchanged.
             The shape is a right parallelepiped (edges not necessarily the same)
+        log_folder : path, default: None
+            folder where to save log file for automatic registration. If None, no logging is saved
+        err_thresh : int
+            Error allowed by the procedure in each direction (units of pixels). 
+        max_iterations : int
+            maximum number of iterations allowed
+
 
         """
-        # image0 and image1 are redefined in `run()
+        # image0 and image1 are redefined in `run`
         self.image0 = im0
         self.image1 = im1
         self.p3d_0 = p3d_0
@@ -36,8 +43,8 @@ class AutomaticRegistration:
             self.datatype_slice = 'int16'
         elif datatype == 'int16' or datatype == '>u2':
             self.datatype_slice ='int32'
-        self.errthresh=2 #in untis of pixels, what error we allow on the alignment - 3D shift - in each direction
-        self.threshold =0.002 #normally use 0.002, the larger this value the less accurate is the alignment
+        self.err_thresh= err_thresh
+        self.max_iterations = max_iterations
         if log_folder is not None:
             self.log_folder = log_folder
             logger = logging.getLogger()
@@ -48,10 +55,14 @@ class AutomaticRegistration:
             logger.addHandler(file_handler)
 
     def calc_edge(self):
-        edge=[] #store the rectangle edges information for the uservolume
+        """
+        Given the vertices position of the parallelepiped, it outputs an array with the egdes values (in pixels) plus the first and second edge repeated. 
+        The repetition is to simplify the coding in other methods.
+        """
+        edge=[]
         for dim in range(0,3):
             edge.append(abs(self.size[dim,0]-self.size[dim,1]))
-        edge.append(edge[0]) #extra repetitions to simplify the code later
+        edge.append(edge[0]) 
         edge.append(edge[1])
         return edge
 
@@ -69,26 +80,26 @@ class AutomaticRegistration:
         corr_img : 2D numpy.array
             correlation matrix of `sel0`, `sel1`.
         """
-        sel0_gray = sel0.astype('float')
-        sel1_gray = sel1.astype('float')
-        sel0_gray -= np.mean(sel0_gray)
-        sel1_gray -= np.mean(sel1_gray)
+        sel0_float = sel0.astype('float')
+        sel1_float = sel1.astype('float')
+        sel0_float -= np.mean(sel0_float)
+        sel1_float -= np.mean(sel1_float)
         # calculate the correlation image by doing a convolution and flipping of one of the images, this is faster than correlate2D
         #::-1 returns a new list or string with all elements in reverse order
-        corr_img = scipy.signal.fftconvolve(sel0_gray, sel1_gray[::-1,::-1], mode='same')
+        corr_img = scipy.signal.fftconvolve(sel0_float, sel1_float[::-1,::-1], mode = 'same')
         return corr_img
 
-    def func_slicing_uservolume(self, im0, im1, selectedslice, dimension):
+    def func_slicing_uservolume(self, im0, im1, selected_slice, dimension):
         """
         Function to output the slices at position `selectedslice` of two 3D images.
-        Selects the slice in a smaller volume defined by the user with `size`.
+        Selects the slice in a smaller volume defined by the user with `self.size`.
         This function also changes the type of the data so the values can be signed when calculating the difference diff.
 
         Parameters
         ------------
         im0 : 3D numpy.array
         im1 : 3D numpy.array
-        selectedslice : int
+        selected_slice : int
             along `dimension`, position of the element in the 3D arrays.
         dimension : int {`0`, `1`, `2`}
             represents one of the xyz spatial axis in the 3D images.
@@ -105,23 +116,22 @@ class AutomaticRegistration:
         """
         size = self.size
         datatype_slice = self.datatype_slice
-        #Select only one slice
 
         if dimension == 0:
-            sel0=im0[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
-            sel1=im1[selectedslice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
+            sel0=im0[selected_slice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
+            sel1=im1[selected_slice,size[1,0]:size[1,1],size[2,0]:size[2,1]].astype(datatype_slice)
         elif dimension==1:
-            sel0=im0[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
-            sel1=im1[size[0,0]:size[0,1],selectedslice,size[2,0]:size[2,1]].astype(datatype_slice)
+            sel0=im0[size[0,0]:size[0,1],selected_slice,size[2,0]:size[2,1]].astype(datatype_slice)
+            sel1=im1[size[0,0]:size[0,1],selected_slice,size[2,0]:size[2,1]].astype(datatype_slice)
         elif dimension==2:
-            sel0=im0[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
-            sel1=im1[size[0,0]:size[0,1],size[1,0]:size[1,1],selectedslice].astype(datatype_slice)
+            sel0=im0[size[0,0]:size[0,1],size[1,0]:size[1,1],selected_slice].astype(datatype_slice)
+            sel1=im1[size[0,0]:size[0,1],size[1,0]:size[1,1],selected_slice].astype(datatype_slice)
 
         diff = sel0-sel1
 
         return sel0, sel1, diff
     
-    def func_slicing(self, im0, im1, selectedslice, dimension):
+    def func_slicing(self, im0, im1, selected_slice, dimension):
         """
         Function to output the slices at position `selectedslice` of two 3D images.
         This function also changes the type of the data so the values can be signed when calculating the difference diff.
@@ -130,7 +140,7 @@ class AutomaticRegistration:
         ------------
         im0 : 3D numpy.array
         im1 : 3D numpy.array
-        selectedslice : int
+        selected_slice : int
             along `dimension`, position of the element in the 3D arrays.
         dimension : int {`0`, `1`, `2`}
             represents one of the xyz spatial axis in the 3D images.
@@ -146,17 +156,16 @@ class AutomaticRegistration:
             Difference between `sel0` and `sel1`.
         """
         datatype_slice = self.datatype_slice
-        #Select only one slice
 
         if dimension == 0:
-            sel0=im0[selectedslice,:,:].astype(datatype_slice)
-            sel1=im1[selectedslice,:,:].astype(datatype_slice)
+            sel0=im0[selected_slice,:,:].astype(datatype_slice)
+            sel1=im1[selected_slice,:,:].astype(datatype_slice)
         elif dimension==1:
-            sel0=im0[:,selectedslice,:].astype(datatype_slice)
-            sel1=im1[:,selectedslice,:].astype(datatype_slice)
+            sel0=im0[:,selected_slice,:].astype(datatype_slice)
+            sel1=im1[:,selected_slice,:].astype(datatype_slice)
         elif dimension==2:
-            sel0=im0[:,:,selectedslice].astype(datatype_slice)
-            sel1=im1[:,:,selectedslice].astype(datatype_slice)
+            sel0=im0[:,:,selected_slice].astype(datatype_slice)
+            sel1=im1[:,:,selected_slice].astype(datatype_slice)
 
         diff = sel0-sel1
 
@@ -179,11 +188,11 @@ class AutomaticRegistration:
         max : float
             value of `corr_img` at position `DD`
         """
-        corr_img= self.cross_image(sel0,sel1) #calculate correlated images
-        displacement=np.array(np.unravel_index(np.argmax(corr_img), corr_img.shape)) #calculate location of max in correlated image
+        corr_img= self.cross_image(sel0,sel1) 
+        displacement=np.array(np.unravel_index(np.argmax(corr_img), corr_img.shape)) 
         max=corr_img[displacement[0],displacement[1]]
-        centre=np.array([round(sel0.shape[0]/2),round(sel0.shape[1]/2)]) #find centre 2d of ref image
-        shift2D=centre-displacement # perhaps counterintuitive but sign is taken care of in shift_3D
+        centre=np.array([round(sel0.shape[0]/2),round(sel0.shape[1]/2)]) 
+        shift2D=centre-displacement 
         return shift2D, max
 
     def shift_3D_arrays(self, im0, im1, shift3D):
@@ -227,7 +236,7 @@ class AutomaticRegistration:
 
     def shift_point_zero(self, p3d,shift3D):
         """
-        Revaluate the coordinates of a fixed point zero, p3d, whose 3d images have been shifted by shift_3D.
+        Revaluate the coordinates of a fixed point zero, `p3d`, whose 3d images have been shifted by `shift_3D`.
 
         Parameters
         -----------------------
@@ -243,146 +252,117 @@ class AutomaticRegistration:
                 p3d[dim]= p3d[dim]+shift3D[dim]
         return p3d
 
-    def iterative_func(self, im0, im1, err):
-        DD3d, err = self.calc_shift(im0, im1, err)
+    def iterative_func(self, im0, im1):
+        """
+        Isolates the methods which will be iterated in a while loop. This can be redefined to add functionality to the iterations. e.g. in the plotting class"""
+        DD3d, err = self.calc_shift(im0, im1)
         return DD3d, err
 
-    def calc_shift(self, im0, im1, err):
-        """Calculates 
+    def calc_shift(self, im0, im1):
+        """        Calculates 
 
         Parameters
         ------------
         im0 : 3D numpy.array
-        im1 : 3D numpy.array
-        err : 
+        im1 : 3D numpy.array 
 
         Returns
         --------
         DD3d : numpy.array [int, int, int]
             3D shift evaluated from im0 and im1, in units of pixels
         err : numpy.array [int, int, int]
-            error allowed on shift calculation in untis of pixels
+            error on shift calculation in untis of pixels
         """
 
-        logging.info("Size of ref is "+str(np.shape(im0)))
+        logging.info("Size of ref is "+str(np.shape(im0))+".")
         logging.info("Size of image 1 is "+str(np.shape(im1))+".\n")
-        
-        #find centre 3d of ref image'
+
         centre3d=np.array([round(im0.shape[0]/2),round(im0.shape[1]/2),round(im0.shape[2]/2)])
-
-
-        DD6d = [] #initialise the array to store 2 displacements in 3 directions
-
-        max3d=[] # store max values of correlation matrices in the 3 directions
+        # initialise the array to store 2 displacements in 3 directions
+        DD6d = [] 
+        # store max values of correlation matrices in the 3 directions
         for dim in range(0,3):
-            [sel0,sel1,diff] = self.func_slicing_uservolume(im0,im1,self.p3d_0[dim],dim)
-            [DD, max] = self.func_2D_displacement(sel0,sel1)
-            max3d.append(max)
+            [sel0,sel1] = self.func_slicing_uservolume(im0,im1,self.p3d_0[dim],dim)[0:2]
+            DD = self.func_2D_displacement(sel0,sel1)[0]
             DD6d.append(DD)
    
         DD6d =np.array(DD6d)
-        logging.info("Array of displacements from the correlation images in 3 directions are \n"+str(DD6d)+".\n")
+        logging.info("Array of displacements from the correlation images in 3 directions is \n"+str(DD6d)+".\n")
         logging.info("Couplets are "+str([DD6d[2,0],DD6d[1,0]])+str([DD6d[0,0],DD6d[2,1]])+str([DD6d[0,1],DD6d[1,1]])+".")
-        # for dim in range(0,2):
-        #     selection=np.array(max3d).argmax()
-        #     print("selection is "+str(selection))
-        #     if sum(abs(DD6d[selection])) == 0:
-        #         max3d[selection]=0
-        #         selection=np.array(max3d).argmax()
-        #         #max3d=np.delete(max3d,selection)
-        #         print("max after deletion is " +str(max3d))
-        #         print("selection after deletion is "+str(selection))
-        
         DD3d = np.array([0,0,0])
-        err[0]=abs(DD6d[2,0]-DD6d[1,0])
-        err[1]=abs(DD6d[0,0] - DD6d[2,1])
-        err[2]=abs(DD6d[0,1] - DD6d[1,1])
-        if  err[0] <= self.errthresh:
+        err = [abs(DD6d[2,0] - DD6d[1,0]), abs(DD6d[0,0] - DD6d[2,1]), abs(DD6d[0,1] - DD6d[1,1])]
+        if  err[0] <= self.err_thresh:
             DD3d[0] = DD6d[2,0]
-        if  err[1] <= self.errthresh:
+        if  err[1] <= self.err_thresh:
             DD3d[1] = DD6d[0,0]
-        if  err[2] <= self.errthresh:
+        if  err[2] <= self.err_thresh:
             DD3d[2] = DD6d[1,1]
-        # if selection ==0:
-        #     DD3d=[0,DD6d[selection][0],DD6d[selection][1]]
-        # if selection ==1:
-        #     DD3d=[DD6d[selection][0],0,DD6d[selection][1]]
-        # if selection ==2:
-        #     DD3d=[DD6d[selection][0],DD6d[selection][1],0]
+
         if sum(abs(DD3d)) == 0:
-            DD3d = self.calc_new_shift(DD3d,DD6d)
+            DD3d = self.calc_alternative_shift(DD3d,DD6d)
         logging.info("Calculated shift for this cycle is "+str(DD3d)+".\n")
         
         return DD3d, err
 
-    def calc_new_shift(self,DD3d,DD6d):
-        logging.info(DD3d)
+    def calc_alternative_shift(self, DD3d, DD6d):
+        """
+        Only a shift in one direction is selected. This is selected as the minimum shift among the couplets whose members have the same sign.
+
+        Parameters:
+        ----------------
+        DD3d: np.array [int, int, int]
+              The shift in the 3 directions.
+        DD6d: np.array [int, int, int, int, int, int]
+              The couplets of shifts in the 3 directions calculated as the position of the maximum in the correlation matrices.
+
+        Returns:
+        DD3d: np.array [int, int, int]
+        The shift in the 3 directions. Only one of the values could be updated by this method.
+
+        """
         tmp=np.array([
             self.choose_shift(DD6d[2,0],DD6d[1,0]),
             self.choose_shift(DD6d[0,0],DD6d[2,1]),
             self.choose_shift(DD6d[0,1],DD6d[1,1])])
         uDD3d=abs(tmp)
-        logging.info(uDD3d)
-        if sum(abs(uDD3d)) !=0:
+        if sum(abs(uDD3d)) != 0:
             minval = np.min(uDD3d[np.nonzero(uDD3d)])
-            index=np.where(uDD3d==minval)[0][0]
-            logging.info(minval)
+            index=np.where(uDD3d == minval)[0][0]
             DD3d[index] =  tmp[index]
         return np.array(DD3d)
 
-    def choose_shift(self,a,b):
-        "If sign of two numbers is the same return the minimum, otherwise return 0"
+    def choose_shift(self, a, b):
+        """The shift between two numbers is chosen as follows.
+        If sign of two numbers is the same return the minimum, otherwise return 0.
+
+        Parameters:
+        ----------------------
+        a, b: np int
+        """
         return np.sign(a)*np.min(abs(np.array([a,b]))) if np.sign(a) == np.sign(b) else 0
     
     def run(self):
-        """
-        run the main code.
-
-        Parameters
-        -----------------------
-        image0 : 3D numpy.array
-        image1 : 3D numpy.array
-        errthresh : int
-        save : bool
-        """
-
-        SUM=100 #initiliase SUM with large number to start the loop
-        err=[100,100,100] #initialise err
-        self.DD3d_accumulate=[0,0,0] #overall 3D shift
-
-        counter=0
-        DD3d=[] #3D shift for this iteration
-
-        SUM=100 #initiliase SUM with large number to start the loop
-        err=[100,100,100]
-        DD3d=np.array([])
-        while SUM>self.threshold:# and DD3d.any() == 0:
-            centre3d_0=np.array([round(self.image0.shape[0]/2),round(self.image0.shape[1]/2),round(self.image0.shape[2]/2)])
-            counter+=1
+        """Run the automatic registration algorithm."""
+        # overall 3D shift
+        self.DD3d_accumulate=[0,0,0] 
+        for counter in range(0, self.max_iterations):
             logging.info("\n\nCycle number "+str(counter)+".\n")
-
-            #if  sum(err) <=3 or counter>30:
-            if counter>30:
-            #    print("exxxx")
-                break
-            
-            SUM = err[0]/centre3d_0[0]+err[1]/centre3d_0[1]+err[2]/centre3d_0[2]
-            
-            DD3d, err= self.iterative_func(self.image0,self.image1, err)
-
+            DD3d, err= self.iterative_func(self.image0,self.image1)
+            err_rel = (err[0]/self.image0.shape[0] + err[1]/self.image0.shape[1] + err[2]/self.image0.shape[2])/3
             self.DD3d_accumulate=np.add(self.DD3d_accumulate,DD3d)
-            
-            logging.info("Error is "+str(SUM))
-
-            self.image0,self.image1=self.shift_3D_arrays(self.image0,self.image1,DD3d)
-            self.p3d_0 = self.shift_point_zero(self.p3d_0,DD3d)
+            logging.info("Relative error is "+str(err_rel)+".\n")
+            self.image0, self.image1 = self.shift_3D_arrays(self.image0, self.image1, DD3d)
+            self.p3d_0 = self.shift_point_zero(self.p3d_0, DD3d)
             logging.info("New point zero is"+str(self.p3d_0)+".\n")
-        DD3d, err=self.iterative_func(self.image0,self.image1, err)
-        logging.info("Error is "+str(SUM)+".\n\n\n\n\n")
+            if sum(abs(DD3d)) == 0:
+                break
+
+        logging.info("\n\nResults:\n")
+        DD3d, err = self.iterative_func(self.image0, self.image1)
+        logging.info("Relative error is "+str(err_rel)+".\n\n\n\n\n")
     
-        logging.info("Overall shift after part user volume is"+str(self.DD3d_accumulate)+".\n")
-        #print("The shift calculated in user volume is "+str(DD3d_accumulate-DD3d_accumulate_whole)+".\n")    
-        logging.info("---------------End cycles part user volume.----------------------------\n\n\n\n\n")
+        logging.info("Overall shift is"+str(self.DD3d_accumulate)+".\n")   
+        logging.info(f'----------------------------Automatic registration ends successfully.----------------------------\n\n\n\n\n')
 
 class AutomaticRegistrationWithPlotting(AutomaticRegistration):
     def __init__(self,intermediate_plot,filename0,filename1,outputfolder,save, *args,**kwargs):
@@ -392,15 +372,15 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
         self.save = save
         super(AutomaticRegistrationWithPlotting, self).__init__(*args,**kwargs)
         
-    def iterative_func(self,im0,im1, err):
-        DD3d, err = self.calc_shift(im0, im1, err)
+    def iterative_func(self,im0,im1):
+        DD3d, err = self.calc_shift(im0, im1)
         self.plot_three_directions(im0,im1)
         return DD3d, err
 
     def intensity_plot_array(self, a0,a1,a2,a3,dim,p3d_0, size, displacementpar,rect00,rect10,filename0,filename1,outputfolder,save):
         """function to plot intensity - array of four images"""
-
-        if dim==1: #needs transpose because dim 1 has inverted axes
+    # needs transpose because dim 1 has inverted axes
+        if dim==1: 
             a0=np.transpose(a0)
             a1=np.transpose(a1)
             a2=np.transpose(a2)
@@ -428,7 +408,7 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
         axs[1, 0].set_ylabel('Dimension '+str(np.mod(dim+1,3)))
         axs[1, 0].set_xlabel('Dimension '+str(np.mod(dim+2,3)))
         axs[1, 1].set_xlabel('Dimension '+str(np.mod(dim+2,3)))
-        # resize the figure to match the aspect ratio of the Axes    
+        # resize the figure to match the aspect ratio of the axes    
         fig.set_size_inches(10, 12, forward=True)
         axs[0, 0].add_patch(rect00)
         axs[1, 0].add_patch(rect10)
@@ -441,8 +421,10 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
             [sel0,sel1,diff] = self.func_slicing_uservolume(im0,im1,self.p3d_0[dim],dim)
             corr_img = self.cross_image(sel0,sel1) 
             if self.intermediate_plot==True:
-                [largesel0,largesel1,largediff]= self.func_slicing(im0,im1,self.p3d_0[dim],dim) #stored to plot the large images too
-                rect1 = Rectangle((self.size[np.mod(dim+2,3),0], self.size[np.mod(dim+1,3),0]), self.edge[dim+2], self.edge[dim+1], linewidth=1,edgecolor='r', facecolor="none") #rect must be repeated otherwise it gives errors when plotting
+                # stored to plot the large images too
+                [largesel0,largesel1]= self.func_slicing(im0,im1,self.p3d_0[dim],dim)[0:2]
+                # rect must be repeated otherwise it gives errors when plotting
+                rect1 = Rectangle((self.size[np.mod(dim+2,3),0], self.size[np.mod(dim+1,3),0]), self.edge[dim+2], self.edge[dim+1], linewidth=1,edgecolor='r', facecolor="none") 
                 rect2 = Rectangle((self.size[np.mod(dim+2,3),0], self.size[np.mod(dim+1,3),0]), self.edge[dim+2], self.edge[dim+1], linewidth=1,edgecolor='r', facecolor="none")
                 self.intensity_plot_array(largesel0,largesel1,corr_img,diff,dim,self.p3d_0,self.size,str(self.DD3d_accumulate),rect1,rect2,self.filenames[0],self.filenames[1],self.outputfolder,self.save)
 

@@ -151,7 +151,7 @@ if pointzero == False:
 #-----------------------------------------------------------------
 # create an object of the class or the class with plottings
 if intermediate_plot is False:
-    object = AutomaticRegistration(image0,image1,p3d_0,size)
+    object = AutomaticRegistration(image0,image1,p3d_0,size, r'C:\Users\zvm34551\Coding_environment\iDVC')
     # run automatic registration
     object.run()
 else:
