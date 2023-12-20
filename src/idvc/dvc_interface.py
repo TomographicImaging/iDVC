@@ -1026,7 +1026,7 @@ class MainWindow(QMainWindow):
         self.actors_3D['pc_actor'] = actor
         self.actors_3D ['subvol_actor'] = sphere_actor
 
-#Registration Panel:
+# Registration Panel:
     def CreateRegistrationPanel(self):
         '''Create the Registration Dockable Widget'''
 
@@ -1521,7 +1521,6 @@ It is used as a global starting point and a translation reference."
         '''
         rp = self.registration_parameters
         if "Restart registration" in rp['start_registration_button'].text():
-            print("reset in the string")
             self.translate = None
             rp['translate_X_entry'].setText("0")
             rp['translate_Y_entry'].setText("0")
@@ -1546,10 +1545,8 @@ It is used as a global starting point and a translation reference."
                 if max_size_of_box < registration_box_size:
                     rp['registration_box_size_entry'].setValue(max_size_of_box)
                 
-                print ("Start Registration Checked")
-                print(rp['start_registration_button'].text())
+                # print ("Start Registration Checked")
                 self.registration_parameters['start_registration_button'].setText("Confirm Registration")
-                print(rp['start_registration_button'].text())
         
                 rp['registration_box_size_entry'].setEnabled(False)
                 
@@ -1570,10 +1567,8 @@ It is used as a global starting point and a translation reference."
                 
             
             else: # "Confirm Registration" has been pressed
-                print ("Start Registration Unchecked")
-                print(rp['start_registration_button'].text())
+                # print ("Start Registration Unchecked")
                 self.registration_parameters['start_registration_button'].setText("Restart registration")
-                print(rp['start_registration_button'].text())
                 rp['registration_box_size_entry'].setEnabled(True)
                 rp['select_point_zero'].setCheckable(True)
 
@@ -1643,8 +1638,7 @@ It is used as a global starting point and a translation reference."
             previous_reg_box_extent = None
 
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
-        target_z_extent = self.enlarge_extent(2)
-        target_z_extent = tuple(target_z_extent)
+        target_z_extent = tuple(self.enlarge_extent(2))
 
         self.target_cropped_image_z_extent = target_z_extent
 
@@ -1679,6 +1673,14 @@ It is used as a global starting point and a translation reference."
                 self.completeRegistration()
 
     def enlarge_extent(self,dim):
+        """
+        Given the resitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
+        it returns 2*the box size in the direction specified by `dim`.
+        
+        Parameters:
+        dim : int
+            Dimension along which to calculate the extent.
+        """
         point0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
@@ -1705,31 +1707,23 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        
+        """It shows the registration difference volume in the viewer and sets up the tab for the manual registration. 
+        It runs the automatic registration and visualises the results and the buttons to cancel or reset it."""
         self.manualRegistration()
         automatic_reg_worker = Worker(self.automatic_reg_run)
         automatic_reg_worker.signals.result.connect(self.setRegistrationWidgetsFromWorker)
-        #automatic_reg_worker.signals.progress.connect(self.progress_window.setValue)
-        #automatic_reg_worker.signals.finished.connect(print("finished"))
-        #automatic_reg_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
         self.threadpool.start(automatic_reg_worker)
-        #self.automatic_reg_run()
 
-    def testtest(self,**kwargs):
-        aa = 1+1
-        print(aa)
 
     def setRegistrationWidgetsFromWorker(self,result):
         '''
         Flips the result from the automatic registration class as numpy and vtk have different conventions.
         Updates widgets and viewer by calling `setRegistrationWidgets`.
         Updates label in the cancel button.
-        MAkes the cancel button and its label visible.
+        Makes the cancel button and the reset button visible.
         '''
-        print(result)
         self.auto_reg_result = np.flip(result)
         self.setRegistrationWidgets(self.auto_reg_result)
-        print(result)
         rp = self.registration_parameters
         rp['set_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
         rp['cancel_auto_reg_button'].setVisible(True)
@@ -1756,38 +1750,32 @@ It is used as a global starting point and a translation reference."
         '''
         Gets the total translation from the widgets by invoking `getRegistrationTranslation`.
         Updates the widgets with the extra shift.
-        Translates the viewer with the shift.
+        Translates the viewer with the extra shift.
         '''
         total_translation = self.getRegistrationTranslation()
-        # update widgets
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
         rp['translate_Y_entry'].setText(str(total_translation[1] + shift[1])) 
         rp['translate_Z_entry'].setText(str(total_translation[2] + shift[2]))
-#        self.manualRegistration()
-        #self.translate.SetTranslation(-int(shift[0]),-int(shift[1]),-int(shift[2]))
         self.translate.SetTranslation(-int(total_translation[0] + shift[0]),-int(total_translation[1] + shift[1]),-int(total_translation[2] + shift[2]))
         self.translate.Update()
         self.subtract.Update()
-        #self.reg_viewer_update(type = 'after automatic registration')
-        #self.centerOnPointZero() 
-        #self.updatePoint0Display()
-        #self.translateImages()
-
-        #the following updates the viewer to the found automatic shift
         self.reg_viewer_update(type = 'after automatic registration')
 
     def getRegistrationTranslation(self):
+        """Reads the current translation in the widgets and returns it."""
         rp = self.registration_parameters
-        current_shift = np.array([int(rp['translate_X_entry'].text()),int(rp['translate_Y_entry'].text()),int(rp['translate_Z_entry'].text())])
-        return current_shift
+        current_translation = np.array([int(rp['translate_X_entry'].text()),int(rp['translate_Y_entry'].text()),int(rp['translate_Z_entry'].text())])
+        return current_translation
         
     def cancelAutomaticRegistration(self):
+        """Resets the widgets and the wiever to no translation."""
         rp = self.registration_parameters
         self.setRegistrationWidgets(np.array([0,0,0]))
         #rp['cancel_auto_reg_button'].setEnabled(False)
 
     def setToAutomaticRegistration(self):
+        """Sets the widgets and the viewer to the translation calculated with the automatic registration procedure."""
         rp = self.registration_parameters
         self.setRegistrationWidgets(self.auto_reg_result)
 
@@ -1798,21 +1786,11 @@ It is used as a global starting point and a translation reference."
         3. Updates the viewer to display the result of the subtraction.
         4. Centres the viewer on the slice that contains point 0.
         '''
-        rpst = str(self.registration_parameters['translate_X_entry'].text())
-        print("first"+rpst)
         self.updatePoint0Display()
-        rpst = str(self.registration_parameters['translate_X_entry'].text())
-        print("s"+rpst)
         self.translateImages()
-        rpst = str(self.registration_parameters['translate_X_entry'].text())
-        print("t"+rpst)
         #reg viewer update makes the text 0
         self.reg_viewer_update(type = 'starting registration')
-        rpst = str(self.registration_parameters['translate_X_entry'].text())
-        print("f"+rpst)
         self.centerOnPointZero() 
-        rpst = str(self.registration_parameters['translate_X_entry'].text())
-        print("fi"+rpst)
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1885,8 +1863,6 @@ It is used as a global starting point and a translation reference."
 
         extent = self.getRegistrationBoxExtentInWorldCoords()
 
-        #print("Registration box extent", extent )
-
         # get the selected ROI
         voi = vtk.vtkExtractVOI()
         
@@ -1898,8 +1874,6 @@ It is used as a global starting point and a translation reference."
         # copy the data to be registered if selection 
         data1 = vtk.vtkImageData()
         data1.DeepCopy(voi.GetOutput())
-        
-        #print ("Reading image 2")
         
         voi.SetInputData(self.unsampled_corr_image_data)
         
@@ -1930,7 +1904,6 @@ It is used as a global starting point and a translation reference."
             This is the case if the "Start Registration" button is pressed. Otherwise, when type=None we are in the middle of 
             manual registration and the viewer is centred on the current slice
         '''
-        # print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
         if type == 'after automatic registration':
@@ -1952,7 +1925,6 @@ It is used as a global starting point and a translation reference."
         if type == 'starting registration':
             v.style.UpdatePipeline()
             # v.startRenderLoop()
-            # print("About to center on point0")
             self.centerOnPointZero()
         else:
             v.style.SetActiveSlice(round(current_slice))
