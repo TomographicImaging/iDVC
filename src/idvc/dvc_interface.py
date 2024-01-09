@@ -976,7 +976,11 @@ class MainWindow(QMainWindow):
         sphere_actor.GetProperty().SetLineWidth(2.0)
         sphere_actor.GetProperty().SetEdgeVisibility(True)
         sphere_actor.GetProperty().SetEdgeColor(1, .2, .2)
-
+        sphere_actor.GetProperty().SetRenderLinesAsTubes(True)
+        sphere_actor.GetProperty().SetRepresentationToWireframe()
+        sphere_actor.GetProperty().SetRenderLinesAsTubes(True)
+        sphere_actor.GetProperty().SetRepresentationToWireframe()
+        
         self.vis_widget_2D.frame.viewer.AddActor(actor, 'pc_actor')
         self.vis_widget_2D.frame.viewer.AddActor(sphere_actor, 'subvol_actor')
         self.cubesphere.Update()
@@ -1415,6 +1419,8 @@ It is used as a global starting point and a translation reference."
                     RegistrationBoxActor.GetProperty().SetColor(0.,.5,.5)
                     RegistrationBoxActor.GetProperty().SetLineWidth(2.0)
                     RegistrationBoxActor.GetProperty().SetEdgeColor(0.,.5,.5)
+                    RegistrationBoxActor.GetProperty().SetRenderLinesAsTubes(True)
+                    RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
 
                     if viewer_widget.viewer == viewer2D:
                         RegistrationBoxActor.GetProperty().SetOpacity(0.5)
@@ -1422,7 +1428,6 @@ It is used as a global starting point and a translation reference."
                         RegistrationBoxActor.GetProperty().SetEdgeVisibility(True)
                         viewer_widget.frame.viewer.AddActor(RegistrationBoxActor, 'registration_box_actor')
                     else:
-                        RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
                         viewer_widget.frame.viewer.getRenderer().AddActor(RegistrationBoxActor)
                         if not hasattr(self, 'actors_3D'):
                             self.actors_3D = {}
@@ -2842,6 +2847,8 @@ The first point is significant, as it is used as a global starting point and ref
                     subvol_actor.GetProperty().SetColor(0.,0,0)
                     subvol_actor.GetProperty().SetLineWidth(2.0)
                     subvol_actor.GetProperty().SetEdgeColor(0.,0,0)
+                    subvol_actor.GetProperty().SetRenderLinesAsTubes(True)
+                    subvol_actor.GetProperty().SetRepresentationToWireframe()
 
                     if viewer_widget.viewer == viewer2D:
                         subvol_actor.GetProperty().SetOpacity(0.5)
@@ -2851,7 +2858,6 @@ The first point is significant, as it is used as a global starting point and ref
                         if not 'subvol_preview_actor' in viewer_widget.frame.viewer.actors:
                             viewer_widget.frame.viewer.AddActor(subvol_actor, 'subvol_preview_actor')
                     else:
-                        subvol_actor.GetProperty().SetRepresentationToWireframe()
                         subvol_actor.GetProperty().SetColor(0, 0, 0)
                         subvol_actor.GetProperty().SetOpacity(1)
                         subvol_actor.GetProperty().SetLineWidth(3.0)
