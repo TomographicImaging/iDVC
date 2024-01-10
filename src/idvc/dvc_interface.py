@@ -267,7 +267,8 @@ class MainWindow(QMainWindow):
         self.viewer3D_dock = QDockWidget("3D View")
         self.viewer3D_dock.setObjectName("3DImageView")
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
-        self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)      
+        self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
+        self.viewer3D_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)   
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
         prev = None

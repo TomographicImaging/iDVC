@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost.
 * Add setting to set the number of OpenMP threads to use during DVC analysis
 * Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
 * renames input files with names reference and correlate for the relative images, if data are copied in the session.
