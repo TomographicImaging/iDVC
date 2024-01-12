@@ -1,8 +1,22 @@
 import PySide2
 from PySide2 import QtWidgets, QtGui
 import os, sys
+import logging
+import argparse
+
 
 def main():
+
+    parser = argparse.ArgumentParser(description='iDVC - Digital Volume Correlation Software')
+
+    parser.add_argument('--debug', type=str)
+    args = parser.parse_args()
+
+    if args.debug in ['debug', 'info', 'warning', 'error', 'critical']:
+        level = eval(f'logging.{args.debug.upper()}')
+        logging.basicConfig(level=level)
+        logging.info(f"iDVC: Setting debugging level to {args.debug.upper()}")
+    
     app = QtWidgets.QApplication([])
     
     file_dir = os.path.dirname(__file__)
@@ -22,6 +36,8 @@ def main():
     
     window.show()
     splash.finish(window)
+
+    
 
     sys.exit(app.exec_())
 
