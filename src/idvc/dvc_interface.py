@@ -1028,7 +1028,7 @@ class MainWindow(QMainWindow):
 
 # Registration Panel:
     def CreateRegistrationPanel(self):
-        '''Create the Registration Dockable Widget'''
+        """Create the Registration Dockable Widget"""
 
         self.registration_panel = generateUIDockParameters(self, '2 - Manual Registration')
         dockWidget = self.registration_panel[0]
@@ -1290,9 +1290,9 @@ It is used as a global starting point and a translation reference."
             self.createPoint0(p0l)
 
     def updatePoint0Display(self):
-        '''Updates the point 0 vtk.vtkCursor3D on the viewer to be centred
+        """Updates the point 0 vtk.vtkCursor3D on the viewer to be centred
         on the current value of self.point0_world_coords (returned by getPoint0WorldCoords()).
-        '''
+        """
         #point0 , point0Mapper, point0Actor
         vox = self.getPoint0WorldCoords()
         for point0 in self.point0:
@@ -1365,12 +1365,12 @@ It is used as a global starting point and a translation reference."
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
     def centerOnPointZero(self):
-        '''Centers the viewing slice on the registration viewer where Point 0 is.
+        """Centers the viewing slice on the registration viewer where Point 0 is.
         This makes sure that the point 0 is visible on the viewer, in the slicing direction.
         E.g. if point0 is at (5,6,7) and we are slicing in the Z direction, the viewer will 
         display slice Z=7.
         Produces a warning dialog if point0 has not yet been selected.
-        '''
+        """
         if hasattr(self, 'vis_widget_reg'):
             v = self.vis_widget_reg.frame.viewer
 
@@ -1675,7 +1675,9 @@ It is used as a global starting point and a translation reference."
     def enlarge_extent(self,dim):
         """
         Given the resitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
-        it returns 2*the box size in the direction specified by `dim`.
+        it returns 2*the box size in the direction specified by `dim`.         
+        If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
+        and positive directions.
         
         Parameters:
         dim : int
@@ -1684,25 +1686,18 @@ It is used as a global starting point and a translation reference."
         point0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
-        print("targext1"+str(target_extent))
-        for i in (0,1):
-            if target_extent[i] < 0:
-                print("negative")
-                target_extent[i] = 0 
-            elif target_extent[i] > self.unsampled_image_dimensions[dim]:
-                target_extent[i] = self.unsampled_image_dimensions[dim] 
-                print("too large")
-            else:
-                pass
-        print("targext2"+str(target_extent))
+        if target_extent[0] < 0:
+            target_extent[0] = 0 
+        if target_extent[1] > self.unsampled_image_dimensions[dim]:
+            target_extent[1] = self.unsampled_image_dimensions[dim] 
         return target_extent
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
-        '''
+        """
         Loads the full resolution correlate image, cropped on the Z axis to the current registration box extent.
         Saves the result in self.unsampled_corr_image_data.
         Then runs self.completeRegistration()
-        '''
+        """
         origin = self.target_cropped_image_origin 
         z_extent = self.target_cropped_image_z_extent
 
@@ -1720,12 +1715,12 @@ It is used as a global starting point and a translation reference."
 
 
     def setRegistrationWidgetsFromWorker(self,result):
-        '''
+        """
         Flips the result from the automatic registration class as numpy and vtk have different conventions.
         Updates widgets and viewer by calling `setRegistrationWidgets`.
         Updates label in the cancel button.
         Makes the cancel button and the reset button visible.
-        '''
+        """
         self.auto_reg_result = np.flip(result)
         self.setRegistrationWidgets(self.auto_reg_result)
         rp = self.registration_parameters
@@ -1735,10 +1730,11 @@ It is used as a global starting point and a translation reference."
         rp['set_auto_reg_button'].setVisible(True)
         
     def setRegistrationWidgets(self, array):
-        '''
+        """
         Updates the widgets with the array.
         Translates the viewer to the array.
-        '''
+        """
+        
         # update widgets
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(array[0])) 
@@ -2007,16 +2003,47 @@ It is used as a global starting point and a translation reference."
         target_x_extent = self.enlarge_extent(0)
         target_y_extent = self.enlarge_extent(1)
         [image0,image1] = [el[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1] for el in [image0, image1]]
-        # get size in the box coordinate system
-        RegBoxSize=self.getRegistrationBoxSizeInWorldCoords() 
-        size=np.array([[RegBoxSize//2,3*RegBoxSize//2],[RegBoxSize//2,3*RegBoxSize//2],[RegBoxSize//2,3*RegBoxSize//2]])
-        # get point zero in the box coordinate system
-        p3d_0 = np.array([RegBoxSize,RegBoxSize,RegBoxSize])
+        # get point zero and size in the box coordinate system
+        p3d_0, size = self.find_p0_and_size()
         # run automatic registration class
         automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, log_folder = os.path.join(working_directory, 'DVC_Sessions'))
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
         return DD3d_accumulate
+
+    # def find_p0(self):
+    #     point0 = self.getPoint0WorldCoords()
+    #     reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+    #     p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
+    #     for dim in (0,3):
+    #         extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+    #         if extent[0] < 0:
+    #             p3d_0[dim] = point0[dim]
+    #     return p3d_0
+
+    def find_p0_and_size(self):
+        """It returns the point zero and the size of the registration box in the coordinate system of the registration box 
+        and with the xyz ordering convention of `self.unsampled_ref_image_data`.
+        If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
+        and positive directions."""
+        point0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
+        size = np.array([[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2]])
+        for dim in range(0,3):
+            extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+            size_extent = [round(point0[dim] - reg_box_size//2), round(point0[dim] + reg_box_size//2)]
+            if extent[0] < 0:
+                p3d_0[dim] = round(point0[dim])
+                size[dim][1] = size_extent[1]
+                if size_extent[0] < 0:
+                    size[dim][0] = 0
+                elif size_extent[0] > 0:
+                    size[dim][0] = size_extent[0]
+            if size_extent[1] > self.unsampled_image_dimensions[dim]:
+                size[dim][1] = size[dim][1] - size_extent[1] + self.unsampled_image_dimensions[dim]
+
+        return np.flip(p3d_0), np.flip(size, axis=0)
 
 #Mask Panel:
     def CreateMaskPanel(self):
@@ -5116,7 +5143,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         for dirpath, dirnames, filenames in os.walk(folder):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
-                #print(fp)
                 temp_size += os.path.getsize(fp)
 
         while not os.path.exists(new_file_dest):
@@ -5137,7 +5163,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         for dirpath, dirnames, filenames in os.walk(folder):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
-                    #print(fp)
                     temp_size += os.path.getsize(fp)
 
         while not os.path.exists(new_file_dest):
@@ -5149,9 +5174,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     fp = os.path.join(dirpath, f)
                     #print(fp)
                     exp_size += os.path.getsize(fp) 
-
-        #print(temp_size) 
-
 
         while temp_size != exp_size and self.progress_window.value() < 98 and self.progress_window.value() !=-1:
             # print((float(exp_size)/(float(temp_size)))*100)

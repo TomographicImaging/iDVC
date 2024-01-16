@@ -234,22 +234,28 @@ class AutomaticRegistration:
             im1=im1[:,:,:-abs(shift3D[2])]
         return(im0,im1)
 
-    def shift_point_zero(self, p3d,shift3D):
+    def shift_point_zero(self, p3d, shift3D, im0):
         """
         Revaluate the coordinates of a fixed point zero, `p3d`, whose 3d images have been shifted by `shift_3D`.
-
+        If the shift is negative, the value is reassigned by subtracting the shift.
+        If the shift is positive, the value is reassigned to that corresponding to the maximum 
+        index for `im0` in the axis of the shift.
+        
         Parameters
         -----------------------
         p3d : [int, int, int]
         shift3d : [int, int, int]
+        im0 : 3D numpy.array
 
         Returns
         -----------------------
         p3d : [int, int, int]
         """
         for dim in range(0,3):
-            if shift3D[dim]<0:
-                p3d[dim]= p3d[dim]+shift3D[dim]
+            if shift3D[dim] < 0:
+                p3d[dim] = p3d[dim] + shift3D[dim]
+            if shift3D[dim] > 0 and p3d[dim] >= np.shape(im0)[dim]:
+                p3d[dim] = np.shape(im0)[dim] - 1
         return p3d
 
     def iterative_func(self, im0, im1):
@@ -352,7 +358,7 @@ class AutomaticRegistration:
             self.DD3d_accumulate=np.add(self.DD3d_accumulate,DD3d)
             logging.info("Relative error is "+str(err_rel)+".\n")
             self.image0, self.image1 = self.shift_3D_arrays(self.image0, self.image1, DD3d)
-            self.p3d_0 = self.shift_point_zero(self.p3d_0, DD3d)
+            self.p3d_0 = self.shift_point_zero(self.p3d_0, DD3d, self.image0)
             logging.info("New point zero is"+str(self.p3d_0)+".\n")
             if sum(abs(DD3d)) == 0:
                 break
