@@ -1684,13 +1684,17 @@ It is used as a global starting point and a translation reference."
         point0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
-        for el in target_extent:
-            if el < 0:
-                el = 0 
-            elif el > self.unsampled_image_dimensions[dim]:
-                el = self.unsampled_image_dimensions[dim] 
+        print("targext1"+str(target_extent))
+        for i in (0,1):
+            if target_extent[i] < 0:
+                print("negative")
+                target_extent[i] = 0 
+            elif target_extent[i] > self.unsampled_image_dimensions[dim]:
+                target_extent[i] = self.unsampled_image_dimensions[dim] 
+                print("too large")
             else:
-                el = el
+                pass
+        print("targext2"+str(target_extent))
         return target_extent
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
@@ -2009,7 +2013,7 @@ It is used as a global starting point and a translation reference."
         # get point zero in the box coordinate system
         p3d_0 = np.array([RegBoxSize,RegBoxSize,RegBoxSize])
         # run automatic registration class
-        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, os.path.join(working_directory, 'DVC_Sessions'))
+        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, log_folder = os.path.join(working_directory, 'DVC_Sessions'))
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
         return DD3d_accumulate
