@@ -2,7 +2,7 @@ import glob
 import os
 
 import ccpi.viewer.viewerLinker as vlink
-import PySide2
+
 import vtk
 from ccpi.viewer import viewer2D, viewer3D
 from ccpi.viewer.CILViewer2D import (SLICE_ORIENTATION_XY,
@@ -19,6 +19,7 @@ from PySide2.QtWidgets import *
 from idvc.ui.widgets import *
 
 from idvc.utilities import RunResults
+import logging 
 
 
 class VisualisationWindow(QtWidgets.QMainWindow):
@@ -41,6 +42,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.interactorStyle = interactorStyle
         self.createEmptyFrame()
         self.threadpool = QThreadPool()
+        self._consume_CharEvent = ['s', 'w']
 
     def getViewer(self):
         return self.frame.viewer
@@ -99,6 +101,10 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                 vs_widgets['coords_combobox'].setEnabled(False)
                 vs_widgets['coords_combobox'].setCurrentIndex(0)
 
+        # consume 's' and 'w' events
+        # https://github.com/vais-ral/CILViewer/issues/332#issuecomment-1888940327
+        self.getInteractor().AddObserver('CharEvent', self.consumeCharEvent, 10.)
+
         self.frame.viewer.setInput3DData(self.image_data)  
         interactor = self.frame.viewer.getInteractor()
 
@@ -149,6 +155,15 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
     def getImageData(self):
         return self.image_data
+
+    def consumeCharEvent(self, interactor, event):
+        '''Changes the event in self._consume_CharEvent to "" so that the event is not processed by the viewer.
+        
+        This prevents the viewer from changing the rendered scene to surface or wireframe mode when the user presses 's' or 'w' respectively.
+        '''
+        if interactor.GetKeyCode() in self._consume_CharEvent:
+            logging.info("Consuming event: " + interactor.GetKeyCode())
+            interactor.SetKeyCode("")
 
 class GraphsWindow(QMainWindow):
     '''creates a new window with graphs from results saved in the selected run folder.
