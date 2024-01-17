@@ -6,6 +6,7 @@ channels:
 dependencies:    
     - python
     - numpy
+    - scipy
     - ccpi::ccpi-viewer >=22.2.0
     - ccpi::ccpi-dvc >=22.0.0
     - natsort
