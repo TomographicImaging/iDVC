@@ -2000,9 +2000,11 @@ It is used as a global starting point and a translation reference."
         # get images
         data = [self.unsampled_ref_image_data,self.unsampled_corr_image_data]
         [image0,image1]=[Converter.vtk2numpy(el) for el in data]
-        target_x_extent = self.enlarge_extent(0)
-        target_y_extent = self.enlarge_extent(1)
-        [image0,image1] = [el[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1] for el in [image0, image1]]
+        print("imag0shape"+str(image0.shape))
+        print("imag1shape"+str(image1.shape))
+        image0, image1 = self.crop_images(image0, image1)
+        
+        
         # get point zero and size in the box coordinate system
         p3d_0, size = self.find_p0_and_size()
         # run automatic registration class
@@ -2020,6 +2022,25 @@ It is used as a global starting point and a translation reference."
     #         if extent[0] < 0:
     #             p3d_0[dim] = point0[dim]
     #     return p3d_0
+    def crop_images(self, im0, im1):
+        point0_z = round(self.getPoint0WorldCoords()[2])
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        target_x_extent = self.enlarge_extent(0)
+        target_y_extent = self.enlarge_extent(1)
+        print(target_x_extent,target_y_extent,self.enlarge_extent(2))
+        [im0,im1] = [el[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1] for el in [im0, im1]]
+        print("imag0shape2"+str(im0.shape))
+        print("imag1shape2"+str(im1.shape))
+        if im0.shape[0] == self.unsampled_image_dimensions[2]:
+            im0 = im0[point0_z-reg_box_size:point0_z+reg_box_size+1,:,:] 
+        else:
+            if im0.shape[0] == 2*reg_box_size + 1:
+                pass
+            else:
+                print("The automatic registration cannot be performed.")
+        print("imag0shape3"+str(im0.shape))
+        print("imag1shape3"+str(im1.shape))
+        return im0, im1
 
     def find_p0_and_size(self):
         """It returns the point zero and the size of the registration box in the coordinate system of the registration box 
@@ -2027,7 +2048,10 @@ It is used as a global starting point and a translation reference."
         If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
         and positive directions."""
         point0 = self.getPoint0WorldCoords()
+        print("point0worldcoord"+str(point0))
+        print("unsampled_image_dimensions"+str(self.unsampled_image_dimensions))
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        print("reg_box_size"+str(reg_box_size))
         p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
         size = np.array([[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2]])
         for dim in range(0,3):
