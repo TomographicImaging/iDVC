@@ -1682,7 +1682,10 @@ It is used as a global starting point and a translation reference."
                 self.unsampled_ref_image_data = self.ref_image_data 
                 self.LoadCorrImageForReg(crop_corr_image=True)
             else:
-                self.completeRegistration()
+                if previous_reg_box_extent != reg_box_extent:
+                    self.LoadCorrImageForReg(crop_corr_image=True)
+                else:
+                    self.completeRegistration()
 
     def enlarge_extent(self,dim):
         """
