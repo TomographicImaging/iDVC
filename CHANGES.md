@@ -1,6 +1,10 @@
 # ChangeLog
 
 ## vx.x.x
+* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively.
+* Added argument parser to idvc command. This allows the user to specify the debugging level.
+* Add workaround for box clipping due to VTK behaviour change from 9.1. Removed requirement for VTK 8.1.2
+* add build directory to gitignore
 * Add setting to set the number of OpenMP threads to use during DVC analysis
 * Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
 * renames input files with names reference and correlate for the relative images, if data are copied in the session.

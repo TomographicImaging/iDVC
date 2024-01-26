@@ -48,7 +48,7 @@ requirements:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
-    - vtk=8.1.2
+    - vtk
 
 about:
   home: http://www.ccpi.ac.uk
