@@ -18,30 +18,26 @@ class AutomaticRegistration:
                  err_thresh=2,
                  max_iterations=30):
         """
-        Instances an object with attributes `image0` and `image1`, which are automatically
-        registered from `im0` and `im1`.
+        Initialize an object for automatic registration of images.
 
         Parameters
-        ------------
-        im0 : 3D numpy.array
-            Image 0 (reference)
-        im1 : 3D numpy.array
-            Image 1 (to perform DVC wrt to a reference image)
-        p3d_0 : [int, int, int]
-            Point zero from which DVC starts. A good choice is a point which
-                is known to be unchanged.
-        size : numpy.array [[int, int], [int, int], [int, int]]
-            Size of the volume in which the registration is performed.
-                Usually a volume which is known to be unchanged.
-                The shape is a right parallelepiped (edges not necessarily the same)
-        log_folder : path, default: None
-            folder where to save log file for automatic registration. If None, no logging is saved
-        err_thresh : int
-            Error allowed by the procedure in each direction (units of pixels).
-        max_iterations : int
-            maximum number of iterations allowed
-
-
+        ----------
+        im0 : numpy.ndarray
+            The reference image (3D numpy array).
+        im1 : numpy.ndarray
+            The image to be registered (3D numpy array).
+        p3d_0 : list[int, int, int]
+            The starting point for the registration process.
+        size : numpy.ndarray
+            The size of the volume in which the registration is performed.
+            Format: [[int, int], [int, int], [int, int]]
+        log_folder : str, optional
+            The folder path where the log file for automatic registration will be saved.
+            If not provided, no logging will be saved.
+        err_thresh : int, optional
+            The error threshold allowed by the registration procedure in each direction (in pixels).
+        max_iterations : int, optional
+            The maximum number of iterations allowed for the registration process.
         """
         # image0 and image1 are redefined in `run`
         self.image0 = im0
@@ -69,9 +65,12 @@ class AutomaticRegistration:
 
     def calc_edge(self):
         """
-        Given the vertices position of the parallelepiped, it outputs an array with the egdes
+        Given the vertices position of the parallelepiped, it outputs an array with the edges
         values (in pixels) plus the first and second edge repeated.
         The repetition is to simplify the coding in other methods.
+
+        Returns:
+            list: A list containing the edge lengths of the parallelepiped.
         """
         edge = []
         for dim in range(0, 3):
@@ -93,7 +92,7 @@ class AutomaticRegistration:
         Returns
         --------
         corr_img : 2D numpy.array
-            correlation matrix of `sel0`, `sel1`.
+            The correlation matrix of `sel0`, `sel1`.
         """
         sel0_float = sel0.astype('float')
         sel1_float = sel1.astype('float')
@@ -119,19 +118,18 @@ class AutomaticRegistration:
         im0 : 3D numpy.array
         im1 : 3D numpy.array
         selected_slice : int
-            along `dimension`, position of the element in the 3D arrays.
+            The position of the slice along the `dimension` axis in the 3D arrays.
         dimension : int {`0`, `1`, `2`}
-            represents one of the xyz spatial axis in the 3D images.
-        size : np.array, [[int, int], [int, int], [int, int]]
+            Represents one of the xyz spatial axis in the 3D images.
 
         Returns
         --------
         sel0 : 2D numpy.array
-            Selected slice in `im0`.
+            The selected slice in `im0`.
         sel1 : 2D numpy.array
-            Selected slice in `im1`.
+            The selected slice in `im1`.
         diff : 2D numpy.array
-            Difference between `sel0` and `sel1`.
+            The difference between `sel0` and `sel1`.
         """
         size = self.size
         datatype_slice = self.datatype_slice
@@ -158,28 +156,29 @@ class AutomaticRegistration:
 
     def func_slicing(self, im0, im1, selected_slice, dimension):
         """
-        Function to output the slices at position `selectedslice` of two 3D images.
+        Function to output the slices at position `selected_slice` of two 3D images.
         This function also changes the type of the data so the values can be signed
         when calculating the difference diff.
 
         Parameters
-        ------------
-        im0 : 3D numpy.array
-        im1 : 3D numpy.array
+        ----------
+        im0 : numpy.ndarray
+            The first 3D image.
+        im1 : numpy.ndarray
+            The second 3D image.
         selected_slice : int
-            along `dimension`, position of the element in the 3D arrays.
-        dimension : int {`0`, `1`, `2`}
-            represents one of the xyz spatial axis in the 3D images.
-        size : np.array, [[int, int], [int, int], [int, int]]
+            The position of the slice along the specified `dimension` in the 3D arrays.
+        dimension : int {0, 1, 2}
+            The axis representing one of the xyz spatial dimensions in the 3D images.
 
         Returns
-        --------
-        sel0 : 2D numpy.array
-            Selected slice in `im0`.
-        sel1 : 2D numpy.array
-            Selected slice in `im1`.
-        diff : 2D numpy.array
-            Difference between `sel0` and `sel1`.
+        -------
+        sel0 : numpy.ndarray
+            The selected slice in `im0`.
+        sel1 : numpy.ndarray
+            The selected slice in `im1`.
+        diff : numpy.ndarray
+            The difference between `sel0` and `sel1`.
         """
         datatype_slice = self.datatype_slice
 
@@ -203,16 +202,19 @@ class AutomaticRegistration:
         which could represent the displacement of two shifted images.
 
         Parameters
-        -----------------------
-        sel0 : 2D numpy.array
-        sel1 : 2D numpy.array
+        ----------
+        sel0 : numpy.ndarray
+            The first 2D image array.
+        sel1 : numpy.ndarray
+            The second 2D image array.
 
         Returns
-        -----------------------
-        shift2D : [int, int]
-            displacement wrt to centre of images `sel0` and `sel1`. Be aware of the sign covention.
+        -------
+        shift2D : list[int, int]
+            The displacement of the two images with respect to the center of `sel0` and `sel1`.
+            The convention for the sign of the displacement is considered.
         max : float
-            value of `corr_img` at position `DD`
+            The maximum value of the correlation matrix corresponding to the displacement.
         """
         corr_img = self.cross_image(sel0, sel1)
         displacement = np.array(
@@ -228,19 +230,23 @@ class AutomaticRegistration:
         The result could crop both images and change the size of the returned 3D arrays.
 
         Parameters
-        -----------------------
-        im0 : 3D numpy.array
-        im1 : 3D numpy.array
-        shift3D : [int, int, int]
+        ----------
+        im0 : numpy.ndarray
+            The first 3D image array.
+        im1 : numpy.ndarray
+            The second 3D image array.
+        shift3D : numpy.ndarray or list[int, int, int]
+            The amount of shift to be applied to the images along each axis.
             The sign convention is taken into account to shift the 3D
-                arrays in the right directions.
+            arrays in the right directions.
 
         Returns
-        -----------------------
-        im0 : 3D numpy.array
-            Could have reduced size wrt input.
-        im1 : 3D numpy.array
-            Could have reduced size wrt input.
+        -------
+        tuple[numpy.ndarray, numpy.ndarray]
+            A tuple containing the shifted 3D image arrays.
+            The first element is the shifted version of `im0`.
+            The second element is the shifted version of `im1`.
+            The size of the arrays may be reduced depending on the shift values.
         """
         if shift3D[0] > 0:
             im0 = im0[:-shift3D[0], :, :]
@@ -260,7 +266,7 @@ class AutomaticRegistration:
         elif shift3D[2] < 0:
             im0 = im0[:, :, abs(shift3D[2]):]
             im1 = im1[:, :, :-abs(shift3D[2])]
-        return (im0, im1)
+        return im0, im1
 
     def shift_point_zero(self, p3d, shift3D, im0):
         """
@@ -270,14 +276,18 @@ class AutomaticRegistration:
         corresponding to the maximum index for `im0` in the axis of the shift.
 
         Parameters
-        -----------------------
-        p3d : [int, int, int]
-        shift3d : [int, int, int]
-        im0 : 3D numpy.array
+        ----------
+        p3d : numpy.ndarray or list[int, int, int]
+            The coordinates of the fixed point zero.
+        shift3d : numpy.ndarray or list[int, int, int]
+            The shift values in each dimension.
+        im0 : numpy.ndarray
+            The 3D numpy array representing the image.
 
         Returns
-        -----------------------
-        p3d : [int, int, int]
+        -------
+        numpy.ndarray or list[int, int, int]
+            The updated coordinates of the fixed point zero.
         """
         for dim in range(0, 3):
             if shift3D[dim] < 0:
@@ -288,26 +298,45 @@ class AutomaticRegistration:
 
     def iterative_func(self, im0, im1):
         """
-        Isolates the methods which will be iterated in a while loop. This can be redefined to
-        add functionality to the iterations, e.g. in the plotting class.
+        Iterates the shift calculation process between two 3D image arrays.
+
+        This method isolates the steps that will be iterated in a while loop. It can be redefined to
+        add additional functionality to the iterations, such as plotting.
+
+        Parameters
+        ----------
+        im0 : numpy.ndarray
+            The first 3D image array.
+        im1 : numpy.ndarray
+            The second 3D image array.
+
+        Returns
+        -------
+        DD3d : numpy.ndarray
+            The calculated 3D shift between im0 and im1, in units of pixels.
+        err : numpy.ndarray
+            The error on the shift calculation, in units of pixels.
         """
         DD3d, err = self.calc_shift(im0, im1)
         return DD3d, err
 
     def calc_shift(self, im0, im1):
-        """        Calculates
+        """
+        Calculates the 3D shift between two 3D numpy arrays
 
         Parameters
-        ------------
-        im0 : 3D numpy.array
-        im1 : 3D numpy.array
+        ----------
+        im0 : numpy.ndarray
+            The reference image.
+        im1 : numpy.ndarray
+            The target image.
 
         Returns
-        --------
-        DD3d : numpy.array [int, int, int]
-            3D shift evaluated from im0 and im1, in units of pixels
-        err : numpy.array [int, int, int]
-            error on shift calculation in untis of pixels
+        -------
+        DD3d : numpy.ndarray
+            The 3D shift evaluated from im0 and im1, in units of pixels.
+        err : numpy.ndarray
+            The error on shift calculation in units of pixels.
         """
 
         logging.info("Size of ref is " + str(np.shape(im0)) + ".")
@@ -356,21 +385,22 @@ class AutomaticRegistration:
 
     def calc_alternative_shift(self, DD3d, DD6d):
         """
-        Only a shift in one direction is selected. This is selected as the minimum shift among
-        the couplets whose members have the same sign.
+        Calculates the alternative shift in one direction. This method selects the
+        minimum shift among the couplets whose elements have the same sign.
 
         Parameters:
-        ----------------
-        DD3d: np.array [int, int, int]
-              The shift in the 3 directions.
-        DD6d: np.array [int, int, int, int, int, int]
-              The couplets of shifts in the 3 directions calculated as the position
-                of the maximum in the correlation matrices.
+        ----------
+        DD3d : numpy.ndarray [int, int, int]
+            The current shift in the 3 directions.
+        DD6d : numpy.ndarray [int, int, int, int, int, int]
+            The couplets of shifts in the 3 directions calculated as the position
+            of the maximum in the correlation matrices.
 
         Returns:
-        DD3d: np.array [int, int, int]
-        The shift in the 3 directions. Only one of the values could be updated by this method.
-
+        -------
+        numpy.ndarray [int, int, int]
+            The updated shift in the 3 directions.
+                Only one of the values could be updated by this method.
         """
         tmp = np.array([
             self.choose_shift(DD6d[2, 0], DD6d[1, 0]),
@@ -385,19 +415,43 @@ class AutomaticRegistration:
         return np.array(DD3d)
 
     def choose_shift(self, a, b):
-        """The shift between two numbers is chosen as follows.
-        If sign of two numbers is the same return the minimum, otherwise return 0.
+        """
+        Choose the shift between two numbers.
+
+        The shift between two numbers is determined based on the following rules:
+        - If the signs of the two numbers are the same, the shift is set to the
+          minimum of their absolute values.
+        - If the signs are different, the shift is set to 0.
 
         Parameters:
-        ----------------------
-        a, b: np int
+        -----------
+        a : np.int
+            The first number.
+        b : np.int
+            The second number.
+
+        Returns:
+        --------
+        np.int
+            The chosen shift value.
         """
         return np.sign(a) * np.min(abs(np.array([a, b]))) if np.sign(
             a) == np.sign(b) else 0
 
     def run(self):
-        """Run the automatic registration algorithm."""
-        # overall 3D shift
+        """
+        Run the automatic registration algorithm.
+
+        This method performs the automatic registration algorithm by iteratively
+        shifting 3D arrays and updating the point zero. It accumulates the overall
+        3D shift and calculates the relative error at each iteration. The algorithm
+        stops when the accumulated shift is zero or the maximum number of iterations
+        is reached.
+
+        Returns:
+        --------
+            None
+        """
         self.DD3d_accumulate = [0, 0, 0]
         for counter in range(0, self.max_iterations):
             logging.info("\n\nCycle number " + str(counter) + ".\n")
@@ -428,6 +482,26 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
 
     def __init__(self, intermediate_plot, filename0, filename1, outputfolder,
                  save, *args, **kwargs):
+        """
+        Initializes an instance of the AutomaticRegistrationWithPlotting class.
+
+        Parameters
+        ----------
+        intermediate_plot : bool
+            Flag indicating whether to generate intermediate plots.
+        filename0 : str
+            Path to the first input file.
+        filename1 : str
+            Path to the second input file.
+        outputfolder : str
+            Path to the output folder.
+        save : bool
+            Flag indicating whether to save the output.
+        *args :
+            Variable length argument list.
+        **kwargs :
+            Arbitrary keyword arguments.
+        """
         self.intermediate_plot = intermediate_plot
         self.filenames = [filename0, filename1]
         self.outputfolder = outputfolder
@@ -436,14 +510,60 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
               self).__init__(*args, **kwargs)
 
     def iterative_func(self, im0, im1):
+        """
+        Redefines the iterative function in the parent class.
+        As in the parent class, this method iterates the shift calculation process
+        between two 3D image arrays.
+        It adds additional functionality by plotting the intermediate results.
+
+        Parameters
+        ----------
+        im0 : numpy.ndarray
+            The first 3D image array.
+        im1 : numpy.ndarray
+            The second 3D image array.
+
+        Returns
+        -------
+        DD3d : numpy.ndarray
+            The calculated 3D shift between im0 and im1, in units of pixels.
+        err : numpy.ndarray
+            The error on the shift calculation, in units of pixels.
+        """
         DD3d, err = self.calc_shift(im0, im1)
         self.plot_three_directions(im0, im1)
         return DD3d, err
 
-    def intensity_plot_array(self, a0, a1, a2, a3, dim, p3d_0, size,
-                             displacementpar, rect00, rect10, filename0,
-                             filename1, outputfolder, save):
-        """function to plot intensity - array of four images"""
+    def intensity_plot_array(self, a0, a1, a2, a3, dim, displacementpar,
+                             rect00, rect10):
+        """
+        This method plots four images: a0, a1, a2, and a3, along with their corresponding colorbars.
+        It also adds rectangle patches to the first and second images.
+        The plot is saved as a figure if the 'save' parameter is set to True.
+
+        Parameters
+        ----------
+        a0 : numpy.ndarray
+            The first image array.
+        a1 : numpy.ndarray
+            The second image array.
+        a2 : numpy.ndarray
+            The cross-correlation image array.
+        a3 : numpy.ndarray
+            The difference image array.
+        dim : int
+            The dimension along which the slice is taken.
+        displacementpar : str
+            The displacement parameter.
+        rect00 : matplotlib.patches.Rectangle
+            The rectangle patch for the first image.
+        rect10 : matplotlib.patches.Rectangle
+            The rectangle patch for the second image.
+
+        Returns
+        -------
+        None
+        """
         # needs transpose because dim 1 has inverted axes
         if dim == 1:
             a0 = np.transpose(a0)
@@ -454,9 +574,10 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
         fig, axs = plt.subplots(2, 2, sharex=False, sharey=False)
         fig.suptitle("Results after displacement of " + displacementpar +
                      ". Slice along dimension " + str(dim))
-        txt = "\nImage0 = " + filename0 + ".\nImage1 = " + filename1 + ".\npoint zero = " + str(
-            p3d_0) + ". uservolume = " + str(size[0]) + str(size[1]) + str(
-                size[2])
+        txt = "\nImage0 = " + self.filenames[
+            0] + ".\nImage1 = " + self.filenames[1] + ".\npoint zero = " + str(
+                self.p3d_0) + ". uservolume = " + str(self.size[0]) + str(
+                    self.size[1]) + str(self.size[2])
         plt.figtext(0.5,
                     0.01,
                     txt,
@@ -502,14 +623,28 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
         fig.set_size_inches(10, 12, forward=True)
         axs[0, 0].add_patch(rect00)
         axs[1, 0].add_patch(rect10)
-        if save is True:
+        if self.save is True:
             fig.savefig(os.path.join(
-                outputfolder,
+                self.outputfolder,
                 'full_figure_' + displacementpar + str(dim) + '.png'),
                         dpi=600)
         return
 
     def plot_three_directions(self, im0, im1):
+        """
+        Plots image slices indicated by `self.p3d_0` and `self.size` in the three dimensions.
+
+        Parameters
+        ----------
+        im0 : numpy.ndarray
+            The first 3D image array.
+        im1 : numpy.ndarray
+            The second 3D image array.
+
+        Returns
+        ------
+        None
+        """
         for dim in range(0, 3):
             [sel0, sel1,
              diff] = self.func_slicing_uservolume(im0, im1, self.p3d_0[dim],
@@ -537,14 +672,17 @@ class AutomaticRegistrationWithPlotting(AutomaticRegistration):
                     linewidth=1,
                     edgecolor='r',
                     facecolor="none")
-                self.intensity_plot_array(largesel0, largesel1, corr_img, diff,
-                                          dim, self.p3d_0, self.size,
+                self.intensity_plot_array(largesel0, largesel1,
+                                          corr_img, diff, dim,
                                           str(self.DD3d_accumulate), rect1,
-                                          rect2, self.filenames[0],
-                                          self.filenames[1], self.outputfolder,
-                                          self.save)
+                                          rect2)
 
     def show_plots(self):
-        "This method shows all the plots on the screen."
+        """
+        Show all the plots on the screen.
+
+        This method displays all the plots generated by the class on the screen.
+        If the `intermediate_plot` flag is set to True, the plots will be shown.
+        """
         if self.intermediate_plot is True:
             self.plt.show()
