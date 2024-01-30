@@ -1288,7 +1288,13 @@ It is used as a global starting point and a translation reference."
         
         else:
             self.warningDialog("Load an image on the viewer first.", "Error")
-        
+    
+    def openFinishRegistrationDialog(self):       
+        self.warningDialog(
+            window_title='Registration Completed',
+            message='Move to the next tab or restart the registration.'
+            )
+
     def OnLeftButtonPressEventForPointZero(self, interactor, event):
         # print('OnLeftButtonPressEventForPointZero', event)
         v = self.vis_widget_reg.frame.viewer
@@ -1532,7 +1538,8 @@ It is used as a global starting point and a translation reference."
             if rp['start_registration_button'].isChecked(): # "Start Registration" has been pressed
                 self.startRegistration()            
             else: # "Confirm Registration" has been pressed
-                self.confirmRegistration()             
+                self.confirmRegistration()     
+                self.openFinishRegistrationDialog()        
 
     def startRegistration(self):
         """
