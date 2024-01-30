@@ -1565,7 +1565,6 @@ It is used as a global starting point and a translation reference."
         # the size to the largest size possible:
         if max_size_of_box < registration_box_size:
             rp['registration_box_size_entry'].setValue(max_size_of_box)
-        # print ("Start Registration Checked")
         self.registration_parameters['start_registration_button'].setText("Confirm Registration")
         rp['cancel_reg_button'].setVisible(True)
         rp['registration_box_size_entry'].setEnabled(False)
@@ -1591,7 +1590,6 @@ It is used as a global starting point and a translation reference."
         """
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        # print ("Start Registration Unchecked")
         self.registration_parameters['start_registration_button'].setText("Restart registration")
         rp['registration_box_size_entry'].setEnabled(True)
         rp['select_point_zero'].setCheckable(True)
@@ -1608,7 +1606,6 @@ It is used as a global starting point and a translation reference."
             self.createPoint0(self.getPoint0WorldCoords())
 
     def UpdateViewerSettingsPanelForRegistration(self):
-        # print("UpdateViewerSettings")
         vs_widgets = self.visualisation_setting_widgets
         rp = self.registration_parameters
         if rp['start_registration_button'].isChecked():
@@ -1945,7 +1942,7 @@ It is used as a global starting point and a translation reference."
             rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
             rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
         printme = str(self.registration_parameters['translate_X_entry'].text())
-        print("after reg"+printme)
+        #print("after reg"+printme)
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
@@ -1970,7 +1967,6 @@ It is used as a global starting point and a translation reference."
         
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        # print('OnKeyPressEventForRegistration', key_code)
 
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
@@ -1981,7 +1977,6 @@ It is used as a global starting point and a translation reference."
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
         key_code = interactor.GetKeyCode()
-        # print('AfterKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
 
         if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
@@ -1993,7 +1988,6 @@ It is used as a global starting point and a translation reference."
         key_code, event = args
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        # print("Current slice", current_slice)
         trans = list(self.translate.GetTranslation())
         orientation = v.style.GetSliceOrientation()
         ij = [0,1]
@@ -2018,7 +2012,6 @@ It is used as a global starting point and a translation reference."
         self.translate.SetTranslation(*trans)
         self.translate.Update()
         self.subtract.Update()
-        #print ("Translation", trans)
 
     def automatic_reg_run(self, **kwargs):
         """Prepares the arguments for the class `automaticRegistration`. Gets the images in full resolution and cropps them. 
@@ -2032,8 +2025,6 @@ It is used as a global starting point and a translation reference."
         # get images
         data = [self.unsampled_ref_image_data,self.unsampled_corr_image_data]
         [image0,image1]=[Converter.vtk2numpy(el) for el in data]
-        print("imag0shape"+str(image0.shape))
-        print("imag1shape"+str(image1.shape))
         image0, image1 = self.crop_images(image0, image1)
         
         
@@ -2059,10 +2050,7 @@ It is used as a global starting point and a translation reference."
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         target_x_extent = self.enlarge_extent(0)
         target_y_extent = self.enlarge_extent(1)
-        print(target_x_extent,target_y_extent,self.enlarge_extent(2))
         [im0,im1] = [el[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1] for el in [im0, im1]]
-        print("imag0shape2"+str(im0.shape))
-        print("imag1shape2"+str(im1.shape))
         if im0.shape[0] == self.unsampled_image_dimensions[2]:
             im0 = im0[point0_z-reg_box_size:point0_z+reg_box_size+1,:,:] 
         else:
@@ -2070,8 +2058,6 @@ It is used as a global starting point and a translation reference."
                 pass
             else:
                 print("The automatic registration cannot be performed.")
-        print("imag0shape3"+str(im0.shape))
-        print("imag1shape3"+str(im1.shape))
         return im0, im1
 
     def find_p0_and_size(self):
@@ -2080,10 +2066,7 @@ It is used as a global starting point and a translation reference."
         If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
         and positive directions."""
         point0 = self.getPoint0WorldCoords()
-        print("point0worldcoord"+str(point0))
-        print("unsampled_image_dimensions"+str(self.unsampled_image_dimensions))
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-        print("reg_box_size"+str(reg_box_size))
         p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
         size = np.array([[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2]])
         for dim in range(0,3):
@@ -2317,9 +2300,6 @@ It is used as a global starting point and a translation reference."
         
         # create a blank image
         dims = image_data.GetDimensions()
-        # print("Dims:" + str(dims))
-
-        #print(image_data.GetSpacing())
         
         # progress_callback.emit(40)
 
@@ -3442,7 +3422,6 @@ The first point is significant, as it is used as a global starting point and ref
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
-        #print(self.roi)
 
         points = np.loadtxt(self.roi)
         # except ValueError as ve:
