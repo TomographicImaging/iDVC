@@ -1888,9 +1888,9 @@ It is used as a global starting point and a translation reference."
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
 
-    def getRegistrationVOIs(self):            
-
-        extent = self.getRegistrationBoxExtentInWorldCoords()
+    def getRegistrationVOIs(self, extent = None):            
+        if extent is None:
+            extent = self.getRegistrationBoxExtentInWorldCoords()
 
         # get the selected ROI
         voi = vtk.vtkExtractVOI()
@@ -2023,11 +2023,13 @@ It is used as a global starting point and a translation reference."
             The calculated 3D shift to register the two volumes.
         """
         # get images
-        data = [self.unsampled_ref_image_data,self.unsampled_corr_image_data]
+        target_x_extent = self.enlarge_extent(0)
+        target_y_extent = self.enlarge_extent(1)
+        target_z_extent = self.enlarge_extent(2)
+        extent = target_x_extent + target_y_extent + target_z_extent
+        data = self.getRegistrationVOIs(extent)
         [image0,image1]=[Converter.vtk2numpy(el) for el in data]
-        image0, image1 = self.crop_images(image0, image1)
-        
-        
+
         # get point zero and size in the box coordinate system
         p3d_0, size = self.find_p0_and_size()
         # run automatic registration class
@@ -2035,30 +2037,6 @@ It is used as a global starting point and a translation reference."
         automatic_registration_object.run()
         DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
         return DD3d_accumulate
-
-    # def find_p0(self):
-    #     point0 = self.getPoint0WorldCoords()
-    #     reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-    #     p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
-    #     for dim in (0,3):
-    #         extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
-    #         if extent[0] < 0:
-    #             p3d_0[dim] = point0[dim]
-    #     return p3d_0
-    def crop_images(self, im0, im1):
-        point0_z = round(self.getPoint0WorldCoords()[2])
-        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-        target_x_extent = self.enlarge_extent(0)
-        target_y_extent = self.enlarge_extent(1)
-        [im0,im1] = [el[:,target_y_extent[0]:target_y_extent[1]+1,target_x_extent[0]:target_x_extent[1]+1] for el in [im0, im1]]
-        if im0.shape[0] == self.unsampled_image_dimensions[2]:
-            im0 = im0[point0_z-reg_box_size:point0_z+reg_box_size+1,:,:] 
-        else:
-            if im0.shape[0] == 2*reg_box_size + 1:
-                pass
-            else:
-                print("The automatic registration cannot be performed.")
-        return im0, im1
 
     def find_p0_and_size(self):
         """It returns the point zero and the size of the registration box in the coordinate system of the registration box 
