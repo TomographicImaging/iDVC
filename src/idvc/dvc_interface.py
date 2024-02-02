@@ -26,7 +26,7 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QFrame, QGroupBox, QLabel, QLineEdit,
                                QMainWindow, QMessageBox,
                                QProgressDialog, QPushButton, QSpinBox,
-                               QTabWidget, QVBoxLayout,
+                               QTabWidget, QTabBar, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
                                QWidget)
 import time
@@ -184,6 +184,13 @@ class MainWindow(QMainWindow):
         else:
             self.CreateSessionSelector("new window")
 
+    def createPopupMenu(self):
+        '''return an empty menu for the main window to use as a popup menu.
+        
+        https://doc.qt.io/qt-6/qmainwindow.html#createPopupMenu
+        '''
+        return QtWidgets.QMenu(self) # Create a new menu
+    
     def SetAppStyle(self):
         if self.settings.value("dark_mode") is None:
             self.settings.setValue("dark_mode", True)
@@ -282,13 +289,12 @@ class MainWindow(QMainWindow):
                     first_dock = current_dock
                 prev= current_dock
                 docks.append(current_dock)
-                
-        first_dock.raise_() # makes first panel the one that is open by default.
+        
+        # makes first panel the one that is open by default.
+        first_dock.raise_()
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.viewer3D_dock)
         
-
-
         # Make a window to house the right dockwidgets
         # This ensures the 2D viewer is large and allows us to position the help and settings below it
 
@@ -301,6 +307,10 @@ class MainWindow(QMainWindow):
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.help_dock)
 
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_settings_dock)
+
+        # Stop the widgets in the tab to be moved around
+        for wdg in self.findChildren(QTabBar):
+            wdg.setMovable(False)
         
 
     def CreateViewerSettingsPanel(self):
@@ -2383,6 +2393,7 @@ It is used as a global starting point and a translation reference."
     def CreatePointCloudPanel(self):
 
         self.pointCloudDockWidget = QDockWidget(self)
+        self.pointCloudDockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.pointCloudDockWidget.setWindowTitle('4 - Point Cloud')
         self.pointCloudDockWidget.setObjectName("PointCloudPanel")
         self.pointCloudDockWidgetContents = QWidget()
