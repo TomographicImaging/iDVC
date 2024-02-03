@@ -250,3 +250,7 @@ class GraphsWindow(QMainWindow):
 
         dock.raise_() # makes summary panel the one that is open by default.
 
+        # Stop the widgets in the tab to be moved around
+        for wdg in self.findChildren(QTabBar):
+            wdg.setMovable(False)
+
