@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Set Tabified widgets not to move or close
 * Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost.
 * Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively.
 * Added argument parser to idvc command. This allows the user to specify the debugging level.
