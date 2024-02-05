@@ -97,7 +97,7 @@ __version__ = gui_version.version
 
 import logging
 
-from idvc.utils.classAutomaticRegistration import AutomaticRegistration
+from idvc.utils.AutomaticRegistration import AutomaticRegistration
 
 class MainWindow(QMainWindow):
     def __init__(self):

@@ -5,7 +5,7 @@ import sys
 
 import numpy as np
 
-from idvc.utils.classAutomaticRegistration import (
+from idvc.utils.AutomaticRegistration import (
     AutomaticRegistration, AutomaticRegistrationWithPlotting)
 
 # from cil.utilities.display import show2D
