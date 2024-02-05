@@ -411,16 +411,20 @@ class MainWindow(QMainWindow):
         "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append(
-            "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
-            "Then click 'Start Registration'. First, the suggested registration is displayed. The difference volume of the registered image is shown in the viewer. The mouse wheel spans in the third direction, the slicing orientation is controlled with the 'x', 'y' or 'z' keys.\n"
-            "To furtherly adjust the registration manually, click on the image and then move the two images relative to each other using the keys: 'j' (up), 'n' (down), 'b' (right) and 'm' (left)."
-            "You can cancel the registration by pressing 'Reset registration' or set to the automatic registration values.\n"
-            "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
+            "1. Click 'Select point 0' to choose a point and region for the registration.\n"
+            "2. Adjust the registration box size as needed.\n"
+            "3. Click 'Start Registration' to begin the registration process.\n"
+            "4. The suggested registration will be displayed, and the difference volume of the registered image will be shown in the viewer.\n"
+            "5. Use the mouse wheel to navigate in the third direction, and the 'x', 'y', or 'z' keys to control the slicing orientation.\n"
+            "6. To manually adjust the registration, click on the image and move the two images relative to each other using the 'j' (up), 'n' (down), 'b' (right), and 'm' (left) keys.\n"
+            "7. You can 'Reset' the registration values or 'Set to Automatic Registration'.\n"
+            "8. You can 'Confirm Registration' or 'Cancel'.\n"
+            "9. Once satisfied with the registration, move to the next tab. Be aware that point 0 is the point from which DVC will start."
             )
         
         self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
             "When you are happy with your region click 'Create Mask'.")
-
+        
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
             "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
@@ -1694,9 +1698,9 @@ It is used as a global starting point and a translation reference."
                 else:
                     self.completeRegistration()
 
-    def enlarge_extent(self,dim):
+    def enlarge_extent(self, dim):
         """
-        Given the resitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
+        Given the regitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
         it returns 2*the box size in the direction specified by `dim`.         
         If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
         and positive directions.
@@ -1729,19 +1733,17 @@ It is used as a global starting point and a translation reference."
 
     def completeRegistration(self):
         """It shows the registration difference volume in the viewer and sets up the tab for the manual registration. 
-        It runs the automatic registration and visualises the results and the buttons to cancel or reset it."""
+        It runs the automatic registration and shows the results and the extra buttons."""
         self.manualRegistration()
         automatic_reg_worker = Worker(self.automatic_reg_run)
         automatic_reg_worker.signals.result.connect(self.setRegistrationWidgetsFromWorker)
         self.threadpool.start(automatic_reg_worker)
 
-
     def setRegistrationWidgetsFromWorker(self,result):
         """
         Flips the result from the automatic registration class as numpy and vtk have different conventions.
         Updates widgets and viewer by calling `setRegistrationWidgets`.
-        Updates label in the cancel button.
-        Makes the cancel button and the reset button visible.
+        Updates the buttons.
         """
         self.auto_reg_result = np.flip(result)
         self.setRegistrationWidgets(self.auto_reg_result)
@@ -1753,8 +1755,7 @@ It is used as a global starting point and a translation reference."
         
     def setRegistrationWidgets(self, array):
         """
-        Updates the widgets with the array.
-        Translates the viewer to the array.
+        Updates the widgets and translates the viewer with the values stored in `array`.
         """
         
         # update widgets
@@ -1769,11 +1770,10 @@ It is used as a global starting point and a translation reference."
         self.reg_viewer_update(type = 'after automatic registration')
 
     def setRegistrationWidgetsShift(self, shift):   
-        '''
-        Gets the total translation from the widgets by invoking `getRegistrationTranslation`.
-        Updates the widgets with the extra shift.
-        Translates the viewer with the extra shift.
-        '''
+        """
+        Gets the total translation from the widgets.
+        Updates the widgets and translates the viewer with the extra `shift`.
+        """
         total_translation = self.getRegistrationTranslation()
         rp = self.registration_parameters
         rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
@@ -1794,10 +1794,9 @@ It is used as a global starting point and a translation reference."
         """Resets the widgets and the viewer to no translation."""
         rp = self.registration_parameters
         self.setRegistrationWidgets(np.array([0,0,0]))
-        #rp['cancel_auto_reg_button'].setEnabled(False)
 
     def cancelRegistration(self):
-        """Resets the widgets and the wiever to no translation and confirms the registration."""
+        """Resets the widgets and the wiever to no translation and confirms the registration. Updates the buttons."""
         self.cancelAutomaticRegistration()
         self.confirmRegistration()
         self.registration_parameters['cancel_reg_button'].setVisible(False)
@@ -1809,12 +1808,12 @@ It is used as a global starting point and a translation reference."
         self.setRegistrationWidgets(self.auto_reg_result)
 
     def manualRegistration(self):
-        '''
+        """
         1. Updates the point0 widget on the viewer to be centred on the location selected by the user.
         2. Translates the correlate image by the translation values set in the translation widgets, and subtracts the reference image from the translated correlate image.
         3. Updates the viewer to display the result of the subtraction.
         4. Centres the viewer on the slice that contains point 0.
-        '''
+        """
         self.updatePoint0Display()
         self.translateImages()
         #reg viewer update makes the text 0
@@ -1932,6 +1931,8 @@ It is used as a global starting point and a translation reference."
             If 'starting registration' then the registration viewer is centred on the slice that contains point 0.
             This is the case if the "Start Registration" button is pressed. Otherwise, when type=None we are in the middle of 
             manual registration and the viewer is centred on the current slice
+            If 'manual registration' then the translation widgets are updated with the current translation on each axis.
+            If 'automatic registration' then the translation widgets are not updated.
         '''
         # update the current translation on the interface:
         rp = self.registration_parameters
@@ -2014,12 +2015,17 @@ It is used as a global starting point and a translation reference."
         self.subtract.Update()
 
     def automatic_reg_run(self, **kwargs):
-        """Prepares the arguments for the class `automaticRegistration`. Gets the images in full resolution and cropps them. 
-        Evaluates the sizer of the box and the point zero in the box coordinate system. Calls the class and runs the automatic registration.
+        """Runs the automatic registration. 
+        
+        This method prepares the arguments for the class `AutomaticRegistration` class and performs the registration process. 
+        It retrieves the images in full resolution and crops them with an extended box.
+        It evaluates the size of the box and the point zero in the box coordinate system.
+        Then, it runs the registration procedure and returns the calculated shift.
+        The class also outputs a logging file in the session directory.
 
         Returns:
         ----------------------------------------------------------------
-        DD3d_accumulate : np.array [int, int, int]
+        DD3d_accumulate : np.ndarray [int, int, int]
             The calculated 3D shift to register the two volumes.
         """
         # get images
@@ -2039,10 +2045,16 @@ It is used as a global starting point and a translation reference."
         return DD3d_accumulate
 
     def find_p0_and_size(self):
-        """It returns the point zero and the size of the registration box in the coordinate system of the registration box 
+        """Finds the point zero and size of the registration box in the coordinate system of the registration box 
         and with the xyz ordering convention of `self.unsampled_ref_image_data`.
-        If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
-        and positive directions."""
+        If the registration box is not fully included in the volumetric data, it accounts for the borders in both the negative 
+        and positive directions.
+        
+        Returns:
+        tuple: A tuple containing the point zero and size of the registration box.
+            - p3d_0 (np.ndarray) : The point zero in the registration box coordinate system.
+            - size (np.ndarray) : The size of the registration box in each dimension.
+        """
         point0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
         p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
