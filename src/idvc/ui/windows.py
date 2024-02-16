@@ -227,6 +227,7 @@ class GraphsWindow(QMainWindow):
     
             GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
             dock1 = QDockWidget(result.title,self)
+            dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
             dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
             dock1.setWidget(GraphWidget)
             self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
@@ -243,6 +244,7 @@ class GraphsWindow(QMainWindow):
         
         SummaryTab = SummaryGraphsWidget(self, result_list)
         dock = QDockWidget("Summary",self)
+        dock.setFeatures(QDockWidget.NoDockWidgetFeatures) 
         dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
         dock.setWidget(SummaryTab)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
