@@ -1184,6 +1184,7 @@ It is used as a global starting point and a translation reference."
         
 
         reg_viewer_dock = QDockWidget("Image Registration",self.RightDockWindow)
+        reg_viewer_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         reg_viewer_dock.setObjectName("2DRegView")
         reg_viewer_dock.setWidget(self.vis_widget_reg)
         #reg_viewer_dock.setMinimumHeight(self.size().height()*0.9)
