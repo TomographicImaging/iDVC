@@ -30,6 +30,13 @@ class VisualisationWindow(QtWidgets.QMainWindow):
         self.parent = parent
         self.setMinimumSize(200,200)
 
+    def createPopupMenu(self):
+        '''returns an empty menu for the main window to use as a popup menu.
+        
+        https://doc.qt.io/qt-6/qmainwindow.html#createPopupMenu
+        '''
+        return QtWidgets.QMenu(self)
+    
 class VisualisationWidget(QtWidgets.QMainWindow):
     '''creates a window with a QCILViewerWidget as the central widget
     '''
@@ -55,8 +62,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
 
     def getViewerType(self):
         return self.viewer
-
-        
+     
     def createEmptyFrame(self):
         #print("empty")
         self.frame = QCILViewerWidget(viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle)
