@@ -1,6 +1,9 @@
 # ChangeLog
 
 ## vx.x.x
+* Set empty pop-up menus for the main windows
+* Set Tabified widgets not to move or close
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost.
 * Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively.
 * Added argument parser to idvc command. This allows the user to specify the debugging level.
 * Add workaround for box clipping due to VTK behaviour change from 9.1. Removed requirement for VTK 8.1.2
