@@ -74,6 +74,7 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
     '''
     dockWidget = QDockWidget(self)
+    dockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
     dockWidget.setWindowTitle(title)
     dockWidgetContents = QWidget()
 

@@ -37,6 +37,7 @@ requirements:
   build:
     - python
     - numpy
+    - typing_extensions # [py<=37]
 
   run:
     - python
