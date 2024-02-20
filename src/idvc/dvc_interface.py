@@ -26,7 +26,7 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QFrame, QGroupBox, QLabel, QLineEdit,
                                QMainWindow, QMessageBox,
                                QProgressDialog, QPushButton, QSpinBox,
-                               QTabWidget, QVBoxLayout,
+                               QTabWidget, QTabBar, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
                                QWidget)
 import time
@@ -184,6 +184,13 @@ class MainWindow(QMainWindow):
         else:
             self.CreateSessionSelector("new window")
 
+    def createPopupMenu(self):
+        '''return an empty menu for the main window to use as a popup menu.
+        
+        https://doc.qt.io/qt-6/qmainwindow.html#createPopupMenu
+        '''
+        return QtWidgets.QMenu(self) # Create a new menu
+    
     def SetAppStyle(self):
         if self.settings.value("dark_mode") is None:
             self.settings.setValue("dark_mode", True)
@@ -268,17 +275,13 @@ class MainWindow(QMainWindow):
         self.viewer3D_dock.setObjectName("3DImageView")
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
         self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
-        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
-            QDockWidget.DockWidgetMovable)
-        
+        self.viewer3D_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)   
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
         prev = None
         first_dock = None
         docks = []
         for current_dock in self.findChildren(QDockWidget):
-            current_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
-                QDockWidget.DockWidgetMovable)
             if self.dockWidgetArea(current_dock) == QtCore.Qt.LeftDockWidgetArea:
                 if prev:
                     self.tabifyDockWidget(prev,current_dock)                    
@@ -286,13 +289,12 @@ class MainWindow(QMainWindow):
                     first_dock = current_dock
                 prev= current_dock
                 docks.append(current_dock)
-                
-        first_dock.raise_() # makes first panel the one that is open by default.
+        
+        # makes first panel the one that is open by default.
+        first_dock.raise_()
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.viewer3D_dock)
         
-
-
         # Make a window to house the right dockwidgets
         # This ensures the 2D viewer is large and allows us to position the help and settings below it
 
@@ -305,6 +307,10 @@ class MainWindow(QMainWindow):
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.help_dock)
 
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_settings_dock)
+
+        # Stop the widgets in the tab to be moved around
+        for wdg in self.findChildren(QTabBar):
+            wdg.setMovable(False)
         
 
     def CreateViewerSettingsPanel(self):
@@ -1178,6 +1184,7 @@ It is used as a global starting point and a translation reference."
         
 
         reg_viewer_dock = QDockWidget("Image Registration",self.RightDockWindow)
+        reg_viewer_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         reg_viewer_dock.setObjectName("2DRegView")
         reg_viewer_dock.setWidget(self.vis_widget_reg)
         #reg_viewer_dock.setMinimumHeight(self.size().height()*0.9)
@@ -2387,6 +2394,7 @@ It is used as a global starting point and a translation reference."
     def CreatePointCloudPanel(self):
 
         self.pointCloudDockWidget = QDockWidget(self)
+        self.pointCloudDockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.pointCloudDockWidget.setWindowTitle('4 - Point Cloud')
         self.pointCloudDockWidget.setObjectName("PointCloudPanel")
         self.pointCloudDockWidgetContents = QWidget()
