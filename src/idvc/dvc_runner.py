@@ -242,6 +242,10 @@ class DVC_runner(object):
 
         message_callback.emit("Creating run configurations")
         vol_bit_depth = int(config['vol_bit_depth'])
+        if vol_bit_depth not in ['8', '16']:
+            # the data will be converted to 16 bit by save_tiff_stack_as_raw
+            # it won't work with other formats
+            vol_bit_depth = 16
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
         if 'vol_endian' in config:

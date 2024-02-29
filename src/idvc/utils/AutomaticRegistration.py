@@ -50,6 +50,8 @@ class AutomaticRegistration:
             self.datatype_slice = 'int16'
         elif datatype == 'int16' or datatype == 'uint16' or datatype == '>u2' or datatype == '<u2':
             self.datatype_slice = 'int32'
+        else:
+            self.datatype_slice = 'float32'
         self.err_thresh = err_thresh
         self.max_iterations = max_iterations
         if log_folder is not None:
