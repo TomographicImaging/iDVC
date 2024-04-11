@@ -1,21 +1,22 @@
 # ChangeLog
 
 ## vx.x.x
+* Add automatic registration functionality
 * Set empty pop-up menus for the main windows
 * Set Tabified widgets not to move or close
-* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost.
-* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively.
-* Added argument parser to idvc command. This allows the user to specify the debugging level.
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost
+* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively
+* Added argument parser to idvc command. This allows the user to specify the debugging level
 * Add workaround for box clipping due to VTK behaviour change from 9.1. Removed requirement for VTK 8.1.2
 * add build directory to gitignore
 * Add setting to set the number of OpenMP threads to use during DVC analysis
 * Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
-* renames input files with names reference and correlate for the relative images, if data are copied in the session.
+* renames input files with names reference and correlate for the relative images, if data are copied in the session
 * More efficient pointcloud creation by not shifting the pointcloud to the make such that point0 is one point of the 
-  created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid.
-* Updates progress bar for setting up a DVC run configuration - previously this was hanging.
-* Improves progress reporting when loading a saved session, including displaying file names as they are loaded.
-* Make splash screen appear instantly when app is opened.
+  created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid
+* Updates progress bar for setting up a DVC run configuration - previously this was hanging
+* Improves progress reporting when loading a saved session, including displaying file names as they are loaded
+* Make splash screen appear instantly when app is opened
 * Restructure to create:
   * ui/dialogs.py
   * ui/widgets.py
