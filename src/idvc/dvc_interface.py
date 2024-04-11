@@ -4632,6 +4632,21 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['run_entry'])
         widgetno += 1
 
+        result_widgets['pc_label'] = QLabel(groupBox)
+        result_widgets['pc_label'].setText("Subvolume Size:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_label'])
+        result_widgets['pc_entry'] = QComboBox(groupBox)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_entry'])
+        widgetno += 1
+
+        result_widgets['subvol_label'] = QLabel(groupBox)
+        result_widgets['subvol_label'].setText("Points in Subvolume:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
+        result_widgets['subvol_entry'] = QComboBox(groupBox)
+        result_widgets['subvol_entry'].setCurrentText("1000")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
+        widgetno += 1
+
         separators = []
         separators.append(QFrame(groupBox))
         separators[-1].setFrameShape(QFrame.HLine)
@@ -4649,30 +4664,28 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1  
 
-        result_widgets['pc_label'] = QLabel(groupBox)
-        result_widgets['pc_label'].setText("Subvolume Size:")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_label'])
-        result_widgets['pc_entry'] = QComboBox(groupBox)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_entry'])
-        widgetno += 1
-
-        result_widgets['subvol_label'] = QLabel(groupBox)
-        result_widgets['subvol_label'].setText("Points in Subvolume:")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
-        result_widgets['subvol_entry'] = QComboBox(groupBox)
-        result_widgets['subvol_entry'].setCurrentText("1000")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
+        #Pointcloud points label
+        result_widgets['pc_points_label'] = QLabel("Points in current pointcloud:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_points_label'])
+        result_widgets['pc_points_value'] = QLabel("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_points_value'])
         widgetno += 1
 
         result_widgets['vec_label'] = QLabel(groupBox)
-        result_widgets['vec_label'].setText("View vectors:")
+        result_widgets['vec_label'].setText("View:")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
         result_widgets['vec_entry'] = QComboBox(groupBox)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         result_widgets['vec_entry'].addItems(['Pointcloud', 'Total Displacement', 'Displacement with respect to Reference Point 0'])
         result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         widgetno += 1
+
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1  
 
         result_widgets['scale_vectors_label'] =  QLabel(groupBox)
         result_widgets['scale_vectors_label'].setText("Vector Scaling:")
@@ -4731,22 +4744,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         result_widgets['range_vectors_max_entry'].setEnabled(False)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_max_entry'])
         widgetno += 1
-        result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
-        widgetno += 1
-        
 
-        result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)
-        
-        result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
+        result_widgets['run_entry'].currentIndexChanged.connect(self.LoadResultsOnViewer)
 
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
-
-        #Pointcloud points label
-        result_widgets['pc_points_label'] = QLabel("Points in current pointcloud:")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_points_label'])
-        result_widgets['pc_points_value'] = QLabel("0")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_points_value'])
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
@@ -4834,8 +4836,25 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
     def _DVCResultsDisableRanges(self, index):
         # reset the interface
-        self.result_widgets['range_vectors_max_entry'].setEnabled(False)
-        self.result_widgets['range_vectors_min_entry'].setEnabled(False)
+        result_widgets = self.result_widgets
+        if index == 0:
+            result_widgets['scale_vectors_label'].setEnabled(False)
+            result_widgets['range_vectors_all_label'].setEnabled(False)
+            result_widgets['range_vectors_max_label'].setEnabled(False)
+            result_widgets['range_vectors_min_label'].setEnabled(False)
+            result_widgets['scale_vectors_entry'].setEnabled(False)
+            result_widgets['range_vectors_all_entry'].setEnabled(False)
+            result_widgets['range_vectors_max_entry'].setEnabled(False)
+            result_widgets['range_vectors_min_entry'].setEnabled(False)
+        else:
+            result_widgets['scale_vectors_label'].setEnabled(True)
+            result_widgets['range_vectors_all_label'].setEnabled(True)
+            result_widgets['range_vectors_max_label'].setEnabled(True)
+            result_widgets['range_vectors_min_label'].setEnabled(True)
+            result_widgets['scale_vectors_entry'].setEnabled(True)
+            result_widgets['range_vectors_all_entry'].setEnabled(True)
+            result_widgets['range_vectors_max_entry'].setEnabled(True)
+            result_widgets['range_vectors_min_entry'].setEnabled(True)
 
     def CreateGraphsWindow(self):
         #print("Create graphs")
