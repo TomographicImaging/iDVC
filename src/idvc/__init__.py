@@ -12,3 +12,7 @@
 
 #   Author: Laura Murgatroyd (UKRI-STFC)
 #   Author: Edoardo Pasca (UKRI-STFC)
+try:
+    import ccpi.viewer
+except ImportError as exc:
+    raise ImportError('Please `conda install "ccpi::ccpi-viewer>=22.2.0"`') from exc
