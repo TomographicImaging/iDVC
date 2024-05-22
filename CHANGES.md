@@ -1,11 +1,12 @@
 # ChangeLog
 
 ## vx.x.x
-* Add automatic registration functionality
-* Set empty pop-up menus for the main windows
-* Set Tabified widgets not to move or close
-* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost
-* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively
+* Edit registration-tab name from "Manual" to "Initial" #
+* Add automatic registration functionality #304
+* Set empty pop-up menus for the main windows #217
+* Set Tabified widgets not to move or close #226 #217
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost #226 #217
+* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively #218
 * Added argument parser to idvc command. This allows the user to specify the debugging level
 * Add workaround for box clipping due to VTK behaviour change from 9.1. Removed requirement for VTK 8.1.2
 * add build directory to gitignore
