@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
-* Edit registration-tab name from "Manual" to "Initial" #
+* Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217
 * Set Tabified widgets not to move or close #226 #217
