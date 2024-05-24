@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
-* Edit "degrees of freedom" widget to be "optimisation parameters" #242
+* Edit "degrees of freedom" widget to be "optimisation parameters" #254
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217
