@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
         else:
             self.CreateSessionSelector("new window")
 
-        self.translate = None
+        self.translate = vtk.vtkImageTranslateExtent()
         self.subtract = vtk.vtkImageMathematics()
         self.vis_widget_reg = VisualisationWidget(self, viewer2D)
 
@@ -776,6 +776,12 @@ class MainWindow(QMainWindow):
             self.visualise()
 
     def visualise(self):
+        """If no data is visualised it outputs an error.
+        Creates a loading progress window.
+        Uploads and sdisplays the ref image in the 2D and 3D viewers.
+        Adds observers to 2D viewer.
+        Links the viewers.
+        Resets attributes `current slice` and `orintation`."""
         if self.ref_image_data is None:
             #self.progress_window.setValue(100)
             self.warningDialog('Unable to load image.','Error', 'Image is in incorrect format to perform run of DVC. Please load a different image.')
@@ -1045,7 +1051,9 @@ class MainWindow(QMainWindow):
 
 # Registration Panel:
     def CreateRegistrationPanel(self):
-        """Create the Registration Dockable Widget"""
+        """Create the Registration Dockable Widget
+        
+        When the visibility changes calls displayRegistrationViewer"""
 
         self.registration_panel = generateUIDockParameters(self, '2 - Manual Registration')
         dockWidget = self.registration_panel[0]
@@ -1208,6 +1216,14 @@ It is used as a global starting point and a translation reference."
         self.registration_parameters = rp
 
     def createRegistrationViewer(self):
+        """Creates the viewer for the registration 
+        i.e. the diff image is shown for the selected area
+        Sets the viewer 2D and 3D to not visible.
+        Adds observer forward and backwards mouse wheel to span the slice.
+        Adds observer press key to updates the plane.
+        Adds observer press key to change orientation.
+        Adds observer press key to shift images with respect to each other.
+        """
         # print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
@@ -1249,6 +1265,7 @@ It is used as a global starting point and a translation reference."
 
         self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.OnKeyPressEventForRegistration, 1.5) #Happens before viewer KeyPressEvent (higher priority)
         self.vis_widget_reg.frame.viewer.style.AddObserver('KeyPressEvent', self.AfterKeyPressEventForRegistration, 0.5) #Happens after viewer KeyPressEvent (lower priority)
+        print(self.vis_widget_reg.frame.viewer.style)
 
     def displayRegistrationViewer(self,registration_open):
         
@@ -1829,6 +1846,7 @@ It is used as a global starting point and a translation reference."
         self.centerOnPointZero() 
 
     def resetRegistrationForSession(self):
+        """Calls displayRegistrationViewer and sets False."""
         if self.vis_widget_reg != []:
             #print("About to del image reg viewer")
             self.displayRegistrationViewer(False)
@@ -1973,17 +1991,21 @@ It is used as a global starting point and a translation reference."
             self.progress_window.close()
         
     def OnKeyPressEventForRegistration(self, interactor, event):
+        
         key_code = interactor.GetKeyCode()
+        print("OnKeyPressEventForRegistrations",key_code)
 
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
             self.translate_image_reg(key_code, event)
             self.reg_viewer_update(type = 'manual registration')
+            print("key pressed")
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
         key_code = interactor.GetKeyCode()
+        print("AfterKeyPressEventForRegistration",key_code)
         rp = self.registration_parameters
 
         if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
@@ -3925,7 +3947,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     def OnKeyPressEventForVectors(self, interactor, event):
         #Vectors have to be recreated on the 2D viewer when switching orientation
         key_code = interactor.GetKeyCode()
-        #print("OnKeyPressEventForVectors", key_code)
+        print("OnKeyPressEventForVectors", key_code)
         if key_code in ['x','y','z'] and \
             interactor._viewer.GetActor('arrow_shaft_actor') and interactor._viewer.GetActor('arrowhead_actor'):
                 if interactor._viewer.GetActor('arrow_shaft_actor').GetVisibility() and interactor._viewer.GetActor('arrowhead_actor').GetVisibility():
