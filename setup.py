@@ -20,7 +20,7 @@ import subprocess
 
 def version2pep440(version):
     '''normalises the version from git describe to pep440
-    
+
     https://www.python.org/dev/peps/pep-0440/#id29
     '''
     if version[0] == 'v':
@@ -55,12 +55,22 @@ with open(fname, 'w') as f:
     f.write('version = \'{}\''.format(dversion))
 
 setup(
-      name = "idvc",
-      description = 'CCPi DVC Configurator',
-	  version = dversion,
-	  packages = {'idvc', 'idvc.ui', 'idvc.utils'},
-      package_dir = {'idvc': os.path.join('src','idvc')},
-      package_data = {'idvc':['DVCIconSquare.png']},
+      name="idvc",
+      description='CCPi DVC Configurator',
+	  version=dversion,
+	  packages={'idvc', 'idvc.ui', 'idvc.utils'},
+      package_dir={'idvc': os.path.join('src','idvc')},
+      package_data={'idvc':['DVCIconSquare.png']},
+      install_requires=[
+        "scipy",
+        # "ccpi-viewer>=22.2.0", # TODO: put on pypi
+        "natsort",
+        "docopt",
+        "matplotlib",
+        # "openmp; platform_system=='Darwin'",
+        "qdarkstyle",
+        "vtk",
+      ],
       # metadata for upload to PyPI
       author="Edoardo Pasca, Laura Murgatroyd",
       author_email="edo.paskino@gmail.com",
