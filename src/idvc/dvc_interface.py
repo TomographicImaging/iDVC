@@ -428,8 +428,15 @@ class MainWindow(QMainWindow):
             "9. Once satisfied with the registration, move to the next tab. Be aware that point 0 is the point from which DVC will start."
             )
         
-        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
-            "When you are happy with your region click 'Create Mask'.")
+        self.help_text.append(
+            "1. If you already have a mask file, upload it.\n"
+            "2. To create a new mask click 'Start tracing'. Click on the image and trace a freehand region while holding the mouse button.\n"
+            "3. If you are not happy with the tracing, click on 'Stop tracing' and then 'Start tracing'.\n"
+            "4. If you wish to extend the mask in 3D click on 'Extend mask' and select the number of slices above and below.\n"
+            "5. When you are happy with your region click 'Create Mask'.\n"
+            "6. Save the mask and name it in the pop-up dialog.\n"
+            "7. To restart the mask creation, click on 'Clear mask' and repeat 2-6.\n"
+            "8. Finish the process by selecting the saved mask and loading it.")
         
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
