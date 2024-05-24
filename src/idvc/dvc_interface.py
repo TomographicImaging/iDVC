@@ -1042,7 +1042,7 @@ class MainWindow(QMainWindow):
     def CreateRegistrationPanel(self):
         """Create the Registration Dockable Widget"""
 
-        self.registration_panel = generateUIDockParameters(self, '2 - Manual Registration')
+        self.registration_panel = generateUIDockParameters(self, '2 - Initial Registration')
         dockWidget = self.registration_panel[0]
         dockWidget.setObjectName("RegistrationPanel")
         groupBox = self.registration_panel[5]
@@ -1739,7 +1739,7 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        """It shows the registration difference volume in the viewer and sets up the tab for the manual registration. 
+        """It shows the registration difference volume in the viewer and sets up the tab for the registration. 
         It runs the automatic registration and shows the results and the extra buttons."""
         self.manualRegistration()
         automatic_reg_worker = Worker(self.automatic_reg_run)
@@ -1937,7 +1937,7 @@ It is used as a global starting point and a translation reference."
         type : str
             If 'starting registration' then the registration viewer is centred on the slice that contains point 0.
             This is the case if the "Start Registration" button is pressed. Otherwise, when type=None we are in the middle of 
-            manual registration and the viewer is centred on the current slice
+            registration and the viewer is centred on the current slice
             If 'manual registration' then the translation widgets are updated with the current translation on each axis.
             If 'automatic registration' then the translation widgets are not updated.
         '''
