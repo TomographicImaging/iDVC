@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
-* Set registration-box-size default and help text #258
+* Set registration-box-size default and help text #259
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217
