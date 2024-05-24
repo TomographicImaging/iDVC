@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Make dimensionality 3D the default #256
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217

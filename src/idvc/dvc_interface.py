@@ -2672,7 +2672,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
-        self.dimensionalityValue.setCurrentIndex(1)
+        self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
         self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
 A 3D pointcloud is created within the full extent of the mask.")
