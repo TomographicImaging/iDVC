@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217
