@@ -14,6 +14,7 @@
 #   Author: Edoardo Pasca (UKRI-STFC)
 
 import os
+from openpyxl import load_workbook
 import sys
 import PySide2
 from PySide2 import QtCore, QtGui, QtWidgets
@@ -2894,7 +2895,8 @@ Each line in the tab delimited file contains an integer point label followed by 
 2   300   750.2  209\n\
 etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
-The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.")
+The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
+File format allowed: 'txt', 'csv, 'xlxs'.")
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
@@ -3071,6 +3073,9 @@ The first point is significant, as it is used as a global starting point and ref
                 self.overlapXValueEntry.setEnabled(False)
 
     def select_pointcloud(self): #, label):
+        """Opens a dialog to select the pointcloud from a file. 
+        Runs this in a worker.
+        Sets the attribut `self.pointcloud_is` to 'loaded'."""
         dialogue = QFileDialog()
         self.roi = None
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
@@ -3413,6 +3418,10 @@ The first point is significant, as it is used as a global starting point and ref
         return True
             
     def loadPointCloud(self, *args, **kwargs):
+        """Loads a pointcloud from file. 
+        File formats allowed are 'txt', 'csv', 'xlxs'. 
+        Else, an error dialog is opened.
+        """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
         progress_callback = kwargs.get('progress_callback', None)
@@ -3420,8 +3429,14 @@ The first point is significant, as it is used as a global starting point and ref
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
-
-        points = np.loadtxt(self.roi)
+        if pointcloud_file.endswith('.txt'):
+            points = np.loadtxt(pointcloud_file)
+        elif pointcloud_file.endswith('.csv'):
+            points = np.genfromtxt(pointcloud_file, delimiter=',')
+        elif pointcloud_file.endswith('.xlsx'):
+            workbook = load_workbook(pointcloud_file, read_only=True)
+            sheet = workbook.active
+            points = np.array(list(sheet.values))
         # except ValueError as ve:
         #     print(ve)
         #     return
