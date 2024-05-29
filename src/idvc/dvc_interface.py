@@ -3731,6 +3731,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
+        multiplier = self.result_widgets['scale_vectors_entry'].value()
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
             grid = vtk.vtkUnstructuredGrid()
@@ -3815,9 +3816,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             pmapper = vtk.vtkPolyDataMapper()
             pmapper.SetInputData(pointPolyData)
             pmapper.SetInputConnection(viewer_widget.PlaneClipper.GetClippedData('arrow_pc_actor').GetOutputPort())
-            pmapper.SetScalarRange(acolor.GetRange())
+            pmapper.SetScalarRange(tuple(i/multiplier for i in acolor.GetRange()))
             pmapper.SetLookupTable(lut)
-
+            print("acolor2d"+str(acolor.GetRange()))
             point_actor = vtk.vtkActor()
             point_actor.SetMapper(pmapper)
             point_actor.GetProperty().SetPointSize(5)
@@ -3828,6 +3829,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             linesPolyData.SetVerts( arrow_shaft_centres ) 
             linesPolyData.GetPointData().SetVectors(arrow_shaft_vectors) 
             linesPolyData.GetPointData().SetScalars(acolor)
+            print("acolor is"+str(acolor))
 
             line_source = vtk.vtkLineSource()
 
@@ -3937,6 +3939,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
         viewer = viewer_widget.frame.viewer
+        multiplier = self.result_widgets['scale_vectors_entry'].value()
         if isinstance(viewer, viewer3D):
             v = viewer
             arrow = vtk.vtkDoubleArray()
@@ -3955,6 +3958,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
+            print("lut as created"+str(lut))
         
             #2. Add the points to a vtkPolyData.
             pointPolyData = vtk.vtkPolyData()
@@ -3991,8 +3995,12 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             pmapper = vtk.vtkPolyDataMapper()
             pmapper.SetInputData(pointPolyData)
             pmapper.SelectColorArray(0)
-            pmapper.SetScalarRange(acolor.GetRange())
+            print(type(acolor.GetRange()))
+            pmapper.SetScalarRange(tuple(i/multiplier for i in acolor.GetRange()))
+            print("acolor"+str(acolor.GetRange()))
+            print("lut before set"+str(lut))
             pmapper.SetLookupTable(lut)
+            print("lut after set"+str(lut))
 
             pactor = vtk.vtkActor()
             pactor.SetMapper(pmapper)
@@ -4004,6 +4012,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             actor_list['arrows_actor'] = arrow_actor
 
             self.vectors_lut3D = lut
+            print("lut after modifications"+str(lut))
             
             v.updatePipeline()
 
@@ -4702,7 +4711,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         result_widgets['range_vectors_min_label'] =  QLabel(groupBox)
         result_widgets['range_vectors_min_label'].setText("Vector Range Min:")
-        result_widgets['range_vectors_min_label'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        result_widgets['range_vectors_min_label'].setToolTip("Adjust the range of the vectors visualised.")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['range_vectors_min_label'])
 
         single_step = 0.00001
@@ -4711,7 +4720,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         result_widgets['range_vectors_min_entry'].setMaximum(1.-single_step)
         result_widgets['range_vectors_min_entry'].setMinimum(0.0)
         result_widgets['range_vectors_min_entry'].setValue(0.00)
-        result_widgets['range_vectors_min_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
+        result_widgets['range_vectors_min_entry'].setToolTip("Adjust the range of the vectors visualised.")
         result_widgets['range_vectors_min_entry'].setEnabled(False)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_min_entry'])
         widgetno += 1
