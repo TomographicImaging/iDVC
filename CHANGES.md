@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Allow csv and xlxs formats in point-cloud file & add error dialog #262 
 * fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
