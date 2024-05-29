@@ -100,6 +100,7 @@ import logging
 
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 
+allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx')
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -3074,7 +3075,7 @@ File format allowed: 'txt', 'csv, 'xlxs'.")
 
     def select_pointcloud(self): #, label):
         """Opens a dialog to select the pointcloud from a file. 
-        Runs this in a worker.
+        Runs the creation or loading of the point cloud in a worker.
         Sets the attribut `self.pointcloud_is` to 'loaded'."""
         dialogue = QFileDialog()
         self.roi = None
@@ -3093,6 +3094,8 @@ File format allowed: 'txt', 'csv, 'xlxs'.")
             self.pointcloud_is = 'loaded'
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
+        """Runs the worker to create or load the point cloud.
+        If the format of the point-cloud file is not in the allowed list it displays an error dialog."""
         if type == "create":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
@@ -3104,8 +3107,15 @@ File format allowed: 'txt', 'csv, 'xlxs'.")
             self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
         elif type == "load pointcloud file":
             self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
-            self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
+            if self.roi.endswith(allowed_point_cloud_file_formats):
+                self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
+                self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
+            else:
+                error_title = "FILE FORMAT ERROR"
+                error_text = f"Error reading the point-cloud file {self.roi}. Allowed formats are {allowed_point_cloud_file_formats}."
+                self.displayFileErrorDialog(message=error_text, title=error_title)
+                return
+                
         elif type == "create without loading":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
@@ -3420,7 +3430,6 @@ File format allowed: 'txt', 'csv, 'xlxs'.")
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
         File formats allowed are 'txt', 'csv', 'xlxs'. 
-        Else, an error dialog is opened.
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
