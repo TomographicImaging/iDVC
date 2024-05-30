@@ -12,10 +12,14 @@ The first step of the DVC analysis is to line up the reference and correlate ima
 The Point 0 Location
 ~~~~~~~~~~~~~~~~~~~~
 
-First you will need to click on **Select point 0**. This will allow you to press shift and left click on a point in the image. Then change the size of the registration box.
-If you scroll through slices of the image, clicking **Center on Point 0** will return you to the slice where point 0 is.
-You should try to select point 0 to be at the position you would like to start your DVC analysis from. Later when you select your mask, if your point 0 lies within the mask then when you generate a point cloud, it will guarantee that a point lies at the location of point 0. Then this will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
-Otherwise, a random point in the cloud will be selected to begin with.
+First, the button **Select point 0** needs to be clicked. Then, point 0 is selected by pressing "shift" and left clicking on a point in the image. 
+Next, the size of the registration box can be edited.
+The slice where point 0 lies can always be visualised by clicking on the button **Center on Point 0**. In particular, this becomes useful after other slices of the 3D image have been visualised.
+
+Point 0 will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
+Point 0 is used in the "Point Cloud" tab, where a point cloud is loaded or generated from the mask selected in the "Mask" tab. 
+If point 0 does not lie within the mask, it will be added as the first point in the cloud.
+
 
 Registering the Images
 ~~~~~~~~~~~~~~~~~~~~~~
