@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
-* Edit documentation on point 0 in dvc steps #263
+* Edit documentation on point 0 in dvc steps #264
 * fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
