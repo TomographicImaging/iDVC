@@ -15,7 +15,9 @@
 import numpy as np
 
 def extract_point_cloud_from_inp_file(inp_file_path):
-    """Opens the inp file, looks for line comments starting with ** and removes them. 
+    """Returns the point cloud from the nodes of an inp file.
+    
+    Opens the inp file, looks for line comments starting with ** and removes them. 
     Finds the first line containing the word '*NODE' and reads the lines below up to the next appearance of '*'.
     
     Returns
