@@ -97,7 +97,7 @@ __version__ = gui_version.version
 
 import logging
 
-
+from idvc.utils.AutomaticRegistration import AutomaticRegistration
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -312,7 +312,6 @@ class MainWindow(QMainWindow):
         for wdg in self.findChildren(QTabBar):
             wdg.setMovable(False)
         
-
     def CreateViewerSettingsPanel(self):
         self.viewer_settings_panel = generateUIDockParameters(self, "Viewer Settings")
         dockWidget = self.viewer_settings_panel[0]
@@ -376,7 +375,6 @@ class MainWindow(QMainWindow):
 
         self.visualisation_setting_widgets = vs_widgets
         
-
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
         vs_widgets = self.visualisation_setting_widgets
@@ -407,7 +405,6 @@ class MainWindow(QMainWindow):
 
                     viewer.updatePipeline()
 
-
     def CreateHelpPanel(self):
         help_panel = generateUIDockParameters(self, "Help")
         dockWidget = help_panel[0]
@@ -420,14 +417,20 @@ class MainWindow(QMainWindow):
         "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append(
-            "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
-            "Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'.\n"
-            "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
+            "1. Click 'Select point 0' to choose a point and region for the registration.\n"
+            "2. Adjust the registration box size as needed.\n"
+            "3. Click 'Start Registration' to begin the registration process.\n"
+            "4. The suggested registration will be displayed, and the difference volume of the registered image will be shown in the viewer.\n"
+            "5. Use the mouse wheel to navigate in the third direction, and the 'x', 'y', or 'z' keys to control the slicing orientation.\n"
+            "6. To manually adjust the registration, click on the image and move the two images relative to each other using the 'j' (up), 'n' (down), 'b' (right), and 'm' (left) keys.\n"
+            "7. You can 'Reset' the registration values or 'Set to Automatic Registration'.\n"
+            "8. You can 'Confirm Registration' or 'Cancel'.\n"
+            "9. Once satisfied with the registration, move to the next tab. Be aware that point 0 is the point from which DVC will start."
             )
         
         self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
             "When you are happy with your region click 'Create Mask'.")
-
+        
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
             "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
@@ -444,8 +447,6 @@ class MainWindow(QMainWindow):
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
         formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
-
-
 
     def displayHelp(self, open, panel_no = None):
         if open:
@@ -665,7 +666,6 @@ class MainWindow(QMainWindow):
                 
         self.progress_window.setValue(100)
 
-
     def displayFileErrorDialog(self, message, title, action_button=None):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Critical)
@@ -876,7 +876,6 @@ class MainWindow(QMainWindow):
         else:
             self.progress_window.canceled.connect(cancel)
 
-
     def setup2DPointCloudPipeline(self):
 
         self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_actor', self.polydata_masker.GetOutputPort())
@@ -989,7 +988,6 @@ class MainWindow(QMainWindow):
         self.vis_widget_2D.frame.viewer.AddActor(sphere_actor, 'subvol_actor')
         self.cubesphere.Update()
         
-
     def setup3DPointCloudPipeline(self):
         #polydata_masker = self.polydata_masker
 
@@ -1040,11 +1038,11 @@ class MainWindow(QMainWindow):
         self.actors_3D['pc_actor'] = actor
         self.actors_3D ['subvol_actor'] = sphere_actor
 
-#Registration Panel:
+# Registration Panel:
     def CreateRegistrationPanel(self):
-        '''Create the Registration Dockable Widget'''
+        """Create the Registration Dockable Widget"""
 
-        self.registration_panel = generateUIDockParameters(self, '2 - Manual Registration')
+        self.registration_panel = generateUIDockParameters(self, '2 - Initial Registration')
         dockWidget = self.registration_panel[0]
         dockWidget.setObjectName("RegistrationPanel")
         groupBox = self.registration_panel[5]
@@ -1169,6 +1167,36 @@ It is used as a global starting point and a translation reference."
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['start_registration_button'])
         widgetno += 1
 
+        # Add cancel automatic registration button
+        rp['cancel_auto_reg_button'] = QPushButton(groupBox)
+        rp['cancel_auto_reg_button'].setText("Reset")
+        rp['cancel_auto_reg_button'].setEnabled(True)
+        rp['cancel_auto_reg_button'].clicked.connect(self.cancelAutomaticRegistration)
+        formLayout.insertRow(widgetno - 1, '', rp['cancel_auto_reg_button'])
+        widgetno += 1
+        rp['cancel_auto_reg_button'].setVisible(False)
+
+        # Add set to automatic registration button
+        rp['set_auto_reg_button'] = QPushButton(groupBox)
+        rp['set_auto_reg_label'] = QLabel(groupBox)
+        rp['set_auto_reg_button'].setText("Set to Automatic Registration")
+        rp['set_auto_reg_label'].setText("Automatic registration [0, 0, 0]")
+        rp['set_auto_reg_button'].setEnabled(True)
+        rp['set_auto_reg_button'].clicked.connect(self.setToAutomaticRegistration)
+        formLayout.insertRow(widgetno - 1, rp['set_auto_reg_label'] , rp['set_auto_reg_button'])
+        widgetno += 1
+        rp['set_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_label'].setVisible(False)
+
+        # Add cancel registration button
+        rp['cancel_reg_button'] = QPushButton(groupBox)
+        rp['cancel_reg_button'].setText("Cancel")
+        rp['cancel_reg_button'].setEnabled(True)
+        rp['cancel_reg_button'].clicked.connect(self.cancelRegistration)
+        formLayout.insertRow(widgetno, '', rp['cancel_reg_button'])
+        widgetno += 1
+        rp['cancel_reg_button'].setVisible(False)
+
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
@@ -1271,7 +1299,13 @@ It is used as a global starting point and a translation reference."
         
         else:
             self.warningDialog("Load an image on the viewer first.", "Error")
-        
+    
+    def openFinishRegistrationDialog(self):       
+        self.warningDialog(
+            window_title='Registration Completed',
+            message='Move to the next tab or restart the registration.'
+            )
+
     def OnLeftButtonPressEventForPointZero(self, interactor, event):
         # print('OnLeftButtonPressEventForPointZero', event)
         v = self.vis_widget_reg.frame.viewer
@@ -1284,9 +1318,9 @@ It is used as a global starting point and a translation reference."
             self.createPoint0(p0l)
 
     def updatePoint0Display(self):
-        '''Updates the point 0 vtk.vtkCursor3D on the viewer to be centred
+        """Updates the point 0 vtk.vtkCursor3D on the viewer to be centred
         on the current value of self.point0_world_coords (returned by getPoint0WorldCoords()).
-        '''
+        """
         #point0 , point0Mapper, point0Actor
         vox = self.getPoint0WorldCoords()
         for point0 in self.point0:
@@ -1359,12 +1393,12 @@ It is used as a global starting point and a translation reference."
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
     def centerOnPointZero(self):
-        '''Centers the viewing slice on the registration viewer where Point 0 is.
+        """Centers the viewing slice on the registration viewer where Point 0 is.
         This makes sure that the point 0 is visible on the viewer, in the slicing direction.
         E.g. if point0 is at (5,6,7) and we are slicing in the Z direction, the viewer will 
         display slice Z=7.
         Produces a warning dialog if point0 has not yet been selected.
-        '''
+        """
         if hasattr(self, 'vis_widget_reg'):
             v = self.vis_widget_reg.frame.viewer
 
@@ -1383,7 +1417,6 @@ It is used as a global starting point and a translation reference."
                     self.warningDialog("Choose a Point 0 first.", "Error")
             else:
                 self.warningDialog("Choose a Point 0 first.", "Error")
-
 
     def displayRegistrationSelection(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1502,78 +1535,88 @@ It is used as a global starting point and a translation reference."
 
     def OnStartStopRegistrationPushed(self):
         ''' This method is triggered by pressing the "Start Registration" button or the "Confirm Registration" button.
+        When the button is pressed again after the first registration, the button text is "Restart registration".
+        '''
+        rp = self.registration_parameters
+        if "Restart registration" in rp['start_registration_button'].text():
+            self.translate = None
+            rp['translate_X_entry'].setText("0")
+            rp['translate_Y_entry'].setText("0")
+            rp['translate_Z_entry'].setText("0")
+       
+        if hasattr(self, 'vis_widget_reg'):
+            self.UpdateViewerSettingsPanelForRegistration()
+            if rp['start_registration_button'].isChecked(): # "Start Registration" has been pressed
+                self.startRegistration()            
+            else: # "Confirm Registration" has been pressed
+                self.confirmRegistration()     
+                self.openFinishRegistrationDialog()        
+
+    def startRegistration(self):
+        """
         If "Start Registration" is pressed:
         - the text on the button is changed to "Confirm Registration"
         - the widgets for setting point0, the registration box size and the translation are disabled
         - the size of the registration box may be updated to make sure it does not exceed the image extent
         - sets up self.translate, which is a vtk.vtkImageTranslateExtent() object, with translation values linked to the values in the translation widgets
         - calls LoadImagesAndCompleteRegistration()
+        """
+        rp = self.registration_parameters
+        # check if we can make registration box, by checking
+        # if the size of registration box is smaller than the difference 
+        # between the current slice and the extent on the current dimension:
+        registration_box_size = rp['registration_box_size_entry'].value()
+        current_orientation = self.vis_widget_reg.frame.viewer.style.GetSliceOrientation()
+        current_slice = self.vis_widget_reg.frame.viewer.getActiveSlice()
+        extent_on_axis = self.vis_widget_reg.frame.viewer.img3D.GetExtent()[2*current_orientation+1] -1
 
-        
-        Alternatively if "Confirm Registration" is pressed:
+        max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])*2
+
+        # if we can't make the registration box with the set size, then update
+        # the size to the largest size possible:
+        if max_size_of_box < registration_box_size:
+            rp['registration_box_size_entry'].setValue(max_size_of_box)
+        self.registration_parameters['start_registration_button'].setText("Confirm Registration")
+        rp['cancel_reg_button'].setVisible(True)
+        rp['registration_box_size_entry'].setEnabled(False)
+        rp['select_point_zero'].setChecked(False)
+        rp['select_point_zero'].setCheckable(False)
+        rp['translate_X_entry'].setEnabled(False)
+        rp['translate_Y_entry'].setEnabled(False)
+        rp['translate_Z_entry'].setEnabled(False)
+        # setup the appropriate stuff to run the registration
+        if not hasattr(self, 'translate'):
+            self.translate = vtk.vtkImageTranslateExtent()
+        elif self.translate is None:
+            self.translate = vtk.vtkImageTranslateExtent()
+        #self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
+        self.LoadImagesAndCompleteRegistration()
+
+    def confirmRegistration(self):
+        """
+        if "Confirm Registration" is pressed:
         - the text on the button is changed to "Start Registration"
         - the widgets for setting point0, the registration box size and the translation are enabled
         - the full dimension (possibly downsampled) reference image is displayed on the viewer.
-        '''
-        if hasattr(self, 'vis_widget_reg'):
-            self.UpdateViewerSettingsPanelForRegistration()
-            rp = self.registration_parameters
-            v = self.vis_widget_reg.frame.viewer
-            if rp['start_registration_button'].isChecked(): # "Start Registration" has been pressed
-
-                # check if we can make registration box, by checking
-                # if the size of registration box is smaller than the difference 
-                # between the current slice and the extent on the current dimension:
-                registration_box_size = rp['registration_box_size_entry'].value()
-                current_orientation = self.vis_widget_reg.frame.viewer.style.GetSliceOrientation()
-                current_slice = self.vis_widget_reg.frame.viewer.getActiveSlice()
-                extent_on_axis = self.vis_widget_reg.frame.viewer.img3D.GetExtent()[2*current_orientation+1] -1
-
-                max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])*2
-
-                # if we can't make the registration box with the set size, then update
-                # the size to the largest size possible:
-                if max_size_of_box < registration_box_size:
-                    rp['registration_box_size_entry'].setValue(max_size_of_box)
-                
-                # print ("Start Registration Checked")
-                rp['start_registration_button'].setText("Confirm Registration")
-                rp['registration_box_size_entry'].setEnabled(False)
-                
-                rp['select_point_zero'].setChecked(False)
-                rp['select_point_zero'].setCheckable(False)
-                rp['translate_X_entry'].setEnabled(False)
-                rp['translate_Y_entry'].setEnabled(False)
-                rp['translate_Z_entry'].setEnabled(False)
-
-                # setup the appropriate stuff to run the registration
-                if not hasattr(self, 'translate'):
-                    self.translate = vtk.vtkImageTranslateExtent()
-                elif self.translate is None:
-                    self.translate = vtk.vtkImageTranslateExtent()
-                self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
-
-                self.LoadImagesAndCompleteRegistration()
-                
-            
-            else: # "Confirm Registration" has been pressed
-                # print ("Start Registration Unchecked")
-                rp['start_registration_button'].setText("Start Registration")
-                rp['registration_box_size_entry'].setEnabled(True)
-                rp['select_point_zero'].setCheckable(True)
-
-                rp['select_point_zero'].setChecked(False)
-                rp['translate_X_entry'].setEnabled(True)
-                rp['translate_Y_entry'].setEnabled(True)
-                rp['translate_Z_entry'].setEnabled(True)
-                
-                v.setInput3DData(self.ref_image_data)
-                v.style.UpdatePipeline()
-                if rp['point_zero_entry'].text() != "":
-                    self.createPoint0(self.getPoint0WorldCoords())
+        """
+        rp = self.registration_parameters
+        v = self.vis_widget_reg.frame.viewer
+        self.registration_parameters['start_registration_button'].setText("Restart registration")
+        rp['registration_box_size_entry'].setEnabled(True)
+        rp['select_point_zero'].setCheckable(True)
+        rp['select_point_zero'].setChecked(False)
+        #rp['translate_X_entry'].setEnabled(True)
+        #rp['translate_Y_entry'].setEnabled(True)
+        #rp['translate_Z_entry'].setEnabled(True)
+        rp['cancel_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_label'].setVisible(False)
+        v.setInput3DData(self.ref_image_data)
+        v.style.UpdatePipeline()
+        if rp['point_zero_entry'].text() != "":
+            self.createPoint0(self.getPoint0WorldCoords())
 
     def UpdateViewerSettingsPanelForRegistration(self):
-        # print("UpdateViewerSettings")
         vs_widgets = self.visualisation_setting_widgets
         rp = self.registration_parameters
         if rp['start_registration_button'].isChecked():
@@ -1625,11 +1668,7 @@ It is used as a global starting point and a translation reference."
             previous_reg_box_extent = None
 
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
-
-        target_z_extent = [reg_box_extent[4], reg_box_extent[5]]
-        if target_z_extent[0] <0:
-            target_z_extent[0] = 0
-        target_z_extent = tuple(target_z_extent)
+        target_z_extent = tuple(self.enlarge_extent(2))
 
         self.target_cropped_image_z_extent = target_z_extent
 
@@ -1661,14 +1700,37 @@ It is used as a global starting point and a translation reference."
                 self.unsampled_ref_image_data = self.ref_image_data 
                 self.LoadCorrImageForReg(crop_corr_image=True)
             else:
-                self.completeRegistration()
+                if previous_reg_box_extent != reg_box_extent:
+                    self.LoadCorrImageForReg(crop_corr_image=True)
+                else:
+                    self.completeRegistration()
+
+    def enlarge_extent(self, dim):
+        """
+        Given the regitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
+        it returns 2*the box size in the direction specified by `dim`.         
+        If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
+        and positive directions.
+        
+        Parameters:
+        dim : int
+            Dimension along which to calculate the extent.
+        """
+        point0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+        if target_extent[0] < 0:
+            target_extent[0] = 0 
+        if target_extent[1] > self.unsampled_image_dimensions[dim]:
+            target_extent[1] = self.unsampled_image_dimensions[dim] 
+        return target_extent
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
-        '''
+        """
         Loads the full resolution correlate image, cropped on the Z axis to the current registration box extent.
         Saves the result in self.unsampled_corr_image_data.
         Then runs self.completeRegistration()
-        '''
+        """
         origin = self.target_cropped_image_origin 
         z_extent = self.target_cropped_image_z_extent
 
@@ -1677,17 +1739,93 @@ It is used as a global starting point and a translation reference."
                                          crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
-        '''
+        """It shows the registration difference volume in the viewer and sets up the tab for the registration. 
+        It runs the automatic registration and shows the results and the extra buttons."""
+        self.manualRegistration()
+        automatic_reg_worker = Worker(self.automatic_reg_run)
+        automatic_reg_worker.signals.result.connect(self.setRegistrationWidgetsFromWorker)
+        self.threadpool.start(automatic_reg_worker)
+
+    def setRegistrationWidgetsFromWorker(self,result):
+        """
+        Flips the result from the automatic registration class as numpy and vtk have different conventions.
+        Updates widgets and viewer by calling `setRegistrationWidgets`.
+        Updates the buttons.
+        """
+        self.auto_reg_result = np.flip(result)
+        self.setRegistrationWidgets(self.auto_reg_result)
+        rp = self.registration_parameters
+        rp['set_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
+        rp['cancel_auto_reg_button'].setVisible(True)
+        rp['set_auto_reg_label'].setVisible(True)
+        rp['set_auto_reg_button'].setVisible(True)
+        
+    def setRegistrationWidgets(self, array):
+        """
+        Updates the widgets and translates the viewer with the values stored in `array`.
+        """
+        
+        # update widgets
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(array[0])) 
+        rp['translate_Y_entry'].setText(str(array[1])) 
+        rp['translate_Z_entry'].setText(str(array[2]))
+        # update viewer
+        self.translate.SetTranslation(-int(array[0]),-int(array[1]),-int(array[2]))
+        self.translate.Update()
+        self.subtract.Update()
+        self.reg_viewer_update(type = 'after automatic registration')
+
+    def setRegistrationWidgetsShift(self, shift):   
+        """
+        Gets the total translation from the widgets.
+        Updates the widgets and translates the viewer with the extra `shift`.
+        """
+        total_translation = self.getRegistrationTranslation()
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
+        rp['translate_Y_entry'].setText(str(total_translation[1] + shift[1])) 
+        rp['translate_Z_entry'].setText(str(total_translation[2] + shift[2]))
+        self.translate.SetTranslation(-int(total_translation[0] + shift[0]),-int(total_translation[1] + shift[1]),-int(total_translation[2] + shift[2]))
+        self.translate.Update()
+        self.subtract.Update()
+        self.reg_viewer_update(type = 'after automatic registration')
+
+    def getRegistrationTranslation(self):
+        """Reads the current translation in the widgets and returns it."""
+        rp = self.registration_parameters
+        current_translation = np.array([int(rp['translate_X_entry'].text()),int(rp['translate_Y_entry'].text()),int(rp['translate_Z_entry'].text())])
+        return current_translation
+        
+    def cancelAutomaticRegistration(self):
+        """Resets the widgets and the viewer to no translation."""
+        rp = self.registration_parameters
+        self.setRegistrationWidgets(np.array([0,0,0]))
+
+    def cancelRegistration(self):
+        """Resets the widgets and the wiever to no translation and confirms the registration. Updates the buttons."""
+        self.cancelAutomaticRegistration()
+        self.confirmRegistration()
+        self.registration_parameters['cancel_reg_button'].setVisible(False)
+        self.registration_parameters['start_registration_button'].setChecked(False)
+
+    def setToAutomaticRegistration(self):
+        """Sets the widgets and the viewer to the translation calculated with the automatic registration procedure."""
+        rp = self.registration_parameters
+        self.setRegistrationWidgets(self.auto_reg_result)
+
+    def manualRegistration(self):
+        """
         1. Updates the point0 widget on the viewer to be centred on the location selected by the user.
         2. Translates the correlate image by the translation values set in the translation widgets, and subtracts the reference image from the translated correlate image.
         3. Updates the viewer to display the result of the subtraction.
         4. Centres the viewer on the slice that contains point 0.
-        '''
+        """
         self.updatePoint0Display()
         self.translateImages()
+        #reg viewer update makes the text 0
         self.reg_viewer_update(type = 'starting registration')
         self.centerOnPointZero() 
-
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1711,7 +1849,6 @@ It is used as a global starting point and a translation reference."
 
             if hasattr(self, 'point0_world_coords'):
                 del self.point0_world_coords
-
 
     def translateImages(self, progress_callback = None):
         '''
@@ -1757,12 +1894,9 @@ It is used as a global starting point and a translation reference."
         self.cast = [cast1, cast2]
         #progress_callback.emit(95)
 
-
-    def getRegistrationVOIs(self):            
-
-        extent = self.getRegistrationBoxExtentInWorldCoords()
-
-        #print("Registration box extent", extent )
+    def getRegistrationVOIs(self, extent = None):            
+        if extent is None:
+            extent = self.getRegistrationBoxExtentInWorldCoords()
 
         # get the selected ROI
         voi = vtk.vtkExtractVOI()
@@ -1775,8 +1909,6 @@ It is used as a global starting point and a translation reference."
         # copy the data to be registered if selection 
         data1 = vtk.vtkImageData()
         data1.DeepCopy(voi.GetOutput())
-        
-        #print ("Reading image 2")
         
         voi.SetInputData(self.unsampled_corr_image_data)
         
@@ -1794,7 +1926,6 @@ It is used as a global starting point and a translation reference."
 
         return [data1, data2]
 
-
     def reg_viewer_update(self, type = None):
         '''
         Updates the translation widgets with the current translation on each axis.
@@ -1806,15 +1937,20 @@ It is used as a global starting point and a translation reference."
         type : str
             If 'starting registration' then the registration viewer is centred on the slice that contains point 0.
             This is the case if the "Start Registration" button is pressed. Otherwise, when type=None we are in the middle of 
-            manual registration and the viewer is centred on the current slice
+            registration and the viewer is centred on the current slice
+            If 'manual registration' then the translation widgets are updated with the current translation on each axis.
+            If 'automatic registration' then the translation widgets are not updated.
         '''
-        # print("Reg viewer update")
         # update the current translation on the interface:
         rp = self.registration_parameters
-        rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
-        rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
-        rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
-
+        if type == 'after automatic registration':
+            pass
+        if type == 'manual registration':
+            rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
+            rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
+            rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
+        printme = str(self.registration_parameters['translate_X_entry'].text())
+        #print("after reg"+printme)
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
@@ -1825,47 +1961,41 @@ It is used as a global starting point and a translation reference."
 
         if type == 'starting registration':
             v.style.UpdatePipeline()
-            v.startRenderLoop()
-            # print("About to center on point0")
+            # v.startRenderLoop()
             self.centerOnPointZero()
         else:
             v.style.SetActiveSlice(round(current_slice))
             v.style.UpdatePipeline()
-            v.startRenderLoop()
+            # v.startRenderLoop()
+            v.style.Render()
 
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
             self.progress_window.close()
         
-
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        # print('OnKeyPressEventForRegistration', key_code)
 
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
             self.translate_image_reg(key_code, event)
-            self.reg_viewer_update()
-
+            self.reg_viewer_update(type = 'manual registration')
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
         key_code = interactor.GetKeyCode()
-        # print('AfterKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
 
         if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
             rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
-            self.completeRegistration()
+            self.manualRegistration()
 
-        
     def translate_image_reg(self, *args, **kwargs):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
         key_code, event = args
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        # print("Current slice", current_slice)
         trans = list(self.translate.GetTranslation())
         orientation = v.style.GetSliceOrientation()
         ij = [0,1]
@@ -1890,9 +2020,66 @@ It is used as a global starting point and a translation reference."
         self.translate.SetTranslation(*trans)
         self.translate.Update()
         self.subtract.Update()
-        #print ("Translation", trans)
 
-            
+    def automatic_reg_run(self, **kwargs):
+        """Runs the automatic registration. 
+        
+        This method prepares the arguments for the class `AutomaticRegistration` class and performs the registration process. 
+        It retrieves the images in full resolution and crops them with an extended box.
+        It evaluates the size of the box and the point zero in the box coordinate system.
+        Then, it runs the registration procedure and returns the calculated shift.
+        The class also outputs a logging file in the session directory.
+
+        Returns:
+        ----------------------------------------------------------------
+        DD3d_accumulate : np.ndarray [int, int, int]
+            The calculated 3D shift to register the two volumes.
+        """
+        # get images
+        target_x_extent = self.enlarge_extent(0)
+        target_y_extent = self.enlarge_extent(1)
+        target_z_extent = self.enlarge_extent(2)
+        extent = target_x_extent + target_y_extent + target_z_extent
+        data = self.getRegistrationVOIs(extent)
+        [image0,image1]=[Converter.vtk2numpy(el) for el in data]
+
+        # get point zero and size in the box coordinate system
+        p3d_0, size = self.find_p0_and_size()
+        # run automatic registration class
+        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, log_folder = os.path.join(working_directory, 'DVC_Sessions'))
+        automatic_registration_object.run()
+        DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
+        return DD3d_accumulate
+
+    def find_p0_and_size(self):
+        """Finds the point zero and size of the registration box in the coordinate system of the registration box 
+        and with the xyz ordering convention of `self.unsampled_ref_image_data`.
+        If the registration box is not fully included in the volumetric data, it accounts for the borders in both the negative 
+        and positive directions.
+        
+        Returns:
+        tuple: A tuple containing the point zero and size of the registration box.
+            - p3d_0 (np.ndarray) : The point zero in the registration box coordinate system.
+            - size (np.ndarray) : The size of the registration box in each dimension.
+        """
+        point0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
+        size = np.array([[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2]])
+        for dim in range(0,3):
+            extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+            size_extent = [round(point0[dim] - reg_box_size//2), round(point0[dim] + reg_box_size//2)]
+            if extent[0] < 0:
+                p3d_0[dim] = round(point0[dim])
+                size[dim][1] = size_extent[1]
+                if size_extent[0] < 0:
+                    size[dim][0] = 0
+                elif size_extent[0] > 0:
+                    size[dim][0] = size_extent[0]
+            if size_extent[1] > self.unsampled_image_dimensions[dim]:
+                size[dim][1] = size[dim][1] - size_extent[1] + self.unsampled_image_dimensions[dim]
+
+        return np.flip(p3d_0), np.flip(size, axis=0)
 
 #Mask Panel:
     def CreateMaskPanel(self):
@@ -2010,12 +2197,10 @@ It is used as a global starting point and a translation reference."
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
-
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
             self.warningDialog(window_title="Attention", 
                                message="If you do not clear the mask and draw again the app will be very sad!" )
-
 
     def ToggleTracing(self):
         '''Toggles the tracing widget for tracing the mask'''
@@ -2033,7 +2218,6 @@ It is used as a global starting point and a translation reference."
             # disable tracing
             mp_widgets['start_tracing'].setText("Start Tracing")
             viewer.imageTracer.Off()
-
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -2113,9 +2297,6 @@ It is used as a global starting point and a translation reference."
         
         # create a blank image
         dims = image_data.GetDimensions()
-        # print("Dims:" + str(dims))
-
-        #print(image_data.GetSpacing())
         
         # progress_callback.emit(40)
 
@@ -2327,7 +2508,6 @@ It is used as a global starting point and a translation reference."
                 self.MaskWorker("load mask")
             else:
                 self.warningDialog("Please select a .mha file", "Error")
-
 
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
@@ -2871,8 +3051,7 @@ The first point is significant, as it is used as a global starting point and ref
                             viewer_widget.frame.viewer.getRenderer().AddActor(subvol_actor)
                         self.actors_3D ['subvol_preview_actor'] = subvol_actor
                     viewer_widget.frame.viewer.style.UpdatePipeline()
-                # print("Added preview")
-        
+                # print("Added preview")  
 
     def updatePointCloudPanel(self):
         #updates which settings can be changed when orientation/dimensions of image changed
@@ -2907,7 +3086,6 @@ The first point is significant, as it is used as a global starting point and ref
         
         if self.roi is not None:
             self.pointcloud_is = 'loaded'
-
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
         if type == "create":
@@ -3234,7 +3412,6 @@ The first point is significant, as it is used as a global starting point and ref
 
         return True
             
-
     def loadPointCloud(self, *args, **kwargs):
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3243,7 +3420,6 @@ The first point is significant, as it is used as a global starting point and ref
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
-        #print(self.roi)
 
         points = np.loadtxt(self.roi)
         # except ValueError as ve:
@@ -3301,7 +3477,6 @@ The first point is significant, as it is used as a global starting point and ref
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
         if hasattr(self, 'num_processed_points'):
             self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
-        
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
@@ -3322,7 +3497,6 @@ The first point is significant, as it is used as a global starting point and ref
         self.DisplayNumberOfPointcloudPoints()
         self.pointcloud_is = 'loaded'
         
-
     def DisplayPointCloud(self):
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
         if self.pointCloud.GetNumberOfPoints() == 0:
@@ -3447,7 +3621,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             if hasattr(self.vis_widget_2D, 'PlaneClipper'):
                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
 
-
     def displayVectors(self,disp_file):
         self.clearPointCloud()
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
@@ -3487,8 +3660,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_max_entry'].setValue(dmax)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
     
-
-
     def _updateUIwithDisplacementVectorRange(self, dmin, dmax):
         single_step = 1e-6
 
@@ -3557,9 +3728,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer.addActor(scalar_bar)
         else:
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
-
-        
-
 
     def createVectors2D(self, displ, viewer_widget):
         viewer = viewer_widget.frame.viewer
@@ -4236,7 +4404,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.threadpool.start(self.config_worker)  
         self.progress_window.setValue(10)
         
-
     def create_run_config(self, **kwargs):
         os.chdir(tempfile.tempdir)
         progress_callback = kwargs.get('progress_callback', PrintCallback())
@@ -4435,12 +4602,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             self.progress_window.setValue(self.progress_window.value()+1)
 
-
     def finished_run(self):
         if self.run_succeeded:
             self.result_widgets['run_entry'].addItem(self.rdvc_widgets['name_entry'].text())
             self.show_run_pcs()
-
 
 
 # DVC Results Panel:
@@ -4586,7 +4751,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
      
-
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -4615,7 +4779,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].addItems(subvol_list)
         self.result_widgets['subvol_entry'].addItems(points_list)
                
-
     def LoadResultsOnViewer(self):
 
         #print("LOAD RESULTS")
@@ -4746,7 +4909,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, None)
 
-
     def save_quit_accepted(self):
         #Load Saved Session
         self.should_really_close = True
@@ -4754,7 +4916,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
         
-
     def save_quit_just_quit(self):
         event = QCloseEvent()
         self.SaveWindow.close()
@@ -4765,7 +4926,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     def save_quit_rejected(self):
         self.should_really_close = False
         self.SaveWindow.close()
-
 
     def SaveSession(self, text_value, compress, event):
         # Save window geometry and state of dockwindows
@@ -5017,7 +5177,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         for dirpath, dirnames, filenames in os.walk(folder):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
-                #print(fp)
                 temp_size += os.path.getsize(fp)
 
         while not os.path.exists(new_file_dest):
@@ -5030,7 +5189,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setValue((float(zip_size)/(float(temp_size)*ratio))*100)
             time.sleep(0.1)
 
-    
     def ShowExportProgress(self, folder, new_file_dest):
         
         self.progress_window.setValue(10)
@@ -5039,7 +5197,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         for dirpath, dirnames, filenames in os.walk(folder):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
-                    #print(fp)
                     temp_size += os.path.getsize(fp)
 
         while not os.path.exists(new_file_dest):
@@ -5051,9 +5208,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     fp = os.path.join(dirpath, f)
                     #print(fp)
                     exp_size += os.path.getsize(fp) 
-
-        #print(temp_size) 
-
 
         while temp_size != exp_size and self.progress_window.value() < 98 and self.progress_window.value() !=-1:
             # print((float(exp_size)/(float(temp_size)))*100)
@@ -5135,7 +5289,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             # dialog.move(centrex/2,centrey/2)
             dialog.open()
         
-
     def load_session_load(self):
         #Load Saved Session
         self.InitialiseSessionVars()
@@ -5487,7 +5640,6 @@ Please select the new location of the file, or move it back to where it was orig
 
         #bring image loading panel to front if it isnt already:        
         self.select_image_dock.raise_()
-
 
     def warningDialog(self, message='', window_title='', detailed_text=''):
         dialog = QMessageBox(self)
