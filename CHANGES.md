@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Allow inp format in point-cloud file #269 
 * Add `openpyxl` to recipe files #262
 * Allow csv and xlxs formats in point-cloud file & add error dialog #262 
 * fix some missing pip dependencies & update workflows & fix tests #233
