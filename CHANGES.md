@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 (#228)
 * Set empty pop-up menus for the main windows
 * Set Tabified widgets not to move or close
 * Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost.

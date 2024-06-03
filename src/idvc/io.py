@@ -983,7 +983,9 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
     return header
 
 def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback, start_progress, end_progress) ->None :
-    '''Converts a TIFF stack to a raw file'''
+    '''Converts a TIFF stack to a raw file
+    
+    if the data is not uint8 or uint16, it will be scaled to uint16'''
     reader = vtk.vtkTIFFReader()
     reader.SetOrientationType(1) # TopLeft
     with open(os.path.abspath(output_fname), 'wb') as f:
