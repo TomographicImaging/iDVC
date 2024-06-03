@@ -15,14 +15,20 @@
 import numpy as np
 
 def extract_point_cloud_from_inp_file(inp_file_path):
-    with open(inp_file_path, 'r') as inpDeck:
-        lines = [ln.strip() for ln in inpDeck.readlines()]
-        lines = [ln for ln in lines if not ln.startswith("**")]
+    """Opens the inp file, looks for line comments starting with ** and removes them. 
+    Finds the first line containing the word '*NODE' and reads the lines below up to the next appearance of '*'.
+    
+    Returns
+    -------
+    np.array of coordinates of the nodes"""
+    with open(inp_file_path, 'r') as inp_file:
+        lines = [ln.strip() for ln in inp_file.readlines()]
+        lines = [ln for ln in lines if not ln.startswith('**')]
         n_nodes= int([n for n, ln in enumerate(lines) if ln.startswith("*NODE")][0])
-        n_next= int([n + n_nodes+ 1 for n, ln in enumerate(lines[n_nodes+1:]) if ln.startswith("*")][0])
+        n_next= int([n + n_nodes + 1 for n, ln in enumerate(lines[n_nodes+1:]) if ln.startswith('*')][0])
         nodes = []
         for ln in lines[n_nodes+1:n_next]:
-            idx, x, y, z = ln.split(",")
-            nodes.append((int(idx.strip()), float(x.strip()), float(y.strip()), float(z.strip())))
+            i, x, y, z = ln.split(",")
+            nodes.append((int(i.strip()), float(x.strip()), float(y.strip()), float(z.strip())))
         nodes = np.array(nodes)
     return nodes
