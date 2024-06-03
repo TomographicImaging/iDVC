@@ -99,8 +99,10 @@ __version__ = gui_version.version
 import logging
 
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
+from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx')
+allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', 'inp')
+
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -2897,7 +2899,7 @@ Each line in the tab delimited file contains an integer point label followed by 
 etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
 The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
-File format allowed: 'txt', 'csv, 'xlxs'.")
+File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
@@ -3446,6 +3448,8 @@ File format allowed: 'txt', 'csv, 'xlxs'.")
             workbook = load_workbook(pointcloud_file, read_only=True)
             sheet = workbook.active
             points = np.array(list(sheet.values))
+        elif pointcloud_file.endswith('.inp'):
+            points =  extract_point_cloud_from_inp_file(args[0])
         # except ValueError as ve:
         #     print(ve)
         #     return
@@ -3494,6 +3498,9 @@ File format allowed: 'txt', 'csv, 'xlxs'.")
         # self.rotateYValueEntry.setText(str("{:.2f}".format(self.pointCloud_rotation[1])))
         # self.rotateZValueEntry.setText(str("{:.2f}".format(self.pointCloud_rotation[2])))
         # print("Set the values")
+
+
+    
 
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
