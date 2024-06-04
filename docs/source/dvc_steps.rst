@@ -4,32 +4,39 @@ DVC Configuration Steps
 Each panel contains a different step in the DVC configuration process.
 When moving between each panel, the Help section is updated. Additional help can be viewed by hovering the mouse over some of the buttons and labels on the interface.
 
-Manual Registration
-===================
+Initial Registration
+====================
 
-The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the **Manual Registration** tab to get started with this.
+The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the **Initial Registration** tab to get started with this.
 
 The Point 0 Location
 ~~~~~~~~~~~~~~~~~~~~
 
-First you will need to click on **Select point 0**. This will allow you to press shift and left click on a point in the image. Then change the size of the registration box.
-If you scroll through slices of the image, clicking **Center on Point 0** will return you to the slice where point 0 is.
-You should try to select point 0 to be at the position you would like to start your DVC analysis from. Later when you select your mask, if your point 0 lies within the mask then when you generate a point cloud, it will guarantee that a point lies at the location of point 0. Then this will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
-Otherwise, a random point in the cloud will be selected to begin with.
+First, the button **Select point 0** needs to be clicked. Then, point 0 is selected by pressing "shift" and left clicking on a point in the image. 
+Next, the size of the registration box can be edited.
+The slice where point 0 lies can always be visualised by clicking on the button **Center on Point 0**. In particular, this becomes useful after other slices of the 3D image have been visualised.
+
+Point 0 will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
+Point 0 is used in the "Point Cloud" tab, where a point cloud is loaded or generated from the mask selected in the "Mask" tab. 
+If point 0 does not lie within the mask, it will be added as the first point in the cloud.
+
 
 Registering the Images
 ~~~~~~~~~~~~~~~~~~~~~~
 
-You can set an initial translation if you already know some information about how the images are translated relative to each other.
+After selecting point 0 and the registration box size, the registration process is initialised by clicking on **Start Registration**. 
+This runs an automatic registration procedure and the results are displayed in the widgets **Translate X**, **Translate Y**, and **Translate Z**, as well as in the label widget **Automatic registration [...]**. 
+The viewer shows an image representing the difference between the reference volume and the correlate volume. 
+This is shown in a square with side equal to the chosen "registration box size". 
+The image can be spanned in 3D and it is initially centred on the slice embedding point 0. 
+This view can be retrieved by clicking on the button **Centre on Point 0**.
+The difference image is calculated from the full-resolution volumes, not their down-sampled versions.
+If two volumes were identical, their difference volume would result in pixels of value 0 and the viewer would show a black square. 
+Two images are registered optimally when their difference volume is as uniform as possible, and shown with large numbers of grey pixels in the viewer.
+The registration procedure can be manually adjusted by clicking on the difference image and moving the two volumes with respect to each other by using the keys: "j", "n", "b", and "m".
+The image orientation cab be changed using the "x", "y" and "z" keys, and scroll through the image slices. 
 
-When you click **Start Registration** this will crop the image to the size of the reference box you chose, centred on the point 0. It will do the same for the correlate image, and then it will subtract one image from the other, and display that on the viewer. It does this for the original images, not the down-sampled versions.
-If you were to load two identical images, then the subtraction would result in nothing, so you would just see a black square. The idea is that to register the images, you need to align them such that the subtraction results in as uniform an image as possible.
-If you have set an initial translation then the images will start off being translated relative to each other accordingly.
-
-You can then move the two images relative to each other by using the keys: j, n, b and m.
-You can also still change the orientation using the x, y and z keys, and scroll through the image slices. 
-
-Here is an example of what an image registration would look like as you begin to align the images – you can see it becomes more grey where you have a good overlap.
+An example of an optimal registration is shown below, where the difference image is largely grey.
 
 .. image:: images/registration_example_0.png
     :width: 49%
@@ -42,8 +49,13 @@ Here is an example of what an image registration would look like as you begin to
 
 :raw-html:`<br />`
 
-Once you are satisfied with the registration, click **Confirm Registration** to save the translation. This will be provided to the DVC analysis code later on.
-Then move on to the **Mask** tab. 
+Click on the button **Reset** to set the translation to [0, 0, 0].
+Click on the button **Set to Automatic Registration** to reset the translation the value of the automatic registration.
+Click on the button **Confirm Registration** when satisfied with the registration and store the translation value for the DVC analysis in the next tabs.
+Click on the button **Cancel** to terminate the registration procedure and retrieve the previous translation value.
+Click on the button **Restart registration** to restart the regitration process again.
+
+Move to the **Mask** tab only when the registration has been confirmed at least once.
 
 Mask Creation
 =============

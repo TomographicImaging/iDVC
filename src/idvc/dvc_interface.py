@@ -26,10 +26,10 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
                                QMainWindow, QMessageBox,
-                               QProgressDialog, QPushButton, QSpinBox,
+                               QProgressDialog, QPushButton, QScrollArea, QSpinBox,
                                QTabWidget, QTabBar, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
-                               QWidget)
+                               QWidget) 
 import time
 import numpy as np
 import math
@@ -103,6 +103,7 @@ from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
 allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp')
 
+allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx')
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -410,6 +411,10 @@ class MainWindow(QMainWindow):
                     viewer.updatePipeline()
 
     def CreateHelpPanel(self):
+        """Creates the help-text dock widget.
+        
+        Saves the help text for all tabs.
+        Adds a QLabel in the form of scrollable text."""
         help_panel = generateUIDockParameters(self, "Help")
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
@@ -422,7 +427,7 @@ class MainWindow(QMainWindow):
 
         self.help_text.append(
             "1. Click 'Select point 0' to choose a point and region for the registration.\n"
-            "2. Adjust the registration box size as needed.\n"
+            "2. Adjust the registration box size. The box should enclose enough material-texture details but be kept relatively small compared to the size of the image. E.g., 1/10 of one image dimension.\n"
             "3. Click 'Start Registration' to begin the registration process.\n"
             "4. The suggested registration will be displayed, and the difference volume of the registered image will be shown in the viewer.\n"
             "5. Use the mouse wheel to navigate in the third direction, and the 'x', 'y', or 'z' keys to control the slicing orientation.\n"
@@ -448,9 +453,19 @@ class MainWindow(QMainWindow):
             "You may also scale the vectors to make them larger and easier to view.")
 
         self.help_label = QLabel(groupBox)
+        scroll_area_widget = QScrollArea()
+        
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
-        formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
+
+        scroll_area_widget.setWidget(self.help_label)
+        scroll_area_widget.setFrameShape(QFrame.NoFrame)
+        scroll_area_widget.setFrameShadow(QFrame.Plain)
+        scroll_area_widget.setStyleSheet("border: 0px;")
+        scroll_area_widget.setWidgetResizable(True)
+
+
+        formLayout.setWidget(1, QFormLayout.SpanningRole, scroll_area_widget)
 
     def displayHelp(self, open, panel_no = None):
         if open:
@@ -705,6 +720,7 @@ class MainWindow(QMainWindow):
         finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
     def save_image_info(self, image_type):
+        """Sets the value of the registration box size to the 1/10 of the max dimension."""
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
@@ -716,7 +732,7 @@ class MainWindow(QMainWindow):
 
             #Update registration box size according to target size and vol bit depth
             self.registration_parameters['registration_box_size_entry'].setMaximum(maximum_value)
-            self.registration_parameters['registration_box_size_entry'].setValue(maximum_value)
+            self.registration_parameters['registration_box_size_entry'].setValue(round(np.max(self.ref_image_data.GetDimensions())/10))
         
         
         #Update mask slices above/below to be max extent of downsampled image
@@ -1579,7 +1595,7 @@ It is used as a global starting point and a translation reference."
         # if we can't make the registration box with the set size, then update
         # the size to the largest size possible:
         if max_size_of_box < registration_box_size:
-            rp['registration_box_size_entry'].setValue(max_size_of_box)
+            rp['registration_box_size_entry'].setMaximum(max_size_of_box)
         self.registration_parameters['start_registration_button'].setText("Confirm Registration")
         rp['cancel_reg_button'].setVisible(True)
         rp['registration_box_size_entry'].setEnabled(False)
@@ -2676,7 +2692,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
-        self.dimensionalityValue.setCurrentIndex(1)
+        self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
         self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
 A 3D pointcloud is created within the full extent of the mask.")
@@ -2900,6 +2916,7 @@ etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
 The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
 File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
+        
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
@@ -3450,6 +3467,7 @@ File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
             points = np.array(list(sheet.values))
         elif pointcloud_file.endswith('.inp'):
             points =  extract_point_cloud_from_inp_file(args[0])
+
         # except ValueError as ve:
         #     print(ve)
         #     return
@@ -4118,12 +4136,12 @@ Future code development will introduce methods for better management of large di
         widgetno += 1
 
         rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
-        rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
+        rdvc_widgets['run_ndof_label'].setText("Number of Optimisation Parameters")
         
-        dof_text = "Defines the degree-of-freedom set for the final stage of the search.\nThe actual search process introduces degrees-of-freedom in stages up to this value.\n\
-Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nReserve strain degrees-of-freedom for cases when the highest precision is required.\n\
+        dof_text = "Defines the optimisation parameters in the final stage of the search.\n\
+Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nUse strain degrees of freedom for cases when the highest precision is required.\n\
 3 = translation only,\n\
-6 = translation plus rotation,\n\
+6 = translation and rotation,\n\
 12 = translation, rotation and strain."
         rdvc_widgets['run_ndof_label'].setToolTip(dof_text)
 
