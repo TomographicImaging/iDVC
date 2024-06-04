@@ -3,7 +3,8 @@ channels:
   - ccpi
   - paskino
   - conda-forge
-dependencies:    
+dependencies:   
+    - openpyxl
     - python
     - numpy
     - scipy

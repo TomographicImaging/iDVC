@@ -429,6 +429,7 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
     def GetPoints(self):
         '''Returns the Points'''
         return self._Points
+    
     def SetData(self, value):
         '''Sets the points from a numpy array or list'''
         if not isinstance (value, numpy.ndarray) :
@@ -441,11 +442,9 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
     def GetData(self):
         return self._Data
 
-
     def GetNumberOfPoints(self):
         '''returns the number of points in the point cloud'''
         return self._Points.GetNumberOfPoints()
-
 
     def FillInputPortInformation(self, port, info):
         # if port == 0:
@@ -457,7 +456,6 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
         return 1
 
     def RequestData(self, request, inInfo, outInfo):
-
         # print ("Request Data")
         # output_image = vtk.vtkDataSet.GetData(inInfo[0])
         pointPolyData = vtk.vtkPolyData.GetData(outInfo)
@@ -471,7 +469,6 @@ class cilNumpyPointCloudToPolyData(VTKPythonAlgorithmBase):
         pointPolyData.SetPoints(self._Points)
         pointPolyData.SetVerts(self._Vertices)
         return 1
-
 
     def FillCells(self):
         '''Fills the Vertices'''

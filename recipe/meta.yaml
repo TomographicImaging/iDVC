@@ -34,8 +34,10 @@ requirements:
     - numpy
     - typing_extensions # [py<=37]
   run:
+    - openpyxl
     - python
     - numpy
+    - scipy
     - ccpi-viewer >=22.4.0
     - ccpi-dvc >=22.0.0
     - natsort
