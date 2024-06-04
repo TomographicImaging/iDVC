@@ -203,6 +203,40 @@ class DVC_runner(object):
         self.session_folder = session_folder
 
     def set_up(self, *args, **kwargs):
+        '''This function sets up the DVC run, creating the run configurations and setting up the run folders.
+        
+        Parameters:
+        -----------
+        *args: not used
+        **kwargs: 
+            message_callback: callback function for messages
+            progress_callback: callback function for progress updates
+
+        Returns:
+        --------
+        None
+
+        This function reads a json file containing the run configuration and creates the run configurations.
+        The json file contains the following:
+        - subvolume_points: list of number of points to process at each subvolume
+        - subvolume_sizes: list of subvolume sizes, if not an integer multiple runs will be created
+        - points: number of points to process in the point cloud
+        - roi_files: list of point cloud files
+        - reference_file: reference image volume
+        - correlate_file: correlation image volume
+        - vol_bit_depth: bit depth of the image volumes. If loading an image not of type int8 or int16, the image will be converted to uint16.
+        - vol_hdr_lngth: header length of the image volumes
+        - dims: dimensions of the image volumes
+        - subvol_geom: geometry of the subvolume, either cube or sphere
+        - subvol_npts: number of points in the subvolume, not used
+        - disp_max: maximum displacement in voxels
+        - dof: number of parameters in the optimisation, 3,6, or 12
+        - obj: objective function, either sad, ssd, zssd, nssd, or znssd
+        - interp_type: interpolation type, either trilinear or tricubic
+        - run_folder: folder to save the run results and configurations
+        - rigid_trans: rigid translation between the reference and correlation volumes
+        - point0_world_coordinate: world coordinates of the starting point for the DVC analysis
+        '''
 
         self.processes = []
         self.process_num = 0
@@ -242,6 +276,10 @@ class DVC_runner(object):
 
         message_callback.emit("Creating run configurations")
         vol_bit_depth = int(config['vol_bit_depth'])
+        if vol_bit_depth not in ['8', '16']:
+            # the data will be converted to 16 bit by save_tiff_stack_as_raw
+            # it won't work with other formats
+            vol_bit_depth = 16
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
         if 'vol_endian' in config:
