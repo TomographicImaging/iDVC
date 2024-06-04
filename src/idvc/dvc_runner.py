@@ -202,6 +202,8 @@ class DVC_runner(object):
         self.run_succeeded = run_succeeded
         self.session_folder = session_folder
 
+    import pysnooper
+    @pysnooper.snoop()
     def set_up(self, *args, **kwargs):
         '''This function sets up the DVC run, creating the run configurations and setting up the run folders.
         
@@ -421,7 +423,8 @@ class DVC_runner(object):
                 progress_callback.emit(int(start_progress + (end_progress - start_progress) * (subv_num / len(roi_files))))
             progress_callback.emit(100)
                 
-        
+    import pysnooper
+    @pysnooper.snoop()
     def run_dvc(self, **kwargs):
         main_window = self.main_window
         input_file = self.input_file

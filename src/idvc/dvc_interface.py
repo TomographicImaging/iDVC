@@ -3711,7 +3711,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         scalar_bar = vtk.vtkScalarBarActor()
         # scalar_bar.SetOrientationToHorizontal()
         scalar_bar.SetOrientationToVertical()
-               
+        scalar_bar.SetTitle('Displacement (pixels)')
+        
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3951,8 +3952,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                                 displ[count][3]) #xyz coords
                 vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 vertices.InsertCellPoint(p)
+                # these are scaled with multiplier
+                multiplier = float(self.result_widgets['scale_vectors_entry'].value())
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
+                # the colors need to remain the quantitative ones, independent on the multiplier
+                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)/multiplier) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
         
