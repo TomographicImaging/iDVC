@@ -2673,7 +2673,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
-        self.dimensionalityValue.setCurrentIndex(1)
+        self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
         self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
 A 3D pointcloud is created within the full extent of the mask.")
@@ -4088,12 +4088,12 @@ Future code development will introduce methods for better management of large di
         widgetno += 1
 
         rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
-        rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
+        rdvc_widgets['run_ndof_label'].setText("Number of Optimisation Parameters")
         
-        dof_text = "Defines the degree-of-freedom set for the final stage of the search.\nThe actual search process introduces degrees-of-freedom in stages up to this value.\n\
-Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nReserve strain degrees-of-freedom for cases when the highest precision is required.\n\
+        dof_text = "Defines the optimisation parameters in the final stage of the search.\n\
+Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nUse strain degrees of freedom for cases when the highest precision is required.\n\
 3 = translation only,\n\
-6 = translation plus rotation,\n\
+6 = translation and rotation,\n\
 12 = translation, rotation and strain."
         rdvc_widgets['run_ndof_label'].setToolTip(dof_text)
 
