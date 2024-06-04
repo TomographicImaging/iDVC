@@ -4089,8 +4089,8 @@ Future code development will introduce methods for better management of large di
         rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
         rdvc_widgets['run_ndof_label'].setText("Number of Optimisation Parameters")
         
-        dof_text = "Defines the optimisation parameters in the final stage of the search.\nThe actual search process introduces more optimisation parameters, i.e. degrees of freedom,  in stages up to this value.\n\
-Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nReserve strain degrees of freedom for cases when the highest precision is required.\n\
+        dof_text = "Defines the optimisation parameters in the final stage of the search.\n\
+Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nUse strain degrees of freedom for cases when the highest precision is required.\n\
 3 = translation only,\n\
 6 = translation and rotation,\n\
 12 = translation, rotation and strain."
