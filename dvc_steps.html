@@ -110,10 +110,12 @@ When moving between each panel, the Help section is updated. Additional help can
 <p>The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the <strong>Manual Registration</strong> tab to get started with this.</p>
 <section id="the-point-0-location">
 <h3>The Point 0 Location<a class="headerlink" href="#the-point-0-location" title="Permalink to this heading"></a></h3>
-<p>First you will need to click on <strong>Select point 0</strong>. This will allow you to press shift and left click on a point in the image. Then change the size of the registration box.
-If you scroll through slices of the image, clicking <strong>Center on Point 0</strong> will return you to the slice where point 0 is.
-You should try to select point 0 to be at the position you would like to start your DVC analysis from. Later when you select your mask, if your point 0 lies within the mask then when you generate a point cloud, it will guarantee that a point lies at the location of point 0. Then this will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
-Otherwise, a random point in the cloud will be selected to begin with.</p>
+<p>First, the button <strong>Select point 0</strong> needs to be clicked. Then, point 0 is selected by pressing “shift” and left clicking on a point in the image.
+Next, the size of the registration box can be edited.
+The slice where point 0 lies can always be visualised by clicking on the button <strong>Center on Point 0</strong>. In particular, this becomes useful after other slices of the 3D image have been visualised.</p>
+<p>Point 0 will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
+Point 0 is used in the “Point Cloud” tab, where a point cloud is loaded or generated from the mask selected in the “Mask” tab.
+If point 0 does not lie within the mask, it will be added as the first point in the cloud.</p>
 </section>
 <section id="registering-the-images">
 <h3>Registering the Images<a class="headerlink" href="#registering-the-images" title="Permalink to this heading"></a></h3>
