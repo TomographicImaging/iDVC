@@ -1,6 +1,8 @@
 # ChangeLog
 
 ## vx.x.x
+* Add `openpyxl` to recipe files #262
+* Allow csv and xlxs formats in point-cloud file & add error dialog #262 
 * Set registration-box-size default and help text #259
 * Make dimensionality 3D the default #256
 * Edit README.md to include Prof. Bay citations and ref to DVC executable #255
