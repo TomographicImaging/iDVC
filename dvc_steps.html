@@ -50,7 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="viewer.html">Datasets &amp; Visualisation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">DVC Configuration Steps</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#manual-registration">Manual Registration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#initial-registration">Initial Registration</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#the-point-0-location">The Point 0 Location</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#registering-the-images">Registering the Images</a></li>
 </ul>
@@ -105,9 +105,9 @@
 <h1>DVC Configuration Steps<a class="headerlink" href="#dvc-configuration-steps" title="Permalink to this heading"></a></h1>
 <p>Each panel contains a different step in the DVC configuration process.
 When moving between each panel, the Help section is updated. Additional help can be viewed by hovering the mouse over some of the buttons and labels on the interface.</p>
-<section id="manual-registration">
-<h2>Manual Registration<a class="headerlink" href="#manual-registration" title="Permalink to this heading"></a></h2>
-<p>The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the <strong>Manual Registration</strong> tab to get started with this.</p>
+<section id="initial-registration">
+<h2>Initial Registration<a class="headerlink" href="#initial-registration" title="Permalink to this heading"></a></h2>
+<p>The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the <strong>Initial Registration</strong> tab to get started with this.</p>
 <section id="the-point-0-location">
 <h3>The Point 0 Location<a class="headerlink" href="#the-point-0-location" title="Permalink to this heading"></a></h3>
 <p>First, the button <strong>Select point 0</strong> needs to be clicked. Then, point 0 is selected by pressing “shift” and left clicking on a point in the image.
@@ -119,18 +119,27 @@ If point 0 does not lie within the mask, it will be added as the first point in 
 </section>
 <section id="registering-the-images">
 <h3>Registering the Images<a class="headerlink" href="#registering-the-images" title="Permalink to this heading"></a></h3>
-<p>You can set an initial translation if you already know some information about how the images are translated relative to each other.</p>
-<p>When you click <strong>Start Registration</strong> this will crop the image to the size of the reference box you chose, centred on the point 0. It will do the same for the correlate image, and then it will subtract one image from the other, and display that on the viewer. It does this for the original images, not the down-sampled versions.
-If you were to load two identical images, then the subtraction would result in nothing, so you would just see a black square. The idea is that to register the images, you need to align them such that the subtraction results in as uniform an image as possible.
-If you have set an initial translation then the images will start off being translated relative to each other accordingly.</p>
-<p>You can then move the two images relative to each other by using the keys: j, n, b and m.
-You can also still change the orientation using the x, y and z keys, and scroll through the image slices.</p>
-<p>Here is an example of what an image registration would look like as you begin to align the images – you can see it becomes more grey where you have a good overlap.</p>
+<p>After selecting point 0 and the registration box size, the registration process is initialised by clicking on <strong>Start Registration</strong>.
+This runs an automatic registration procedure and the results are displayed in the widgets <strong>Translate X</strong>, <strong>Translate Y</strong>, and <strong>Translate Z</strong>, as well as in the label widget <strong>Automatic registration […]</strong>.
+The viewer shows an image representing the difference between the reference volume and the correlate volume.
+This is shown in a square with side equal to the chosen “registration box size”.
+The image can be spanned in 3D and it is initially centred on the slice embedding point 0.
+This view can be retrieved by clicking on the button <strong>Centre on Point 0</strong>.
+The difference image is calculated from the full-resolution volumes, not their down-sampled versions.
+If two volumes were identical, their difference volume would result in pixels of value 0 and the viewer would show a black square.
+Two images are registered optimally when their difference volume is as uniform as possible, and shown with large numbers of grey pixels in the viewer.
+The registration procedure can be manually adjusted by clicking on the difference image and moving the two volumes with respect to each other by using the keys: “j”, “n”, “b”, and “m”.
+The image orientation cab be changed using the “x”, “y” and “z” keys, and scroll through the image slices.</p>
+<p>An example of an optimal registration is shown below, where the difference image is largely grey.</p>
 <a class="reference internal image-reference" href="_images/registration_example_0.png"><img alt="_images/registration_example_0.png" src="_images/registration_example_0.png" style="width: 49%;" /></a>
 <a class="reference internal image-reference" href="_images/registration_example_1.png"><img alt="_images/registration_example_1.png" src="_images/registration_example_1.png" style="width: 49%;" /></a>
 <p><span class="raw-html"><br /></span></p>
-<p>Once you are satisfied with the registration, click <strong>Confirm Registration</strong> to save the translation. This will be provided to the DVC analysis code later on.
-Then move on to the <strong>Mask</strong> tab.</p>
+<p>Click on the button <strong>Reset</strong> to set the translation to [0, 0, 0].
+Click on the button <strong>Set to Automatic Registration</strong> to reset the translation the value of the automatic registration.
+Click on the button <strong>Confirm Registration</strong> when satisfied with the registration and store the translation value for the DVC analysis in the next tabs.
+Click on the button <strong>Cancel</strong> to terminate the registration procedure and retrieve the previous translation value.
+Click on the button <strong>Restart registration</strong> to restart the regitration process again.</p>
+<p>Move to the <strong>Mask</strong> tab only when the registration has been confirmed at least once.</p>
 </section>
 </section>
 <section id="mask-creation">
