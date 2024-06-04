@@ -487,7 +487,7 @@ def loadTif(*args, **kwargs):
     target_size = kwargs.get('target_size', 0.125)
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
-    bits_per_byte = 8
+    bits_per_byte = 16
 
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
@@ -530,36 +530,9 @@ def loadTif(*args, **kwargs):
             getProgress, progress_callback=progress_callback))
         reader.SetFileName(filenames)
 
-        dtype = vtk.VTK_UNSIGNED_CHAR
+        
 
-        if reader.GetOutput().GetScalarType() != dtype and False:
-            # need to cast to 8 bits unsigned
-            print("The if statement is true")
-
-            stats = vtk.vtkImageAccumulate()
-            stats.SetInputConnection(reader.GetOutputPort())
-            stats.Update()
-            iMin = stats.GetMin()[0]
-            iMax = stats.GetMax()[0]
-            if (iMax - iMin == 0):
-                scale = 1
-            else:
-                scale = vtk.VTK_UNSIGNED_CHAR_MAX / (iMax - iMin)
-
-            shiftScaler = vtk.vtkImageShiftScale()
-            shiftScaler.SetInputConnection(reader.GetOutputPort())
-            shiftScaler.SetScale(scale)
-            shiftScaler.SetShift(-iMin)
-            shiftScaler.SetOutputScalarType(dtype)
-            shiftScaler.Update()
-
-            tmpdir = tempfile.gettempdir()
-            writer = vtk.vtkMetaImageWriter()
-            writer.SetInputConnection(shiftScaler.GetOutputPort())
-            writer.SetFileName(os.path.join(tmpdir, 'input8bit.mhd'))
-            writer.Write()
-
-            reader = shiftScaler
+        
         reader.Update()
 
         shape = reader.GetStoredArrayShape()
@@ -1010,7 +983,9 @@ def generateMetaImageHeader(datafname, typecode, shape, isFortran, isBigEndian, 
     return header
 
 def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback, start_progress, end_progress) ->None :
-    '''Converts a TIFF stack to a raw file'''
+    '''Converts a TIFF stack to a raw file
+    
+    if the data is not uint8 or uint16, it will be scaled to uint16'''
     reader = vtk.vtkTIFFReader()
     reader.SetOrientationType(1) # TopLeft
     with open(os.path.abspath(output_fname), 'wb') as f:
@@ -1019,6 +994,15 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
             reader.SetFileName(el)
             reader.Update()
             slice_data = Converter.vtk2numpy(reader.GetOutput())
+            if slice_data.dtype not in [numpy.uint8, numpy.uint16, numpy.int8, numpy.int16]:
+                # scale to uint16
+                convert_to_dtype = numpy.uint16
+                # rescale as float32
+                slice_data = slice_data.astype(numpy.float32)
+                m,M = slice_data.min(), slice_data.max()
+                slice_data = (slice_data - m) / (M - m) * numpy.iinfo(convert_to_dtype).max 
+                # finally cast to uint16
+                slice_data = slice_data.astype(numpy.uint16)
             f.write(slice_data.tobytes())
             progress_callback.emit(int(start_progress + (end_progress - start_progress) * (filenames.index(el) / steps)))
             
