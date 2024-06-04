@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Make dimensionality 3D the default #256
 * Edit README.md to include Prof. Bay citations and ref to DVC executable #255
 * Edit "degrees of freedom" widget to be "optimisation parameters" #254
 * Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 #228
