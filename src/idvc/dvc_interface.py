@@ -101,7 +101,7 @@ import logging
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', 'inp')
+allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
