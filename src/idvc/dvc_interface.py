@@ -418,7 +418,7 @@ class MainWindow(QMainWindow):
 
         self.help_text.append(
             "1. Click 'Select point 0' to choose a point and region for the registration.\n"
-            "2. Adjust the registration box size as needed.\n"
+            "2. Adjust the registration box size. The box should enclose enough material-texture details but be kept relatively small compared to the size of the image. E.g., 1/10 of one image dimension.\n"
             "3. Click 'Start Registration' to begin the registration process.\n"
             "4. The suggested registration will be displayed, and the difference volume of the registered image will be shown in the viewer.\n"
             "5. Use the mouse wheel to navigate in the third direction, and the 'x', 'y', or 'z' keys to control the slicing orientation.\n"
@@ -701,6 +701,7 @@ class MainWindow(QMainWindow):
         finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
     def save_image_info(self, image_type):
+        """Sets the value of the registration box size to the 1/10 of the max dimension."""
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
@@ -712,7 +713,7 @@ class MainWindow(QMainWindow):
 
             #Update registration box size according to target size and vol bit depth
             self.registration_parameters['registration_box_size_entry'].setMaximum(maximum_value)
-            self.registration_parameters['registration_box_size_entry'].setValue(maximum_value)
+            self.registration_parameters['registration_box_size_entry'].setValue(round(np.max(self.ref_image_data.GetDimensions())/10))
         
         
         #Update mask slices above/below to be max extent of downsampled image
@@ -1575,7 +1576,7 @@ It is used as a global starting point and a translation reference."
         # if we can't make the registration box with the set size, then update
         # the size to the largest size possible:
         if max_size_of_box < registration_box_size:
-            rp['registration_box_size_entry'].setValue(max_size_of_box)
+            rp['registration_box_size_entry'].setMaximum(max_size_of_box)
         self.registration_parameters['start_registration_button'].setText("Confirm Registration")
         rp['cancel_reg_button'].setVisible(True)
         rp['registration_box_size_entry'].setEnabled(False)

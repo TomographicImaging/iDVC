@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Set registration-box-size default and help text #259
 * Make dimensionality 3D the default #256
 * Edit README.md to include Prof. Bay citations and ref to DVC executable #255
 * Edit "degrees of freedom" widget to be "optimisation parameters" #254
