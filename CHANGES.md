@@ -2,7 +2,6 @@
 
 ## vx.x.x
 * Add scrolling widget in the help text #260
-* Fix some missing pip dependencies & update workflows & fix tests #233
 * Add `openpyxl` to recipe files #262
 * Allow csv and xlxs formats in point-cloud file & add error dialog #262 
 * Set registration-box-size default and help text #259
@@ -10,7 +9,7 @@
 * Edit README.md to include Prof. Bay citations and ref to DVC executable #255
 * Edit "degrees of freedom" widget to be "optimisation parameters" #254
 * Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 #228
-* fix some missing pip dependencies & update workflows & fix tests #233
+* Fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217
