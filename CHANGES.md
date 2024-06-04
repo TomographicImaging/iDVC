@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Edit documentation on point 0 in dvc steps #264
 * Add scrolling widget in the help text #260
 * Add `openpyxl` to recipe files #262
 * Allow csv and xlxs formats in point-cloud file & add error dialog #262 
