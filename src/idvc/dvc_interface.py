@@ -26,10 +26,10 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
                                QMainWindow, QMessageBox,
-                               QProgressDialog, QPushButton, QSpinBox,
+                               QProgressDialog, QPushButton, QScrollArea, QSpinBox,
                                QTabWidget, QTabBar, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
-                               QWidget)
+                               QWidget) 
 import time
 import numpy as np
 import math
@@ -408,6 +408,10 @@ class MainWindow(QMainWindow):
                     viewer.updatePipeline()
 
     def CreateHelpPanel(self):
+        """Creates the help-text dock widget.
+        
+        Saves the help text for all tabs.
+        Adds a QLabel in the form of scrollable text."""
         help_panel = generateUIDockParameters(self, "Help")
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
@@ -446,9 +450,19 @@ class MainWindow(QMainWindow):
             "You may also scale the vectors to make them larger and easier to view.")
 
         self.help_label = QLabel(groupBox)
+        scroll_area_widget = QScrollArea()
+        
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
-        formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
+
+        scroll_area_widget.setWidget(self.help_label)
+        scroll_area_widget.setFrameShape(QFrame.NoFrame)
+        scroll_area_widget.setFrameShadow(QFrame.Plain)
+        scroll_area_widget.setStyleSheet("border: 0px;")
+        scroll_area_widget.setWidgetResizable(True)
+
+
+        formLayout.setWidget(1, QFormLayout.SpanningRole, scroll_area_widget)
 
     def displayHelp(self, open, panel_no = None):
         if open:
