@@ -2,6 +2,8 @@
 
 ## vx.x.x
 * Edit "degrees of freedom" widget to be "optimisation parameters" #254
+* Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 #228
+* fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
 * Set empty pop-up menus for the main windows #217

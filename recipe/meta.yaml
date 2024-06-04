@@ -6,13 +6,11 @@ source:
   path: ../
 
 build:
-  number: {{ GIT_DESCRIBE_NUMBER }}
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
   noarch: python
   preserve_egg_dir: False
-
   entry_points:
     - idvc = idvc.idvc:main
-
   missing_dso_whitelist:
     - /lib64/libc.so.6            # [linux]
     - /lib64/libm.so.6            # [linux]
@@ -23,22 +21,18 @@ build:
     - C:\Windows\System32\msvcrt.dll   # [win]
     - C:\Windows\System32\SHELL32.dll  # [win]
 
-
 test:
   source_files:
     - ./test
-
   commands:
-    - python -c "import os; print ('TESTING IN THIS DIRECTORY' , os.getcwd())"
+    - python -c "import os; print('TESTING IN THIS DIRECTORY', os.getcwd())"
     - python -m unittest discover test
-  
+
 requirements:
-  
   build:
     - python
     - numpy
     - typing_extensions # [py<=37]
-
   run:
     - python
     - numpy
