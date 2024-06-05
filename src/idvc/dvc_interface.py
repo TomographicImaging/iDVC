@@ -3996,7 +3996,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     def createVectors3D(self, displ, viewer_widget, actor_list):
         '''Creates displacement vectors in 3D
         
-        Uses the "vector scaling" multiplier from the UI to scale the vectors but keeps the color bar the same
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
         '''
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
