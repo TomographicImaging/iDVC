@@ -62,7 +62,7 @@ The **Slices Above** and **Slices Below** are in the coordinate system of the do
 If you would like your mask to cover more than one area, or you would like to increase the area of the mask, tick the **Extend Mask** checkbox.
 Then you can draw another region and press **Extend Mask** to extend the mask to this region as well.
 
-Saving and Loading a mask
+Saving and loading a mask
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The most recent mask you have created will automatically be saved, but if you would like to create a new mask, you will be prompted to then save the previous one, otherwise it will be discarded.
@@ -72,6 +72,19 @@ The names of all of the masks you have saved will appear in a dropdown list. You
 Note that the mask is created in the coordinate system of the down-sampled image, so if you change the down-sampling level, you may not be able to reload a mask you have previously generated.
 Alternatively, you may load a mask from a file you have saved. This must be an uncompressed metaimage file, with the extension .mha.
 Once you are satisfied with the mask, move on to the **Point Cloud** panel.
+
+Trace complex masks
+~~~~~~~~~~~~~~~~~~~
+
+The traced line to create a mask can be controlled as follows.
+
+1) Draw a free hand line: left button click over the image, hold and drag.
+2) Erase the line: left button click and release.
+3) Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key. 
+4) Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle. 
+5) Handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points. 
+6) Erase any handle: ctrl key + right button down on the handle.
+7) Split a segment at the cursor position: shift key + right button down on any snap drawn line segment.
 
 Point Cloud
 ===========
