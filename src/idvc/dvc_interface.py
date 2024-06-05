@@ -14,6 +14,7 @@
 #   Author: Edoardo Pasca (UKRI-STFC)
 
 import os
+from openpyxl import load_workbook
 import sys
 import PySide2
 from PySide2 import QtCore, QtGui, QtWidgets
@@ -25,10 +26,10 @@ from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
                                QMainWindow, QMessageBox,
-                               QProgressDialog, QPushButton, QSpinBox,
+                               QProgressDialog, QPushButton, QScrollArea, QSpinBox,
                                QTabWidget, QTabBar, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
-                               QWidget)
+                               QWidget) 
 import time
 import numpy as np
 import math
@@ -98,6 +99,9 @@ __version__ = gui_version.version
 import logging
 
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
+from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
+
+allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -406,6 +410,10 @@ class MainWindow(QMainWindow):
                     viewer.updatePipeline()
 
     def CreateHelpPanel(self):
+        """Creates the help-text dock widget.
+        
+        Saves the help text for all tabs.
+        Adds a QLabel in the form of scrollable text."""
         help_panel = generateUIDockParameters(self, "Help")
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
@@ -418,7 +426,7 @@ class MainWindow(QMainWindow):
 
         self.help_text.append(
             "1. Click 'Select point 0' to choose a point and region for the registration.\n"
-            "2. Adjust the registration box size as needed.\n"
+            "2. Adjust the registration box size. The box should enclose enough material-texture details but be kept relatively small compared to the size of the image. E.g., 1/10 of one image dimension.\n"
             "3. Click 'Start Registration' to begin the registration process.\n"
             "4. The suggested registration will be displayed, and the difference volume of the registered image will be shown in the viewer.\n"
             "5. Use the mouse wheel to navigate in the third direction, and the 'x', 'y', or 'z' keys to control the slicing orientation.\n"
@@ -451,9 +459,19 @@ class MainWindow(QMainWindow):
             "You may also scale the vectors to make them larger and easier to view.")
 
         self.help_label = QLabel(groupBox)
+        scroll_area_widget = QScrollArea()
+        
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
-        formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
+
+        scroll_area_widget.setWidget(self.help_label)
+        scroll_area_widget.setFrameShape(QFrame.NoFrame)
+        scroll_area_widget.setFrameShadow(QFrame.Plain)
+        scroll_area_widget.setStyleSheet("border: 0px;")
+        scroll_area_widget.setWidgetResizable(True)
+
+
+        formLayout.setWidget(1, QFormLayout.SpanningRole, scroll_area_widget)
 
     def displayHelp(self, open, panel_no = None):
         if open:
@@ -708,6 +726,7 @@ class MainWindow(QMainWindow):
         finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
 
     def save_image_info(self, image_type):
+        """Sets the value of the registration box size to the 1/10 of the max dimension."""
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
@@ -719,7 +738,7 @@ class MainWindow(QMainWindow):
 
             #Update registration box size according to target size and vol bit depth
             self.registration_parameters['registration_box_size_entry'].setMaximum(maximum_value)
-            self.registration_parameters['registration_box_size_entry'].setValue(maximum_value)
+            self.registration_parameters['registration_box_size_entry'].setValue(round(np.max(self.ref_image_data.GetDimensions())/10))
         
         
         #Update mask slices above/below to be max extent of downsampled image
@@ -1582,7 +1601,7 @@ It is used as a global starting point and a translation reference."
         # if we can't make the registration box with the set size, then update
         # the size to the largest size possible:
         if max_size_of_box < registration_box_size:
-            rp['registration_box_size_entry'].setValue(max_size_of_box)
+            rp['registration_box_size_entry'].setMaximum(max_size_of_box)
         self.registration_parameters['start_registration_button'].setText("Confirm Registration")
         rp['cancel_reg_button'].setVisible(True)
         rp['registration_box_size_entry'].setEnabled(False)
@@ -2679,7 +2698,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
-        self.dimensionalityValue.setCurrentIndex(1)
+        self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
         self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
 A 3D pointcloud is created within the full extent of the mask.")
@@ -2901,7 +2920,9 @@ Each line in the tab delimited file contains an integer point label followed by 
 2   300   750.2  209\n\
 etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
-The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.")
+The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
+File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
+        
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
@@ -3078,6 +3099,9 @@ The first point is significant, as it is used as a global starting point and ref
                 self.overlapXValueEntry.setEnabled(False)
 
     def select_pointcloud(self): #, label):
+        """Opens a dialog to select the pointcloud from a file. 
+        Runs the creation or loading of the point cloud in a worker.
+        Sets the attribut `self.pointcloud_is` to 'loaded'."""
         dialogue = QFileDialog()
         self.roi = None
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
@@ -3095,6 +3119,8 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointcloud_is = 'loaded'
 
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
+        """Runs the worker to create or load the point cloud.
+        If the format of the point-cloud file is not in the allowed list it displays an error dialog."""
         if type == "create":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
@@ -3106,8 +3132,15 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
         elif type == "load pointcloud file":
             self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
-            self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
+            if self.roi.endswith(allowed_point_cloud_file_formats):
+                self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
+                self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
+            else:
+                error_title = "FILE FORMAT ERROR"
+                error_text = f"Error reading the point-cloud file {self.roi}. Allowed formats are {allowed_point_cloud_file_formats}."
+                self.displayFileErrorDialog(message=error_text, title=error_title)
+                return
+                
         elif type == "create without loading":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
@@ -3418,8 +3451,11 @@ The first point is significant, as it is used as a global starting point and ref
         self.roi = filename
 
         return True
-            
+
     def loadPointCloud(self, *args, **kwargs):
+        """Loads a pointcloud from file. 
+        File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
+        """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
         progress_callback = kwargs.get('progress_callback', None)
@@ -3427,8 +3463,17 @@ The first point is significant, as it is used as a global starting point and ref
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
+        if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
+            points = np.loadtxt(pointcloud_file)
+        elif pointcloud_file.endswith('.csv'):
+            points = np.genfromtxt(pointcloud_file, delimiter=',')
+        elif pointcloud_file.endswith('.xlsx'):
+            workbook = load_workbook(pointcloud_file, read_only=True)
+            sheet = workbook.active
+            points = np.array(list(sheet.values))
+        elif pointcloud_file.endswith('.inp'):
+            points =  extract_point_cloud_from_inp_file(args[0])
 
-        points = np.loadtxt(self.roi)
         # except ValueError as ve:
         #     print(ve)
         #     return
@@ -3477,6 +3522,9 @@ The first point is significant, as it is used as a global starting point and ref
         # self.rotateYValueEntry.setText(str("{:.2f}".format(self.pointCloud_rotation[1])))
         # self.rotateZValueEntry.setText(str("{:.2f}".format(self.pointCloud_rotation[2])))
         # print("Set the values")
+
+
+    
 
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
@@ -3649,6 +3697,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self._addColorBar(self.vis_widget_2D)
         logging.info('Adding color bar 3D')
         self._addColorBar(self.vis_widget_3D)
+
+        # trigger a drawing
+        self.vis_widget_2D.frame.viewer.renWin.Render()
+        self.vis_widget_3D.frame.viewer.renWin.Render()
         
     def _removeColormap(self):
         '''remove vectors and colormap'''
@@ -3718,7 +3770,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         scalar_bar = vtk.vtkScalarBarActor()
         # scalar_bar.SetOrientationToHorizontal()
         scalar_bar.SetOrientationToVertical()
-               
+        scalar_bar.SetTitle('Displacement (pixels)')
+        
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3737,6 +3790,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
 
     def createVectors2D(self, displ, viewer_widget):
+        '''Creates displacement vectors in 2D
+        
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
+        '''
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3763,6 +3820,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
             orientation = viewer.getSliceOrientation()
 
+            # the vectors are scaled with multiplier
+            multiplier = float(self.result_widgets['scale_vectors_entry'].value())
             for count in range(len(displ)):
                 p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
                 arrow_start_vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
@@ -3777,9 +3836,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 for i, value in enumerate(arrow_shaft_centre):
                     if i != orientation:
                         arrow_vector[i] = displ[count][i+6] 
-                        arrowhead_vector[i] = (displ[count][i+6]*0.3) # Vector for arrowhead - determines height of triangle that forms arrowhead
-                        arrow_shaft_vector[i] = displ[count][i+6]*0.8 # Vector for arrow shaft - determines length of arrow shaft
-                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.4
+                        # Vector for arrowhead - determines height of triangle that forms arrowhead
+                        arrowhead_vector[i] = (displ[count][i+6] * 0.3)
+                         # Vector for arrow shaft - determines length of arrow shaft
+                        arrow_shaft_vector[i] = displ[count][i+6] * 0.8
+                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6]) * 0.4
                         arrowhead_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.3 + displ[count][i+6]*0.15
 
                 p = arrow_shaft_centres_pc.InsertNextPoint(arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2])
@@ -3803,10 +3864,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print("Arrow head loc: ", [arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2]])
                 # print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
-
+                
+                
                 acolor.InsertNextValue(np.sqrt(
-                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)
-                    ) 
+                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0) 
+                    ) / multiplier
                 )#inserts u^2 + v^2 + w^2
                 
             lut = self._createLookupTable()
@@ -3943,6 +4005,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     self.createVectors2D(displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
+        '''Creates displacement vectors in 3D
+        
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
+        '''
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
             v = viewer
@@ -3958,8 +4024,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                                 displ[count][3]) #xyz coords
                 vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 vertices.InsertCellPoint(p)
+                # these are scaled with multiplier
+                multiplier = float(self.result_widgets['scale_vectors_entry'].value())
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
+                # the colors need to remain the quantitative ones, independent on the multiplier
+                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)/multiplier) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
         
@@ -4094,12 +4163,12 @@ Future code development will introduce methods for better management of large di
         widgetno += 1
 
         rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
-        rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
+        rdvc_widgets['run_ndof_label'].setText("Number of Optimisation Parameters")
         
-        dof_text = "Defines the degree-of-freedom set for the final stage of the search.\nThe actual search process introduces degrees-of-freedom in stages up to this value.\n\
-Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nReserve strain degrees-of-freedom for cases when the highest precision is required.\n\
+        dof_text = "Defines the optimisation parameters in the final stage of the search.\n\
+Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nUse strain degrees of freedom for cases when the highest precision is required.\n\
 3 = translation only,\n\
-6 = translation plus rotation,\n\
+6 = translation and rotation,\n\
 12 = translation, rotation and strain."
         rdvc_widgets['run_ndof_label'].setToolTip(dof_text)
 
