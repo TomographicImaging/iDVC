@@ -101,7 +101,7 @@ import logging
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp', 'roi')
+allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3447,7 +3447,7 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
-        File formats allowed are 'roi', 'txt', 'csv', 'xlxs'. 
+        File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3785,7 +3785,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     def createVectors2D(self, displ, viewer_widget):
         '''Creates displacement vectors in 2D
         
-        Uses the "vector scaling" multiplier from the UI to scale the vectors but keeps the color bar the same
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
         '''
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
@@ -4000,7 +4000,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     def createVectors3D(self, displ, viewer_widget, actor_list):
         '''Creates displacement vectors in 3D
         
-        Uses the "vector scaling" multiplier from the UI to scale the vectors but keeps the color bar the same
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
         '''
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
