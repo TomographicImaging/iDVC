@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar.
 * Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 (#228)
 * fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
