@@ -3690,6 +3690,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self._addColorBar(self.vis_widget_2D)
         logging.info('Adding color bar 3D')
         self._addColorBar(self.vis_widget_3D)
+
+        # trigger a drawing
+        self.vis_widget_2D.frame.viewer.renWin.Render()
+        self.vis_widget_3D.frame.viewer.renWin.Render()
         
     def _removeColormap(self):
         '''remove vectors and colormap'''
