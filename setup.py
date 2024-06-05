@@ -70,6 +70,7 @@ setup(
         # "openmp; platform_system=='Darwin'",
         "qdarkstyle",
         "vtk",
+        "openpyxl",
       ],
       # metadata for upload to PyPI
       author="Edoardo Pasca, Laura Murgatroyd",
