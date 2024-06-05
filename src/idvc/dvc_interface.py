@@ -101,9 +101,8 @@ import logging
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp')
+allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx')
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -2915,7 +2914,7 @@ Each line in the tab delimited file contains an integer point label followed by 
 etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
 The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
-File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
+File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
@@ -3445,10 +3444,10 @@ File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
         self.roi = filename
 
         return True
-            
+
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
-        File formats allowed are 'txt', 'csv', 'xlxs'. 
+        File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3457,7 +3456,7 @@ File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
-        if pointcloud_file.endswith('.txt'):
+        if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
             points = np.loadtxt(pointcloud_file)
         elif pointcloud_file.endswith('.csv'):
             points = np.genfromtxt(pointcloud_file, delimiter=',')
@@ -3691,6 +3690,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self._addColorBar(self.vis_widget_2D)
         logging.info('Adding color bar 3D')
         self._addColorBar(self.vis_widget_3D)
+
+        # trigger a drawing
+        self.vis_widget_2D.frame.viewer.renWin.Render()
+        self.vis_widget_3D.frame.viewer.renWin.Render()
         
     def _removeColormap(self):
         '''remove vectors and colormap'''
@@ -3760,7 +3763,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         scalar_bar = vtk.vtkScalarBarActor()
         # scalar_bar.SetOrientationToHorizontal()
         scalar_bar.SetOrientationToVertical()
-               
+        scalar_bar.SetTitle('Displacement (pixels)')
+        
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3779,6 +3783,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
 
     def createVectors2D(self, displ, viewer_widget):
+        '''Creates displacement vectors in 2D
+        
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
+        '''
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3805,6 +3813,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
             orientation = viewer.getSliceOrientation()
 
+            # the vectors are scaled with multiplier
+            multiplier = float(self.result_widgets['scale_vectors_entry'].value())
             for count in range(len(displ)):
                 p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
                 arrow_start_vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
@@ -3819,9 +3829,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 for i, value in enumerate(arrow_shaft_centre):
                     if i != orientation:
                         arrow_vector[i] = displ[count][i+6] 
-                        arrowhead_vector[i] = (displ[count][i+6]*0.3) # Vector for arrowhead - determines height of triangle that forms arrowhead
-                        arrow_shaft_vector[i] = displ[count][i+6]*0.8 # Vector for arrow shaft - determines length of arrow shaft
-                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.4
+                        # Vector for arrowhead - determines height of triangle that forms arrowhead
+                        arrowhead_vector[i] = (displ[count][i+6] * 0.3)
+                         # Vector for arrow shaft - determines length of arrow shaft
+                        arrow_shaft_vector[i] = displ[count][i+6] * 0.8
+                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6]) * 0.4
                         arrowhead_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.3 + displ[count][i+6]*0.15
 
                 p = arrow_shaft_centres_pc.InsertNextPoint(arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2])
@@ -3845,10 +3857,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print("Arrow head loc: ", [arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2]])
                 # print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
-
+                
+                
                 acolor.InsertNextValue(np.sqrt(
-                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)
-                    ) 
+                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0) 
+                    ) / multiplier
                 )#inserts u^2 + v^2 + w^2
                 
             lut = self._createLookupTable()
@@ -3985,6 +3998,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     self.createVectors2D(displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
+        '''Creates displacement vectors in 3D
+        
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
+        '''
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
             v = viewer
@@ -4000,8 +4017,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                                 displ[count][3]) #xyz coords
                 vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 vertices.InsertCellPoint(p)
+                # these are scaled with multiplier
+                multiplier = float(self.result_widgets['scale_vectors_entry'].value())
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
+                # the colors need to remain the quantitative ones, independent on the multiplier
+                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)/multiplier) #inserts u^2 + v^2
                 
             lut = self._createLookupTable()
         
