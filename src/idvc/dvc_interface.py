@@ -101,9 +101,8 @@ import logging
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp')
+allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp', 'roi')
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx')
 class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
@@ -2915,7 +2914,7 @@ Each line in the tab delimited file contains an integer point label followed by 
 etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
 The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
-File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
+File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
@@ -3445,10 +3444,10 @@ File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
         self.roi = filename
 
         return True
-            
+
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
-        File formats allowed are 'txt', 'csv', 'xlxs'. 
+        File formats allowed are 'roi', 'txt', 'csv', 'xlxs'. 
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3457,7 +3456,7 @@ File format allowed: 'txt', 'csv, 'xlxs', 'inp'.")
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         self.roi = pointcloud_file
-        if pointcloud_file.endswith('.txt'):
+        if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
             points = np.loadtxt(pointcloud_file)
         elif pointcloud_file.endswith('.csv'):
             points = np.genfromtxt(pointcloud_file, delimiter=',')
