@@ -1,27 +1,21 @@
-name: conda_build
-
+name: conda
 on:
-  release:
-    types: [published]
-  push:
-    branches: [ master ]
-    tags:
-      - '**'
-  pull_request:
-    branches: [ master ]
-    
+  release: {types: [published]}
+  push: {branches: [master], tags: ['**']}
+  pull_request: {branches: [master]}
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - name: publish-to-conda
-      uses: paskino/conda-package-publish-action@v1.4.4
+    - uses: actions/checkout@v4
       with:
-        subDir: 'recipe'
+        fetch-depth: 0
+        ref: ${{ github.event.pull_request.head.sha || github.ref }} # fix SHA
+    - uses: TomographicImaging/conda-package-publish-action@v2
+      with:
+        additional_apt_packages: libgl-dev
+        subDir: recipe
         channels: '-c conda-forge -c ccpi -c paskino'
         AnacondaToken: ${{ secrets.ANACONDA_TOKEN }}
         publish: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') }}
         test_all: ${{(github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')) || (github.ref == 'refs/heads/master')}}
-        convert_win: false
-        convert_osx: false

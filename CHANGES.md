@@ -1,11 +1,25 @@
 # ChangeLog
 
 ## vx.x.x
-* Add automatic registration functionality
-* Set empty pop-up menus for the main windows
-* Set Tabified widgets not to move or close
-* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost
-* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively
+* Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
+* Allow inp format in point-cloud file #269 
+* Edit documentation on registration in dvc steps #268
+* Edit documentation on point 0 in dvc steps #264
+* Add scrolling widget in the help text #260
+* Add `openpyxl` to recipe files #262
+* Allow csv and xlxs formats in point-cloud file & add error dialog #262 
+* Set registration-box-size default and help text #259
+* Make dimensionality 3D the default #256
+* Edit README.md to include Prof. Bay citations and ref to DVC executable #255
+* Edit "degrees of freedom" widget to be "optimisation parameters" #254
+* Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 #228
+* Fix some missing pip dependencies & update workflows & fix tests #233
+* Edit registration-tab name from "Manual" to "Initial" #241
+* Add automatic registration functionality #304
+* Set empty pop-up menus for the main windows #217
+* Set Tabified widgets not to move or close #226 #217
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost #226 #217
+* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively #218
 * Added argument parser to idvc command. This allows the user to specify the debugging level
 * Add workaround for box clipping due to VTK behaviour change from 9.1. Removed requirement for VTK 8.1.2
 * add build directory to gitignore
