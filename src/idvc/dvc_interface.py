@@ -101,7 +101,7 @@ import logging
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-allowed_point_cloud_file_formats = ('.txt','.csv','.xlsx', '.inp', '.roi')
+allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -3447,7 +3447,7 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
-        File formats allowed are 'roi', 'txt', 'csv', 'xlxs'. 
+        File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
