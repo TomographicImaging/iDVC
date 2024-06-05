@@ -3,7 +3,6 @@
 ## vx.x.x
 * Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar. (#270)
 * Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 (#228)
-* fix some missing pip dependencies & update workflows & fix tests #233
 * Allow inp format in point-cloud file #269 
 * Edit documentation on registration in dvc steps #268
 * Edit documentation on point 0 in dvc steps #264
