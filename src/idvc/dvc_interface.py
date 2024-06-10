@@ -437,14 +437,23 @@ class MainWindow(QMainWindow):
             )
         
         self.help_text.append(
-            "1. If you already have a mask file, upload it.\n"
-            "2. To create a new mask click 'Start tracing'. Click on the image and trace a freehand region while holding the mouse button.\n"
-            "3. If you are not happy with the tracing, click on 'Stop tracing' and then 'Start tracing'.\n"
-            "4. If you wish to extend the mask in 3D click on 'Extend mask' and select the number of slices above and below.\n"
-            "5. When you are happy with your region click 'Create Mask'.\n"
-            "6. Save the mask and name it in the pop-up dialog.\n"
-            "7. To restart the mask creation, click on 'Clear mask' and repeat 2-6.\n"
-            "8. Finish the process by selecting the saved mask and loading it.")
+            "The mask dictates where the point cloud lies.\n\n"
+            "1. Click on 'Load Mask from File' to upload a mask file (format '.mha').\n"
+            "2. To create a new mask click 'Start tracing'. This enables freehand tracing on the viewer. The mask design consists of either the tracing of a single curve or the insertion of multiple spline segments separated by point handles.\n\n"
+            "- Draw a free hand line: left button click over the image, hold and drag.\n"
+            "- Erase the line: left button click and release.\n"
+            "- Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key.\n"
+            "- Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle.\n" 
+            "- Point handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points.\n" 
+            "- Erase any point handle: ctrl key + right button down on the handle.\n"
+            "- Split a segment at the cursor position: shift key + right button down on any snap drawn line segment.\n\n"
+            "3. If you are not happy with the tracing, click on 'Stop tracing'.\n"
+            "4. The mask is used across multiple slices in 3D. The volume can be adjusted by editing the 'Slices Above' and 'Slices Below' values.\n"
+            "5. Click on 'Create mask' when the tracing is finalised.\n"
+            "6. Tick the 'Extend Mask' checkbox if the mask needs to cover more than one area, or the area of the mask needs to be enlarged. Then, draw another region and press the button 'Extend Mask'.\n"
+            "7. The most recent mask will automatically be applied. If it is intended to draw more than one mask click on 'Save Mask' and name it in the pop-up dialog.\n"
+            "8. To restart the mask creation, click on 'Clear mask'.\n"
+            "9. Each mask can be selected and reloaded by clicking on 'Load Saved Mask'.")
         
         self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
