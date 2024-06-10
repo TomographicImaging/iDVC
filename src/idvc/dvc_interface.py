@@ -3521,10 +3521,12 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
     def DisplayNumberOfPointcloudPoints(self):
         # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
+        print ("self.pc_no_points is"+ str(self.pc_no_points))
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
         if hasattr(self, 'num_processed_points'):
             self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
+            print ("num_processed_points is"+ str(self.num_processed_points))
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
@@ -3678,6 +3680,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                                                      multiplier = self.result_widgets['scale_vectors_entry'].value())
 
         self.num_processed_points = np.shape(displ)[0]
+        print("np.shape(displ)[0] is"+ str(np.shape(displ)[0]))
         self.DisplayNumberOfPointcloudPoints()
 
         logging.info('Adding vectors 2D')
@@ -3735,15 +3738,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
         )
 
-        if self.result_widgets['range_vectors_min_entry'].isEnabled():
-            min_size = self.result_widgets['range_vectors_min_entry'].value() 
-            max_size = self.result_widgets['range_vectors_max_entry'].value()
-            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
-        else:
-            min_size = None
-            max_size = None
-            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
-            self._updateUIwithDisplacementVectorRange(dmin, dmax)
+
+        min_size = None
+        max_size = None
+        displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
+        self._updateUIwithDisplacementVectorRange(dmin, dmax)
                 
         displ = np.asarray(displ)
 
@@ -3753,6 +3752,13 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     displ[count][i+6] *= multiplier
 
         return displ
+
+    def edit_range(self):
+        if self.result_widgets['range_vectors_min_entry'].isEnabled():
+            min_size = self.result_widgets['range_vectors_min_entry'].value() 
+            max_size = self.result_widgets['range_vectors_max_entry'].value()
+            displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
+
 
     def _addColorBar(self, viewer_widget):
         # get lookup table
@@ -4886,6 +4892,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.result_widgets['range_vectors_min_entry'].setEnabled(False)
                 # set the label of the number of points to the number of points in the pointcloud
                 self.num_processed_points = int( self.pc_no_points )
+                print("self.pc_no_points is"+ str(self.pc_no_points ))
                 self.DisplayNumberOfPointcloudPoints()
 
             else: 
@@ -4893,16 +4900,10 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 for result in self.result_list:
                     # print("Subvolume size match? ", result.subvol_size, subvol_size)
                     if result.subvol_size == subvol_size:
-                        # print ("YES")
                         # print("Subv points match? {} {}".format(result.subvol_points, subvol_points))
                         if result.subvol_points == subvol_points:
-                            # print ("YES")
                             run_file = result.disp_file
                             self.displayVectors(run_file)
-                        # else:
-                        #     print ("NO")    
-                    # else:
-                    #     print ("NO")
 
     def _DVCResultsDisableRanges(self, index):
         # reset the interface
