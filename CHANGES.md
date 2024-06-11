@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Edit DVC-Results tab #231
 * Edit mask help text and documentation #257
 * Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
 * Allow inp format in point-cloud file #269 
