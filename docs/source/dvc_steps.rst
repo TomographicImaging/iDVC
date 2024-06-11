@@ -72,13 +72,21 @@ The user can trace in 2 modalities: free hand and or by inserting multiple segme
 Click on the **Start Tracing** button to draw a mask and enable tracing on the viewer. 
 
 Freehand tracing:
+
 - Draw a free hand line: left button click over the image, hold and drag.
+
 - Erase the line: left button click and release.
+
 Multisegment tracing:
+
 - Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key. 
+
 - Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle. 
+
 - Point handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points. 
+
 - Erase any point handle: ctrl key + right button down on the handle.
+
 - Split a segment at the cursor position: shift key + right button down on any snap drawn line segment.
 
 The 2D mask drawn in the viewer is used across multiple slices in 3D, above and below the current slice; the volume can be adjusted by editing the **Slices Above** and **Slices Below** values.
