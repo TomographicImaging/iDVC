@@ -3732,7 +3732,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         """Loads the point cloud from file. If the min is enabled it resamples the vectors to the range selected by the user,
         else, it extracts the range of the vectors magnitude and updates the min and max widgets.
         If the multiplier is not 1 it rescales the vectors.
-        The method is invoked when the widget 'View' is set to 'total displacement' or 'displacement with respecvt to point 0'"""
+        The method is invoked when the widget 'View' is set to 'total displacement' or 'displacement with respect to point 0'"""
         
         raw_displ = np.asarray(
             PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
