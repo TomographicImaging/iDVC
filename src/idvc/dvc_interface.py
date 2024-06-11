@@ -4855,6 +4855,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['subvol_entry'].addItems(points_list)
                
     def LoadResultsOnViewer(self):
+        """Opens a warning dialog if the entries on 'subvolume size' and 'points in subvolume' are not suitable.
+        If the point cloud is selected in 'view' it loads the point cloud on the viewers, 
+        else, it shows the vectors on the viewers."""
         if hasattr(self, 'result_list'):
             try:
                 subvol_size = int(self.result_widgets['pc_entry'].currentText())
@@ -4874,7 +4877,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
             self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
-            #print("New roi is", self.roi)
             self.results_folder = results_folder
 
             if (self.result_widgets['vec_entry'].currentText() == "Pointcloud"):
@@ -4896,6 +4898,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
 
     def _DVCResultsDisableRanges(self, index):
+        """Disables the range-vectors widgets. 
+        Note: The min is used as a checker in 'loadDisplacementFile', hence when editing this method make
+        sure the points/vectors are visualised correctly in the viewer. """
         # reset the interface
         self.result_widgets['range_vectors_max_entry'].setEnabled(False)
         self.result_widgets['range_vectors_min_entry'].setEnabled(False)
