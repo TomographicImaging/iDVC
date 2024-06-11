@@ -59,31 +59,66 @@ Move to the **Mask** tab only when the registration has been confirmed at least 
 
 Mask Creation
 =============
+The point cloud will be created inside a mask defined by the user. A mask is a binary image where ones represent where the points will lie. iDVC allows you to create or import a mask via file. 
+Once satisfied with the mask, move on to the **Point Cloud** panel.
 
 Creating a mask
 ~~~~~~~~~~~~~~~
+A mask is created by tracing the cross section of the mask and extending it above and below the current slice by **Slices Above** and **Slices Below** values. 
+More complex masks can be created by extending the mask by multiple tracing.
 
-A mask needs to be created to dictate where the point cloud will lie.
-To draw a mask, click on the **Start Tracing** button.
-This will allow you to trace a region freehand by left button clicking and dragging the mouse.
+The user can trace in 2 modalities: free hand and or by inserting multiple segments separated by point handles.
 
-To extend the mask in 3D, above and below the current slice, you may adjust the **Slices Above** and **Slices Below** settings,
-before clicking **create mask**.
-The **Slices Above** and **Slices Below** are in the coordinate system of the down-sampled image (if your image has been down-sampled).
+Click on the **Start Tracing** button to draw a mask and enable tracing on the viewer. 
 
-If you would like your mask to cover more than one area, or you would like to increase the area of the mask, tick the **Extend Mask** checkbox.
-Then you can draw another region and press **Extend Mask** to extend the mask to this region as well.
+Freehand tracing:
 
-Saving and Loading a mask
-~~~~~~~~~~~~~~~~~~~~~~~~~
+- Draw a free hand line: left button click over the image, hold and drag.
 
-The most recent mask you have created will automatically be saved, but if you would like to create a new mask, you will be prompted to then save the previous one, otherwise it will be discarded.
+- Erase the line: left button click and release.
 
-The names of all of the masks you have saved will appear in a dropdown list. You can select one from here and reload it.
+Multisegment tracing:
 
-Note that the mask is created in the coordinate system of the down-sampled image, so if you change the down-sampling level, you may not be able to reload a mask you have previously generated.
-Alternatively, you may load a mask from a file you have saved. This must be an uncompressed metaimage file, with the extension .mha.
-Once you are satisfied with the mask, move on to the **Point Cloud** panel.
+- Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key. 
+
+- Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle. 
+
+- Point handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points. 
+
+- Erase any point handle: ctrl key + right button down on the handle.
+
+- Split a segment at the cursor position: shift key + right button down on any snap drawn line segment.
+
+The 2D mask drawn in the viewer is used across multiple slices in 3D, above and below the current slice; the volume can be adjusted by editing the **Slices Above** and **Slices Below** values.
+Click on **Create mask** when the tracing is finalised.
+
+Note: the **Slices Above** and **Slices Below** are in the coordinate system of the downsampled image (if the images have been downsampled).
+
+Extending a mask
+~~~~~~~~~~~~~~~~
+
+Tick the **Extend Mask** checkbox if the mask needs to cover more than one area, or the area of the mask needs to be enlarged. 
+Then, draw another region and press the button **Extend Mask**.
+
+If **Extend Mask** is not checked the mask will be reset when tracing.
+
+Saving a mask
+~~~~~~~~~~~~~
+
+The most recent mask that has been created will automatically be applied. 
+If it is intended to draw more than one mask click on the **Save Mask** button. Else, the older mask will be discarded if a new mask is created without saving the previous one.
+
+The names of all of the saved masks will appear in a dropdown list. 
+Each mask can be selected and reloaded by clicking on **Load Saved Mask**.
+
+Note: the mask is created in the coordinate system of the down-sampled image.
+If the down-sampling level is changed, you may not be able to reload a mask you have previously generated.
+
+Loading a mask from file
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+As an alternative to creating a mask, this may be loaded from a file by clicking **Load Mask from File**. 
+The file format should be an uncompressed metaimage file, with extension '.mha'.
 
 Point Cloud
 ===========
