@@ -59,17 +59,22 @@ Move to the **Mask** tab only when the registration has been confirmed at least 
 
 Mask Creation
 =============
-A mask needs to be created to dictate where the point cloud will lie.
+The point cloud will be created inside a mask defined by the user. A mask is a binary image where ones represent where the points will lie. iDVC allows you to create or import a mask via file. 
 Once satisfied with the mask, move on to the **Point Cloud** panel.
 
 Creating a mask
 ~~~~~~~~~~~~~~~
-Click on the **Start Tracing** button to draw a mask and enable freehand tracing on the viewer. 
-The mask design consists of either the tracing of a single curve or the insertion of multiple spline segments separated by point handles.
-The traced line to create a mask can be controlled following the instructions below.
+A mask is created by tracing the cross section of the mask and extending it above and below the current slice by **Slices Above** and **Slices Below** values. 
+More complex masks can be created by extending the mask by multiple tracing.
 
+The user can trace in 2 modalities: free hand and or by inserting multiple segments separated by point handles.
+
+Click on the **Start Tracing** button to draw a mask and enable tracing on the viewer. 
+
+Freehand tracing:
 - Draw a free hand line: left button click over the image, hold and drag.
 - Erase the line: left button click and release.
+Multisegment tracing:
 - Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key. 
 - Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle. 
 - Point handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points. 
@@ -86,6 +91,8 @@ Extending a mask
 
 Tick the **Extend Mask** checkbox if the mask needs to cover more than one area, or the area of the mask needs to be enlarged. 
 Then, draw another region and press the button **Extend Mask**.
+
+If **Extend Mask** is not checked the mask will be reset when tracing.
 
 Saving a mask
 ~~~~~~~~~~~~~
