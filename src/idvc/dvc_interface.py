@@ -3520,13 +3520,11 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
     
 
     def DisplayNumberOfPointcloudPoints(self):
-        # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
-        print ("self.pc_no_points is"+ str(self.pc_no_points))
+        "Updates the number of points in the widgets."
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
         if hasattr(self, 'num_processed_points'):
             self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
-            print ("num_processed_points is"+ str(self.num_processed_points))
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
@@ -3680,7 +3678,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                                                      multiplier = self.result_widgets['scale_vectors_entry'].value())
 
         self.num_processed_points = np.shape(displ)[0]
-        print("np.shape(displ)[0] is"+ str(np.shape(displ)[0]))
         self.DisplayNumberOfPointcloudPoints()
 
         logging.info('Adding vectors 2D')
@@ -3710,7 +3707,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     
         self.result_widgets['range_vectors_max_entry'].setEnabled(True)
         self.result_widgets['range_vectors_min_entry'].setEnabled(True)
-        print("range_vectors_min_entry set to true in setUI vector full range")
         dmin = self.result_widgets['range_vectors_max_entry'].minimum()
         dmax = self.result_widgets['range_vectors_max_entry'].maximum()
         self.result_widgets['range_vectors_max_entry'].setValue(dmax)
@@ -3730,8 +3726,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_min_entry'].setMinimum(dmin)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
         self.result_widgets['range_vectors_min_entry'].setEnabled(True)
-        print("range_vectors_min_entry set to true in setUI vector vector range")
-
         self.result_widgets['range_vectors_all_entry'].setEnabled(True)
         
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
@@ -4861,8 +4855,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['subvol_entry'].addItems(points_list)
                
     def LoadResultsOnViewer(self):
-        print("running LoadResultsOnViewer")
-
         if hasattr(self, 'result_list'):
             try:
                 subvol_size = int(self.result_widgets['pc_entry'].currentText())
@@ -4891,18 +4883,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 # reset the interface
                 self.result_widgets['range_vectors_max_entry'].setEnabled(False)
                 self.result_widgets['range_vectors_min_entry'].setEnabled(False)
-                print("range_vectors_min_entry set to false inside loadresults")
                 # set the label of the number of points to the number of points in the pointcloud
                 self.num_processed_points = int( self.pc_no_points )
-                print("self.pc_no_points is"+ str(self.pc_no_points ))
                 self.DisplayNumberOfPointcloudPoints()
 
             else: 
-                # print("Result list", self.result_list, len(self.result_list))
                 for result in self.result_list:
-                    # print("Subvolume size match? ", result.subvol_size, subvol_size)
                     if result.subvol_size == subvol_size:
-                        # print("Subv points match? {} {}".format(result.subvol_points, subvol_points))
                         if result.subvol_points == subvol_points:
                             run_file = result.disp_file
                             self.displayVectors(run_file)
