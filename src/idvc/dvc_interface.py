@@ -4830,18 +4830,17 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_max_entry'])
         widgetno += 1
 
-        result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
-        widgetno += 1
+        #result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
+        #formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
+        #widgetno += 1
 
-        result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        #result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
 
         result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
-        #result_widgets['run_entry'].currentIndexChanged.connect(lambda: self.LoadResultsOnViewer(False))
-        result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
-        #result_widgets['vec_entry'].currentIndexChanged.connect(lambda: self.LoadResultsOnViewer(False))
-        #result_widgets['range_vectors_min_entry'].valueChanged.connect(lambda: self.LoadResultsOnViewer(True))
-        #result_widgets['range_vectors_max_entry'].valueChanged.connect(lambda: self.LoadResultsOnViewer(True))
+        result_widgets['run_entry'].currentIndexChanged.connect(lambda: self.LoadResultsOnViewer)
+        result_widgets['vec_entry'].currentIndexChanged.connect(lambda: self.LoadResultsOnViewer)
+        result_widgets['range_vectors_min_entry'].valueChanged.connect(lambda: self.LoadResultsOnViewer)
+        result_widgets['range_vectors_max_entry'].valueChanged.connect(lambda: self.LoadResultsOnViewer)
 
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
 
