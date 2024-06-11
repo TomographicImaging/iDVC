@@ -3710,6 +3710,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     
         self.result_widgets['range_vectors_max_entry'].setEnabled(True)
         self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+        print("range_vectors_min_entry set to true in setUI vector full range")
         dmin = self.result_widgets['range_vectors_max_entry'].minimum()
         dmax = self.result_widgets['range_vectors_max_entry'].maximum()
         self.result_widgets['range_vectors_max_entry'].setValue(dmax)
@@ -3729,6 +3730,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_min_entry'].setMinimum(dmin)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
         self.result_widgets['range_vectors_min_entry'].setEnabled(True)
+        print("range_vectors_min_entry set to true in setUI vector vector range")
 
         self.result_widgets['range_vectors_all_entry'].setEnabled(True)
         
@@ -3740,10 +3742,12 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         )
 
         if self.result_widgets['range_vectors_min_entry'].isEnabled():
+            print("min max are extracted")
             min_size = self.result_widgets['range_vectors_min_entry'].value() 
             max_size = self.result_widgets['range_vectors_max_entry'].value()
             displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
         else:
+            print("min max are none")
             min_size = None
             max_size = None
             displ, dmin, dmax = reduce_displ(raw_displ, min_size, max_size, disp_wrt_point0)
@@ -4812,6 +4816,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         result_widgets['range_vectors_min_entry'].setValue(0.00)
         result_widgets['range_vectors_min_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
         result_widgets['range_vectors_min_entry'].setEnabled(False)
+        print("range_vectors_min_entry set to false")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_min_entry'])
         widgetno += 1
 
@@ -4830,17 +4835,17 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_max_entry'])
         widgetno += 1
 
-        #result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
-        #formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
-        #widgetno += 1
+        result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
+        widgetno += 1
 
-        #result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
 
         result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
-        result_widgets['run_entry'].currentIndexChanged.connect(lambda: self.LoadResultsOnViewer)
-        result_widgets['vec_entry'].currentIndexChanged.connect(lambda: self.LoadResultsOnViewer)
-        result_widgets['range_vectors_min_entry'].valueChanged.connect(lambda: self.LoadResultsOnViewer)
-        result_widgets['range_vectors_max_entry'].valueChanged.connect(lambda: self.LoadResultsOnViewer)
+        #result_widgets['run_entry'].currentIndexChanged.connect(self.LoadResultsOnViewer)
+        #result_widgets['vec_entry'].currentIndexChanged.connect(self.LoadResultsOnViewer)
+        #result_widgets['range_vectors_min_entry'].valueChanged.connect(self.LoadResultsOnViewer)
+        #result_widgets['range_vectors_max_entry'].valueChanged.connect(self.LoadResultsOnViewer)
 
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
 
@@ -4877,7 +4882,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                
     def LoadResultsOnViewer(self):
         print("running LoadResultsOnViewer")
-        print("range flag is ")
 
         if hasattr(self, 'result_list'):
             try:
@@ -4907,6 +4911,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 # reset the interface
                 self.result_widgets['range_vectors_max_entry'].setEnabled(False)
                 self.result_widgets['range_vectors_min_entry'].setEnabled(False)
+                print("range_vectors_min_entry set to false inside loadresults")
                 # set the label of the number of points to the number of points in the pointcloud
                 self.num_processed_points = int( self.pc_no_points )
                 print("self.pc_no_points is"+ str(self.pc_no_points ))
@@ -4927,6 +4932,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         # reset the interface
         self.result_widgets['range_vectors_max_entry'].setEnabled(False)
         self.result_widgets['range_vectors_min_entry'].setEnabled(False)
+        print("range_vectors_min_entry set to false in dvcresultsrange")
         
         # # reset the interface
         # result_widgets = self.result_widgets
