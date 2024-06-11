@@ -4082,6 +4082,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
 #Run DVC  Panel:
     def CreateRunDVCPanel(self):
+        """Creates the 'Run DVC' tab. Creates the widgets in it and connects them."""
         self.run_dvc_panel = generateUIDockParameters(self, "5 - Run DVC")
         dockWidget = self.run_dvc_panel[0]
         dockWidget.setObjectName("RunDVCPanel")
@@ -4682,6 +4683,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
 # DVC Results Panel:
     def CreateViewDVCResultsPanel(self):
+        "Creates the 'DVC Results' tab. Creates the widgets in it and connects them."
         self.dvc_results_panel = generateUIDockParameters(self, "6 - DVC Results")
         dockWidget = self.dvc_results_panel[0]
         dockWidget.setObjectName("DVCResultsPanel")
