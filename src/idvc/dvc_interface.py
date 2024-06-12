@@ -1243,7 +1243,7 @@ It is used as a global starting point and a translation reference."
         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
 
-        self.vis_widget_reg = VisualisationWidget(self, viewer2D)
+        self.vis_widget_reg = VisualisationWidget(parent = self, viewer = viewer2D, enableSliderWidget=False)
         
 
         reg_viewer_dock = QDockWidget("Image Registration",self.RightDockWindow)

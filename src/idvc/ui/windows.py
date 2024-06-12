@@ -40,13 +40,13 @@ class VisualisationWindow(QtWidgets.QMainWindow):
 class VisualisationWidget(QtWidgets.QMainWindow):
     '''creates a window with a QCILViewerWidget as the central widget
     '''
-    def __init__(self, parent, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle):
+    def __init__(self, parent, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle, enableSliderWidget=True):
         super().__init__()
         self.parent = parent
-
         self.e = ErrorObserver()
         self.viewer = viewer
         self.interactorStyle = interactorStyle
+        self.enableSliderWidget = enableSliderWidget
         self.createEmptyFrame()
         self.threadpool = QThreadPool()
         self._consume_CharEvent = ['s', 'w']
@@ -65,7 +65,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
      
     def createEmptyFrame(self):
         #print("empty")
-        self.frame = QCILViewerWidget(viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle)
+        self.frame = QCILViewerWidget(parent = None, viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle, enableSliderWidget = self.enableSliderWidget)
         self.setCentralWidget(self.frame)
         self.image_file = [""]
        
