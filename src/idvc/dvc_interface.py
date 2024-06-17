@@ -464,8 +464,23 @@ class MainWindow(QMainWindow):
         self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results."
             "You can access these options under 'File'.")
 
-        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset."
-            "You may also scale the vectors to make them larger and easier to view.")
+        self.help_text.append("Results are displayed in the form of graphs and displacement vectors.\n\n"
+                             "Select the run from the dropdown list of all of the saved runs. For each run, select the subvolume size and the points in the subvolume.\n\n"
+                             "Visualise displacements:\n"
+                             "1. Choose what to view. The list includes the point cloud or the displacement vectors including, or excluding, the rigid body offset stored during the initial registration.\n"
+                             "2. Click 'View Pointcloud/Vectors' to visualise the pointcloud/vectors on the 2D and 3D viewers.\n"
+                             "3. When the vector scaling is set to 1, the displacement vectors are shown in true size. Edit the value to rescale the vectors on the viewers and click 'View Pointcloud/Vectors' to apply the changes.\n"
+                             "4. Limit the range of the vectors viewed by changing the 'Vector Range Min' and Vector Range Max'. Then, click 'View Pointcloud/Vectors' to apply the changes.\n"            
+                             "5. On the 2D viewer, the vectors are shown as 2D arrows, showing the displacements in the current plane. If the 'x', 'y' or 'z' keys are pressed click 'View Pointcloud/Vectors' to apply the changes.\n\n"
+                             "Display Graphs:\n"
+                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window). A tab is created for each run, showing a summary of the parameters.\n"
+                             "1. Select an option from the list for the variable to compare.\n"
+                             "2. Select the parameters to compare from the list.\n"
+                             "3. Click on 'Plot Histograms'.\n"
+                             "Note: This will automatically show the displacements including the translation that you set in the manual registration.\n"
+                             "4. Optionally, go to 'Settings' and select 'Show displacement relative to reference point 0' to adjust the displacements to exclude the initial registration translation.\n"
+                             "5. In the case of a bulk run, a particular variable can be selected and the graphs for this variable in each of the runs can be compared.\n\n"
+                            )
 
         self.help_label = QLabel(groupBox)
         scroll_area_widget = QScrollArea()
