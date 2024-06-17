@@ -2175,7 +2175,6 @@ It is used as a global starting point and a translation reference."
 
         mp_widgets['mask_downsampled_coords_warning'] = QLabel(groupBox)
         mp_widgets['mask_downsampled_coords_warning'].setWordWrap(True)
-        mp_widgets['mask_downsampled_coords_warning'].setAutoFillBackground(False)
         mp_widgets['mask_downsampled_coords_warning'].setText("Note: if your image has been downsampled, the number of slices is in the coordinates of the downsampled image.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_downsampled_coords_warning'])
         widgetno += 1
