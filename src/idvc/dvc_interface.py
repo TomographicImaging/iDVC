@@ -3465,6 +3465,7 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         """Loads a pointcloud from file. 
         Handles BOM in csv file.
         File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
+        Stores the pointcloud in a temporary txt file, whose path is stored in 'self.roi'.
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
