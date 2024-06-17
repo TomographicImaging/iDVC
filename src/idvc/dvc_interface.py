@@ -277,9 +277,10 @@ class MainWindow(QMainWindow):
 
         self.viewer3D_dock = QDockWidget("3D View")
         self.viewer3D_dock.setObjectName("3DImageView")
+        self.viewer3D_dock.setMinimumHeight(300)
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
         self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
-        self.viewer3D_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)   
+        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable)   
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
         prev = None
@@ -2607,7 +2608,6 @@ It is used as a global starting point and a translation reference."
 # Point Cloud Panel:
 
     def CreatePointCloudPanel(self):
-
         self.pointCloudDockWidget = QDockWidget(self)
         self.pointCloudDockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.pointCloudDockWidget.setWindowTitle('4 - Point Cloud')
@@ -2618,8 +2618,13 @@ It is used as a global starting point and a translation reference."
 
 
         # Add vertical layout to dock contents
+
         self.graphDockVL = QVBoxLayout(self.pointCloudDockWidgetContents)
         self.graphDockVL.setContentsMargins(0, 0, 0, 0)
+
+        scroll_area_point_cloud = QScrollArea()
+        scroll_area_point_cloud.setWidgetResizable(True)
+        scroll_area_point_cloud.setWidget(self.pointCloudDockWidgetContents)
 
         # Create widget for dock contents
         self.dockWidget = QWidget(self.pointCloudDockWidgetContents)
@@ -2891,7 +2896,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         # Add elements to layout
         self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
         self.graphDockVL.addWidget(self.dockWidget)
-        self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
+        self.pointCloudDockWidget.setWidget(scroll_area_point_cloud)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.pointCloudDockWidget)
         widgetno += 1
 
