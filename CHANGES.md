@@ -4,12 +4,11 @@
 * Edit DVC-Results tab #231
 * Edit mask help text and documentation #257
 * Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
-* Allow inp format in point-cloud file #269 
 * Edit documentation on registration in dvc steps #268
 * Edit documentation on point 0 in dvc steps #264
 * Add scrolling widget in the help text #260
 * Add `openpyxl` to recipe files #262
-* Allow csv and xlxs formats in point-cloud file & add error dialog #262 
+* Allow csv, xlxs and inp formats in point-cloud file & add error dialog #262 #269 #284
 * Set registration-box-size default and help text #259
 * Make dimensionality 3D the default #256
 * Edit README.md to include Prof. Bay citations and ref to DVC executable #255
