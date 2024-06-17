@@ -83,6 +83,11 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     dockContentsVerticalLayout = QVBoxLayout(dockWidgetContents)
     dockContentsVerticalLayout.setContentsMargins(0, 0, 0, 0)
 
+    #create scroll widget
+    scroll_area = QScrollArea()
+    scroll_area.setWidgetResizable(True)
+    scroll_area.setWidget(dockWidgetContents)
+
     # Create widget for dock contents
     internalDockWidget = QWidget(dockWidgetContents)
 
@@ -101,7 +106,7 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     # Add elements to layout
     internalWidgetVerticalLayout.addWidget(paramsGroupBox)
     dockContentsVerticalLayout.addWidget(internalDockWidget)
-    dockWidget.setWidget(dockWidgetContents)
+    dockWidget.setWidget(scroll_area)
 
     #        self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
     #        self.graphDockVL.addWidget(self.dockWidget)
