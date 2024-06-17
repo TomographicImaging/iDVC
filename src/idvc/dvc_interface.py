@@ -2181,15 +2181,10 @@ It is used as a global starting point and a translation reference."
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_extend_below_entry'])
         widgetno += 1
 
-        mp_widgets['mask_downsampled_coords_warning'] = QScrollArea()
-        qlabel = QLabel(groupBox)
-        qlabel.setWordWrap(True)
-        mp_widgets['mask_downsampled_coords_warning'].setWidget(qlabel)
-        mp_widgets['mask_downsampled_coords_warning'].setFrameShape(QFrame.NoFrame)
-        mp_widgets['mask_downsampled_coords_warning'].setFrameShadow(QFrame.Plain)
-        mp_widgets['mask_downsampled_coords_warning'].setStyleSheet("border: 0px;")
-        mp_widgets['mask_downsampled_coords_warning'].setWidgetResizable(True)
-        qlabel.setText("Note: if your image has been downsampled, the number of slices is in the coordinates of the downsampled image.")
+        mp_widgets['mask_downsampled_coords_warning'] = QLabel(groupBox)
+        mp_widgets['mask_downsampled_coords_warning'].setWordWrap(True)
+        mp_widgets['mask_downsampled_coords_warning'].setAutoFillBackground(False)
+        mp_widgets['mask_downsampled_coords_warning'].setText("Note: if your image has been downsampled, the number of slices is in the coordinates of the downsampled image.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_downsampled_coords_warning'])
         widgetno += 1
 
