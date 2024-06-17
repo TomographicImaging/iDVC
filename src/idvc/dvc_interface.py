@@ -469,19 +469,11 @@ class MainWindow(QMainWindow):
             "You may also scale the vectors to make them larger and easier to view.")
 
         self.help_label = QLabel(groupBox)
-        scroll_area_widget = QScrollArea()
-        
+    
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
 
-        scroll_area_widget.setWidget(self.help_label)
-        scroll_area_widget.setFrameShape(QFrame.NoFrame)
-        scroll_area_widget.setFrameShadow(QFrame.Plain)
-        scroll_area_widget.setStyleSheet("border: 0px;")
-        scroll_area_widget.setWidgetResizable(True)
-
-
-        formLayout.setWidget(1, QFormLayout.SpanningRole, scroll_area_widget)
+        formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
 
     def displayHelp(self, open, panel_no = None):
         if open:
