@@ -139,17 +139,17 @@ centred on the location of the reference point 0.
 If you select a **2D** point cloud, then the point cloud will only be created on the currently displayed slice of the image.
 A **3D** point cloud will be created across the entire extent of the mask. 
 
-The overlap is the percentage overlap of the subvolume regions.
-You can also set a rotation of the subvolumes in degrees, relative to any of the three axes.
+The **Overlap** is the percentage overlap of the subvolume regions.
+You can also set a **Rotation Angle** of the subvolumes in degrees, relative to any of the three axes.
 
-You may choose to **erode** the mask.
-Without doing this, although all of the points will lie within the mask, parts of some of the subvolumes may lie outside of the mask.
-Eroding the mask will help to ensure the entirety of all of the subvolume regions lies within the mask.
+Parts of some of the subvolumes may lie outside of the mask, although all of the points will lie within the mask.
+You may choose to erode the mask by ticking **Erode mask**.
+Eroding the mask will help ensure the entirety of all of the subvolume regions lies within the mask.
 Be aware that this is quite a time consuming process.
-You may also adjust the multiplier on the erosion, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter to you if some subvolumes are partially outside of the mask.
+You may also adjust the **Erosion multiplier**, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter if some subvolumes are partially outside of the mask.
 
-The **display subvolume regions** option allows you to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
-The display registration region toggles on/off the view of the registration box centred on point 0.
+The **Display Subvolume Regions** option allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
+The **Display Registration Region**s toggles on/off the view of the registration box centred on point 0.
 
 .. image:: images/3D_pointcloud.png
 
@@ -163,7 +163,8 @@ The names of all of the point clouds you have saved to the current session will 
 You can select one from here and reload it.
 
 Alternatively, you may load a point cloud from a file you have saved.
-This must be a tab-delimited text file with the point number in the first column, followed by the x, y and z coordinates of each point.
+Allowed file formats are `txt`, `csv`, `xlxs`, `inp`.
+This could be a tab-delimited text file with the point number in the first column, followed by the x, y and z coordinates of each point.
 
 An example is shown below. The first point in the file will be used as the starting point for the DVC analysis.
 Note that you may use non-integer coordinates.
@@ -175,7 +176,7 @@ Note that you may use non-integer coordinates.
 Note that the point cloud is in the coordinate system of the original image, and is not affected by the down-sampling, it is displayed at the true location of the points.
 Once you are happy with your point cloud, you can move on to the **Run DVC** panel.
 
-To delete a PointCloud you should press the `Clear Point Cloud` button.
+To delete a PointCloud you should press the **Clear Point Cloud** button.
 
 .. _Running DVC Analysis:
 
