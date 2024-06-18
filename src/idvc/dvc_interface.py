@@ -455,12 +455,23 @@ class MainWindow(QMainWindow):
             "8. To restart the mask creation, click on 'Clear mask'.\n"
             "9. Each mask can be selected and reloaded by clicking on 'Load Saved Mask'.")
         
-        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
+        self.help_text.append("A point cloud for the DVC analysis can be generated or imported from file.\n"
+            "Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
-            "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
-            "If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
-            "It will be the first point in the file that is used as the reference point.")
-
+            "The reference point for the DVC analysis is the first point in the point-cloud file.\n\n"
+            "Generate a point cloud:\n"
+            "1. A 3D point cloud will be created across the entire extent of the mask unless the 2D dimensionality is selected i.e. the point cloud is created on the currently displayed slice of the image.\n" 
+            "2. Set the overlap, representing the percentage overlap of the subvolume regions.\n"
+            "3. Optionally, set the rotation angle of the subvolumes in degrees, relative to any of the three axes.\n"
+            "4. Tick 'Erode mask' to ensure the entirety of all of the subvolume regions lies within the mask. The erosion multiplier changes the weight of the erosion process.\n"
+            "Note: If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n\n"
+            "Load a point cloud from file:\n"
+            "1. If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
+            f"2. Import the point cloud file in the format {allowed_point_cloud_file_formats}.\n\n"
+            "Click on 'Clear Point Cloud' button to delete the point cloud.\n"
+            "Tick 'Display Subvolume Regions' to turn on/off viewing the subvolumes.\n"
+            "Tick 'Display Registration Region' toggles on/off the view of the registration box centred on point 0.")
+        
         self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results."
             "You can access these options under 'File'.")
 
@@ -2667,22 +2678,24 @@ It is used as a global starting point and a translation reference."
         # Add ISO Value field
         self.isoValueLabel = QLabel(self.graphParamsGroupBox)
         self.isoValueLabel.setText("Subvolume size")
-        self.isoValueLabel.setToolTip("Defines the diameter or side length of the subvolumes created around each search point. This is in units of voxels on the original image.")
+        tooltip_subvolume_size = "Defines the diameter of a spherical subvolume region or the side length of a cubic subvolume region created around each point. This is in units of voxels on the original image."
+        self.isoValueLabel.setToolTip(tooltip_subvolume_size)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.isoValueLabel)
         self.isoValueEntry= QLineEdit(self.graphParamsGroupBox)
         self.isoValueEntry.setValidator(validatorint)
         self.isoValueEntry.setText('30')
-        self.isoValueEntry.setToolTip("Defines the diameter or side length of the subvolumes created around each search point. This is in units of voxels on the original image.")
+        self.isoValueEntry.setToolTip(tooltip_subvolume_size)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.isoValueEntry)
         self.isoValueEntry.textChanged.connect(self.displaySubvolumePreview)
 
         widgetno += 1
         pc['pointcloud_size_entry'] = self.isoValueEntry
-
+        tooltip_display_subvolume_preview = "A preview of the size of each subvolume will be shown in the viewer."
         pc['subvolume_preview_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['subvolume_preview_check'].setText("Display Subvolume Preview")
         pc['subvolume_preview_check'].setChecked(True)
         pc['subvolume_preview_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_preview_actor') )
+        pc['subvolume_preview_check'].setToolTip(tooltip_display_subvolume_preview)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolume_preview_check'])
         widgetno += 1
 
@@ -2717,15 +2730,15 @@ It is used as a global starting point and a translation reference."
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
         self.dimensionalityLabel.setText("Dimensionality")
-        self.dimensionalityLabel.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
-A 3D pointcloud is created within the full extent of the mask.")
+        tooltip_dimensionality = "A 2D pointcloud is created only on the currently viewed plane.\n\
+A 3D pointcloud is created within the full extent of the mask."
+        self.dimensionalityLabel.setToolTip(tooltip_dimensionality)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
         self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
-        self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
-A 3D pointcloud is created within the full extent of the mask.")
+        self.dimensionalityValue.setToolTip(tooltip_dimensionality)
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.dimensionalityValue)
         widgetno += 1
@@ -2969,16 +2982,20 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         widgetno += 1
 
         pc['subvolumes_check'] = QCheckBox(self.graphParamsGroupBox)
+        tooltip_display_subvolume_regions = "Allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed."
         pc['subvolumes_check'].setText("Display Subvolume Regions")
         pc['subvolumes_check'].setChecked(False)
         pc['subvolumes_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_actor') )
+        pc['subvolumes_check'].setToolTip(tooltip_display_subvolume_regions)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolumes_check'])
         widgetno += 1
 
         pc['reg_box_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['reg_box_check'].setText("Display Registration Region")
+        tooltip_display_registration_region = "Toggles on/off the view of the registration box centred on point 0."
         pc['reg_box_check'].setChecked(True)
         pc['reg_box_check'].stateChanged.connect( partial(self.showHideActor,actor_name='registration_box_actor') )
+        pc['reg_box_check'].setToolTip(tooltip_display_registration_region)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['reg_box_check'])
         widgetno += 1
 
