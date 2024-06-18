@@ -1,7 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
-* Make 3D viewer dock widget floatable, add minimum height. Add scroll area to dock widgets #289
+* Make 3D viewer dock widget floatable, add minimum height. Add scroll area to point-cloud tab #289
 * Edit DVC-Results tab #231
 * Edit mask help text and documentation #257
 * Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
