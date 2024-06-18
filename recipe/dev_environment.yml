@@ -15,4 +15,4 @@ dependencies:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
-    - vtk
+    - vtk =8.1.2
