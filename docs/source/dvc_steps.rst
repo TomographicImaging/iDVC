@@ -149,7 +149,7 @@ Be aware that this is quite a time consuming process.
 You may also adjust the **Erosion multiplier**, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter if some subvolumes are partially outside of the mask.
 
 The **Display Subvolume Regions** option allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
-The **Display Registration Region**s toggles on/off the view of the registration box centred on point 0.
+The **Display Registration Region** toggles on/off the view of the registration box centred on point 0.
 
 .. image:: images/3D_pointcloud.png
 
