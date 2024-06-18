@@ -89,6 +89,7 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     # Add vertical layout to dock widget
     internalWidgetVerticalLayout = QVBoxLayout(internalDockWidget)
     internalWidgetVerticalLayout.setContentsMargins(0, 0, 0, 0)
+    internalWidgetVerticalLayout.setAlignment(Qt.AlignTop)
 
     # Add group box
     paramsGroupBox = QGroupBox(internalDockWidget)
@@ -96,7 +97,6 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
 
     # Add form layout to group box
     groupBoxFormLayout = QFormLayout(paramsGroupBox)
-    #groupBoxFormLayout.setFormAlignment(Qt.AlignCenter)
 
     # Add elements to layout
     internalWidgetVerticalLayout.addWidget(paramsGroupBox)

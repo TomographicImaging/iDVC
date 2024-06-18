@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Make 3D viewer dock widget floatable, add minimum height. Add scroll area to point-cloud tab #289
 * Fix vtk version #291
 * Disables buttons in Select-Image tab after first registration #293
 * Edit DVC-Results tab #231
