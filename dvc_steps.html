@@ -204,15 +204,15 @@ This is the diameter of a spherical subvolume region, or the side length of a cu
 centred on the location of the reference point 0.</p>
 <p>If you select a <strong>2D</strong> point cloud, then the point cloud will only be created on the currently displayed slice of the image.
 A <strong>3D</strong> point cloud will be created across the entire extent of the mask.</p>
-<p>The overlap is the percentage overlap of the subvolume regions.
-You can also set a rotation of the subvolumes in degrees, relative to any of the three axes.</p>
-<p>You may choose to <strong>erode</strong> the mask.
-Without doing this, although all of the points will lie within the mask, parts of some of the subvolumes may lie outside of the mask.
-Eroding the mask will help to ensure the entirety of all of the subvolume regions lies within the mask.
+<p>The <strong>Overlap</strong> is the percentage overlap of the subvolume regions.
+You can also set a <strong>Rotation Angle</strong> of the subvolumes in degrees, relative to any of the three axes.</p>
+<p>Parts of some of the subvolumes may lie outside of the mask, although all of the points will lie within the mask.
+You may choose to erode the mask by ticking <strong>Erode mask</strong>.
+Eroding the mask will help ensure the entirety of all of the subvolume regions lies within the mask.
 Be aware that this is quite a time consuming process.
-You may also adjust the multiplier on the erosion, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter to you if some subvolumes are partially outside of the mask.</p>
-<p>The <strong>display subvolume regions</strong> option allows you to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
-The display registration region toggles on/off the view of the registration box centred on point 0.</p>
+You may also adjust the <strong>Erosion multiplier</strong>, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter if some subvolumes are partially outside of the mask.</p>
+<p>The <strong>Display Subvolume Regions</strong> option allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
+The <strong>Display Registration Region</strong> toggles on/off the view of the registration box centred on point 0.</p>
 <img alt="_images/3D_pointcloud.png" src="_images/3D_pointcloud.png" />
 <p><span class="raw-html"><br /></span></p>
 </section>
@@ -222,14 +222,15 @@ The display registration region toggles on/off the view of the registration box 
 The names of all of the point clouds you have saved to the current session will appear in a dropdown list.
 You can select one from here and reload it.</p>
 <p>Alternatively, you may load a point cloud from a file you have saved.
-This must be a tab-delimited text file with the point number in the first column, followed by the x, y and z coordinates of each point.</p>
+Allowed file formats are <cite>txt</cite>, <cite>csv</cite>, <cite>xlxs</cite>, <cite>inp</cite>.
+This could be a tab-delimited text file with the point number in the first column, followed by the x, y and z coordinates of each point.</p>
 <p>An example is shown below. The first point in the file will be used as the starting point for the DVC analysis.
 Note that you may use non-integer coordinates.</p>
 <img alt="_images/pointcloud_txt_example.png" src="_images/pointcloud_txt_example.png" />
 <p><span class="raw-html"><br /></span></p>
 <p>Note that the point cloud is in the coordinate system of the original image, and is not affected by the down-sampling, it is displayed at the true location of the points.
 Once you are happy with your point cloud, you can move on to the <strong>Run DVC</strong> panel.</p>
-<p>To delete a PointCloud you should press the <cite>Clear Point Cloud</cite> button.</p>
+<p>To delete a PointCloud you should press the <strong>Clear Point Cloud</strong> button.</p>
 </section>
 </section>
 <section id="running-the-dvc-analysis">
