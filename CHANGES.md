@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Fix vtk version #291
 * Edit DVC-Results tab #231
 * Edit mask/point-cloud/results tooltips, help text and documentation #257 #286 #287
 * Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
