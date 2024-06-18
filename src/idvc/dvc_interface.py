@@ -480,6 +480,10 @@ class MainWindow(QMainWindow):
                              "Note: This will automatically show the displacements including the translation that you set in the manual registration.\n"
                              "4. Optionally, go to 'Settings' and select 'Show displacement relative to reference point 0' to adjust the displacements to exclude the initial registration translation.\n"
                              "5. In the case of a bulk run, a particular variable can be selected and the graphs for this variable in each of the runs can be compared.\n\n"
+                            "Results Files:\n"
+                            "Select a folder and export a session to access the result files. Two tab-delimited text files are generated for each run at location <session_folder>\Results\<run_name>\dvc_result_*.\n"
+                            "1. The status file (dvc_result_*.stat) contains an echo of the input file used for the analysis, information about the point cloud, dvc program version, run date/time, search statistics and timing.\n"
+                            "2. The displacement file (dvc_result_*.disp) records status, objective funtion, displacement, rotation, and strain for each point in the analysis."
                             )
 
         self.help_label = QLabel(groupBox)
