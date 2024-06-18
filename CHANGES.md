@@ -1,38 +1,20 @@
 # ChangeLog
 
-## vx.x.x
-* Make 3D viewer dock widget floatable, add minimum height. Add scroll area to point-cloud tab #289
-* Fix vtk version #291
-* Disables buttons in Select-Image tab after first registration #293
+## v24.0.0
+New features:
 * Edit DVC-Results tab #231
-* Edit mask/point-cloud/results tooltips, help text and documentation #257 #286 #287
-* Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
-* Edit documentation on registration in dvc steps #268
-* Edit documentation on point 0 in dvc steps #264
 * Add scrolling widget in the help text #260
-* Add `openpyxl` to recipe files #262
 * Allow csv, xlxs and inp formats in point-cloud file & add error dialog #262 #269 #284
 * Set registration-box-size default and help text #259
 * Make dimensionality 3D the default #256
-* Edit README.md to include Prof. Bay citations and ref to DVC executable #255
-* Edit "degrees of freedom" widget to be "optimisation parameters" #254
 * Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 #228
-* Fix some missing pip dependencies & update workflows & fix tests #233
 * Edit registration-tab name from "Manual" to "Initial" #241
 * Add automatic registration functionality #304
-* Set empty pop-up menus for the main windows #217
-* Set Tabified widgets not to move or close #226 #217
-* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost #226 #217
-* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively #218
 * Added argument parser to idvc command. This allows the user to specify the debugging level
-* Add workaround for box clipping due to VTK behaviour change from 9.1. Removed requirement for VTK 8.1.2
-* add build directory to gitignore
 * Add setting to set the number of OpenMP threads to use during DVC analysis
-* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
 * renames input files with names reference and correlate for the relative images, if data are copied in the session
 * More efficient pointcloud creation by not shifting the pointcloud to the make such that point0 is one point of the 
   created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid
-* Updates progress bar for setting up a DVC run configuration - previously this was hanging
 * Improves progress reporting when loading a saved session, including displaying file names as they are loaded
 * Make splash screen appear instantly when app is opened
 * Restructure to create:
@@ -41,7 +23,33 @@
   * ui/windows.py
   * utils.py
   * idvc.py - which launches the app
+  
+Bug fixes:
+* Make 3D viewer dock widget floatable, add minimum height. Add scroll area to point-cloud tab #289
+* Disables buttons in Select-Image tab after first registration #293
+* Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
+* Edit "degrees of freedom" widget to be "optimisation parameters" #254
+* Set empty pop-up menus for the main windows #217
+* Set Tabified widgets not to move or close #226 #217
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost #226 #217
+* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively #218
+* Add workaround for box clipping due to VTK behaviour change from 9.1. 
+* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
+* Updates progress bar for setting up a DVC run configuration - previously this was hanging
+  
+CI:
+* Fix vtk version #291
+* Add `openpyxl` to recipe files #262
+* Fix some missing pip dependencies & update workflows & fix tests #233
+* Removed requirement for VTK 8.1.2
+* add build directory to gitignore
 * Revert to v1.4.4 of conda build action
+
+Documentation:
+* Edit mask/point-cloud/results tooltips, help text and documentation #257 #286 #287
+* Edit documentation on registration in dvc steps #268
+* Edit documentation on point 0 in dvc steps #264
+* Edit README.md to include Prof. Bay citations and ref to DVC executable #255
 
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
