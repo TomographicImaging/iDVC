@@ -461,7 +461,7 @@ class MainWindow(QMainWindow):
             "The reference point for the DVC analysis is the first point in the point-cloud file.\n\n"
             "Generate a point cloud:\n"
             "1. A 3D point cloud will be created across the entire extent of the mask unless the 2D dimensionality is selected i.e. the point cloud is created on the currently displayed slice of the image.\n" 
-            "2. The overlap is the percentage overlap of the subvolume regions. Values larger than 0.2 are not recommended.\n"
+            "2. Set the overlap, representing the percentage overlap of the subvolume regions.\n"
             "3. Optionally, set the rotation angle of the subvolumes in degrees, relative to any of the three axes.\n"
             "4. Tick 'Erode mask' to ensure the entirety of all of the subvolume regions lies within the mask. The erosion multiplier changes the weight of the erosion process.\n"
             "Note: If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n\n"
