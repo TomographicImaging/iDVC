@@ -86,9 +86,15 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     # Create widget for dock contents
     internalDockWidget = QWidget(dockWidgetContents)
 
+    #create scroll widget
+    scroll_area = QScrollArea()
+    scroll_area.setWidgetResizable(True)
+    scroll_area.setWidget(internalDockWidget)
+
     # Add vertical layout to dock widget
     internalWidgetVerticalLayout = QVBoxLayout(internalDockWidget)
     internalWidgetVerticalLayout.setContentsMargins(0, 0, 0, 0)
+    internalWidgetVerticalLayout.setAlignment(Qt.AlignTop)
 
     # Add group box
     paramsGroupBox = QGroupBox(internalDockWidget)
@@ -96,11 +102,10 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
 
     # Add form layout to group box
     groupBoxFormLayout = QFormLayout(paramsGroupBox)
-    #groupBoxFormLayout.setFormAlignment(Qt.AlignCenter)
 
     # Add elements to layout
     internalWidgetVerticalLayout.addWidget(paramsGroupBox)
-    dockContentsVerticalLayout.addWidget(internalDockWidget)
+    dockContentsVerticalLayout.addWidget(scroll_area)
     dockWidget.setWidget(dockWidgetContents)
 
     #        self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
