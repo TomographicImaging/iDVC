@@ -3499,7 +3499,9 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
+        Handles BOM in csv file.
         File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
+        Stores the pointcloud in a temporary txt file, whose path is stored in 'self.roi'.
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3507,17 +3509,27 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         progress_callback.emit(20)
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
-        self.roi = pointcloud_file
+        
         if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
             points = np.loadtxt(pointcloud_file)
         elif pointcloud_file.endswith('.csv'):
-            points = np.genfromtxt(pointcloud_file, delimiter=',')
+            with tempfile.NamedTemporaryFile(delete=False, mode='w+', suffix='.csv', newline='', encoding='utf-8') as temp_file:
+                with open(pointcloud_file, 'r', encoding='utf-8-sig') as f:
+                    lines = f.readlines()
+                temp_file.writelines(lines)
+                temp_file_path = temp_file.name
+            points = np.genfromtxt(temp_file_path, delimiter=',', dtype=float)
+            os.remove(temp_file_path)
         elif pointcloud_file.endswith('.xlsx'):
             workbook = load_workbook(pointcloud_file, read_only=True)
             sheet = workbook.active
             points = np.array(list(sheet.values))
         elif pointcloud_file.endswith('.inp'):
             points =  extract_point_cloud_from_inp_file(args[0])
+        filename = os.path.basename(pointcloud_file)
+        path = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+        np.savetxt(path, points,fmt=('%d','%f','%f','%f'))
+        self.roi = path
 
         # except ValueError as ve:
         #     print(ve)
@@ -4472,6 +4484,8 @@ This parameter has a strong effect on computation time, so be careful."
             next_button.setEnabled(True)
 
     def create_config_worker(self):
+        """Creates warning dialogs if information is missing to run DVC.
+        Calls the worker."""
         if hasattr(self, 'translate'):
             if self.translate is None:
                 self.warningDialog("Complete image registration first.", "Error")
@@ -4479,7 +4493,7 @@ This parameter has a strong effect on computation time, so be careful."
         if not hasattr(self, 'translate'):
             self.warningDialog("Complete image registration first.", "Error")
             return
-
+        
         if self.pointcloud_is == 'loaded':
             if not self.roi:
                 self.warningDialog(window_title="Error", 
