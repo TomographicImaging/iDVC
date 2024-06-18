@@ -1600,10 +1600,17 @@ It is used as a global starting point and a translation reference."
 
     def OnStartStopRegistrationPushed(self):
         ''' This method is triggered by pressing the "Start Registration" button or the "Confirm Registration" button.
-        When the button is pressed again after the first registration, the button text is "Restart registration".
+        When the button is pressed for the first time, the buttons in the "Select Image" tab are disabled and the help text for that tab is changed.
+        When the button is pressed again after the first registration, the button text is "Restart Registration".
+        
         '''
         rp = self.registration_parameters
-        if "Restart registration" in rp['start_registration_button'].text():
+        if "Start Registration" in rp['start_registration_button'].text():
+            self.si_widgets['ref_browse'].setEnabled(False)
+            self.si_widgets['cor_browse'].setEnabled(False)
+            self.si_widgets['view_button'].setEnabled(False)
+            self.help_text[0] = """If you wish to upload a new set of data, and the buttons are not enabled, close and restart the iDVC app."""
+        elif "Restart Registration" in rp['start_registration_button'].text():
             self.translate = None
             rp['translate_X_entry'].setText("0")
             rp['translate_Y_entry'].setText("0")
@@ -1666,7 +1673,7 @@ It is used as a global starting point and a translation reference."
         """
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        self.registration_parameters['start_registration_button'].setText("Restart registration")
+        self.registration_parameters['start_registration_button'].setText("Restart Registration")
         rp['registration_box_size_entry'].setEnabled(True)
         rp['select_point_zero'].setCheckable(True)
         rp['select_point_zero'].setChecked(False)
