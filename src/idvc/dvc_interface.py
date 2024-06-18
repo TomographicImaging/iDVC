@@ -2615,12 +2615,14 @@ It is used as a global starting point and a translation reference."
         self.graphDockVL = QVBoxLayout(self.pointCloudDockWidgetContents)
         self.graphDockVL.setContentsMargins(0, 0, 0, 0)
 
-        scroll_area_point_cloud = QScrollArea()
-        scroll_area_point_cloud.setWidgetResizable(True)
-        scroll_area_point_cloud.setWidget(self.pointCloudDockWidgetContents)
+        
 
         # Create widget for dock contents
         self.dockWidget = QWidget(self.pointCloudDockWidgetContents)
+
+        scroll_area_point_cloud = QScrollArea()
+        scroll_area_point_cloud.setWidgetResizable(True)
+        scroll_area_point_cloud.setWidget(self.dockWidget)
 
         # Add vertical layout to dock widget
         self.graphWidgetVL = QVBoxLayout(self.dockWidget)
@@ -2888,8 +2890,8 @@ A 3D pointcloud is created within the full extent of the mask.")
         widgetno += 1
         # Add elements to layout
         self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
-        self.graphDockVL.addWidget(self.dockWidget)
-        self.pointCloudDockWidget.setWidget(scroll_area_point_cloud)
+        self.graphDockVL.addWidget(scroll_area_point_cloud)
+        self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.pointCloudDockWidget)
         widgetno += 1
 
