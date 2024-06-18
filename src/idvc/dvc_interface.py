@@ -455,17 +455,47 @@ class MainWindow(QMainWindow):
             "8. To restart the mask creation, click on 'Clear mask'.\n"
             "9. Each mask can be selected and reloaded by clicking on 'Load Saved Mask'.")
         
-        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
+        self.help_text.append("A point cloud for the DVC analysis can be generated or imported from file.\n"
+            "Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
-            "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
-            "If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
-            "It will be the first point in the file that is used as the reference point.")
-
+            "The reference point for the DVC analysis is the first point in the point-cloud file.\n\n"
+            "Generate a point cloud:\n"
+            "1. A 3D point cloud will be created across the entire extent of the mask unless the 2D dimensionality is selected i.e. the point cloud is created on the currently displayed slice of the image.\n" 
+            "2. Set the overlap, representing the percentage overlap of the subvolume regions.\n"
+            "3. Optionally, set the rotation angle of the subvolumes in degrees, relative to any of the three axes.\n"
+            "4. Tick 'Erode mask' to ensure the entirety of all of the subvolume regions lies within the mask. The erosion multiplier changes the weight of the erosion process.\n"
+            "Note: If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n\n"
+            "Load a point cloud from file:\n"
+            "1. If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
+            f"2. Import the point cloud file in the format {allowed_point_cloud_file_formats}.\n\n"
+            "Click on 'Clear Point Cloud' button to delete the point cloud.\n"
+            "Tick 'Display Subvolume Regions' to turn on/off viewing the subvolumes.\n"
+            "Tick 'Display Registration Region' toggles on/off the view of the registration box centred on point 0.")
+        
         self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results."
             "You can access these options under 'File'.")
 
-        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset."
-            "You may also scale the vectors to make them larger and easier to view.")
+        self.help_text.append("Results are displayed in the form of graphs and displacement vectors.\n\n"
+                             "Select the run from the dropdown list of all of the saved runs. For each run, select the subvolume size and the points in the subvolume.\n\n"
+                             "Visualise displacements:\n"
+                             "1. Choose what to view. The list includes the point cloud or the displacement vectors including, or excluding, the rigid body offset stored during the initial registration.\n"
+                             "2. Click 'View Pointcloud/Vectors' to visualise the pointcloud/vectors on the 2D and 3D viewers.\n"
+                             "3. When the vector scaling is set to 1, the displacement vectors are shown in true size. Edit the value to rescale the vectors on the viewers and click 'View Pointcloud/Vectors' to apply the changes.\n"
+                             "4. Limit the range of the vectors viewed by changing the 'Vector Range Min' and Vector Range Max'. Then, click 'View Pointcloud/Vectors' to apply the changes.\n"            
+                             "5. On the 2D viewer, the vectors are shown as 2D arrows, showing the displacements in the current plane. If the 'x', 'y' or 'z' keys are pressed click 'View Pointcloud/Vectors' to apply the changes.\n\n"
+                             "Display Graphs:\n"
+                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window). A tab is created for each run, showing a summary of the parameters.\n"
+                             "1. Select an option from the list for the variable to compare.\n"
+                             "2. Select the parameters to compare from the list.\n"
+                             "3. Click on 'Plot Histograms'.\n"
+                             "Note: This will automatically show the displacements including the translation that you set in the manual registration.\n"
+                             "4. Optionally, go to 'Settings' and select 'Show displacement relative to reference point 0' to adjust the displacements to exclude the initial registration translation.\n"
+                             "5. In the case of a bulk run, a particular variable can be selected and the graphs for this variable in each of the runs can be compared.\n\n"
+                            "Results Files:\n"
+                            "Select a folder and export a session to access the result files. Two tab-delimited text files are generated for each run at location <session_folder>\Results\<run_name>\dvc_result_*.\n"
+                            "1. The status file (dvc_result_*.stat) contains an echo of the input file used for the analysis, information about the point cloud, dvc program version, run date/time, search statistics and timing.\n"
+                            "2. The displacement file (dvc_result_*.disp) records status, objective function, displacement, rotation, and strain for each point in the analysis."
+                            )
 
         self.help_label = QLabel(groupBox)
         scroll_area_widget = QScrollArea()
@@ -1570,10 +1600,17 @@ It is used as a global starting point and a translation reference."
 
     def OnStartStopRegistrationPushed(self):
         ''' This method is triggered by pressing the "Start Registration" button or the "Confirm Registration" button.
-        When the button is pressed again after the first registration, the button text is "Restart registration".
+        When the button is pressed for the first time, the buttons in the "Select Image" tab are disabled and the help text for that tab is changed.
+        When the button is pressed again after the first registration, the button text is "Restart Registration".
+        
         '''
         rp = self.registration_parameters
-        if "Restart registration" in rp['start_registration_button'].text():
+        if "Start Registration" in rp['start_registration_button'].text():
+            self.si_widgets['ref_browse'].setEnabled(False)
+            self.si_widgets['cor_browse'].setEnabled(False)
+            self.si_widgets['view_button'].setEnabled(False)
+            self.help_text[0] = """If you wish to upload a new set of data, and the buttons are not enabled, close and restart the iDVC app."""
+        elif "Restart Registration" in rp['start_registration_button'].text():
             self.translate = None
             rp['translate_X_entry'].setText("0")
             rp['translate_Y_entry'].setText("0")
@@ -1636,7 +1673,7 @@ It is used as a global starting point and a translation reference."
         """
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        self.registration_parameters['start_registration_button'].setText("Restart registration")
+        self.registration_parameters['start_registration_button'].setText("Restart Registration")
         rp['registration_box_size_entry'].setEnabled(True)
         rp['select_point_zero'].setCheckable(True)
         rp['select_point_zero'].setChecked(False)
@@ -2652,22 +2689,24 @@ It is used as a global starting point and a translation reference."
         # Add ISO Value field
         self.isoValueLabel = QLabel(self.graphParamsGroupBox)
         self.isoValueLabel.setText("Subvolume size")
-        self.isoValueLabel.setToolTip("Defines the diameter or side length of the subvolumes created around each search point. This is in units of voxels on the original image.")
+        tooltip_subvolume_size = "Defines the diameter of a spherical subvolume region or the side length of a cubic subvolume region created around each point. This is in units of voxels on the original image."
+        self.isoValueLabel.setToolTip(tooltip_subvolume_size)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.isoValueLabel)
         self.isoValueEntry= QLineEdit(self.graphParamsGroupBox)
         self.isoValueEntry.setValidator(validatorint)
         self.isoValueEntry.setText('30')
-        self.isoValueEntry.setToolTip("Defines the diameter or side length of the subvolumes created around each search point. This is in units of voxels on the original image.")
+        self.isoValueEntry.setToolTip(tooltip_subvolume_size)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.isoValueEntry)
         self.isoValueEntry.textChanged.connect(self.displaySubvolumePreview)
 
         widgetno += 1
         pc['pointcloud_size_entry'] = self.isoValueEntry
-
+        tooltip_display_subvolume_preview = "A preview of the size of each subvolume will be shown in the viewer."
         pc['subvolume_preview_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['subvolume_preview_check'].setText("Display Subvolume Preview")
         pc['subvolume_preview_check'].setChecked(True)
         pc['subvolume_preview_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_preview_actor') )
+        pc['subvolume_preview_check'].setToolTip(tooltip_display_subvolume_preview)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolume_preview_check'])
         widgetno += 1
 
@@ -2702,15 +2741,15 @@ It is used as a global starting point and a translation reference."
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
         self.dimensionalityLabel.setText("Dimensionality")
-        self.dimensionalityLabel.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
-A 3D pointcloud is created within the full extent of the mask.")
+        tooltip_dimensionality = "A 2D pointcloud is created only on the currently viewed plane.\n\
+A 3D pointcloud is created within the full extent of the mask."
+        self.dimensionalityLabel.setToolTip(tooltip_dimensionality)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
         self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
-        self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
-A 3D pointcloud is created within the full extent of the mask.")
+        self.dimensionalityValue.setToolTip(tooltip_dimensionality)
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.dimensionalityValue)
         widgetno += 1
@@ -2954,16 +2993,20 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         widgetno += 1
 
         pc['subvolumes_check'] = QCheckBox(self.graphParamsGroupBox)
+        tooltip_display_subvolume_regions = "Allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed."
         pc['subvolumes_check'].setText("Display Subvolume Regions")
         pc['subvolumes_check'].setChecked(False)
         pc['subvolumes_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_actor') )
+        pc['subvolumes_check'].setToolTip(tooltip_display_subvolume_regions)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolumes_check'])
         widgetno += 1
 
         pc['reg_box_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['reg_box_check'].setText("Display Registration Region")
+        tooltip_display_registration_region = "Toggles on/off the view of the registration box centred on point 0."
         pc['reg_box_check'].setChecked(True)
         pc['reg_box_check'].stateChanged.connect( partial(self.showHideActor,actor_name='registration_box_actor') )
+        pc['reg_box_check'].setToolTip(tooltip_display_registration_region)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['reg_box_check'])
         widgetno += 1
 
@@ -3463,7 +3506,9 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
     def loadPointCloud(self, *args, **kwargs):
         """Loads a pointcloud from file. 
+        Handles BOM in csv file.
         File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
+        Stores the pointcloud in a temporary txt file, whose path is stored in 'self.roi'.
         """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
@@ -3471,17 +3516,27 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         progress_callback.emit(20)
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
-        self.roi = pointcloud_file
+        
         if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
             points = np.loadtxt(pointcloud_file)
         elif pointcloud_file.endswith('.csv'):
-            points = np.genfromtxt(pointcloud_file, delimiter=',')
+            with tempfile.NamedTemporaryFile(delete=False, mode='w+', suffix='.csv', newline='', encoding='utf-8') as temp_file:
+                with open(pointcloud_file, 'r', encoding='utf-8-sig') as f:
+                    lines = f.readlines()
+                temp_file.writelines(lines)
+                temp_file_path = temp_file.name
+            points = np.genfromtxt(temp_file_path, delimiter=',', dtype=float)
+            os.remove(temp_file_path)
         elif pointcloud_file.endswith('.xlsx'):
             workbook = load_workbook(pointcloud_file, read_only=True)
             sheet = workbook.active
             points = np.array(list(sheet.values))
         elif pointcloud_file.endswith('.inp'):
             points =  extract_point_cloud_from_inp_file(args[0])
+        filename = os.path.basename(pointcloud_file)
+        path = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+        np.savetxt(path, points,fmt=('%d','%f','%f','%f'))
+        self.roi = path
 
         # except ValueError as ve:
         #     print(ve)
@@ -4436,6 +4491,8 @@ This parameter has a strong effect on computation time, so be careful."
             next_button.setEnabled(True)
 
     def create_config_worker(self):
+        """Creates warning dialogs if information is missing to run DVC.
+        Calls the worker."""
         if hasattr(self, 'translate'):
             if self.translate is None:
                 self.warningDialog("Complete image registration first.", "Error")
@@ -4443,7 +4500,7 @@ This parameter has a strong effect on computation time, so be careful."
         if not hasattr(self, 'translate'):
             self.warningDialog("Complete image registration first.", "Error")
             return
-
+        
         if self.pointcloud_is == 'loaded':
             if not self.roi:
                 self.warningDialog(window_title="Error", 

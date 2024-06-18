@@ -63,7 +63,7 @@ The two files it produces for each run are as follows:
 - Information about the point cloud, dvc program version, and run date/time.
 - Search statistics and timing.
 
-**Displacement file** (.disp): This is a tab-delimited text file of the dev results. A header line appears first identifying columns: 
+**Displacement file** (.disp): This is a tab-delimited text file of the DVC results. A header line appears first identifying columns: 
 
 - ``n`` = the point identifier
 - ``x, y, z`` = the point location within the reference volume
