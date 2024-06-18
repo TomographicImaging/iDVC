@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## vx.x.x
+* Upgrade CILviewer to 24.0.0 #279
 * Fix vtk version #291
 * Disables buttons in Select-Image tab after first registration #293
 * Edit DVC-Results tab #231
