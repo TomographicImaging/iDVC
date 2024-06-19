@@ -1,0 +1,7 @@
+scipy
+natsort
+docopt
+matplotlib
+qdarkstyle
+vtk
+openpyxl

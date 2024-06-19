@@ -15,7 +15,7 @@ jobs:
       with:
         additional_apt_packages: libgl-dev
         subDir: recipe
-        channels: '-c conda-forge -c ccpi -c paskino'
+        channels: '-c conda-forge -c ccpi'
         AnacondaToken: ${{ secrets.ANACONDA_TOKEN }}
         publish: ${{ github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags') }}
         test_all: ${{(github.event_name == 'push' && startsWith(github.event.ref, 'refs/tags')) || (github.ref == 'refs/heads/master')}}

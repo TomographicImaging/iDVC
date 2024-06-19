@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: idvc
+Version: 22.2.0.dev56
+Summary: CCPi DVC Configurator
+Home-page: http://www.ccpi.ac.uk
+Author: Edoardo Pasca, Laura Murgatroyd
+Author-email: edo.paskino@gmail.com
+License: Apache v2.0
+Keywords: Digital Volume Correlation
+License-File: LICENSE
+Requires-Dist: scipy
+Requires-Dist: natsort
+Requires-Dist: docopt
+Requires-Dist: matplotlib
+Requires-Dist: qdarkstyle
+Requires-Dist: vtk
+Requires-Dist: openpyxl
