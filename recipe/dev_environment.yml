@@ -4,7 +4,7 @@ channels:
   - ccpi
 dependencies:   
     - openpyxl
-    - python =3.11
+    - python
     - numpy
     - scipy
     - ccpi::ccpi-viewer >=24.0.0
