@@ -35,7 +35,7 @@ requirements:
     - typing_extensions # [py<=37]
   run:
     - openpyxl
-    - python
+    - python =3.11
     - numpy
     - scipy
     - ccpi::ccpi-viewer >=24.0.0
