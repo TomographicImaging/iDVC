@@ -1,8 +1,7 @@
 name: idvc_dev
 channels:
-  - ccpi
-  - paskino
   - conda-forge
+  - ccpi
 dependencies:   
     - openpyxl
     - python

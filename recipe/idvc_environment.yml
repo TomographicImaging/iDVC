@@ -1,7 +1,6 @@
 name: idvc
 channels:
-  - ccpi
-  - paskino
   - conda-forge
+  - ccpi
 dependencies:    
     - idvc
