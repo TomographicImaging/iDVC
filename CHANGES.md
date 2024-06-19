@@ -25,6 +25,7 @@ New features:
   * idvc.py - which launches the app #198
   
 Bug fixes:
+* Edit methods for registration viewer to be compatible with vtk in viewer v24.0.0
 * Make 3D viewer dock widget floatable, add minimum height. Add scroll area to point-cloud tab #289
 * Disables buttons in Select-Image tab after first registration #293
 * Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
