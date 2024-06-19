@@ -30,7 +30,7 @@ test:
 
 requirements:
   build:
-    - python
+    - python =3.11
     - numpy
     - typing_extensions # [py<=37]
   run:
