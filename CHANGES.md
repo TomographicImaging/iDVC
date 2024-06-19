@@ -40,7 +40,6 @@ Bug fixes:
   
 CI:
 * Upgrade CILviewer to 24.0.0 #279
-* Fix vtk version #291
 * Add `openpyxl` to recipe files #262
 * Fix some missing pip dependencies & update workflows & fix tests #233
 * Add build directory to gitignore #216
