@@ -1328,8 +1328,9 @@ It is used as a global starting point and a translation reference."
                     if self.vis_widget_reg.getImageData() != self.ref_image_data:
                         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
                         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
-                        self.vis_widget_reg.setImageData(self.ref_image_data)
-                        self.vis_widget_reg.displayImageData()
+                        # EDO disabling this initial image display
+                        # self.vis_widget_reg.setImageData(self.ref_image_data)
+                        # self.vis_widget_reg.displayImageData()
 
                     self.viewer2D_dock.setVisible(False)
                     self.viewer3D_dock.setVisible(False)
@@ -1847,6 +1848,8 @@ It is used as a global starting point and a translation reference."
         self.translate.SetTranslation(-int(array[0]),-int(array[1]),-int(array[2]))
         self.translate.Update()
         self.subtract.Update()
+        # for c in self.cast:
+        #     c.Update()
         self.reg_viewer_update(type = 'after automatic registration')
 
     def setRegistrationWidgetsShift(self, shift):   
@@ -1862,6 +1865,8 @@ It is used as a global starting point and a translation reference."
         self.translate.SetTranslation(-int(total_translation[0] + shift[0]),-int(total_translation[1] + shift[1]),-int(total_translation[2] + shift[2]))
         self.translate.Update()
         self.subtract.Update()
+        # for c in self.cast:
+        #     c.Update()
         self.reg_viewer_update(type = 'after automatic registration')
 
     def getRegistrationTranslation(self):
@@ -1941,16 +1946,33 @@ It is used as a global starting point and a translation reference."
         # print ("out of the reader", reader.GetOutput())
 
         cast1 = vtk.vtkImageCast()
-        cast2 = vtk.vtkImageCast()
         cast1.SetInputData(data1)
         cast1.SetOutputScalarTypeToFloat()
+        cast1.Update()
+
+        cast2 = vtk.vtkImageCast()
         cast2.SetInputConnection(self.translate.GetOutputPort())
         cast2.SetOutputScalarTypeToFloat()
+        cast2.Update()
+
+        extent_overlap = find_extent_overlap(cast1.GetOutput().GetExtent(), 
+                                             cast2.GetOutput().GetExtent())
+        
+        voi1 = vtk.vtkExtractVOI()
+        voi1.SetInputData(cast1.GetOutput())
+        voi1.SetVOI(extent_overlap)
+        voi1.Update()
+
+        voi2 = vtk.vtkExtractVOI()
+        voi2.SetInputData(cast2.GetOutput())
+        voi2.SetVOI(extent_overlap)
+        voi2.Update()
+        
         #progress_callback.emit(50)
         subtract = vtk.vtkImageMathematics()
         subtract.SetOperationToSubtract()
-        subtract.SetInputConnection(1,cast1.GetOutputPort())
-        subtract.SetInputConnection(0,cast2.GetOutputPort())
+        subtract.SetInput1Data(voi1.GetOutput())
+        subtract.SetInput2Data(voi2.GetOutput())
         #progress_callback.emit(70)
         
         subtract.Update()
@@ -1965,6 +1987,9 @@ It is used as a global starting point and a translation reference."
         # print ("stats ", stats.GetMinimum(), stats.GetMaximum(), stats.GetMean(), stats.GetMedian())
         self.subtract = subtract
         self.cast = [cast1, cast2]
+        self.subtract_voi = [voi1, voi2]
+        self.stats = stats
+        self.cast_data = data
         #progress_callback.emit(95)
 
     def getRegistrationVOIs(self, extent = None):            
@@ -2029,8 +2054,18 @@ It is used as a global starting point and a translation reference."
         if hasattr(v, 'img3D'):
             current_slice = v.getActiveSlice()
         
+        self.translate.Update()
+        self.cast[1].Update()
+        voi_overlap = find_extent_overlap(self.cast[0].GetOutput().GetExtent(), 
+                                          self.cast[1].GetOutput().GetExtent())
+        self.subtract_voi[0].SetVOI(voi_overlap)
+        self.subtract_voi[1].SetVOI(voi_overlap)
+        self.subtract_voi[0].Update()
+        self.subtract_voi[1].Update()
+        self.subtract.Update()
+        # update 
         v.setInputData(self.subtract.GetOutput())
-        # print("Set the input data")
+
 
         if type == 'starting registration':
             v.style.UpdatePipeline()
@@ -2038,9 +2073,8 @@ It is used as a global starting point and a translation reference."
             self.centerOnPointZero()
         else:
             v.style.SetActiveSlice(round(current_slice))
-            v.style.UpdatePipeline()
-            # v.startRenderLoop()
-            v.style.Render()
+            # v.updatePipeline(True)
+            # v.style.Render()
 
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
@@ -5811,5 +5845,13 @@ Please select the new location of the file, or move it back to where it was orig
         
 
 
-
+def find_extent_overlap(extent1, extent2):
+    '''Find the overlap extent of two extents.'''
+    overlap = [0,0,0,0,0,0]
+    for i in range(3):
+        overlap[2*i] = max(extent1[2*i], extent2[2*i])
+        overlap[2*i+1] = min(extent1[2*i+1], extent2[2*i+1])
+        if overlap[2*i] > overlap[2*i+1]:
+            raise ValueError("No overlap in extent")
+    return overlap
         

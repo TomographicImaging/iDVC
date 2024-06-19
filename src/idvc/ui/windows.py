@@ -50,6 +50,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         self.createEmptyFrame()
         self.threadpool = QThreadPool()
         self._consume_CharEvent = ['s', 'w']
+        
 
     def getViewer(self):
         return self.frame.viewer
