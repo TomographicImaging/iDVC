@@ -39,7 +39,9 @@ from PySide2.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
                                QFormLayout, QGroupBox, QLabel, QLineEdit,
                                QMessageBox, QProgressDialog, QVBoxLayout,
                                QWidget)
+import logging
 
+logger = logging.getLogger(__name__)
 # ImageCreator class
 
 
@@ -988,6 +990,25 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
     if the data is not uint8 or uint16, it will be scaled to uint16'''
     reader = vtk.vtkTIFFReader()
     reader.SetOrientationType(1) # TopLeft
+    
+    # find the global min and max
+    stats = vtk.vtkImageHistogramStatistics()
+    for i,el in enumerate(filenames):
+        reader.SetFileName(el)
+        reader.Update()
+        stats.SetInputConnection(reader.GetOutputPort())
+        stats.Update()
+        if i == 0:
+            m,M = stats.GetMinimum(), stats.GetMaximum()
+        else:
+            m = stats.GetMinimum() if stats.GetMinimum() < m else m
+            M = stats.GetMaximum() if stats.GetMaximum() > M else M
+    logger.debug(f"Min: {m}, Max: {M}")
+    if M-m == 0:
+        msg = "Data is constant, cannot scale to uint16"
+        logger.error(msg)
+        raise ValueError(msg)
+
     with open(os.path.abspath(output_fname), 'wb') as f:
         steps = len(filenames)
         for el in filenames:
@@ -999,7 +1020,7 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
                 convert_to_dtype = numpy.uint16
                 # rescale as float32
                 slice_data = slice_data.astype(numpy.float32)
-                m,M = slice_data.min(), slice_data.max()
+                
                 slice_data = (slice_data - m) / (M - m) * numpy.iinfo(convert_to_dtype).max 
                 # finally cast to uint16
                 slice_data = slice_data.astype(numpy.uint16)

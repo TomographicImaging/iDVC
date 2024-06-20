@@ -1,5 +1,8 @@
 # ChangeLog
 
+Bugfixes:
+  * Fix bug with loading of TIFF files not char or short #262
+
 ## v24.0.0
 New features:
 * Edit DVC-Results tab #231

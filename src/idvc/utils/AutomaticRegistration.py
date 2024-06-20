@@ -46,10 +46,13 @@ class AutomaticRegistration:
         self.size = size
         self.edge = self.calc_edge()
         datatype = im0.dtype
-        if datatype == 'int8' or datatype == 'uint8' or datatype == '>u1' or datatype == '<u1':
-            self.datatype_slice = 'int16'
-        elif datatype == 'int16' or datatype == 'uint16' or datatype == '>u2' or datatype == '<u2':
-            self.datatype_slice = 'int32'
+        # if datatype == 'int8' or datatype == 'uint8' or datatype == '>u1' or datatype == '<u1':
+        #     self.datatype_slice = 'int16'
+        # elif datatype == 'int16' or datatype == 'uint16' or datatype == '>u2' or datatype == '<u2':
+        #     self.datatype_slice = 'int32'
+        # else:
+        #     self.datatype_slice = 'int16'
+        self.datatype_slice = datatype
         self.err_thresh = err_thresh
         self.max_iterations = max_iterations
         if log_folder is not None:
