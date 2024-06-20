@@ -1,4 +1,7 @@
 # ChangeLog
+## v24.0.1
+Bug fixes:
+* Fix bug on sampling points in subvolume
 
 ## v24.0.0
 New features:
