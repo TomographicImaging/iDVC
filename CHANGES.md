@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v24.0.1
+Bug fixes:
+* Fix bug on sampling points in subvolume #302
+
 ## v24.0.0
 New features:
 * Edit DVC-Results tab #231
