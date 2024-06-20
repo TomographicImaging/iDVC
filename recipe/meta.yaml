@@ -32,20 +32,19 @@ requirements:
   build:
     - python
     - numpy
-    - typing_extensions # [py<=37]
+
   run:
     - openpyxl
     - python
     - numpy
     - scipy
-    - ccpi-viewer >=22.4.0
+    - ccpi-viewer >=24.0.1
     - ccpi-dvc >=22.0.0
     - natsort
     - docopt
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
-    - vtk =8.1.2
 
 about:
   home: http://www.ccpi.ac.uk

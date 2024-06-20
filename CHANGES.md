@@ -49,6 +49,9 @@ Documentation:
 * Edit point 0/registration/mask/point-cloud/results tooltips, help text and documentation #257 #264 #268 #286 #287
 * Edit README.md to include Prof. Bay citations and ref to DVC executable #255
 
+Dependencies:
+* Update CILViewer to v24.0.1
+
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction
 * Create environment file for development of iDVC
