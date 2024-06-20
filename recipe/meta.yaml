@@ -38,7 +38,7 @@ requirements:
     - python
     - numpy
     - scipy
-    - ccpi-viewer >=24.0.0
+    - ccpi-viewer >=24.0.1
     - ccpi-dvc >=22.0.0
     - natsort
     - docopt
