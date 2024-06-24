@@ -13,6 +13,7 @@ Installing the App
 
 Please note that whenever you would like to open the app you need to carry out steps 2, 4 and 5 above.
 Alternatively, use miniforge (https://github.com/conda-forge/miniforge) instead of miniconda. 
+
 Updating the App
 ================
 If you have previously installed the app, to get an updated version:
