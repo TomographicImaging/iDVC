@@ -32,6 +32,7 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilTIFFResampleReader,
                                           cilTIFFCroppedReader, 
                                           Converter)
+from ccpi.viewer.ui.dialogs import RawInputDialog
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
 from PySide2.QtCore import QThreadPool
@@ -683,8 +684,6 @@ def createRawImportDialog(main_window, fname, output_image, info_var, resample, 
 
     
     else:
-        from ccpi.viewer.ui.dialogs import RawInputDialog
-
         dialog = RawInputDialog(main_window, fname)
         dialog.Ok.clicked.connect(lambda: createConvertRawImageWorker(
             main_window, fname, output_image, info_var, resample, target_size, 
