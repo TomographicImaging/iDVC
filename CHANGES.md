@@ -4,6 +4,9 @@
 Bug fixes:
 * Fix bug on sampling points in subvolume #302
 
+Documentation:
+* Edits results documentation and help text #309
+
 ## v24.0.0
 New features:
 * Edit DVC-Results tab #231
