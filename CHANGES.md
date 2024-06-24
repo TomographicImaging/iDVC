@@ -5,6 +5,8 @@ Bug fixes:
 * Fix bug on sampling points in subvolume #302
 * Fix text on automatic registration widget #310
 
+Enhancements:
+* Add units to rotation angle in point cloud #311
 Documentation:
 * Edits results documentation and help text #309
 

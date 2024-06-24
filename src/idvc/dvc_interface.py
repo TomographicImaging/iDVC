@@ -2879,7 +2879,7 @@ A 3D pointcloud is created within the full extent of the mask."
         rotation_layout = QHBoxLayout()
         rotation_layout.setContentsMargins(0,0,0,0)
 
-        self.rotationLabel = QLabel("Rotation Angle", self.graphParamsGroupBox)
+        self.rotationLabel = QLabel("Rotation Angle [deg]", self.graphParamsGroupBox)
         self.rotationLabel.setToolTip(rotation_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.rotationLabel)
 
