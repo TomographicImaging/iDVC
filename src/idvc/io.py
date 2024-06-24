@@ -566,8 +566,6 @@ def getProgress(caller, event, progress_callback):
 
 
 # raw 
-import pysnooper
-@pysnooper.snoop()
 def createRawImportDialog(main_window, fname, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn, method='viewer'):
     # method could be 'viewer' or 'app'
     if method == 'app':

@@ -2,7 +2,7 @@
 
 ## v24.0.1
 Bug fixes:
-* Use RawInputDialog from the viewer package
+* Use RawInputDialog from the viewer package #314
 * Fix bug with loading of TIFF files not char or short #262
 * Fix bug on sampling points in subvolume #302
 * Fix text on automatic registration widget #310
