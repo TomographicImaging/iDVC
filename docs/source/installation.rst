@@ -7,7 +7,7 @@ Installing the App
 ==================
 1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html 
 2.	Open an anaconda prompt (miniconda).
-3.  Create a new environment by typing ``conda create --name idvc_environment -c conda-forge -c ccpi idvc=24.0.0`` (or replace ``24.0.0`` with the latest version number).
+3.  Create a new environment and install the software by typing ``conda create --name idvc_environment -c conda-forge -c ccpi idvc=24.0.0`` (or replace ``24.0.0`` with the latest version number).
 4.	Activate the environment by typing ``activate idvc_environment``.
 5.	Run the app by typing ``idvc``.
 
