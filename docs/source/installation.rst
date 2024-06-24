@@ -1,26 +1,26 @@
 Installation
 ************
 
-Currently the app is available to install on windows. Linux and MacOS versions are currently a work in progress.
+Binary installation of iDVC can be achieved with conda. Currently we only support Windows, although a Linux version is also available.
 
 Installing the App
 ==================
 1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html 
-2.	Open an anaconda prompt (miniconda) and type... 
-3.	``conda create --name idvc idvc=22.3.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels`` (or replace 22.3.0 with the latest version number)
-4.	``activate idvc``
-5.	``idvc``
+2.	Open an anaconda prompt (miniconda).
+3.  Create a new environment by typing ``conda create --name idvc_environment -c conda-forge -c ccpi idvc=24.0.0`` (or replace ``24.0.0`` with the latest version number).
+4.	Activate the environment by typing ``activate idvc_environment``.
+5.	Run the app by typing ``idvc``.
 
 Please note that whenever you would like to open the app you need to carry out steps 2, 4 and 5 above.
-
+Alternatively, use miniforge (https://github.com/conda-forge/miniforge) instead of miniconda. 
 Updating the App
 ================
 If you have previously installed the app, to get an updated version:
 
-1.	Open anaconda prompt (miniconda) and type…
-2.	``activate idvc`` (note that when you created your environment, if you called it something else you need to replace 'idvc' with your environment name.)
-3.	``conda install idvc=22.3.0 -c ccpi -c paskino -c conda-forge -c defaults --override-channels`` (or replace 22.3.0 with the latest version number)
-4.	Then use: ``idvc`` to open up the app, as normal
+1.	Open anaconda prompt (miniconda).
+2.	Type ``activate idvc_environment`` (note that when you created your environment, if you called it something else you need to replace ``idvc`` with your environment name.)
+3.	Type ``conda install idvc=24.0.1 -c ccpi -c conda-forge`` (or replace ``24.0.1`` with the latest version number)
+4.	Type ``idvc`` to open up the app, as normal.
 
 Installing the DVC Executable Only
 ==================================
@@ -29,7 +29,7 @@ Alternatively, if you would only like to install the dvc executable and not the 
 
 1.	Install miniconda<https://docs.conda.io/en/latest/miniconda.html>
 2.	Open an anaconda prompt (miniconda) and type….
-3.	``conda create --name dvc-core ccpi-dvc -c ccpi -c paskino -c conda-forge -c defaults --override-channels``
+3.	``conda create --name dvc-core ccpi-dvc -c ccpi -c conda-forge -c defaults --override-channels``
 4.	``activate dvc-core``
 5.	``dvc``
 

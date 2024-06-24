@@ -7,8 +7,10 @@ Bug fixes:
 
 Enhancements:
 * Add units to rotation angle in point cloud #311
+
 Documentation:
-* Edits results documentation and help text #309
+* Edit results documentation and help text #309
+* Edit installation documentation #312
 
 ## v24.0.0
 New features:
