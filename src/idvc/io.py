@@ -116,8 +116,10 @@ class ImageDataCreator(object):
                                             resample, target_size, crop_image, origin, target_z_extent, finish_fn)
                 return
             else:  # if we aren't given the image dimensions etc, the user needs to enter them
+                
+                method = 'viewer'
                 main_window.raw_import_dialog = createRawImportDialog(
-                    main_window, image, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn)
+                    main_window, image, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn, method=method)
                 dialog = main_window.raw_import_dialog['dialog'].show()
                 return
 
@@ -562,119 +564,146 @@ def getProgress(caller, event, progress_callback):
     progress_callback.emit(caller.GetProgress()*80)
 
 
-# raw:
-def createRawImportDialog(main_window, fname, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn):
-    dialog = QDialog(main_window)
-    ui = generateUIFormView()
-    groupBox = ui['groupBox']
-    formLayout = ui['groupBoxFormLayout']
-    widgetno = 1
+# raw 
+import pysnooper
+@pysnooper.snoop()
+def createRawImportDialog(main_window, fname, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn, method='viewer'):
+    # method could be 'viewer' or 'app'
+    if method == 'app':
+        dialog = QDialog(main_window)
+        ui = generateUIFormView()
+        groupBox = ui['groupBox']
+        formLayout = ui['groupBoxFormLayout']
+        widgetno = 1
 
-    title = "Config for " + os.path.basename(fname)
-    dialog.setWindowTitle(title)
+        title = "Config for " + os.path.basename(fname)
+        dialog.setWindowTitle(title)
 
-    # dimensionality
-    dimensionalityLabel = QLabel(groupBox)
-    dimensionalityLabel.setText("Dimensionality")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimensionalityLabel)
-    dimensionalityValue = QComboBox(groupBox)
-    dimensionalityValue.addItem("3D")
-    dimensionalityValue.addItem("2D")
-    dimensionalityValue.setCurrentIndex(0)
-    # dimensionalityValue.currentIndexChanged.connect(lambda: \
-    #             main_window.overlapZValueEntry.setEnabled(True) \
-    #             if main_window.dimensionalityValue.currentIndex() == 0 else \
-    #             main_window.overlapZValueEntry.setEnabled(False))
+        # dimensionality
+        dimensionalityLabel = QLabel(groupBox)
+        dimensionalityLabel.setText("Dimensionality")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimensionalityLabel)
+        dimensionalityValue = QComboBox(groupBox)
+        dimensionalityValue.addItem("3D")
+        dimensionalityValue.addItem("2D")
+        dimensionalityValue.setCurrentIndex(0)
+        # dimensionalityValue.currentIndexChanged.connect(lambda: \
+        #             main_window.overlapZValueEntry.setEnabled(True) \
+        #             if main_window.dimensionalityValue.currentIndex() == 0 else \
+        #             main_window.overlapZValueEntry.setEnabled(False))
 
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimensionalityValue)
-    widgetno += 1
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimensionalityValue)
+        widgetno += 1
 
-    validator = QtGui.QIntValidator()
-    # Add X size
-    dimXLabel = QLabel(groupBox)
-    dimXLabel.setText("Size X")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimXLabel)
-    dimXValueEntry = QLineEdit(groupBox)
-    dimXValueEntry.setValidator(validator)
-    dimXValueEntry.setText("0")
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimXValueEntry)
-    widgetno += 1
+        validator = QtGui.QIntValidator()
+        # Add X size
+        dimXLabel = QLabel(groupBox)
+        dimXLabel.setText("Size X")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimXLabel)
+        dimXValueEntry = QLineEdit(groupBox)
+        dimXValueEntry.setValidator(validator)
+        dimXValueEntry.setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimXValueEntry)
+        widgetno += 1
 
-    # Add Y size
-    dimYLabel = QLabel(groupBox)
-    dimYLabel.setText("Size Y")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimYLabel)
-    dimYValueEntry = QLineEdit(groupBox)
-    dimYValueEntry.setValidator(validator)
-    dimYValueEntry.setText("0")
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimYValueEntry)
-    widgetno += 1
+        # Add Y size
+        dimYLabel = QLabel(groupBox)
+        dimYLabel.setText("Size Y")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimYLabel)
+        dimYValueEntry = QLineEdit(groupBox)
+        dimYValueEntry.setValidator(validator)
+        dimYValueEntry.setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimYValueEntry)
+        widgetno += 1
 
-    # Add Z size
-    dimZLabel = QLabel(groupBox)
-    dimZLabel.setText("Size Z")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimZLabel)
-    dimZValueEntry = QLineEdit(groupBox)
-    dimZValueEntry.setValidator(validator)
-    dimZValueEntry.setText("0")
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimZValueEntry)
-    widgetno += 1
+        # Add Z size
+        dimZLabel = QLabel(groupBox)
+        dimZLabel.setText("Size Z")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, dimZLabel)
+        dimZValueEntry = QLineEdit(groupBox)
+        dimZValueEntry.setValidator(validator)
+        dimZValueEntry.setText("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, dimZValueEntry)
+        widgetno += 1
 
-    # Data Type
-    dtypeLabel = QLabel(groupBox)
-    dtypeLabel.setText("Data Type")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, dtypeLabel)
-    dtypeValue = QComboBox(groupBox)
-    # , "int32", "uint32", "float32", "float64"])
-    dtypeValue.addItems(["int8", "uint8", "int16", "uint16"])
-    dtypeValue.setCurrentIndex(1)
+        # Data Type
+        dtypeLabel = QLabel(groupBox)
+        dtypeLabel.setText("Data Type")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, dtypeLabel)
+        dtypeValue = QComboBox(groupBox)
+        # , "int32", "uint32", "float32", "float64"])
+        dtypeValue.addItems(["int8", "uint8", "int16", "uint16"])
+        dtypeValue.setCurrentIndex(1)
 
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, dtypeValue)
-    widgetno += 1
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, dtypeValue)
+        widgetno += 1
 
-    # Endiannes
-    endiannesLabel = QLabel(groupBox)
-    endiannesLabel.setText("Byte Ordering")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, endiannesLabel)
-    endiannes = QComboBox(groupBox)
-    endiannes.addItems(["Big Endian", "Little Endian"])
-    endiannes.setCurrentIndex(1)
+        # Endiannes
+        endiannesLabel = QLabel(groupBox)
+        endiannesLabel.setText("Byte Ordering")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, endiannesLabel)
+        endiannes = QComboBox(groupBox)
+        endiannes.addItems(["Big Endian", "Little Endian"])
+        endiannes.setCurrentIndex(1)
 
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, endiannes)
-    widgetno += 1
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, endiannes)
+        widgetno += 1
 
-    # Fortran Ordering
-    fortranLabel = QLabel(groupBox)
-    fortranLabel.setText("Fortran Ordering")
-    formLayout.setWidget(widgetno, QFormLayout.LabelRole, fortranLabel)
-    fortranOrder = QComboBox(groupBox)
-    fortranOrder.addItem("Fortran Order: XYZ")
-    fortranOrder.addItem("C Order: ZYX")
-    fortranOrder.setCurrentIndex(0)
-    # dimensionalityValue.currentIndexChanged.connect(lambda: \
-    #             main_window.overlapZValueEntry.setEnabled(True) \
-    #             if main_window.dimensionalityValue.currentIndex() == 0 else \
-    #             main_window.overlapZValueEntry.setEnabled(False))
+        # Fortran Ordering
+        fortranLabel = QLabel(groupBox)
+        fortranLabel.setText("Fortran Ordering")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, fortranLabel)
+        fortranOrder = QComboBox(groupBox)
+        fortranOrder.addItem("Fortran Order: XYZ")
+        fortranOrder.addItem("C Order: ZYX")
+        fortranOrder.setCurrentIndex(0)
+        # dimensionalityValue.currentIndexChanged.connect(lambda: \
+        #             main_window.overlapZValueEntry.setEnabled(True) \
+        #             if main_window.dimensionalityValue.currentIndex() == 0 else \
+        #             main_window.overlapZValueEntry.setEnabled(False))
 
-    formLayout.setWidget(widgetno, QFormLayout.FieldRole, fortranOrder)
-    widgetno += 1
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, fortranOrder)
+        widgetno += 1
 
-    buttonbox = QDialogButtonBox(QDialogButtonBox.Ok |
-                                 QDialogButtonBox.Cancel)
-    buttonbox.accepted.connect(lambda: createConvertRawImageWorker(
-        main_window, fname, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn))
-    buttonbox.rejected.connect(dialog.close)
-    formLayout.addWidget(buttonbox)
+        buttonbox = QDialogButtonBox(QDialogButtonBox.Ok |
+                                    QDialogButtonBox.Cancel)
+        buttonbox.accepted.connect(lambda: createConvertRawImageWorker(
+            main_window, fname, output_image, info_var, resample, target_size, 
+            crop_image, origin, target_z_extent, finish_fn))
+        buttonbox.rejected.connect(dialog.close)
+        formLayout.addWidget(buttonbox)
 
-    dialog.setLayout(ui['verticalLayout'])
-    dialog.setModal(True)
+        dialog.setLayout(ui['verticalLayout'])
+        dialog.setModal(True)
+        return {'dialog': dialog, 'ui': ui,
+                'dimensionality': dimensionalityValue,
+                'dimX': dimXValueEntry, 'dimY': dimYValueEntry, 'dimZ': dimZValueEntry,
+                'dtype': dtypeValue, 'endiannes': endiannes, 'isFortran': fortranOrder,
+                'buttonBox': buttonbox}
 
-    return {'dialog': dialog, 'ui': ui,
-            'dimensionality': dimensionalityValue,
-            'dimX': dimXValueEntry, 'dimY': dimYValueEntry, 'dimZ': dimZValueEntry,
-            'dtype': dtypeValue, 'endiannes': endiannes, 'isFortran': fortranOrder,
-            'buttonBox': buttonbox}
+    
+    else:
+        from ccpi.viewer.ui.dialogs import RawInputDialog
 
+        dialog = RawInputDialog(main_window, fname)
+        dialog.Ok.clicked.connect(lambda: createConvertRawImageWorker(
+            main_window, fname, output_image, info_var, resample, target_size, 
+            crop_image, origin, target_z_extent, finish_fn))
+        # The cancel button closes the dialog by default
+        # dialog.Cancel.connect(dialog.close)
+        return {'dialog': dialog,
+                'ui': None, # apparently unused
+                'dimensionality': dialog.getWidget('dimensionality'),
+                'dimX': dialog.getWidget('dim_Width'), 
+                'dimY': dialog.getWidget('dim_Height'),
+                'dimZ': dialog.getWidget('dim_Images'),
+                'dtype': dialog.getWidget('dtype'), 
+                'endiannes': dialog.getWidget('endianness'), 
+                'isFortran': dialog.getWidget('is_fortran'),
+                'buttonBox': dialog.buttonBox}   
+        
+
+    
 
 def createConvertRawImageWorker(main_window, fname, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn):
     createProgressWindow(main_window, "Converting", "Converting Image")
