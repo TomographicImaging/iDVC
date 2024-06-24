@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
                             "Results Files:\n"
                             "Select a folder and export a session to access the result files. Two tab-delimited text files are generated for each run at location <session_folder>\Results\<run_name>\dvc_result_*.\n"
                             "1. The status file (dvc_result_*.stat) contains an echo of the input file used for the analysis, information about the point cloud, dvc program version, run date/time, search statistics and timing.\n"
-                            "2. The displacement file (dvc_result_*.disp) records status, objective function, displacement, rotation, and strain for each point in the analysis."
+                            "2. The displacement file (dvc_result_*.disp) records status, objective function and displacement vector for each point in the analysis."
                             )
 
         self.help_label = QLabel(groupBox)
