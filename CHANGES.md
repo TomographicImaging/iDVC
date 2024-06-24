@@ -10,7 +10,7 @@ Enhancements:
 
 Documentation:
 * Edit results documentation and help text #309
-* Edit installation documentation #312
+* Edit installation documentation #313
 
 ## v24.0.0
 New features:
