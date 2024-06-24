@@ -3,6 +3,7 @@
 ## v24.0.1
 Bug fixes:
 * Fix bug on sampling points in subvolume #302
+* Fix text on automatic registration widget #310
 
 Documentation:
 * Edits results documentation and help text #309
