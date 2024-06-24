@@ -1829,7 +1829,7 @@ It is used as a global starting point and a translation reference."
         self.auto_reg_result = np.flip(result)
         self.setRegistrationWidgets(self.auto_reg_result)
         rp = self.registration_parameters
-        rp['set_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
+        rp['set_auto_reg_label'].setText(f'Automatic registration [{self.auto_reg_result[0]}, {self.auto_reg_result[1]}, {self.auto_reg_result[2]}]')
         rp['cancel_auto_reg_button'].setVisible(True)
         rp['set_auto_reg_label'].setVisible(True)
         rp['set_auto_reg_button'].setVisible(True)
