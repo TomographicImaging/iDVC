@@ -3980,7 +3980,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     ) / multiplier
                 )#inserts u^2 + v^2 + w^2
                 
-            lut = self._createLookupTable()
+            lut = self._createLookupTable(cmap='turbo')
 
             pointPolyData = vtk.vtkPolyData()
             pointPolyData.SetPoints( pc ) # (x,y,z)
@@ -4092,9 +4092,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     def _createLookupTable(self, cmap='magma'):
         lut = vtk.vtkLookupTable()
         
-        cmap = CILColorMaps.get_color_map('magma')
-        lut.SetNumberOfTableValues(len(cmap))
-        for i,el in enumerate(cmap):
+        dcmap = CILColorMaps.get_color_map(cmap)
+        lut.SetNumberOfTableValues(len(dcmap))
+        for i,el in enumerate(dcmap):
             lut.SetTableValue(i, *el, 1)
 
         lut.Build()
@@ -4139,7 +4139,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # the colors need to remain the quantitative ones, independent on the multiplier
                 acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)/multiplier) #inserts u^2 + v^2
                 
-            lut = self._createLookupTable()
+            lut = self._createLookupTable(cmap='turbo')
         
             #2. Add the points to a vtkPolyData.
             pointPolyData = vtk.vtkPolyData()
