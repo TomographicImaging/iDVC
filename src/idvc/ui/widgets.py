@@ -238,7 +238,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                 row = self.subvol_points.index(result.subvol_points) + 1
                 column= self.subvol_sizes.index(result.subvol_size) + 1
                 plotNum = (row-1)*numColumns + column
-                ax = self.figure.add_subplot(numRows, numColumns, plotNum)
+                ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
                 
                 if row ==1:
                     ax.set_title("Subvolume Size:" + str(result.subvol_size) )
@@ -248,7 +248,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
             else:
                 plotNum = plotNum + 1
-                ax = self.figure.add_subplot(numRows, numColumns, plotNum)
+                ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
     
                 if index ==1:
                     text = str(result.subvol_points) 

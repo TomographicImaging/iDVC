@@ -1,7 +1,16 @@
 # ChangeLog
 
-Bugfixes:
-  * Fix bug with loading of TIFF files not char or short #262
+## v24.0.1
+Bug fixes:
+* Use RawInputDialog from the viewer package
+* Fix bug with loading of TIFF files not char or short #262
+* Fix bug on sampling points in subvolume #302
+* Fix text on automatic registration widget #310
+
+Enhancements:
+* Add units to rotation angle in point cloud #311
+Documentation:
+* Edits results documentation and help text #309
 
 ## v24.0.0
 New features:

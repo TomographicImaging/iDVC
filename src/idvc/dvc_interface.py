@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
                             "Results Files:\n"
                             "Select a folder and export a session to access the result files. Two tab-delimited text files are generated for each run at location <session_folder>\Results\<run_name>\dvc_result_*.\n"
                             "1. The status file (dvc_result_*.stat) contains an echo of the input file used for the analysis, information about the point cloud, dvc program version, run date/time, search statistics and timing.\n"
-                            "2. The displacement file (dvc_result_*.disp) records status, objective function, displacement, rotation, and strain for each point in the analysis."
+                            "2. The displacement file (dvc_result_*.disp) records status, objective function and displacement vector for each point in the analysis."
                             )
 
         self.help_label = QLabel(groupBox)
@@ -1829,7 +1829,7 @@ It is used as a global starting point and a translation reference."
         self.auto_reg_result = np.flip(result)
         self.setRegistrationWidgets(self.auto_reg_result)
         rp = self.registration_parameters
-        rp['set_auto_reg_label'].setText(f'Automatic registration {[self.auto_reg_result[0],self.auto_reg_result[1],self.auto_reg_result[2]]}')
+        rp['set_auto_reg_label'].setText(f'Automatic registration [{self.auto_reg_result[0]}, {self.auto_reg_result[1]}, {self.auto_reg_result[2]}]')
         rp['cancel_auto_reg_button'].setVisible(True)
         rp['set_auto_reg_label'].setVisible(True)
         rp['set_auto_reg_button'].setVisible(True)
@@ -2879,7 +2879,7 @@ A 3D pointcloud is created within the full extent of the mask."
         rotation_layout = QHBoxLayout()
         rotation_layout.setContentsMargins(0,0,0,0)
 
-        self.rotationLabel = QLabel("Rotation Angle", self.graphParamsGroupBox)
+        self.rotationLabel = QLabel("Rotation Angle [deg]", self.graphParamsGroupBox)
         self.rotationLabel.setToolTip(rotation_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.rotationLabel)
 
