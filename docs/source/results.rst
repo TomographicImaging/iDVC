@@ -70,6 +70,3 @@ The two files it produces for each run are as follows:
 - ``status`` = the search outcome: 0 = successful (no error), -1 = Range_Fail, -2 = Convg_Fail
 - ``objmin`` = the objective function magnitude at the end of the search
 - ``u, v, w`` = the point displacement: [location in target volume] - [location in reference volume]
-- ``phi, theta, psi`` = subvolume rotation, if num_srch_dof = 6 or 12
-- ``exx eyy ezz exy eyz exz`` = subvolume strain, if num_srch_dof = 12
-
