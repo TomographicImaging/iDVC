@@ -50,6 +50,10 @@ class AutomaticRegistration:
             self.datatype_slice = 'int16'
         elif datatype == 'int16' or datatype == 'uint16' or datatype == '>u2' or datatype == '<u2':
             self.datatype_slice = 'int32'
+        elif datatype == 'float32' or datatype == 'float64':
+            self.datatype_slice = datatype
+        else:
+            raise ValueError("Automatic registration cannot handle {} datatype.".format(datatype))
         self.err_thresh = err_thresh
         self.max_iterations = max_iterations
         if log_folder is not None:
