@@ -87,26 +87,27 @@
              
   <section id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this heading"></a></h1>
-<p>Currently the app is available to install on windows. Linux and MacOS versions are currently a work in progress.</p>
+<p>Binary installation of iDVC can be achieved with conda. Currently we only tested the app on Windows.</p>
 <section id="installing-the-app">
 <h2>Installing the App<a class="headerlink" href="#installing-the-app" title="Permalink to this heading"></a></h2>
 <ol class="arabic simple">
 <li><p>Install miniconda: <a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">https://docs.conda.io/en/latest/miniconda.html</a></p></li>
-<li><p>Open an anaconda prompt (miniconda) and type…</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">--name</span> <span class="pre">idvc</span> <span class="pre">idvc=22.3.0</span> <span class="pre">-c</span> <span class="pre">ccpi</span> <span class="pre">-c</span> <span class="pre">paskino</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">-c</span> <span class="pre">defaults</span> <span class="pre">--override-channels</span></code> (or replace 22.3.0 with the latest version number)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">activate</span> <span class="pre">idvc</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">idvc</span></code></p></li>
+<li><p>Open an anaconda prompt (miniconda).</p></li>
+<li><p>Create a new environment and install the software by typing <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">--name</span> <span class="pre">idvc_environment</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">-c</span> <span class="pre">ccpi</span> <span class="pre">idvc=24.0.0</span></code> (or replace <code class="docutils literal notranslate"><span class="pre">24.0.0</span></code> with the latest version number).</p></li>
+<li><p>Activate the environment by typing <code class="docutils literal notranslate"><span class="pre">activate</span> <span class="pre">idvc_environment</span></code>.</p></li>
+<li><p>Run the app by typing <code class="docutils literal notranslate"><span class="pre">idvc</span></code>.</p></li>
 </ol>
-<p>Please note that whenever you would like to open the app you need to carry out steps 2, 4 and 5 above.</p>
+<p>Please note that whenever you would like to open the app you need to carry out steps 2, 4 and 5 above.
+Alternatively, use miniforge (<a class="reference external" href="https://github.com/conda-forge/miniforge">https://github.com/conda-forge/miniforge</a>) instead of miniconda.</p>
 </section>
 <section id="updating-the-app">
 <h2>Updating the App<a class="headerlink" href="#updating-the-app" title="Permalink to this heading"></a></h2>
 <p>If you have previously installed the app, to get an updated version:</p>
 <ol class="arabic simple">
-<li><p>Open anaconda prompt (miniconda) and type…</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">activate</span> <span class="pre">idvc</span></code> (note that when you created your environment, if you called it something else you need to replace ‘idvc’ with your environment name.)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">idvc=22.3.0</span> <span class="pre">-c</span> <span class="pre">ccpi</span> <span class="pre">-c</span> <span class="pre">paskino</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">-c</span> <span class="pre">defaults</span> <span class="pre">--override-channels</span></code> (or replace 22.3.0 with the latest version number)</p></li>
-<li><p>Then use: <code class="docutils literal notranslate"><span class="pre">idvc</span></code> to open up the app, as normal</p></li>
+<li><p>Open anaconda prompt (miniconda).</p></li>
+<li><p>Type <code class="docutils literal notranslate"><span class="pre">activate</span> <span class="pre">idvc_environment</span></code> (note that when you created your environment, if you called it something else you need to replace <code class="docutils literal notranslate"><span class="pre">idvc</span></code> with your environment name.)</p></li>
+<li><p>Type <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">idvc=24.0.1</span> <span class="pre">-c</span> <span class="pre">ccpi</span> <span class="pre">-c</span> <span class="pre">conda-forge</span></code> (or replace <code class="docutils literal notranslate"><span class="pre">24.0.1</span></code> with the latest version number)</p></li>
+<li><p>Type <code class="docutils literal notranslate"><span class="pre">idvc</span></code> to open up the app, as normal.</p></li>
 </ol>
 </section>
 <section id="installing-the-dvc-executable-only">
@@ -116,7 +117,7 @@ Alternatively, if you would only like to install the dvc executable and not the 
 <ol class="arabic simple">
 <li><p>Install miniconda&lt;<a class="reference external" href="https://docs.conda.io/en/latest/miniconda.html">https://docs.conda.io/en/latest/miniconda.html</a>&gt;</p></li>
 <li><p>Open an anaconda prompt (miniconda) and type….</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">create</span> <span class="pre">--name</span> <span class="pre">dvc-core</span> <span class="pre">ccpi-dvc</span> <span class="pre">-c</span> <span class="pre">ccpi</span> <span class="pre">-c</span> <span class="pre">paskino</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">-c</span> <span class="pre">defaults</span> <span class="pre">--override-channels</span></code></p></li>
+<li><p><a href="#id1"><span class="problematic" id="id2">``</span></a>conda create –name dvc-core ccpi-dvc -c ccpi -c conda-forge ``</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">activate</span> <span class="pre">dvc-core</span></code></p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">dvc</span></code></p></li>
 </ol>
