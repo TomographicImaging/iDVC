@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v20.7.2")
+        self.settings = QSettings("CCPi", "DVC Interface v24.0.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -223,7 +223,8 @@ class MainWindow(QMainWindow):
         os.mkdir("Results")
 
     def OpenSettings(self):
-        self.settings_window = SettingsWindow(self)
+        if not hasattr(self, 'settings_window'):
+            self.settings_window = SettingsWindow(self)
         self.settings_window.show()
 
     def InitialiseSessionVars(self):
