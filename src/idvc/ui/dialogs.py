@@ -5,33 +5,21 @@ from PySide2.QtGui import *
 import multiprocessing
 import vtk
 
+from eqt.ui.FormDialog import FormDialog
 
-class SettingsWindow(QDialog):
 
-    def __init__(self, parent):
-        super(SettingsWindow, self).__init__(parent)
+class SettingsWindow(FormDialog):
+
+    def __init__(self, parent, title="Settings"):
+
+        super(SettingsWindow, self).__init__(parent, title)
 
         self.parent = parent
 
-        self.setWindowTitle("Settings")
 
+        
         self.dark_checkbox = QCheckBox("Dark Mode")
-
-        self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
-        self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
-        self.vis_size_entry = QDoubleSpinBox()
-
-        self.vis_size_entry.setMaximum(64.0)
-        self.vis_size_entry.setMinimum(0.01)
-        self.vis_size_entry.setSingleStep(0.01)
-
-        if self.parent.settings.value("vis_size") is not None:
-            self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
-
-        else:
-            self.vis_size_entry.setValue(1.0)
-
-
+        # populate from settings
         if self.parent.settings.value("dark_mode") is not None:
             if self.parent.settings.value("dark_mode") == "true":
                 self.dark_checkbox.setChecked(True)
@@ -40,33 +28,59 @@ class SettingsWindow(QDialog):
         else:
             self.dark_checkbox.setChecked(True)
 
+        self.addWidget(self.dark_checkbox, '', 'darkmode')
+
+        self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
+        self.addWidget(self.copy_files_checkbox, '', 'copy_file_checkbox')
+        self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
+        self.vis_size_entry = QDoubleSpinBox()
+        self.vis_size_entry.setMaximum(64.0)
+        self.vis_size_entry.setMinimum(0.01)
+        self.vis_size_entry.setSingleStep(0.01)
+        # populate from settings
+        if self.parent.settings.value("vis_size") is not None:
+            self.vis_size_entry.setValue(float(self.parent.settings.value("vis_size")))
+        else:
+            self.vis_size_entry.setValue(1.0)
+
+        self.addWidget(self.vis_size_entry, self.vis_size_label, 'vis_size')
+
+        
         separator = QFrame()
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Raised)
         self.adv_settings_label = QLabel("Advanced")
+        
+        self.addSpanningWidget(separator,'separator')
+        self.addSpanningWidget(self.adv_settings_label, 'advanced_label')
 
 
         self.gpu_label = QLabel("Please set the size of your GPU memory.")
         self.gpu_size_label = QLabel("GPU Memory (GB): ")
         self.gpu_size_entry = QDoubleSpinBox()
 
+        self.addSpanningWidget(self.gpu_label, 'gpu_label')
+        self.addWidget(self.gpu_size_entry, self.gpu_size_label, 'gpu_size')
 
+        # populate from settings
         if self.parent.settings.value("gpu_size") is not None:
             self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
-
         else:
             self.gpu_size_entry.setValue(1.0)
 
         self.gpu_size_entry.setMaximum(64.0)
         self.gpu_size_entry.setMinimum(0.00)
         self.gpu_size_entry.setSingleStep(0.01)
+
+
         self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
         self.gpu_checkbox.setChecked(True) #gpu is default
         if self.parent.settings.value("volume_mapper") == "cpu":
             self.gpu_checkbox.setChecked(False)
-
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
+        self.addWidget(self.gpu_checkbox, '', 'gpu_checkbox')
+
 
         self.omp_threads_entry = QSpinBox(self)
         # default OMP_THREADS based on the number of cores available
@@ -87,31 +101,10 @@ class SettingsWindow(QDialog):
         self.omp_threads_entry.setSingleStep(1)
         self.omp_threads_label = QLabel("OMP Threads: ")
 
-
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.dark_checkbox)
-        self.layout.addWidget(self.copy_files_checkbox)
-        self.layout.addWidget(self.vis_size_label)
-        self.layout.addWidget(self.vis_size_entry)
-        self.layout.addWidget(separator)
-        self.layout.addWidget(self.adv_settings_label)
-        self.layout.addWidget(self.gpu_checkbox)
-        self.layout.addWidget(self.gpu_label)
-        self.layout.addWidget(self.gpu_size_label)
-        self.layout.addWidget(self.gpu_size_entry)
-
-        self.layout.addWidget(self.omp_threads_label)
-        self.layout.addWidget(self.omp_threads_entry)
+        self.addWidget(self.omp_threads_entry, self.omp_threads_label, 'use_omp')
 
 
-        self.buttons = QDialogButtonBox(
-           QDialogButtonBox.Save | QDialogButtonBox.Cancel,
-           Qt.Horizontal, self)
-        self.layout.addWidget(self.buttons)
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.rejected.connect(self.quit)
-
-    def accept(self):
+    def onOk(self):
         #self.parent.settings.setValue("settings_chosen", 1)
         if self.dark_checkbox.isChecked():
             self.parent.settings.setValue("dark_mode", True)
@@ -144,7 +137,7 @@ class SettingsWindow(QDialog):
 
 
         #print(self.parent.settings.value("copy_files"))
-    def quit(self):
+    def onCancel(self):
         if self.parent.settings.value("first_app_load") != "False":
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")

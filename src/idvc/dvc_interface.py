@@ -105,6 +105,7 @@ allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        """Creates an instance of the setting form dialog."""
         QMainWindow.__init__(self)
         
         self.threadpool = QThreadPool()
@@ -172,7 +173,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v20.7.2")
+        self.settings = QSettings("CCPi", "DVC Interface v24.0.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -181,6 +182,7 @@ class MainWindow(QMainWindow):
 
         self.SetAppStyle()
 
+        self.settings_window = SettingsWindow(self)
         if self.settings.value("first_app_load") != "False":
             self.OpenSettings()
             # self.settings.setValue("first_app_load", False)
@@ -223,7 +225,7 @@ class MainWindow(QMainWindow):
         os.mkdir("Results")
 
     def OpenSettings(self):
-        self.settings_window = SettingsWindow(self)
+        """Shows the settings dialog."""
         self.settings_window.show()
 
     def InitialiseSessionVars(self):

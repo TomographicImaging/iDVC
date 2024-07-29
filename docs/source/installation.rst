@@ -30,7 +30,7 @@ Alternatively, if you would only like to install the dvc executable and not the 
 
 1.	Install miniconda<https://docs.conda.io/en/latest/miniconda.html>
 2.	Open an anaconda prompt (miniconda) and type….
-3.	``conda create --name dvc-core ccpi-dvc -c ccpi -c conda-forge ``
+3.	``conda create --name dvc-core ccpi-dvc -c ccpi -c conda-forge``
 4.	``activate dvc-core``
 5.	``dvc``
 
