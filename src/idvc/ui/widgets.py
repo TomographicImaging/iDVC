@@ -21,6 +21,12 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
     def __init__(self, parent, plot_data, displ_wrt_point0 = False):
+        '''
+        Parameters
+        ----------  
+        plot_data: RunResults
+        displ_wrt_point0: bool
+        '''
         super().__init__()
         self.parent = parent
 
@@ -37,9 +43,23 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         self.CreateHistogram(plot_data, displ_wrt_point0)
 
     def CreateHistogram(self, result, displ_wrt_point0):
+        '''
+        Gets the filepath of the disp file via `result.disp_file`. Extracts the displacements by using the converter.
+        This imports the whole row, so the displacement vector is given by indices 6, 7, 8. Index 5 is the objective func minimum.
+        'plot_data' is a list of array, where each array is a column of data: objmin, u, v, w.
+        Hist makes an instogram with bins 20.
+        
+        Parameters
+        ----------  
+        result: RunResults
+        displ_wrt_point0: bool
+        '''
+        
+        print("result.disp_file is ",result.disp_file)
         displ = np.asarray(
         PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
         )
+        print("displ is",displ)
         if displ_wrt_point0:
             point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
             for count in range(len(displ)):
@@ -47,6 +67,7 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
                     displ[count][i+6] = displ[count][i+6] - point0_disp[i]
 
         plot_data = [displ[:,i] for i in range(5, displ.shape[1])]
+        print("plot_data is",plot_data)
 
         numGraphs = len(plot_data)
         if numGraphs <= 3:

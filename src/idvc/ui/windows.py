@@ -233,6 +233,8 @@ class GraphsWindow(QMainWindow):
             file_path = os.path.join(folder, os.path.basename(folder))
             result = RunResults(file_path)
             result_list.append(result)
+            print("result is",result)
+            print("dispwrt is",displ_wrt_point0)
     
             GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
             dock1 = QDockWidget(result.title,self)
