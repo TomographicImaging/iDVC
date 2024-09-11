@@ -4959,8 +4959,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         points_list = []
         subvol_list = []
         for folder in glob.glob(os.path.join(directory, "dvc_result_*")):
-            file_path = os.path.join(folder, os.path.basename(folder))
-            result = RunResults(file_path)
+            result = RunResults(folder)
             self.result_list.append(result)
             el = str(result.subvol_points)
             if el not in points_list:

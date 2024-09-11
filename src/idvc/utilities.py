@@ -4,16 +4,17 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 import numpy as np
+import os
 
 
         
 class RunResults(object):
-    def __init__(self, file_name):
-        
+    def __init__(self, folder):
+        file_name = os.path.join(folder, os.path.basename(folder))
         self.points = None
-
         disp_file_name = file_name + ".disp"
         stat_file_name = file_name + ".stat"
+        print("disp file name",disp_file_name)
 
         with open(stat_file_name,"r") as stat_file:
             
@@ -46,19 +47,20 @@ class RunResults(object):
                 #     self.subvol_aspect = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
                 count+=1
 
-        plot_titles_dict = {
+        data_label_dict = {
             'objmin': "Objective Minimum", 'u': "Displacement in x", 'v':"Displacement in y", 'w':"Displacement in z",
             'phi':"Change in phi",'the':"Change in theta", 'psi':"Change in psi"}
 
         with open(disp_file_name) as f:
             # first 4 columns are: n, x, y, z, status - we don't want these
-            self.plot_titles = f.readline().split()[5:]
-            self.plot_titles = [plot_titles_dict.get(text, text) for text in self.plot_titles]
+            self.data_label = f.readline().split()[5:]
+            self.data_label = [data_label_dict.get(text, text) for text in self.data_label]
 
         
         self.disp_file = disp_file_name
+        self.run_name = os.path.basename(os.path.dirname(folder))
 
-        self.title =  str(self.subvol_points) + " Points in Subvolume," + " Subvolume Size: " + str(self.subvol_size)
+        self.title =  str(self.subvol_points) + "," + str(self.subvol_size)
 
     def __str__(self):
 

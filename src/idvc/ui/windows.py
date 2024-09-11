@@ -215,7 +215,7 @@ class GraphsWindow(QMainWindow):
 
     def SetResultsFolder(self, folder):
         self.results_folder = folder
-        self.setWindowTitle("Digital Volume Correlation Results - {foldername}".format(foldername=os.path.basename(self.results_folder)))
+        self.setWindowTitle("Run {foldername}".format(foldername=os.path.basename(self.results_folder)))
     
     def ReloadGraphs(self):
         self.DeleteAllWidgets()
@@ -231,7 +231,7 @@ class GraphsWindow(QMainWindow):
         #print(results_folder[0])
         for folder in glob.glob(os.path.join(self.results_folder, "dvc_result_*")):
             file_path = os.path.join(folder, os.path.basename(folder))
-            result = RunResults(file_path)
+            result = RunResults(folder)
             result_list.append(result)
             print("result is",result)
             print("dispwrt is",displ_wrt_point0)

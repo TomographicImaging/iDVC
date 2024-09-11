@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from idvc.pointcloud_conversion import PointCloudConverter
+from idvc.utils.manipulate_result_files import extractDataFromDispResultFile
 from functools import partial
 import shutil
 import os
@@ -20,17 +21,18 @@ from eqt.threading import Worker
 class SingleRunResultsWidget(QtWidgets.QWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
-    def __init__(self, parent, plot_data, displ_wrt_point0 = False):
+    def __init__(self, parent, result, displ_wrt_point0 = False):
         '''
         Parameters
         ----------  
-        plot_data: RunResults
+        results: RunResults
         displ_wrt_point0: bool
         '''
         super().__init__()
         self.parent = parent
 
         self.figure = plt.figure()
+        plt.suptitle(f"Run {result.run_name}: points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}")
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar(self.canvas, self)
 
@@ -40,13 +42,14 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-        self.CreateHistogram(plot_data, displ_wrt_point0)
+        self.CreateHistogram(result, displ_wrt_point0)
+
+
 
     def CreateHistogram(self, result, displ_wrt_point0):
         '''
-        Gets the filepath of the disp file via `result.disp_file`. Extracts the displacements by using the converter.
-        This imports the whole row, so the displacement vector is given by indices 6, 7, 8. Index 5 is the objective func minimum.
-        'plot_data' is a list of array, where each array is a column of data: objmin, u, v, w.
+        Extracts the data from the disp file.
+        Determines the number of graphs, rows and column to group them in.
         Hist makes an instogram with bins 20.
         
         Parameters
@@ -54,22 +57,8 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         result: RunResults
         displ_wrt_point0: bool
         '''
-        
-        print("result.disp_file is ",result.disp_file)
-        displ = np.asarray(
-        PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
-        )
-        print("displ is",displ)
-        if displ_wrt_point0:
-            point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-            for count in range(len(displ)):
-                for i in range(3):
-                    displ[count][i+6] = displ[count][i+6] - point0_disp[i]
-
-        plot_data = [displ[:,i] for i in range(5, displ.shape[1])]
-        print("plot_data is",plot_data)
-
-        numGraphs = len(plot_data)
+        data, no_points, result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
+        numGraphs = len(result_arrays)
         if numGraphs <= 3:
             numRows = 1
         else:
@@ -77,13 +66,20 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         numColumns = np.ceil(numGraphs/numRows)
 
         plotNum = 0
-        for array in plot_data:
+        print("no_points",no_points)
+        relative_frequency_data = result_arrays
+        for array in relative_frequency_data:
             plotNum = plotNum + 1
+            xlabel = result.data_label[plotNum-1]
             ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
-            ax.set_ylabel("")
-            #ax.set_xlabel(plot_titles[plotNum-1])
-            ax.set_title(result.plot_titles[plotNum-1])
-            ax.hist(array,20)
+            counts, bins, patches = ax.hist(array, bins=20)
+            relative_counts = counts*100/ no_points
+            print(relative_counts)
+            ax.clear()
+            bin_widths = np.diff(bins)
+            ax.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
+            ax.set_ylabel("Relative frequency (% points in run)")
+            ax.set_xlabel(xlabel)
 
         plt.tight_layout() # Provides proper spacing between figures
 
@@ -121,20 +117,20 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
 
         self.label = QLabel(self)
-        self.label.setText("Select which variable would like to compare: ")
+        self.label.setText("Select data: ")
         self.layout.addWidget(self.label,widgetno,1)
 
         self.combo = QComboBox(self)
-        self.combo.addItems(result.plot_titles)
+        self.combo.addItems(result.data_label)
         self.layout.addWidget(self.combo,widgetno,2)  
         widgetno+=1
 
         self.label1 = QLabel(self)
-        self.label1.setText("Select which parameter you would like to compare: ")
+        self.label1.setText("Select parameter: ")
         self.layout.addWidget(self.label1,widgetno,1)  
         
         self.combo1 = QComboBox(self)
-        self.param_list = ["All","Sampling Points in Subvolume", "Subvolume Size"]
+        self.param_list = ["All","Sampling points in subvolume", "Subvolume size"]
         self.combo1.addItems(self.param_list)
         self.layout.addWidget(self.combo1,widgetno,2)
         widgetno+=1
@@ -215,16 +211,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         displacements = []
 
         for result in result_list:
-            displ = np.asarray(
-            PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
-            )
-            if displ_wrt_point0:
-                point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-                for count in range(len(displ)):
-                    for i in range(3):
-                        displ[count][i+6] = displ[count][i+6] - point0_disp[i]
-
-            no_points = np.shape(displ[0])
+            data, no_points, result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
 
             if no_points not in points_list:
                 points_list.append(no_points)
@@ -238,7 +225,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                     pass
             
             resultsToPlot.append(result)
-            displacements.append(displ)
+            displacements.append(result_arrays)
 
         points_list.sort()
 
