@@ -16,10 +16,51 @@ import tempfile
 from eqt.threading import Worker
 from scipy.stats import norm
 
+class BaseResultsWidget(QtWidgets.QWidget):
+    '''creates a dockable widget which will display graph results from runs of the DVC code
+    '''
+    def __init__(self, parent):
+        '''
+        Parameters
+        ----------  
+        results: RunResults
+        displ_wrt_point0: bool
+        '''
+        super().__init__()
+        self.parent = parent
+        self.plt = plt
+        self.figure = self.plt.figure()
 
+        self.canvas = FigureCanvas(self.figure)
+        self.toolbar = NavigationToolbar(self.canvas, self)
 
+    def addSubplot(self, figure, numRows, numColumns, plotNum, result, array): 
+        '''plot the Gaussian curve, legend'''
+        xlabel = result.data_label[plotNum-1]
+        ax = figure.add_subplot(numRows, numColumns, int(plotNum))
+        counts, bins, patches = ax.hist(array, bins=20)
+        relative_counts = counts*100/ len(array)
 
-class SingleRunResultsWidget(QtWidgets.QWidget):
+        ax.clear()
+        bin_widths = np.diff(bins)
+        ax.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
+        ax.set_ylabel("Relative frequency (% points in run)")
+        ax.set_xlabel(xlabel)
+
+        mean = array.mean()
+        var = array.var()
+        std = array.std()
+        ax.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.2f}')
+        ax.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.2f}')
+        ax.axvline(mean+std, color='g', linestyle='--')
+
+        x = np.linspace(min(array), max(array), 1000)
+        gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
+        ax.plot(x, gaussian, 'b--', label='gaussian fit')
+
+        ax.legend(loc='upper right')
+
+class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
     def __init__(self, parent, result, displ_wrt_point0 = False):
@@ -29,13 +70,8 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         results: RunResults
         displ_wrt_point0: bool
         '''
-        super().__init__()
-        self.parent = parent
-
-        self.figure = plt.figure()
-        plt.suptitle(f"Run {result.run_name}: points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}")
-        self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
+        super().__init__(parent)
+        self.plt.suptitle(f"Run {result.run_name}: points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}")
 
         #Layout
         self.layout = QtWidgets.QVBoxLayout()
@@ -43,11 +79,9 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-        self.CreateHistogram(result, displ_wrt_point0)
+        self.addHistogramsToLayout(result, displ_wrt_point0)
 
-
-
-    def CreateHistogram(self, result, displ_wrt_point0):
+    def addHistogramsToLayout(self, result, displ_wrt_point0):
         '''
         Extracts the data from the disp file.
         Determines the number of graphs, rows and column to group them in.
@@ -67,43 +101,19 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
         numColumns = np.ceil(numGraphs/numRows)
 
         plotNum = 0
-        print("no_points",no_points)
         for array in result_arrays:
             plotNum = plotNum + 1
-            xlabel = result.data_label[plotNum-1]
-            ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
-            counts, bins, patches = ax.hist(array, bins=20)
-            relative_counts = counts*100/ no_points
-            print(relative_counts)
-            ax.clear()
-            bin_widths = np.diff(bins)
-            ax.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
-            ax.set_ylabel("Relative frequency (% points in run)")
-            ax.set_xlabel(xlabel)
-            mean = array.mean()
-            var = array.var()
-            std = array.std()
-            #print("variance is",array.var())
-            ax.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.2f}')
-            ax.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.2f}')
-            ax.axvline(mean+std, color='g', linestyle='--')
-
-            # Plot the Gaussian curve
-            x = np.linspace(min(array), max(array), 1000)
-            gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
-            ax.plot(x, gaussian, 'b--', label='gaussian fit')
-
-            ax.legend(loc='upper right')
+            self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, array)
 
         plt.tight_layout() # Provides proper spacing between figures
 
         self.canvas.draw() 
 
-class SummaryGraphsWidget(QtWidgets.QWidget):
+class SummaryGraphsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
     '''
     def __init__(self, parent, result_list, displ_wrt_point0 = False):
-        super().__init__()
+        super().__init__(parent)
         self.parent = parent
 
         #Layout
@@ -260,6 +270,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                 row = self.subvol_points.index(result.subvol_points) + 1
                 column= self.subvol_sizes.index(result.subvol_size) + 1
                 plotNum = (row-1)*numColumns + column
+                
                 ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
                 
                 if row ==1:
@@ -280,9 +291,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
             plot_data = [displacements[i][:,k] for k in range(5, displacements[i].shape[1])]
 
-            #get variable to display graphs for:
-            ax.hist(plot_data[self.combo.currentIndex()], 20)
-
+            self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, plot_data[self.combo.currentIndex()])
+            
         self.figure.suptitle(self.combo.currentText(),size ="large")
 
         plt.tight_layout() # Provides proper spacing between figures

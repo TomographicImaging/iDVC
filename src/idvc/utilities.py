@@ -48,7 +48,7 @@ class RunResults(object):
                 count+=1
 
         data_label_dict = {
-            'objmin': "Objective Minimum", 'u': "Displacement in x", 'v':"Displacement in y", 'w':"Displacement in z",
+            'objmin': "Objective minimum", 'u': "Displacement x component (pixels)", 'v':"Displacement y component (pixels)", 'w':"Displacement z component (pixels)",
             'phi':"Change in phi",'the':"Change in theta", 'psi':"Change in psi"}
 
         with open(disp_file_name) as f:
@@ -56,7 +56,6 @@ class RunResults(object):
             self.data_label = f.readline().split()[5:]
             self.data_label = [data_label_dict.get(text, text) for text in self.data_label]
 
-        
         self.disp_file = disp_file_name
         self.run_name = os.path.basename(os.path.dirname(folder))
 
