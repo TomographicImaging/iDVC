@@ -14,6 +14,7 @@ import shutil
 import os
 import tempfile
 from eqt.threading import Worker
+from scipy.stats import norm
 
 
 
@@ -67,8 +68,7 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
 
         plotNum = 0
         print("no_points",no_points)
-        relative_frequency_data = result_arrays
-        for array in relative_frequency_data:
+        for array in result_arrays:
             plotNum = plotNum + 1
             xlabel = result.data_label[plotNum-1]
             ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
@@ -80,6 +80,20 @@ class SingleRunResultsWidget(QtWidgets.QWidget):
             ax.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
             ax.set_ylabel("Relative frequency (% points in run)")
             ax.set_xlabel(xlabel)
+            mean = array.mean()
+            var = array.var()
+            std = array.std()
+            #print("variance is",array.var())
+            ax.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.2f}')
+            ax.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.2f}')
+            ax.axvline(mean+std, color='g', linestyle='--')
+
+            # Plot the Gaussian curve
+            x = np.linspace(min(array), max(array), 1000)
+            gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
+            ax.plot(x, gaussian, 'b--', label='gaussian fit')
+
+            ax.legend(loc='upper right')
 
         plt.tight_layout() # Provides proper spacing between figures
 
