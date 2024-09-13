@@ -89,9 +89,9 @@ from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
 
-from idvc.ui.widgets import *
+from idvc.ui.graphs_widgets import *
 from idvc.ui.dialogs import *
-from idvc.ui.windows import *
+from idvc.ui.VisualisationWidget import *
 from idvc.utilities import *
 
 __version__ = gui_version.version
@@ -487,7 +487,7 @@ class MainWindow(QMainWindow):
                              "4. Limit the range of the vectors viewed by changing the 'Vector Range Min' and Vector Range Max'. Then, click 'View Pointcloud/Vectors' to apply the changes.\n"            
                              "5. On the 2D viewer, the vectors are shown as 2D arrows, showing the displacements in the current plane. If the 'x', 'y' or 'z' keys are pressed click 'View Pointcloud/Vectors' to apply the changes.\n\n"
                              "Display Graphs:\n"
-                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window). A tab is created for each run, showing a summary of the parameters.\n"
+                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window). A tab is created for each run and an additional tab for the bulk run.\n"
                              "1. Select an option from the list for the variable to compare.\n"
                              "2. Select the parameters to compare from the list.\n"
                              "3. Click on 'Plot Histograms'.\n"

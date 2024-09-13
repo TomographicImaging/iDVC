@@ -227,16 +227,10 @@ class GraphsWindow(QMainWindow):
             del current_dock
 
     def CreateDockWidgets(self, displ_wrt_point0 = False):
-        result_list=[]
-        #print(results_folder[0])
         for folder in glob.glob(os.path.join(self.results_folder, "dvc_result_*")):
-            file_path = os.path.join(folder, os.path.basename(folder))
+            GraphWidget = SingleRunResultsWidget(self)
             result = RunResults(folder)
-            result_list.append(result)
-            print("result is",result)
-            print("dispwrt is",displ_wrt_point0)
-    
-            GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
+            GraphWidget.addHistogramsToLayout(result, displ_wrt_point0)
             dock1 = QDockWidget(result.title,self)
             dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
             dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
@@ -253,17 +247,18 @@ class GraphsWindow(QMainWindow):
                     self.tabifyDockWidget(prev,current_dock)
                 prev= current_dock
         
-        SummaryTab = SummaryGraphsWidget(self, result_list)
-        dock = QDockWidget("Summary",self)
+        #BulkTab = BulkRunResultsWidget(self, self.results_folder, displ_wrt_point0)
+        dock = QDockWidget("Bulk",self)
         dock.setFeatures(QDockWidget.NoDockWidgetFeatures) 
         dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-        dock.setWidget(SummaryTab)
+        #dock.setWidget(BulkTab)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
         self.tabifyDockWidget(prev,dock)
 
-        dock.raise_() # makes summary panel the one that is open by default.
+        dock.raise_() # makes bulk panel the one that is open by default.
 
         # Stop the widgets in the tab to be moved around
         for wdg in self.findChildren(QTabBar):
             wdg.setMovable(False)
+
 
