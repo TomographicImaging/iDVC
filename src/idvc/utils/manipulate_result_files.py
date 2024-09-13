@@ -8,7 +8,6 @@ def extractDataFromDispResultFile(result, displ_wrt_point0):
     This imports the whole row, so the displacement vector is given by indices 6, 7, 8. Index 5 is the objective func minimum.
     'plot_data' is a list of array, where each array is a column of data: objmin, u, v, w.
     """
-    print("result.disp_file is ", result.disp_file)
     data = np.asarray(
     PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
     )

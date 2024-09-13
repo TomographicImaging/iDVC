@@ -20,6 +20,8 @@ from idvc.ui.widgets import *
 
 from idvc.utilities import RunResults
 import logging 
+import json
+import pandas as pd
 
 
 class VisualisationWindow(QtWidgets.QMainWindow):
@@ -226,16 +228,33 @@ class GraphsWindow(QMainWindow):
             current_dock.close()
             del current_dock
 
-    def CreateDockWidgets(self, displ_wrt_point0 = False):
+    def CreateDockWidgets(self, displ_wrt_point0 = False):  
+        subvol_size_list = []
+        subvol_points_list = []
+        result_list = []
+        plot_list = []
         for folder in glob.glob(os.path.join(self.results_folder, "dvc_result_*")):
-            GraphWidget = SingleRunResultsWidget(self)
+            single_run_results_widget = SingleRunResultsWidget(self)
             result = RunResults(folder)
-            GraphWidget.addHistogramsToLayout(result, displ_wrt_point0)
+            
+            plot = single_run_results_widget.addHistogramsToLayout(result, displ_wrt_point0)
             dock1 = QDockWidget(result.title,self)
             dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
             dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-            dock1.setWidget(GraphWidget)
+            dock1.setWidget(single_run_results_widget)
             self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
+
+            subvol_size_list.append(str(result.subvol_size))
+            subvol_points_list.append(str(result.subvol_points))
+            result_list.append(result)
+            plot_list.append(plot)
+
+        result_data_frame = pd.DataFrame({
+    'subvol_size': subvol_size_list,
+    'subvol_points': subvol_points_list,
+    'result': result_list,
+    'plot': plot_list})
+        print(result_data_frame)
     
         prev = None
 
@@ -247,11 +266,11 @@ class GraphsWindow(QMainWindow):
                     self.tabifyDockWidget(prev,current_dock)
                 prev= current_dock
         
-        #BulkTab = BulkRunResultsWidget(self, self.results_folder, displ_wrt_point0)
+        bulk_run_results_widget = BulkRunResultsWidget(self, result_data_frame, displ_wrt_point0)
         dock = QDockWidget("Bulk",self)
         dock.setFeatures(QDockWidget.NoDockWidgetFeatures) 
         dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-        #dock.setWidget(BulkTab)
+        dock.setWidget(bulk_run_results_widget)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
         self.tabifyDockWidget(prev,dock)
 

@@ -14,7 +14,6 @@ class RunResults(object):
         self.points = None
         disp_file_name = file_name + ".disp"
         stat_file_name = file_name + ".stat"
-        print("disp file name",disp_file_name)
 
         with open(stat_file_name,"r") as stat_file:
             

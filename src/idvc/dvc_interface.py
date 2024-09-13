@@ -89,9 +89,9 @@ from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
 
-from idvc.ui.graphs_widgets import *
+from idvc.ui.widgets import *
 from idvc.ui.dialogs import *
-from idvc.ui.VisualisationWidget import *
+from idvc.ui.windows import *
 from idvc.utilities import *
 
 __version__ = gui_version.version

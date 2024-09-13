@@ -62,6 +62,7 @@ class BaseResultsWidget(QtWidgets.QWidget):
         ax.plot(x, gaussian, 'b--', label='gaussian fit')
 
         ax.legend(loc='upper right')
+        return ax
 
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
@@ -74,7 +75,6 @@ class SingleRunResultsWidget(BaseResultsWidget):
         displ_wrt_point0: bool
         '''
         super().__init__(parent)
-        
         
         #Layout
         self.layout = QtWidgets.QVBoxLayout()
@@ -106,16 +106,17 @@ class SingleRunResultsWidget(BaseResultsWidget):
         plotNum = 0
         for array in result_arrays:
             plotNum = plotNum + 1
-            self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, array)
+            subplot = self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, array)
 
         plt.tight_layout() # Provides proper spacing between figures
 
         self.canvas.draw() 
+        return subplot
 
 class BulkRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
     '''
-    def __init__(self, parent, folder, displ_wrt_point0 = False):
+    def __init__(self, parent, result_data_frame, displ_wrt_point0 = False):
         super().__init__(parent)
         self.parent = parent
 
@@ -128,40 +129,32 @@ class BulkRunResultsWidget(BaseResultsWidget):
 
 
         self.figure = plt.figure()
-        result_list = self.importResultList(folder)
-        self.addWidgetstoLayout(result_list)
-        self.button.clicked.connect(partial(self.addHistogramsToLayout,result_list, displ_wrt_point0))
+        single_result = result_data_frame.iloc[0]['result']
+        self.subvol_sizes = result_data_frame['subvol_size'].unique()
+        print(single_result)
+        print(result_data_frame['subvol_size'])
+        self.addWidgetstoLayout(single_result)
+        #self.button.clicked.connect(partial(self.addHistogramsToLayout, result_data_frame, displ_wrt_point0))
 
         
         self.setLayout(self.layout)
-        self.addHistogramsToLayout(result_list, displ_wrt_point0)
+        #self.addHistogramsToLayout(result_data_frame, displ_wrt_point0)
 
-    def importResultList(self, results_folder):
-        result_list=[]
-        for folder in glob.glob(os.path.join(results_folder, "dvc_result_*")):
-            result = RunResults(folder)
-            result_list.append(result)
-        return result_list
-
-    def addWidgetstoLayout(self, result_list):
+    def addWidgetstoLayout(self, result):
         widgetno=0
 
-        if len(result_list) >=1:
-            print(result_list)
-            result = result_list[0] #These options were the same for all runs:
-
-            self.results_details_label = QLabel(self)
-            self.results_details_label.setText("Subvolume Geometry: {subvol_geom}\n\
+        self.results_details_label = QLabel(self)
+        self.results_details_label.setText("Subvolume Geometry: {subvol_geom}\n\
 Maximum Displacement: {disp_max}\n\
 Degrees of Freedom: {num_srch_dof}\n\
 Objective Function: {obj_function}\n\
 Interpolation Type: {interp_type}\n\
 Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
-            disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
-            interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
-            self.layout.addWidget(self.results_details_label,widgetno,0,5,1)
-            self.results_details_label.setAlignment(Qt.AlignTop)        
-            widgetno+=1
+        disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
+        interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
+        self.layout.addWidget(self.results_details_label,widgetno,0,5,1)
+        self.results_details_label.setAlignment(Qt.AlignTop)        
+        widgetno+=1
 
 
         self.label = QLabel(self)
@@ -187,15 +180,14 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.secondParamLabel.setText("Subvolume size:")
         self.layout.addWidget(self.secondParamLabel,widgetno,1)
         
-        self.secondParamCombo = QComboBox(self)
-        self.secondParamList = [str(i) for i in self.subvol_sizes]
-        self.secondParamCombo.addItems(self.secondParamList)
-        self.layout.addWidget(self.secondParamCombo,widgetno,2)
+        self.subvolSizesCombo = QComboBox(self)
+        self.subvolSizesCombo.addItems(self.subvol_sizes)
+        self.layout.addWidget(self.subvolSizesCombo,widgetno,2)
         widgetno+=1
 
         self.param_list_widget.currentIndexChanged.connect(self.showSecondParam)
         self.secondParamLabel.hide()
-        self.secondParamCombo.hide()
+        self.subvolSizesCombo.hide()
 
         self.button = QtWidgets.QPushButton("Plot Histograms")
         
@@ -203,7 +195,6 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         widgetno+=1
 
         self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
         self.layout.addWidget(self.toolbar,widgetno,0,1,3)
         widgetno+=1
         self.layout.addWidget(self.canvas,widgetno,0,3,3)
@@ -213,24 +204,24 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         index = self.param_list_widget.currentIndex()
         if index ==0:
             self.secondParamLabel.hide()
-            self.secondParamCombo.hide()
+            self.subvolSizesCombo.hide()
 
         elif index == 1:
             self.secondParamLabel.show()
-            self.secondParamCombo.show()
+            self.subvolSizesCombo.show()
             self.secondParamLabel.setText("Subvolume Size:")
-            self.secondParamCombo.clear()
-            self.secondParamCombo.addItems([str(i) for i in self.subvol_sizes])
+            self.subvolSizesCombo.clear()
+            self.subvolSizesCombo.addItems([str(i) for i in self.subvol_sizes])
 
         elif index == 2:
             self.secondParamLabel.show()
-            self.secondParamCombo.show()
+            self.subvolSizesCombo.show()
             self.secondParamLabel.setText("Points in Subvolume:")
-            self.secondParamCombo.clear()
+            self.subvolSizesCombo.clear()
             newList = []
-            self.secondParamCombo.addItems([str(i) for i in self.subvol_points])   
+            self.subvolSizesCombo.addItems([str(i) for i in self.subvol_points])   
         
-    def addHistogramsToLayout(self, result_list, displ_wrt_point0):
+    def addHistogramsToLayout(self, result_data_frame, displ_wrt_point0):
 
         self.subvol_points=[]
         self.subvol_sizes=[]
@@ -254,11 +245,11 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
 
             if param_index == 1: # Points in subvolume is compared
-                if result.subvol_size != float(self.secondParamCombo.currentText()):
+                if result.subvol_size != float(self.subvolSizesCombo.currentText()):
                     pass
 
             elif param_index ==2:
-                if result.subvol_points != float(self.secondParamCombo.currentText()):
+                if result.subvol_points != float(self.subvolSizesCombo.currentText()):
                     pass
 
         no_points_list.sort()
