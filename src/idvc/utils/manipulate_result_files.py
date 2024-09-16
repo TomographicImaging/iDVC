@@ -1,5 +1,8 @@
 import numpy as np
+import pandas as pd
 from idvc.pointcloud_conversion import PointCloudConverter
+from idvc.utilities import RunResults
+import glob, os
 
 def extractDataFromDispResultFile(result, displ_wrt_point0):    
     """
@@ -14,9 +17,29 @@ def extractDataFromDispResultFile(result, displ_wrt_point0):
     data_shape = data.shape
     index_objmin = 5
     index_disp = [6,9]
-    no_points = data_shape[0]
     if displ_wrt_point0:
         point0_disp_array = data[0,index_disp[0]:index_disp[1]]
         data[:,index_disp[0]:index_disp[1]] = data[:,index_disp[0]:index_disp[1]] - point0_disp_array
     result_arrays = np.transpose(data[:,index_objmin:data_shape[1]])
-    return data, no_points, result_arrays
+    return result_arrays
+
+def createResultsDataFrame(results_folder, displ_wrt_point0):
+    subvol_size_list = []
+    subvol_points_list = []
+    result_list = []
+    result_arrays_list = []
+
+    for folder in glob.glob(os.path.join(results_folder, "dvc_result_*")):
+        result = RunResults(folder)
+        result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
+        subvol_size_list.append(str(result.subvol_size))
+        subvol_points_list.append(str(result.subvol_points))
+        result_list.append(result)
+
+        result_arrays_list.append(result_arrays)
+    result_data_frame = pd.DataFrame({
+'subvol_size': subvol_size_list,
+'subvol_points': subvol_points_list,
+'result': result_list,
+'result_arrays': result_arrays_list})
+    return result_data_frame

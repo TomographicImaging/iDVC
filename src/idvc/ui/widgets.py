@@ -4,6 +4,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from idvc.utils.manipulate_result_files import extractDataFromDispResultFile
@@ -13,8 +14,6 @@ import os
 import tempfile
 from eqt.threading import Worker
 from scipy.stats import norm
-import glob
-from idvc.utilities import RunResults
 
 
 class BaseResultsWidget(QtWidgets.QWidget):
@@ -29,45 +28,49 @@ class BaseResultsWidget(QtWidgets.QWidget):
         '''
         super().__init__()
         self.parent = parent
-        self.plt = plt
-        self.figure = self.plt.figure()
-
-        self.canvas = FigureCanvas(self.figure)
+        self.fig = Figure()
+        self.fig, hist_plot = plt.subplots()
+        self.canvas = FigureCanvas(self.fig)
+        self.fig.clf()
         self.toolbar = NavigationToolbar(self.canvas, self)
 
 
 
-    def addSubplot(self, figure, numRows, numColumns, plotNum, result, array): 
-        '''plot the Gaussian curve, legend'''
-        xlabel = result.data_label[plotNum-1]
-        ax = figure.add_subplot(numRows, numColumns, int(plotNum))
-        counts, bins, patches = ax.hist(array, bins=20)
-        relative_counts = counts*100/ len(array)
 
-        ax.clear()
+    def addSubplot(self, plotNum, result, array, data_label): 
+        '''plot the Gaussian curve, legend
+        
+        Returns
+        -------
+        matplotlib.pyplot
+            A plot of the histogram
+        """'''
+        xlabel = data_label
+        counts, bins, patches = plt.hist(array, bins=20)
+        relative_counts = counts*100/ len(array)
+        plt.cla()
         bin_widths = np.diff(bins)
-        ax.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
-        ax.set_ylabel("Relative frequency (% points in run)")
-        ax.set_xlabel(xlabel)
+        plt.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
+        plt.ylabel("Relative frequency (% points in run)")
+        plt.xlabel(xlabel)
 
         mean = array.mean()
-        var = array.var()
         std = array.std()
-        ax.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.2f}')
-        ax.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.2f}')
-        ax.axvline(mean+std, color='g', linestyle='--')
+        plt.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.2f}')
+        plt.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.2f}')
+        plt.axvline(mean+std, color='g', linestyle='--')
 
         x = np.linspace(min(array), max(array), 1000)
         gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
-        ax.plot(x, gaussian, 'b--', label='gaussian fit')
+        plt.plot(x, gaussian, 'b--', label='gaussian fit')
 
-        ax.legend(loc='upper right')
-        return ax
+        plt.legend(loc='upper right')
+        return plt
 
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
-    def __init__(self, parent):
+    def __init__(self, parent, result, displ_wrt_point0):
         '''
         Parameters
         ----------  
@@ -81,8 +84,10 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
+        self.addHistogramsToLayout(result, displ_wrt_point0)
+            
 
-    def addHistogramsToLayout(self, result, displ_wrt_point0 = False):
+    def addHistogramsToLayout(self, result, displ_wrt_point0):
         '''
     
         Extracts the data from the disp file.
@@ -94,21 +99,26 @@ class SingleRunResultsWidget(BaseResultsWidget):
         result: RunResults
         displ_wrt_point0: bool
         '''
-        self.plt.suptitle(f"Run {result.run_name}: points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}")
-        data, no_points, result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
+        self.fig.suptitle(f"Run '{result.run_name}': points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}")
+        result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
         numGraphs = len(result_arrays)
         if numGraphs <= 3:
             numRows = 1
         else:
-            numRows = np.round(np.sqrt(numGraphs))
-        numColumns = np.ceil(numGraphs/numRows)
+            numRows = int(np.round(np.sqrt(numGraphs)))
+            print(numRows)
+        numColumns = int(np.ceil(numGraphs/numRows))
+        print(numColumns)
 
         plotNum = 0
         for array in result_arrays:
+            data_label = result.data_label[plotNum]
             plotNum = plotNum + 1
-            subplot = self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, array)
-
-        plt.tight_layout() # Provides proper spacing between figures
+            self.fig.add_subplot(numRows, numColumns, plotNum)
+            subplot = self.addSubplot(plotNum, result, array, data_label)
+            
+            
+        self.fig.tight_layout() # Provides proper spacing between figures
 
         self.canvas.draw() 
         return subplot
@@ -116,7 +126,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
 class BulkRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
     '''
-    def __init__(self, parent, result_data_frame, displ_wrt_point0 = False):
+    def __init__(self, parent, result_data_frame):
         super().__init__(parent)
         self.parent = parent
 
@@ -124,21 +134,18 @@ class BulkRunResultsWidget(BaseResultsWidget):
         #self.layout.setSpacing(1)
         self.layout.setAlignment(Qt.AlignTop)
 
-        
-
-
-
-        self.figure = plt.figure()
         single_result = result_data_frame.iloc[0]['result']
+        self.run_name = single_result.run_name
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
+        self.subvol_points = result_data_frame['subvol_points'].unique()
         print(single_result)
         print(result_data_frame['subvol_size'])
         self.addWidgetstoLayout(single_result)
-        #self.button.clicked.connect(partial(self.addHistogramsToLayout, result_data_frame, displ_wrt_point0))
+        self.button.clicked.connect(partial(self.addHistogramsToLayout, result_data_frame))
 
         
         self.setLayout(self.layout)
-        #self.addHistogramsToLayout(result_data_frame, displ_wrt_point0)
+        self.addHistogramsToLayout(result_data_frame)
 
     def addWidgetstoLayout(self, result):
         widgetno=0
@@ -194,7 +201,6 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.layout.addWidget(self.button,widgetno,2)
         widgetno+=1
 
-        self.canvas = FigureCanvas(self.figure)
         self.layout.addWidget(self.toolbar,widgetno,0,1,3)
         widgetno+=1
         self.layout.addWidget(self.canvas,widgetno,0,3,3)
@@ -221,84 +227,39 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             newList = []
             self.subvolSizesCombo.addItems([str(i) for i in self.subvol_points])   
         
-    def addHistogramsToLayout(self, result_data_frame, displ_wrt_point0):
-
-        self.subvol_points=[]
-        self.subvol_sizes=[]
-
-        for result in result_list:
-            if result.subvol_points not in self.subvol_points:
-                self.subvol_points.append(result.subvol_points)
-            if result.subvol_size not in self.subvol_sizes:
-                self.subvol_sizes.append(result.subvol_size)
-        self.subvol_points.sort()
-        self.subvol_sizes.sort()
-
-
-        self.figure.clear()
-
+    def addHistogramsToLayout(self, result_data_frame):
+        self.fig.clf()
         param_index = self.param_list_widget.currentIndex()
-
-        for result in result_list:
-
-
-
-
-            if param_index == 1: # Points in subvolume is compared
-                if result.subvol_size != float(self.subvolSizesCombo.currentText()):
-                    pass
-
-            elif param_index ==2:
-                if result.subvol_points != float(self.subvolSizesCombo.currentText()):
-                    pass
-
-        no_points_list.sort()
-
-        if param_index == 1 or param_index ==2:
+        
+        self.fig.suptitle(f"Bulk Run '{self.run_name}': {self.data_label_widget.currentText()}")
+        
+        if param_index == 1: 
             numRows = 1
-            numColumns = len(result_list)
+            numColumns = len(result_data_frame)
+        
+        elif param_index ==2:
+            numRows = 1
+            numColumns = len(self.subvol_points)
 
-        no_points_list = []
-        for result in result_list:
-            if no_points not in no_points_list:
-                    no_points_list.append(no_points)
-
-        if param_index ==0:
+        elif param_index ==0:
+            
+            
+            numRows = len(self.subvol_points)
+            numColumns = len(self.subvol_sizes)
+            
             plotNum = 0
             
-            for result in result_list:
+            for row in result_data_frame.itertuples():
+                print(f"Index: {row.Index}")
+                print(f"Row data: {row.result}")
+                data_label = f"{self.data_label_widget.currentText()}"
+                data_index = self.data_label_widget.currentIndex()
                 plotNum = plotNum + 1
-                data, no_points, result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
-                subvol_size = result.subvol_size 
-                subvol_points = result.subvol_points
-
-                self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, result_arrays[self.data_label_widget.currentIndex()])
+                self.fig.add_subplot(numRows, numColumns, plotNum)
+                self.addSubplot(plotNum, row.result, row.result_arrays[data_index], data_label)
             
-                
-                if row ==1:
-                    ax.set_title("Subvolume Size:" + str(result.subvol_size) )
-                if column == 1:
-                    text = str(result.subvol_points) 
-                    ax.set_ylabel(text + " " + "Points in subvol")
-
-            else:
-                plotNum = plotNum + 1
-                ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
-    
-                if param_index ==1:
-                    text = str(result.subvol_points) 
-                if param_index ==2:
-                    text = str(result.subvol_size) 
-                ax.set_ylabel(text + " " + self.param_list_widget.currentText())
-
-            plot_data = [result_arrays_list[i][:,k] for k in range(5, result_arrays_list[i].shape[1])]
-
-            self.addSubplot(self.figure, int(numRows), int(numColumns), plotNum, result, plot_data[self.data_label_widget.currentIndex()])
-            
-        self.figure.suptitle(self.data_label_widget.currentText(),size ="large")
-
-        plt.tight_layout() # Provides proper spacing between figures
-        plt.subplots_adjust(top=0.88) # Means heading doesn't overlap with subplot titles
+        self.fig.tight_layout() # Provides proper spacing between figures
+        self.fig.subplots_adjust(top=0.88) # Means heading doesn't overlap with subplot titles
         self.canvas.draw()
 
 
