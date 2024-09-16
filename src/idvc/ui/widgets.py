@@ -14,6 +14,7 @@ import os
 import tempfile
 from eqt.threading import Worker
 from scipy.stats import norm
+from eqt.ui.NoBorderScrollArea import NoBorderScrollArea
 
 
 class BaseResultsWidget(QtWidgets.QWidget):
@@ -21,6 +22,10 @@ class BaseResultsWidget(QtWidgets.QWidget):
     '''
     def __init__(self, parent):
         '''
+        Adds vertical layout.
+        figure.
+        canvas.
+        sets minimum size so scrollbar works.
         Parameters
         ----------  
         results: RunResults
@@ -29,10 +34,14 @@ class BaseResultsWidget(QtWidgets.QWidget):
         super().__init__()
         self.parent = parent
         self.fig = Figure()
-        self.fig, hist_plot = plt.subplots()
+        self.fig, hist_plot = plt.subplots(figsize=(10, 8), layout="constrained")
         self.canvas = FigureCanvas(self.fig)
         self.fig.clf()
+        self.canvas.setMinimumSize(400, 400) #needed for scrollbar
         self.toolbar = NavigationToolbar(self.canvas, self)
+        self.layout = QtWidgets.QVBoxLayout()
+        self.layout.addWidget(self.canvas)
+        self.setLayout(self.layout)
 
 
 
@@ -78,11 +87,8 @@ class SingleRunResultsWidget(BaseResultsWidget):
         displ_wrt_point0: bool
         '''
         super().__init__(parent)
-        
-        #Layout
-        self.layout = QtWidgets.QVBoxLayout()
         self.layout.addWidget(self.toolbar)
-        self.layout.addWidget(self.canvas)
+        self.layout.addWidget(self.canvas, stretch=1)
         self.setLayout(self.layout)
         self.addHistogramsToLayout(result, displ_wrt_point0)
             
@@ -99,16 +105,15 @@ class SingleRunResultsWidget(BaseResultsWidget):
         result: RunResults
         displ_wrt_point0: bool
         '''
-        self.fig.suptitle(f"Run '{result.run_name}': points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}")
+        self.fig.suptitle(f"Run '{result.run_name}': points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}",fontsize='xx-large')
         result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
         numGraphs = len(result_arrays)
         if numGraphs <= 3:
             numRows = 1
         else:
             numRows = int(np.round(np.sqrt(numGraphs)))
-            print(numRows)
         numColumns = int(np.ceil(numGraphs/numRows))
-        print(numColumns)
+
 
         plotNum = 0
         for array in result_arrays:
@@ -117,8 +122,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
             self.fig.add_subplot(numRows, numColumns, plotNum)
             subplot = self.addSubplot(plotNum, result, array, data_label)
             
-            
-        self.fig.tight_layout() # Provides proper spacing between figures
+        self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
 
         self.canvas.draw() 
         return subplot
@@ -128,26 +132,25 @@ class BulkRunResultsWidget(BaseResultsWidget):
     '''
     def __init__(self, parent, result_data_frame):
         super().__init__(parent)
-        self.parent = parent
 
-        self.layout = QtWidgets.QGridLayout()
-        #self.layout.setSpacing(1)
-        self.layout.setAlignment(Qt.AlignTop)
+
+        self.grid_layout = QtWidgets.QGridLayout()
+        self.grid_layout.setAlignment(Qt.AlignTop)
+        self.layout.addLayout(self.grid_layout,0)
 
         single_result = result_data_frame.iloc[0]['result']
         self.run_name = single_result.run_name
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
         self.subvol_points = result_data_frame['subvol_points'].unique()
-        print(single_result)
-        print(result_data_frame['subvol_size'])
-        self.addWidgetstoLayout(single_result)
+        self.addWidgetstoGridLayout(single_result)
         self.button.clicked.connect(partial(self.addHistogramsToLayout, result_data_frame))
-
         
-        self.setLayout(self.layout)
+        scroll_area_widget = NoBorderScrollArea(self.canvas)
+        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.layout.addWidget(scroll_area_widget,1)
         self.addHistogramsToLayout(result_data_frame)
 
-    def addWidgetstoLayout(self, result):
+    def addWidgetstoGridLayout(self, result):
         widgetno=0
 
         self.results_details_label = QLabel(self)
@@ -159,37 +162,37 @@ Interpolation Type: {interp_type}\n\
 Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
         interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
-        self.layout.addWidget(self.results_details_label,widgetno,0,5,1)
+        self.grid_layout.addWidget(self.results_details_label,widgetno,0,5,1)
         self.results_details_label.setAlignment(Qt.AlignTop)        
         widgetno+=1
 
 
         self.label = QLabel(self)
         self.label.setText("Select data: ")
-        self.layout.addWidget(self.label,widgetno,1)
+        self.grid_layout.addWidget(self.label,widgetno,1)
 
         self.data_label_widget = QComboBox(self)
         self.data_label_widget.addItems(result.data_label)
-        self.layout.addWidget(self.data_label_widget,widgetno,2)  
+        self.grid_layout.addWidget(self.data_label_widget,widgetno,2)  
         widgetno+=1
 
         self.label1 = QLabel(self)
         self.label1.setText("Select parameter: ")
-        self.layout.addWidget(self.label1,widgetno,1)  
+        self.grid_layout.addWidget(self.label1,widgetno,1)  
         
         self.param_list_widget = QComboBox(self)
         self.param_list = ["All","Sampling points in subvolume", "Subvolume size"]
         self.param_list_widget.addItems(self.param_list)
-        self.layout.addWidget(self.param_list_widget,widgetno,2)
+        self.grid_layout.addWidget(self.param_list_widget,widgetno,2)
         widgetno+=1
 
         self.secondParamLabel = QLabel(self)
         self.secondParamLabel.setText("Subvolume size:")
-        self.layout.addWidget(self.secondParamLabel,widgetno,1)
+        self.grid_layout.addWidget(self.secondParamLabel,widgetno,1)
         
         self.subvolSizesCombo = QComboBox(self)
         self.subvolSizesCombo.addItems(self.subvol_sizes)
-        self.layout.addWidget(self.subvolSizesCombo,widgetno,2)
+        self.grid_layout.addWidget(self.subvolSizesCombo,widgetno,2)
         widgetno+=1
 
         self.param_list_widget.currentIndexChanged.connect(self.showSecondParam)
@@ -198,12 +201,10 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
         self.button = QtWidgets.QPushButton("Plot Histograms")
         
-        self.layout.addWidget(self.button,widgetno,2)
+        self.grid_layout.addWidget(self.button,widgetno,2)
         widgetno+=1
 
-        self.layout.addWidget(self.toolbar,widgetno,0,1,3)
-        widgetno+=1
-        self.layout.addWidget(self.canvas,widgetno,0,3,3)
+        self.grid_layout.addWidget(self.toolbar,widgetno,0,1,3)
         widgetno+=1
 
     def showSecondParam(self):
@@ -231,7 +232,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.fig.clf()
         param_index = self.param_list_widget.currentIndex()
         
-        self.fig.suptitle(f"Bulk Run '{self.run_name}': {self.data_label_widget.currentText()}")
+        self.fig.suptitle(f"Bulk Run '{self.run_name}': {self.data_label_widget.currentText()}",fontsize='xx-large')
         
         if param_index == 1: 
             numRows = 1
@@ -244,22 +245,21 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         elif param_index ==0:
             
             
-            numRows = len(self.subvol_points)
-            numColumns = len(self.subvol_sizes)
+            numRows = len(self.subvol_sizes)
+            numColumns = len(self.subvol_points)
             
             plotNum = 0
             
             for row in result_data_frame.itertuples():
-                print(f"Index: {row.Index}")
-                print(f"Row data: {row.result}")
+                result = row.result
                 data_label = f"{self.data_label_widget.currentText()}"
                 data_index = self.data_label_widget.currentIndex()
                 plotNum = plotNum + 1
-                self.fig.add_subplot(numRows, numColumns, plotNum)
-                self.addSubplot(plotNum, row.result, row.result_arrays[data_index], data_label)
-            
-        self.fig.tight_layout() # Provides proper spacing between figures
-        self.fig.subplots_adjust(top=0.88) # Means heading doesn't overlap with subplot titles
+                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label)
+                subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
+        
+        self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.canvas.draw()
 
 
