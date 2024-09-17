@@ -190,14 +190,14 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.secondParamLabel.setText("Subvolume size:")
         self.grid_layout.addWidget(self.secondParamLabel,widgetno,1)
         
-        self.subvolSizesCombo = QComboBox(self)
-        self.subvolSizesCombo.addItems(self.subvol_sizes)
-        self.grid_layout.addWidget(self.subvolSizesCombo,widgetno,2)
+        self.secondParamCombo = QComboBox(self)
+        self.secondParamCombo.addItems(self.subvol_sizes)
+        self.grid_layout.addWidget(self.secondParamCombo,widgetno,2)
         widgetno+=1
 
         self.param_list_widget.currentIndexChanged.connect(self.showSecondParam)
         self.secondParamLabel.hide()
-        self.subvolSizesCombo.hide()
+        self.secondParamCombo.hide()
 
         self.button = QtWidgets.QPushButton("Plot Histograms")
         
@@ -211,22 +211,22 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         index = self.param_list_widget.currentIndex()
         if index ==0:
             self.secondParamLabel.hide()
-            self.subvolSizesCombo.hide()
+            self.secondParamCombo.hide()
 
         elif index == 1:
             self.secondParamLabel.show()
-            self.subvolSizesCombo.show()
+            self.secondParamCombo.show()
             self.secondParamLabel.setText("Subvolume Size:")
-            self.subvolSizesCombo.clear()
-            self.subvolSizesCombo.addItems([str(i) for i in self.subvol_sizes])
+            self.secondParamCombo.clear()
+            self.secondParamCombo.addItems([str(i) for i in self.subvol_sizes])
 
         elif index == 2:
             self.secondParamLabel.show()
-            self.subvolSizesCombo.show()
+            self.secondParamCombo.show()
             self.secondParamLabel.setText("Points in Subvolume:")
-            self.subvolSizesCombo.clear()
+            self.secondParamCombo.clear()
             newList = []
-            self.subvolSizesCombo.addItems([str(i) for i in self.subvol_points])   
+            self.secondParamCombo.addItems([str(i) for i in self.subvol_points])   
         
     def addHistogramsToLayout(self, result_data_frame):
         self.fig.clf()
@@ -234,31 +234,28 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         
         self.fig.suptitle(f"Bulk Run '{self.run_name}': {self.data_label_widget.currentText()}",fontsize='xx-large')
         
-        if param_index == 1: 
-            numRows = 1
-            numColumns = len(result_data_frame)
+        numRows = len(self.subvol_sizes)
+        numColumns = len(self.subvol_points)
+        plotNum = 0
         
-        elif param_index ==2:
-            numRows = 1
-            numColumns = len(self.subvol_points)
+        for row in result_data_frame.itertuples():
+            result = row.result
 
-        elif param_index ==0:
-            
-            
-            numRows = len(self.subvol_sizes)
-            numColumns = len(self.subvol_points)
-            
-            plotNum = 0
-            
-            for row in result_data_frame.itertuples():
-                result = row.result
-                data_label = f"{self.data_label_widget.currentText()}"
-                data_index = self.data_label_widget.currentIndex()
-                plotNum = plotNum + 1
-                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-                self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label)
-                subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
-        
+            if param_index == 1: 
+                numRows = 1
+                if result.subvol_size != float(self.secondParamCombo.currentText()):
+                    continue
+            elif param_index ==2:
+                numColumns = 1
+                if result.subvol_points != float(self.secondParamCombo.currentText()):
+                    continue
+            data_label = f"{self.data_label_widget.currentText()}"
+            data_index = self.data_label_widget.currentIndex()
+            plotNum = plotNum + 1
+            subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+            self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label)
+            subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
+
         self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.canvas.draw()
 
