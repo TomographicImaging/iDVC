@@ -46,7 +46,7 @@ class BaseResultsWidget(QtWidgets.QWidget):
 
 
 
-    def addSubplot(self, plotNum, result, array, data_label): 
+    def addSubplot(self, plotNum, result, array, data_label, mean, std): 
         '''plot the Gaussian curve, legend
         
         Returns
@@ -62,11 +62,8 @@ class BaseResultsWidget(QtWidgets.QWidget):
         plt.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
         plt.ylabel("Relative frequency (% points in run)")
         plt.xlabel(xlabel)
-
-        mean = array.mean()
-        std = array.std()
-        plt.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.2f}')
-        plt.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.2f}')
+        plt.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.3f}')
+        plt.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.3f}')
         plt.axvline(mean+std, color='g', linestyle='--')
 
         x = np.linspace(min(array), max(array), 1000)
@@ -74,12 +71,11 @@ class BaseResultsWidget(QtWidgets.QWidget):
         plt.plot(x, gaussian, 'b--', label='gaussian fit')
 
         plt.legend(loc='upper right')
-        return plt
 
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
-    def __init__(self, parent, result, displ_wrt_point0):
+    def __init__(self, parent, result, displ_wrt_point0, mean_array, std_array):
         '''
         Parameters
         ----------  
@@ -90,10 +86,10 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.layout.addWidget(self.toolbar)
         self.layout.addWidget(self.canvas, stretch=1)
         self.setLayout(self.layout)
-        self.addHistogramsToLayout(result, displ_wrt_point0)
+        self.addHistogramsToLayout(result, displ_wrt_point0, mean_array, std_array)
             
 
-    def addHistogramsToLayout(self, result, displ_wrt_point0):
+    def addHistogramsToLayout(self, result, displ_wrt_point0, mean_array, std_array):
         '''
     
         Extracts the data from the disp file.
@@ -115,17 +111,24 @@ class SingleRunResultsWidget(BaseResultsWidget):
         numColumns = int(np.ceil(numGraphs/numRows))
 
 
+
         plotNum = 0
         for array in result_arrays:
             data_label = result.data_label[plotNum]
+            mean = mean_array[plotNum]
+            std = std_array[plotNum]
             plotNum = plotNum + 1
             self.fig.add_subplot(numRows, numColumns, plotNum)
-            subplot = self.addSubplot(plotNum, result, array, data_label)
+            self.addSubplot(plotNum, result, array, data_label, mean, std)
+
             
         self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
 
         self.canvas.draw() 
-        return subplot
+    
+    def getMeanArrayAndStdArray(self):
+        print(self.mean_array, self.std_array)
+        #return self.result_data_frame
 
 class BulkRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
@@ -133,7 +136,7 @@ class BulkRunResultsWidget(BaseResultsWidget):
     def __init__(self, parent, result_data_frame):
         super().__init__(parent)
 
-
+        self.result_data_frame = result_data_frame
         self.grid_layout = QtWidgets.QGridLayout()
         self.grid_layout.setAlignment(Qt.AlignTop)
         self.layout.addLayout(self.grid_layout,0)
@@ -143,12 +146,12 @@ class BulkRunResultsWidget(BaseResultsWidget):
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
         self.subvol_points = result_data_frame['subvol_points'].unique()
         self.addWidgetstoGridLayout(single_result)
-        self.button.clicked.connect(partial(self.addHistogramsToLayout, result_data_frame))
+        self.button.clicked.connect(partial(self.addHistogramsToLayout))
         
         scroll_area_widget = NoBorderScrollArea(self.canvas)
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.layout.addWidget(scroll_area_widget,1)
-        self.addHistogramsToLayout(result_data_frame)
+        self.addHistogramsToLayout()
 
     def addWidgetstoGridLayout(self, result):
         widgetno=0
@@ -228,7 +231,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             newList = []
             self.secondParamCombo.addItems([str(i) for i in self.subvol_points])   
         
-    def addHistogramsToLayout(self, result_data_frame):
+    def addHistogramsToLayout(self):
+        """And stores mean and std"""
         self.fig.clf()
         param_index = self.param_list_widget.currentIndex()
         
@@ -238,7 +242,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         numColumns = len(self.subvol_points)
         plotNum = 0
         
-        for row in result_data_frame.itertuples():
+        for row in self.result_data_frame.itertuples():
             result = row.result
 
             if param_index == 1: 
@@ -251,13 +255,16 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                     continue
             data_label = f"{self.data_label_widget.currentText()}"
             data_index = self.data_label_widget.currentIndex()
+            mean = row.mean_array[data_index]
+            std = row.std_array[data_index]
             plotNum = plotNum + 1
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-            self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label)
+            self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label, mean, std)
             subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
-
         self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.canvas.draw()
+
+
 
 
         

@@ -43,3 +43,18 @@ def createResultsDataFrame(results_folder, displ_wrt_point0):
 'result': result_list,
 'result_arrays': result_arrays_list})
     return result_data_frame
+
+def addMeanAndStdToResultDataFrame(result_data_frame):
+    mean_array_list = []
+    std_array_list = []
+    for row in result_data_frame.itertuples():
+        mean_array = []
+        std_array = []
+        for array in row.result_arrays:
+            mean_array.append(array.mean())
+            std_array.append(array.std())
+        mean_array_list.append(mean_array)
+        std_array_list.append(std_array)
+    result_data_frame['mean_array'] = mean_array_list
+    result_data_frame['std_array'] = std_array_list
+    return result_data_frame

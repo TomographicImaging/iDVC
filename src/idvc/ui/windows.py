@@ -22,7 +22,7 @@ from idvc.utilities import RunResults
 import logging 
 import json
 import pandas as pd
-from idvc.utils.manipulate_result_files import createResultsDataFrame
+from idvc.utils.manipulate_result_files import createResultsDataFrame, addMeanAndStdToResultDataFrame
 
 
 class VisualisationWindow(QtWidgets.QMainWindow):
@@ -231,9 +231,12 @@ class GraphsWindow(QMainWindow):
 
     def CreateDockWidgets(self, displ_wrt_point0 = False):  
         result_data_frame = createResultsDataFrame(self.results_folder, displ_wrt_point0)
-        print(result_data_frame)
-        for result in result_data_frame['result']:
-            single_run_results_widget = SingleRunResultsWidget(self, result, displ_wrt_point0)
+        result_data_frame = addMeanAndStdToResultDataFrame(result_data_frame)
+        for row in result_data_frame.itertuples():
+            result = row.result
+            mean_array = row.mean_array
+            std_array = row.std_array
+            single_run_results_widget = SingleRunResultsWidget(self, result, displ_wrt_point0, mean_array, std_array)
             dock1 = QDockWidget(result.title,self)
             dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
             dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
@@ -252,14 +255,23 @@ class GraphsWindow(QMainWindow):
         
         if len(result_data_frame) > 1:
             bulk_run_results_widget = BulkRunResultsWidget(self, result_data_frame)
-            dock = QDockWidget("Bulk",self)
-            dock.setFeatures(QDockWidget.NoDockWidgetFeatures) 
-            dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-            dock.setWidget(bulk_run_results_widget)
-            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
-            self.tabifyDockWidget(prev,dock)
+            dock2 = QDockWidget("Bulk",self)
+            dock2.setFeatures(QDockWidget.NoDockWidgetFeatures) 
+            dock2.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+            dock2.setWidget(bulk_run_results_widget)
+            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock2)
+            self.tabifyDockWidget(prev,dock2)
 
-            dock.raise_() # makes bulk panel the one that is open by default.
+            dock2.raise_() # makes bulk panel the one that is open by default.
+            
+            # add statistial analysis tab
+            statistical_analisis_widget = QWidget()
+            dock3 = QDockWidget("Statistical analysis",self)
+            dock3.setFeatures(QDockWidget.NoDockWidgetFeatures) 
+            dock3.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+            dock3.setWidget(statistical_analisis_widget)
+            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock3)
+            self.tabifyDockWidget(dock2,dock3)
 
         # Stop the widgets in the tab to be moved around
         for wdg in self.findChildren(QTabBar):
