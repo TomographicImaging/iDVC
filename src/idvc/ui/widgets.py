@@ -72,15 +72,11 @@ class BaseResultsWidget(QtWidgets.QWidget):
 
         plt.legend(loc='upper right')
 
-    def addStatisticalAnalysisPlot(self, data_label,xpoints,ypoints):
-        xlabel = data_label
+    def addStatisticalAnalysisPlot(self, xlabel, ylabel, xpoints,ypoints, color):
         # Create the plot
-        plt.plot(xpoints, ypoints)
-        plt.ylabel("Mean")
+        plt.plot(xpoints, ypoints, color+'-')
+        plt.ylabel(ylabel)
         plt.xlabel(xlabel)
-
-
-
 
     def initTab(self, result_data_frame):
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
@@ -91,7 +87,7 @@ class BaseResultsWidget(QtWidgets.QWidget):
         
         
         numRows = len(self.subvol_sizes)
-        numColumns = len(self.subvol_points)
+        numColumns = 2
         plotNum = 0
             
         self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
@@ -99,18 +95,26 @@ class BaseResultsWidget(QtWidgets.QWidget):
         self.canvas.draw() 
         
         if data_type == 'subvol_size':
-            df_sz_list = []
+           
+            self.fig.suptitle(f"Bulk Run 'self.run_name': self.data_label_widget.currentText()",fontsize='xx-large')
             for subvol_size in self.subvol_sizes:
-                self.fig.suptitle(f"Subvolume size: {subvol_size}",fontsize='xx-large')
                 data_index = 0
-                plotNum = plotNum + 1
-                self.fig.add_subplot(numRows, numColumns, plotNum)
-                df_sz = df[(df['subvol_size'] == subvol_size)]
                 
+                df_sz = df[(df['subvol_size'] == subvol_size)]
                 xpoints = df_sz['subvol_points']
+
+                plotNum = plotNum + 1
+                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
                 ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-                self.addStatisticalAnalysisPlot("Objective minimum",xpoints,ypoints)
-                df_sz_list.append(df_sz)
+                self.addStatisticalAnalysisPlot("Points in subvolume", "Objective minimum mean",xpoints,ypoints, 'r')
+                subplot.set_title(f"Subvolume size: {subvol_size}", fontsize='x-large', pad=20)
+                
+                plotNum = plotNum + 1
+                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
+                self.addStatisticalAnalysisPlot("Points in subvolume", "Objective minimum std", xpoints,ypoints, 'g')
+                subplot.set_title(f"Subvolume size: {subvol_size}", fontsize='x-large', pad=20)
+        
 
         
 class SingleRunResultsWidget(BaseResultsWidget):
