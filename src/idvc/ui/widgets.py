@@ -43,9 +43,6 @@ class BaseResultsWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-
-
-
     def addSubplot(self, plotNum, result, array, data_label, mean, std): 
         '''plot the Gaussian curve, legend
         
@@ -72,50 +69,11 @@ class BaseResultsWidget(QtWidgets.QWidget):
 
         plt.legend(loc='upper right')
 
-    def addStatisticalAnalysisPlot(self, xlabel, ylabel, xpoints,ypoints, color):
+    def addStatisticalAnalysisPlot(self, xlabel, ylabel, xpoints, ypoints, color):
         # Create the plot
         plt.plot(xpoints, ypoints, color+'-')
         plt.ylabel(ylabel)
         plt.xlabel(xlabel)
-
-    def initTab(self, result_data_frame):
-        self.subvol_sizes = result_data_frame['subvol_size'].unique()
-        self.subvol_points = result_data_frame['subvol_points'].unique()
-
-    def addManyPlots(self, data_type, result_data_frame):
-        df = result_data_frame
-        
-        
-        numRows = len(self.subvol_sizes)
-        numColumns = 2
-        plotNum = 0
-            
-        self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
-
-        self.canvas.draw() 
-        
-        if data_type == 'subvol_size':
-           
-            self.fig.suptitle(f"Bulk Run 'self.run_name': self.data_label_widget.currentText()",fontsize='xx-large')
-            for subvol_size in self.subvol_sizes:
-                data_index = 0
-                
-                df_sz = df[(df['subvol_size'] == subvol_size)]
-                xpoints = df_sz['subvol_points']
-
-                plotNum = plotNum + 1
-                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-                ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-                self.addStatisticalAnalysisPlot("Points in subvolume", "Objective minimum mean",xpoints,ypoints, 'r')
-                subplot.set_title(f"Subvolume size: {subvol_size}", fontsize='x-large', pad=20)
-                
-                plotNum = plotNum + 1
-                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-                ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-                self.addStatisticalAnalysisPlot("Points in subvolume", "Objective minimum std", xpoints,ypoints, 'g')
-                subplot.set_title(f"Subvolume size: {subvol_size}", fontsize='x-large', pad=20)
-        
-
         
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
@@ -167,19 +125,17 @@ class SingleRunResultsWidget(BaseResultsWidget):
             self.addSubplot(plotNum, result, array, data_label, mean, std)
 
             
-        self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
+        #self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
 
         self.canvas.draw() 
-    
-    def getMeanArrayAndStdArray(self):
-        print(self.mean_array, self.std_array)
-        #return self.result_data_frame
 
-class BulkRunResultsWidget(BaseResultsWidget):
+
+class BulkRunResultsBaseWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
     '''
     def __init__(self, parent, result_data_frame):
         super().__init__(parent)
+        print("init BulkRunResultsBaseWidget")
 
         self.result_data_frame = result_data_frame
         self.grid_layout = QtWidgets.QGridLayout()
@@ -191,12 +147,12 @@ class BulkRunResultsWidget(BaseResultsWidget):
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
         self.subvol_points = result_data_frame['subvol_points'].unique()
         self.addWidgetstoGridLayout(single_result)
-        self.button.clicked.connect(partial(self.addHistogramsToLayout))
         
+        self.button.clicked.connect(partial(self.addPlotsToLayout))
         scroll_area_widget = NoBorderScrollArea(self.canvas)
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.layout.addWidget(scroll_area_widget,1)
-        self.addHistogramsToLayout()
+        self.layout.addWidget(scroll_area_widget,1)  
+        self.addPlotsToLayout()
 
     def addWidgetstoGridLayout(self, result):
         widgetno=0
@@ -275,9 +231,19 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             self.secondParamCombo.clear()
             newList = []
             self.secondParamCombo.addItems([str(i) for i in self.subvol_points])   
-        
-    def addHistogramsToLayout(self):
-        """And stores mean and std"""
+
+    def addPlotsToLayout(self):
+        print("addplot0")
+        pass
+class BulkRunResultsWidget(BulkRunResultsBaseWidget):
+    def __init__(self, parent, result_data_frame):
+        print("init2")
+        super().__init__(parent, result_data_frame)
+
+    
+    def addPlotsToLayout(self):
+        """And stores mean and std"""#
+        print("addplotb")
         self.fig.clf()
         param_index = self.param_list_widget.currentIndex()
         
@@ -306,11 +272,78 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
             self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label, mean, std)
             subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
-        self.fig.subplots_adjust(hspace=2,wspace=0.5)
+        #self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.canvas.draw()
 
+class StatisticsResultsWidget(BulkRunResultsBaseWidget):
+    def __init__(self, parent, result_data_frame):
+        print("init 3")
+        super().__init__(parent, result_data_frame)
 
+    def addPlotsToLayout(self):
+        print("addplots")
+        self.fig.clf()
+        df = self.result_data_frame
+        param_index = self.param_list_widget.currentIndex()
+        
+        
+        
+        numColumns = 2
+        plotNum = 0
+        self.fig.suptitle(f"Bulk Run 'self.run_name': self.data_label_widget.currentText()",fontsize='xx-large')
+        if param_index == 0: 
+            pass
+        else:
+            if param_index == 1: 
+                data_type = 'subvol_points'
+                other_type ='subvol_size'
+                numRows = len(self.subvol_sizes)
+                for subvol_size in self.subvol_sizes:
+                    if subvol_size != float(self.secondParamCombo.currentText()):
+                        pass#continue
+                    data_label = f"{self.data_label_widget.currentText()}"
+                    data_index = self.data_label_widget.currentIndex()
+                    df_sz = df[(df[other_type] == subvol_size)]
+                    xpoints = df_sz[data_type]
 
+                    plotNum = plotNum + 1
+                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
+                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
+                    subplot.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
+                    
+                    plotNum = plotNum + 1
+                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
+                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
+                    subplot.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
+                        
+            #self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
+            elif param_index == 2: 
+                data_type = 'subvol_size'
+                other_type = 'subvol_points'
+                numRows = len(self.subvol_points)
+                for subvol_points in self.subvol_points:
+                    if subvol_points != float(self.secondParamCombo.currentText()):
+                        pass#continue
+                    data_label = f"{self.data_label_widget.currentText()}"
+                    data_index = self.data_label_widget.currentIndex()
+                    df_sz = df[(df[other_type] == subvol_points)]
+                    xpoints = df_sz[data_type]
+
+                    plotNum = plotNum + 1
+                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
+                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
+                    subplot.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
+                    
+                    plotNum = plotNum + 1
+                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
+                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
+                    subplot.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
+                
+        self.canvas.draw() 
 
         
 class SaveObjectWindow(QtWidgets.QWidget):
