@@ -265,7 +265,9 @@ class GraphsWindow(QMainWindow):
             dock2.raise_() # makes bulk panel the one that is open by default.
             
             # add statistial analysis tab
-            statistical_analisis_widget = QWidget()
+            statistical_analisis_widget = BaseResultsWidget(self)
+            statistical_analisis_widget.initTab(result_data_frame)
+            statistical_analisis_widget.addManyPlots('subvol_size',result_data_frame)
             dock3 = QDockWidget("Statistical analysis",self)
             dock3.setFeatures(QDockWidget.NoDockWidgetFeatures) 
             dock3.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)

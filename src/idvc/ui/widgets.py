@@ -72,6 +72,47 @@ class BaseResultsWidget(QtWidgets.QWidget):
 
         plt.legend(loc='upper right')
 
+    def addStatisticalAnalysisPlot(self, data_label,xpoints,ypoints):
+        xlabel = data_label
+        # Create the plot
+        plt.plot(xpoints, ypoints)
+        plt.ylabel("Mean")
+        plt.xlabel(xlabel)
+
+
+
+
+    def initTab(self, result_data_frame):
+        self.subvol_sizes = result_data_frame['subvol_size'].unique()
+        self.subvol_points = result_data_frame['subvol_points'].unique()
+
+    def addManyPlots(self, data_type, result_data_frame):
+        df = result_data_frame
+        
+        
+        numRows = len(self.subvol_sizes)
+        numColumns = len(self.subvol_points)
+        plotNum = 0
+            
+        self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
+
+        self.canvas.draw() 
+        
+        if data_type == 'subvol_size':
+            df_sz_list = []
+            for subvol_size in self.subvol_sizes:
+                self.fig.suptitle(f"Subvolume size: {subvol_size}",fontsize='xx-large')
+                data_index = 0
+                plotNum = plotNum + 1
+                self.fig.add_subplot(numRows, numColumns, plotNum)
+                df_sz = df[(df['subvol_size'] == subvol_size)]
+                
+                xpoints = df_sz['subvol_points']
+                ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
+                self.addStatisticalAnalysisPlot("Objective minimum",xpoints,ypoints)
+                df_sz_list.append(df_sz)
+
+        
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
