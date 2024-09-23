@@ -31,10 +31,8 @@ class BaseResultsWidget(QtWidgets.QWidget):
         results: RunResults
         displ_wrt_point0: bool
         '''
-        super().__init__()
-        self.parent = parent
-        self.fig = Figure()
-        self.fig, hist_plot = plt.subplots(figsize=(10, 8), layout="constrained")
+        super().__init__(parent = parent)
+        self.fig = Figure(figsize=(10, 8))
         self.canvas = FigureCanvas(self.fig)
         self.fig.clf()
         self.canvas.setMinimumSize(400, 400) #needed for scrollbar
@@ -43,7 +41,7 @@ class BaseResultsWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.canvas)
         self.setLayout(self.layout)
 
-    def addSubplot(self, plotNum, result, array, data_label, mean, std): 
+    def addSubplot(self, plot, array, xlabel, mean, std): 
         '''plot the Gaussian curve, legend
         
         Returns
@@ -51,29 +49,28 @@ class BaseResultsWidget(QtWidgets.QWidget):
         matplotlib.pyplot
             A plot of the histogram
         """'''
-        xlabel = data_label
-        counts, bins, patches = plt.hist(array, bins=20)
+        counts, bins = plot.hist(array, bins=20)[0:2]
         relative_counts = counts*100/ len(array)
-        plt.cla()
+        plot.cla()
         bin_widths = np.diff(bins)
-        plt.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
-        plt.ylabel("Relative frequency (% points in run)")
-        plt.xlabel(xlabel)
-        plt.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.3f}')
-        plt.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.3f}')
-        plt.axvline(mean+std, color='g', linestyle='--')
+        plot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
+        plot.set_ylabel("Relative frequency (% points in run)")
+        plot.set_xlabel(xlabel)
+        plot.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.3f}')
+        plot.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.3f}')
+        plot.axvline(mean+std, color='g', linestyle='--')
 
         x = np.linspace(min(array), max(array), 1000)
         gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
-        plt.plot(x, gaussian, 'b--', label='gaussian fit')
+        plot.plot(x, gaussian, 'b--', label='gaussian fit')
 
-        plt.legend(loc='upper right')
+        plot.legend(loc='upper right')
 
-    def addStatisticalAnalysisPlot(self, xlabel, ylabel, xpoints, ypoints, color):
+    def addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color):
         # Create the plot
-        plt.plot(xpoints, ypoints, color+'-')
-        plt.ylabel(ylabel)
-        plt.xlabel(xlabel)
+        subplot.plot(xpoints, ypoints, color+'-')
+        subplot.set_ylabel(ylabel)
+        subplot.set_xlabel(xlabel)
         
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
@@ -113,19 +110,15 @@ class SingleRunResultsWidget(BaseResultsWidget):
             numRows = int(np.round(np.sqrt(numGraphs)))
         numColumns = int(np.ceil(numGraphs/numRows))
 
-
-
-        plotNum = 0
-        for array in result_arrays:
+        for plotNum, array in enumerate(result_arrays):
             data_label = result.data_label[plotNum]
             mean = mean_array[plotNum]
             std = std_array[plotNum]
-            plotNum = plotNum + 1
-            self.fig.add_subplot(numRows, numColumns, plotNum)
-            self.addSubplot(plotNum, result, array, data_label, mean, std)
+            subplot = self.fig.add_subplot(numRows, numColumns, plotNum + 1)
+            self.addSubplot(subplot, array, data_label, mean, std)
 
             
-        #self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
+        self.fig.tight_layout(rect=[0, 0, 1, 0.95])
 
         self.canvas.draw() 
 
@@ -185,8 +178,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.grid_layout.addWidget(self.label1,widgetno,1)  
         
         self.param_list_widget = QComboBox(self)
-        self.param_list = ["All","Sampling points in subvolume", "Subvolume size"]
         self.param_list_widget.addItems(self.param_list)
+        
         self.grid_layout.addWidget(self.param_list_widget,widgetno,2)
         widgetno+=1
 
@@ -195,13 +188,14 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.grid_layout.addWidget(self.secondParamLabel,widgetno,1)
         
         self.secondParamCombo = QComboBox(self)
-        self.secondParamCombo.addItems(self.subvol_sizes)
+        self.secondParamCombo_subvol_sizes = self.subvol_sizes
+        self.secondParamCombo_subvol_points = self.subvol_points
+        self.secondParamCombo.addItems(self.secondParamCombo_subvol_sizes)
         self.grid_layout.addWidget(self.secondParamCombo,widgetno,2)
         widgetno+=1
 
         self.param_list_widget.currentIndexChanged.connect(self.showSecondParam)
-        self.secondParamLabel.hide()
-        self.secondParamCombo.hide()
+        self.showSecondParam()
 
         self.button = QtWidgets.QPushButton("Plot Histograms")
         
@@ -213,34 +207,35 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
     def showSecondParam(self):
         index = self.param_list_widget.currentIndex()
-        if index ==0:
-            self.secondParamLabel.hide()
-            self.secondParamCombo.hide()
 
-        elif index == 1:
+        if index == 0:
             self.secondParamLabel.show()
             self.secondParamCombo.show()
             self.secondParamLabel.setText("Subvolume Size:")
             self.secondParamCombo.clear()
-            self.secondParamCombo.addItems([str(i) for i in self.subvol_sizes])
+            self.secondParamCombo.addItems([str(i) for i in self.secondParamCombo_subvol_sizes])
 
-        elif index == 2:
+        elif index == 1:
             self.secondParamLabel.show()
             self.secondParamCombo.show()
             self.secondParamLabel.setText("Points in Subvolume:")
             self.secondParamCombo.clear()
-            newList = []
-            self.secondParamCombo.addItems([str(i) for i in self.subvol_points])   
+            self.secondParamCombo.addItems([str(i) for i in self.secondParamCombo_subvol_points])   
+        
+        elif index ==2:
+            self.secondParamLabel.hide()
+            self.secondParamCombo.hide()
 
     def addPlotsToLayout(self):
         print("addplot0")
         pass
+    
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
         print("init2")
+        self.param_list = ["Sampling points in subvolume", "Subvolume size", "All"]
         super().__init__(parent, result_data_frame)
-
-    
+        
     def addPlotsToLayout(self):
         """And stores mean and std"""#
         print("addplotb")
@@ -256,11 +251,11 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
         for row in self.result_data_frame.itertuples():
             result = row.result
 
-            if param_index == 1: 
+            if param_index == 0: 
                 numRows = 1
                 if result.subvol_size != float(self.secondParamCombo.currentText()):
                     continue
-            elif param_index ==2:
+            elif param_index == 1:
                 numColumns = 1
                 if result.subvol_points != float(self.secondParamCombo.currentText()):
                     continue
@@ -270,15 +265,20 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             std = row.std_array[data_index]
             plotNum = plotNum + 1
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-            self.addSubplot(plotNum, result, row.result_arrays[data_index], data_label, mean, std)
+            self.addSubplot(subplot, row.result_arrays[data_index], data_label, mean, std)
             subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
-        #self.fig.subplots_adjust(hspace=2,wspace=0.5)
+        self.fig.subplots_adjust(hspace=2,wspace=0.5)
+        self.fig.tight_layout(rect=[0, 0, 1, 0.95])
         self.canvas.draw()
 
 class StatisticsResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
         print("init 3")
+        self.param_list = ["Sampling points in subvolume", "Subvolume size"]
         super().__init__(parent, result_data_frame)
+        self.secondParamCombo_subvol_sizes = np.append(self.secondParamCombo_subvol_sizes, "All")
+        self.secondParamCombo_subvol_points = np.append(self.secondParamCombo_subvol_points, "All")
+        self.secondParamCombo.addItems(["All"])
 
     def addPlotsToLayout(self):
         print("addplots")
@@ -291,16 +291,19 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         numColumns = 2
         plotNum = 0
         self.fig.suptitle(f"Bulk Run 'self.run_name': self.data_label_widget.currentText()",fontsize='xx-large')
-        if param_index == 0: 
+        if param_index == 2: 
             pass
         else:
-            if param_index == 1: 
+            if param_index == 0: 
                 data_type = 'subvol_points'
                 other_type ='subvol_size'
                 numRows = len(self.subvol_sizes)
                 for subvol_size in self.subvol_sizes:
-                    if subvol_size != float(self.secondParamCombo.currentText()):
-                        pass#continue
+                    if str(subvol_size) != self.secondParamCombo.currentText():
+                        if self.secondParamCombo.currentText() == "All":
+                            pass
+                        else:
+                            continue
                     data_label = f"{self.data_label_widget.currentText()}"
                     data_index = self.data_label_widget.currentIndex()
                     df_sz = df[(df[other_type] == subvol_size)]
@@ -309,23 +312,26 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                     plotNum = plotNum + 1
                     subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
+                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
                     subplot.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
                     
                     plotNum = plotNum + 1
                     subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
+                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
                     subplot.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
                         
             #self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
-            elif param_index == 2: 
+            elif param_index == 1: 
                 data_type = 'subvol_size'
                 other_type = 'subvol_points'
                 numRows = len(self.subvol_points)
                 for subvol_points in self.subvol_points:
-                    if subvol_points != float(self.secondParamCombo.currentText()):
-                        pass#continue
+                    if str(subvol_points) != self.secondParamCombo.currentText():
+                        if self.secondParamCombo.currentText() == "All":
+                            pass
+                        else:
+                            continue
                     data_label = f"{self.data_label_widget.currentText()}"
                     data_index = self.data_label_widget.currentIndex()
                     df_sz = df[(df[other_type] == subvol_points)]
@@ -334,15 +340,16 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                     plotNum = plotNum + 1
                     subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
+                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
                     subplot.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
                     
                     plotNum = plotNum + 1
                     subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
+                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
                     subplot.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
-                
+        
+        self.fig.tight_layout(rect=[0, 0, 1, 0.95])        
         self.canvas.draw() 
 
         
@@ -352,11 +359,9 @@ class SaveObjectWindow(QtWidgets.QWidget):
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
     def __init__(self, parent, object_type, save_only):
-        super().__init__()
+        super().__init__(parent = parent)
 
         #print(save_only)
-
-        self.parent = parent
         self.object = object_type
 
         if self.object == "mask":
@@ -395,37 +400,37 @@ class SaveObjectWindow(QtWidgets.QWidget):
             #Load Saved Session
             #print("Write mask to file, then carry on")
             filename = self.textbox.text() + ".mha"
-            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
-            self.parent.mask_parameters['masksList'].addItem(filename)
-            self.parent.mask_details[filename] = self.parent.mask_details['current']
-            #print(self.parent.mask_details)
+            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent().mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
+            self.parent().mask_parameters['masksList'].addItem(filename)
+            self.parent().mask_details[filename] = self.parent().mask_details['current']
+            #print(self.parent().mask_details)
 
-            self.parent.mask_parameters['loadButton'].setEnabled(True)
-            self.parent.mask_parameters['masksList'].setEnabled(True)
+            self.parent().mask_parameters['loadButton'].setEnabled(True)
+            self.parent().mask_parameters['masksList'].setEnabled(True)
 
 
             if not save_only:
                 #print("Not save only")
                 #would be better to move this elsewhere
-                self.parent.mask_worker = Worker(self.parent.extendMask)
-                self.parent.create_progress_window("Loading", "Loading Mask")
-                self.parent.mask_worker.signals.progress.connect(self.parent.progress)
-                self.parent.mask_worker.signals.finished.connect(self.parent.DisplayMask)
-                self.parent.threadpool.start(self.parent.mask_worker)
-                self.parent.progress_window.setValue(10)
+                self.parent().mask_worker = Worker(self.parent().extendMask)
+                self.parent().create_progress_window("Loading", "Loading Mask")
+                self.parent().mask_worker.signals.progress.connect(self.parent().progress)
+                self.parent().mask_worker.signals.finished.connect(self.parent().DisplayMask)
+                self.parent().threadpool.start(self.parent().mask_worker)
+                self.parent().progress_window.setValue(10)
             
         if self.object == "pointcloud":
             filename = self.textbox.text() + ".roi"
             shutil.copyfile(os.path.join(tempfile.tempdir, "latest_pointcloud.roi"), os.path.join(tempfile.tempdir, filename))
 
-            self.parent.pointcloud_parameters['loadButton'].setEnabled(True)
-            self.parent.pointcloud_parameters['pointcloudList'].setEnabled(True)
-            self.parent.pointcloud_parameters['pointcloudList'].addItem(filename)
-            self.parent.pointCloud_details[filename] = self.parent.pointCloud_details['latest_pointcloud.roi']
-            #print(self.parent.pointCloud_details)
-            #self.parent.createPointCloud()
+            self.parent().pointcloud_parameters['loadButton'].setEnabled(True)
+            self.parent().pointcloud_parameters['pointcloudList'].setEnabled(True)
+            self.parent().pointcloud_parameters['pointcloudList'].addItem(filename)
+            self.parent().pointCloud_details[filename] = self.parent().pointCloud_details['latest_pointcloud.roi']
+            #print(self.parent().pointCloud_details)
+            #self.parent().createPointCloud()
             if not save_only:
-                self.parent.PointCloudWorker("create")
+                self.parent().PointCloudWorker("create")
             
 
         self.close()
@@ -433,15 +438,15 @@ class SaveObjectWindow(QtWidgets.QWidget):
     def quit(self):
         if self.object == "mask":
             #would be better to move this elsewhere
-            self.parent.mask_worker = Worker(self.parent.extendMask)
-            self.parent.create_progress_window("Loading", "Loading Mask")
-            self.parent.mask_worker.signals.progress.connect(self.parent.progress)
-            self.parent.mask_worker.signals.finished.connect(self.parent.DisplayMask)
-            self.parent.threadpool.start(self.parent.mask_worker)
-            self.parent.progress_window.setValue(10)
+            self.parent().mask_worker = Worker(self.parent().extendMask)
+            self.parent().create_progress_window("Loading", "Loading Mask")
+            self.parent().mask_worker.signals.progress.connect(self.parent().progress)
+            self.parent().mask_worker.signals.finished.connect(self.parent().DisplayMask)
+            self.parent().threadpool.start(self.parent().mask_worker)
+            self.parent().progress_window.setValue(10)
 
         if self.object == "pointcloud":
-            self.parent.PointCloudWorker("create")
-            #self.parent.createPointCloud()
+            self.parent().PointCloudWorker("create")
+            #self.parent().createPointCloud()
 
         self.close()
