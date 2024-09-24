@@ -188,7 +188,6 @@ class GraphsWindow(QMainWindow):
 
         # Menu
         self.menu = self.menuBar()
-        self.file_menu = self.menu.addMenu("File")
         self.settings_menu = self.menu.addMenu("Settings")
 
         displacement_setting_action = QAction("Show Displacement Relative to Reference Point 0", self)
@@ -198,13 +197,6 @@ class GraphsWindow(QMainWindow):
 
         displacement_setting_action.triggered.connect(self.ReloadGraphs)
         self.settings_menu.addAction(displacement_setting_action)
-
-
-        # Exit QAction
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence.Quit)
-        exit_action.triggered.connect(self.close)
-        self.file_menu.addAction(exit_action)
 
         #Tab positions:
         self.setTabPosition(QtCore.Qt.AllDockWidgetAreas,QTabWidget.North)
@@ -232,16 +224,16 @@ class GraphsWindow(QMainWindow):
     def CreateDockWidgets(self, displ_wrt_point0 = False):  
         result_data_frame = createResultsDataFrame(self.results_folder, displ_wrt_point0)
         result_data_frame = addMeanAndStdToResultDataFrame(result_data_frame)
-        for row in result_data_frame.itertuples():
-            result = row.result
-            mean_array = row.mean_array
-            std_array = row.std_array
-            single_run_results_widget = SingleRunResultsWidget(self, result, displ_wrt_point0, mean_array, std_array)
-            dock1 = QDockWidget(result.title,self)
-            dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
-            dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-            dock1.setWidget(single_run_results_widget)
-            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
+        row = result_data_frame.iloc[0]
+        result = row.result
+        mean_array = row.mean_array
+        std_array = row.std_array
+        single_run_results_widget = SingleRunResultsWidget(self, result_data_frame, displ_wrt_point0, mean_array, std_array)
+        dock1 = QDockWidget(result.title,self)
+        dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
+        dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+        dock1.setWidget(single_run_results_widget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
 
         prev = None
 

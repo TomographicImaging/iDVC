@@ -20,7 +20,7 @@ from eqt.ui.NoBorderScrollArea import NoBorderScrollArea
 class BaseResultsWidget(QtWidgets.QWidget):
     '''creates a dockable widget which will display graph results from runs of the DVC code
     '''
-    def __init__(self, parent):
+    def __init__(self, parent, result_data_frame):
         '''
         Adds vertical layout.
         figure.
@@ -31,17 +31,55 @@ class BaseResultsWidget(QtWidgets.QWidget):
         results: RunResults
         displ_wrt_point0: bool
         '''
+        self.result_data_frame = result_data_frame
+        single_result = result_data_frame.iloc[0]['result']
+        self.run_name = single_result.run_name
+        self.subvol_sizes = result_data_frame['subvol_size'].unique()
+        self.subvol_points = result_data_frame['subvol_points'].unique()
         super().__init__(parent = parent)
+        self.layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.layout)
+
+        self.grid_layout = QtWidgets.QGridLayout()
+        self.grid_layout.setAlignment(Qt.AlignTop)
+        self.layout.addLayout(self.grid_layout,0)
+        self.addInfotoGridLayout(single_result)
+
         self.fig = Figure(figsize=(10, 8))
         self.canvas = FigureCanvas(self.fig)
         self.fig.clf()
         self.canvas.setMinimumSize(400, 400) #needed for scrollbar
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        self.layout = QtWidgets.QVBoxLayout()
-        self.layout.addWidget(self.canvas)
-        self.setLayout(self.layout)
+        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-    def addSubplot(self, plot, array, xlabel, mean, std): 
+        self.toolbar = NavigationToolbar(self.canvas, self)
+        self.layout.addWidget(self.toolbar)
+
+        scroll_area_widget = NoBorderScrollArea(self.canvas)
+        self.layout.addWidget(scroll_area_widget,1)  
+        
+        
+    def addInfotoGridLayout(self, result):
+        widgetno=0
+        self.results_details_label = QLabel(self)
+        self.results_details_label.setText("Subvolume Geometry: {subvol_geom}\n\
+Maximum Displacement: {disp_max}\n\
+Degrees of Freedom: {num_srch_dof}\n\
+Objective Function: {obj_function}\n\
+Interpolation Type: {interp_type}\n\
+Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
+        disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
+        interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
+        self.grid_layout.addWidget(self.results_details_label,widgetno,0,5,1)
+        self.results_details_label.setAlignment(Qt.AlignTop)        
+
+    def addPlotsToLayout(self):
+        pass
+
+    def addWidgetsToGridLayout(self, result):
+        print("parent grid")
+        pass
+
+    def addHistogramSubplot(self, plot, array, xlabel, mean, std): 
         '''plot the Gaussian curve, legend
         
         Returns
@@ -75,21 +113,23 @@ class BaseResultsWidget(QtWidgets.QWidget):
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
-    def __init__(self, parent, result, displ_wrt_point0, mean_array, std_array):
+    def __init__(self, parent, result_data_frame, displ_wrt_point0, mean_array, std_array):
         '''
         Parameters
         ----------  
         results: RunResults
         displ_wrt_point0: bool
         '''
-        super().__init__(parent)
-        self.layout.addWidget(self.toolbar)
-        self.layout.addWidget(self.canvas, stretch=1)
-        self.setLayout(self.layout)
-        self.addHistogramsToLayout(result, displ_wrt_point0, mean_array, std_array)
-            
+        super().__init__(parent, result_data_frame)
+        single_result = result_data_frame.iloc[0]['result']
+        self.addWidgetsToGridLayout(single_result)
+        self.addPlotsToLayout(single_result, displ_wrt_point0, mean_array, std_array)
+        
+    def addWidgetsToGridLayout(self, result):
+        print("single grid")
+        pass
 
-    def addHistogramsToLayout(self, result, displ_wrt_point0, mean_array, std_array):
+    def addPlotsToLayout(self, result, displ_wrt_point0, mean_array, std_array):
         '''
     
         Extracts the data from the disp file.
@@ -115,7 +155,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
             mean = mean_array[plotNum]
             std = std_array[plotNum]
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum + 1)
-            self.addSubplot(subplot, array, data_label, mean, std)
+            self.addHistogramSubplot(subplot, array, data_label, mean, std)
 
             
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
@@ -127,42 +167,13 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
     '''
     def __init__(self, parent, result_data_frame):
-        super().__init__(parent)
-        print("init BulkRunResultsBaseWidget")
-
-        self.result_data_frame = result_data_frame
-        self.grid_layout = QtWidgets.QGridLayout()
-        self.grid_layout.setAlignment(Qt.AlignTop)
-        self.layout.addLayout(self.grid_layout,0)
-
+        super().__init__(parent, result_data_frame)
         single_result = result_data_frame.iloc[0]['result']
-        self.run_name = single_result.run_name
-        self.subvol_sizes = result_data_frame['subvol_size'].unique()
-        self.subvol_points = result_data_frame['subvol_points'].unique()
         self.addWidgetstoGridLayout(single_result)
-        
-        self.button.clicked.connect(partial(self.addPlotsToLayout))
-        scroll_area_widget = NoBorderScrollArea(self.canvas)
-        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.layout.addWidget(scroll_area_widget,1)  
-        self.addPlotsToLayout()
 
     def addWidgetstoGridLayout(self, result):
-        widgetno=0
-
-        self.results_details_label = QLabel(self)
-        self.results_details_label.setText("Subvolume Geometry: {subvol_geom}\n\
-Maximum Displacement: {disp_max}\n\
-Degrees of Freedom: {num_srch_dof}\n\
-Objective Function: {obj_function}\n\
-Interpolation Type: {interp_type}\n\
-Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
-        disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
-        interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
-        self.grid_layout.addWidget(self.results_details_label,widgetno,0,5,1)
-        self.results_details_label.setAlignment(Qt.AlignTop)        
-        widgetno+=1
-
+        print("second grid")
+        widgetno=1
 
         self.label = QLabel(self)
         self.label.setText("Select data: ")
@@ -198,6 +209,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.showSecondParam()
 
         self.button = QtWidgets.QPushButton("Plot Histograms")
+        self.button.clicked.connect(partial(self.addPlotsToLayout))
         
         self.grid_layout.addWidget(self.button,widgetno,2)
         widgetno+=1
@@ -226,9 +238,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
             self.secondParamLabel.hide()
             self.secondParamCombo.hide()
 
-    def addPlotsToLayout(self):
-        print("addplot0")
-        pass
+
     
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
@@ -265,7 +275,7 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             std = row.std_array[data_index]
             plotNum = plotNum + 1
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-            self.addSubplot(subplot, row.result_arrays[data_index], data_label, mean, std)
+            self.addHistogramSubplot(subplot, row.result_arrays[data_index], data_label, mean, std)
             subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
         self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
@@ -276,6 +286,9 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         print("init 3")
         self.param_list = ["Sampling points in subvolume", "Subvolume size"]
         super().__init__(parent, result_data_frame)
+        
+        self.secondParamCombo_subvol_sizes = self.subvol_sizes
+        self.secondParamCombo_subvol_points = self.subvol_points
         self.secondParamCombo_subvol_sizes = np.append(self.secondParamCombo_subvol_sizes, "All")
         self.secondParamCombo_subvol_points = np.append(self.secondParamCombo_subvol_points, "All")
         self.secondParamCombo.addItems(["All"])
