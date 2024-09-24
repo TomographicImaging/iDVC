@@ -136,8 +136,8 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.addPlotsToLayout()
         
     def addWidgetsToGridLayout(self):
-        self.secondParamCombo_subvol_sizes = self.subvol_sizes
-        self.secondParamCombo_subvol_points = self.subvol_points
+        self.subvol_size_value_list = self.subvol_sizes
+        self.subvol_points_value_list = self.subvol_points
         
         widgetno=1
 
@@ -146,7 +146,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.subvol_points_label,widgetno,1)  
         
         self.subvol_points_widget = QComboBox(self)
-        self.subvol_points_widget.addItems(self.secondParamCombo_subvol_points)
+        self.subvol_points_widget.addItems(self.subvol_points_value_list)
         self.grid_layout.addWidget(self.subvol_points_widget,widgetno,2)
         widgetno+=1
 
@@ -155,7 +155,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.subvol_size_label,widgetno,1)  
         
         self.subvol_size_widget = QComboBox(self)
-        self.subvol_size_widget.addItems(self.secondParamCombo_subvol_sizes)
+        self.subvol_size_widget.addItems(self.subvol_size_value_list)
         self.grid_layout.addWidget(self.subvol_size_widget,widgetno,2)
         widgetno+=1
 
@@ -209,69 +209,84 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         self.addPlotsToLayout()
 
     def addWidgetstoGridLayout(self, result, param_list, button_text):
-        print("second grid")
-        widgetno=1
+        widgetno=0
 
-        self.label = QLabel(self)
-        self.label.setText("Select result to plot: ")
-        self.grid_layout.addWidget(self.label,widgetno,1)
+        self.data_label_label = QLabel(self)
+        self.data_label_label.setText("Select result to plot: ")
+        self.grid_layout.addWidget(self.data_label_label,widgetno,1)
 
         self.data_label_widget = QComboBox(self)
         self.data_label_widget.addItems(result.data_label)
         self.grid_layout.addWidget(self.data_label_widget,widgetno,2)  
+        
         widgetno+=1
 
-        self.label1 = QLabel(self)
-        self.label1.setText("Select parameter to fix: ")
-        self.grid_layout.addWidget(self.label1,widgetno,1)  
+        self.parameter_fix_label = QLabel(self)
+        self.parameter_fix_label.setText("Select parameter to fix: ")
+        self.grid_layout.addWidget(self.parameter_fix_label,widgetno,1)  
         
-        self.param_list_widget = QComboBox(self)
-        self.param_list_widget.addItems(param_list)
+        self.parameter_fix_widget = QComboBox(self)
+        self.parameter_fix_widget.addItems(param_list)
+        self.grid_layout.addWidget(self.parameter_fix_widget,widgetno,2)
         
-        self.grid_layout.addWidget(self.param_list_widget,widgetno,2)
         widgetno+=1
 
-        self.secondParamLabel = QLabel(self)
-        self.secondParamLabel.setText("Subvolume size:")
-        self.grid_layout.addWidget(self.secondParamLabel,widgetno,1)
+        self.subvol_size_value_label = QLabel(self)
+        self.subvol_size_value_label.setText("Subvolume size:")
+        self.grid_layout.addWidget(self.subvol_size_value_label,widgetno,1)
         
-        self.secondParamCombo = QComboBox(self)
-        self.secondParamCombo_subvol_sizes = self.subvol_sizes
-        self.secondParamCombo_subvol_points = self.subvol_points
-        self.secondParamCombo.addItems(self.secondParamCombo_subvol_sizes)
-        self.grid_layout.addWidget(self.secondParamCombo,widgetno,2)
+        self.subvol_size_value_widget = QComboBox(self)
+        self.subvol_size_value_list = self.subvol_sizes
+        self.subvol_size_value_widget.addItems(self.subvol_size_value_list)
+        self.grid_layout.addWidget(self.subvol_size_value_widget,widgetno,2)
+
+        self.subvol_points_value_label = QLabel(self)
+        self.subvol_points_value_label.setText("Points in subvolume:")
+        self.grid_layout.addWidget(self.subvol_points_value_label,widgetno,1)
+        
+        self.subvol_points_value_widget = QComboBox(self)
+        self.subvol_points_value_list = self.subvol_points
+        self.subvol_points_value_widget.addItems(self.subvol_points_value_list)
+        self.grid_layout.addWidget(self.subvol_points_value_widget,widgetno,2)
+        
+        self.showParameterValues(2)
+        self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.showParameterValues(2))
+
         widgetno+=1
-
-        self.param_list_widget.currentIndexChanged.connect(self.showSecondParam)
-        self.showSecondParam()
-
         self.button = QtWidgets.QPushButton(button_text)
         self.button.clicked.connect(partial(self.addPlotsToLayout))
-        
         self.grid_layout.addWidget(self.button,widgetno,2)
-        widgetno+=1
 
-    def showSecondParam(self):
-        index = self.param_list_widget.currentIndex()
+    def showParameterValues(self, row):
+        index = self.parameter_fix_widget.currentIndex()
 
         if index == 0:
-            self.secondParamLabel.show()
-            self.secondParamCombo.show()
-            self.secondParamLabel.setText("Subvolume size:")
-            self.secondParamCombo.clear()
-            self.secondParamCombo.addItems([str(i) for i in self.secondParamCombo_subvol_sizes])
+            self.subvol_points_value_label.hide()
+            self.subvol_points_value_widget.hide()
+            self.grid_layout.removeWidget(self.subvol_points_value_label)
+            self.grid_layout.removeWidget(self.subvol_points_value_widget)
+            self.grid_layout.addWidget(self.subvol_size_value_label, row, 1)
+            self.grid_layout.addWidget(self.subvol_size_value_widget, row, 2)
+            self.subvol_size_value_label.show()
+            self.subvol_size_value_widget.show()
 
         elif index == 1:
-            self.secondParamLabel.show()
-            self.secondParamCombo.show()
-            self.secondParamLabel.setText("Points in subvolume:")
-            self.secondParamCombo.clear()
-            self.secondParamCombo.addItems([str(i) for i in self.secondParamCombo_subvol_points])   
+            self.grid_layout.addWidget(self.subvol_points_value_label, row,1)
+            self.grid_layout.addWidget(self.subvol_points_value_widget, row,2)
+            self.subvol_points_value_label.show()
+            self.subvol_points_value_widget.show() 
+            self.subvol_size_value_label.hide()
+            self.subvol_size_value_widget.hide()
+            self.grid_layout.removeWidget(self.subvol_size_value_label)
+            self.grid_layout.removeWidget(self.subvol_size_value_widget)
         
         elif index ==2:
-            self.secondParamLabel.hide()
-            self.secondParamCombo.hide()
-
+            self.subvol_points_value_label.hide()
+            self.subvol_points_value_widget.hide() 
+            self.subvol_size_value_label.hide()
+            self.subvol_size_value_widget.hide()
+        
+        
 
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
@@ -283,9 +298,9 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
         """And stores mean and std"""#
         print("addplotb")
         self.fig.clf()
-        param_index = self.param_list_widget.currentIndex()
+        param_index = self.parameter_fix_widget.currentIndex()
         
-        self.fig.suptitle(f"Bulk Run '{self.run_name}': {self.data_label_widget.currentText()}",fontsize='xx-large')
+        self.fig.suptitle(f"Bulk run '{self.run_name}': {self.data_label_widget.currentText()} for {self.parameter_fix_widget.currentText()} = ",fontsize='xx-large')
         
         numRows = len(self.subvol_sizes)
         numColumns = len(self.subvol_points)
@@ -296,11 +311,11 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
 
             if param_index == 0: 
                 numRows = 1
-                if result.subvol_size != float(self.secondParamCombo.currentText()):
+                if result.subvol_size != float(self.subvol_size_value_widget.currentText()):
                     continue
             elif param_index == 1:
                 numColumns = 1
-                if result.subvol_points != float(self.secondParamCombo.currentText()):
+                if result.subvol_points != float(self.subvol_points_value_widget.currentText()):
                     continue
             data_label = f"{self.data_label_widget.currentText()}"
             data_index = self.data_label_widget.currentIndex()
@@ -320,17 +335,17 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         param_list = ["Subvolume size", "Sampling points in subvolume"]
         super().__init__(parent, result_data_frame, param_list)
         
-        self.secondParamCombo_subvol_sizes = self.subvol_sizes
-        self.secondParamCombo_subvol_points = self.subvol_points
-        self.secondParamCombo_subvol_sizes = np.append(self.secondParamCombo_subvol_sizes, "All")
-        self.secondParamCombo_subvol_points = np.append(self.secondParamCombo_subvol_points, "All")
-        self.secondParamCombo.addItems(["All"])
+        self.subvol_size_value_list = self.subvol_sizes
+        self.subvol_points_value_list = self.subvol_points
+        self.subvol_size_value_list = np.append(self.subvol_size_value_list, "All")
+        self.subvol_points_value_list = np.append(self.subvol_points_value_list, "All")
+        self.subvol_points_value_widget.addItems(["All"])
+        self.subvol_size_value_widget.addItems(["All"])
 
     def addPlotsToLayout(self):
-        print("addplots")
         self.fig.clf()
         df = self.result_data_frame
-        param_index = self.param_list_widget.currentIndex()
+        param_index = self.parameter_fix_widget.currentIndex()
         
         
         
@@ -345,8 +360,8 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 other_type ='subvol_size'
                 numRows = len(self.subvol_sizes)
                 for subvol_size in self.subvol_sizes:
-                    if str(subvol_size) != self.secondParamCombo.currentText():
-                        if self.secondParamCombo.currentText() == "All":
+                    if str(subvol_size) != self.subvol_size_value_widget.currentText():
+                        if self.subvol_size_value_widget.currentText() == "All":
                             pass
                         else:
                             continue
@@ -373,8 +388,8 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 other_type = 'subvol_points'
                 numRows = len(self.subvol_points)
                 for subvol_points in self.subvol_points:
-                    if str(subvol_points) != self.secondParamCombo.currentText():
-                        if self.secondParamCombo.currentText() == "All":
+                    if str(subvol_points) != self.subvol_points_value_widget.currentText():
+                        if self.subvol_points_value_widget.currentText() == "All":
                             pass
                         else:
                             continue
