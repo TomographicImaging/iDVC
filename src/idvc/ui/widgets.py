@@ -122,12 +122,38 @@ class SingleRunResultsWidget(BaseResultsWidget):
         '''
         super().__init__(parent, result_data_frame)
         single_result = result_data_frame.iloc[0]['result']
-        self.addWidgetsToGridLayout(single_result)
+        if len(result_data_frame) > 1:
+            self.addWidgetsToGridLayout(single_result)
         self.addPlotsToLayout(single_result, displ_wrt_point0, mean_array, std_array)
         
     def addWidgetsToGridLayout(self, result):
-        print("single grid")
-        pass
+        self.secondParamCombo_subvol_sizes = self.subvol_sizes
+        self.secondParamCombo_subvol_points = self.subvol_points
+        
+        widgetno=1
+
+        self.subvol_points_label = QLabel(self)
+        self.subvol_points_label.setText("Select points in subvolume: ")
+        self.grid_layout.addWidget(self.subvol_points_label,widgetno,1)  
+        
+        self.subvol_points_widget = QComboBox(self)
+        self.subvol_points_widget.addItems(self.secondParamCombo_subvol_points)
+        self.grid_layout.addWidget(self.subvol_points_widget,widgetno,2)
+        widgetno+=1
+
+        self.subvol_size_label = QLabel(self)
+        self.subvol_size_label.setText("Select subvolume size: ")
+        self.grid_layout.addWidget(self.subvol_size_label,widgetno,1)  
+        
+        self.subvol_size_widget = QComboBox(self)
+        self.subvol_size_widget.addItems(self.secondParamCombo_subvol_sizes)
+        self.grid_layout.addWidget(self.subvol_size_widget,widgetno,2)
+        widgetno+=1
+
+        self.button = QtWidgets.QPushButton("Plot histograms")
+        self.button.clicked.connect(partial(self.addPlotsToLayout))
+        self.grid_layout.addWidget(self.button,widgetno,2)
+        widgetno+=1
 
     def addPlotsToLayout(self, result, displ_wrt_point0, mean_array, std_array):
         '''
@@ -166,17 +192,18 @@ class SingleRunResultsWidget(BaseResultsWidget):
 class BulkRunResultsBaseWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from all runs in a bulk run
     '''
-    def __init__(self, parent, result_data_frame):
+    def __init__(self, parent, result_data_frame, param_list, button_text = "Plot"):
         super().__init__(parent, result_data_frame)
         single_result = result_data_frame.iloc[0]['result']
-        self.addWidgetstoGridLayout(single_result)
+        self.addWidgetstoGridLayout(single_result, param_list, button_text)
+        self.addPlotsToLayout()
 
-    def addWidgetstoGridLayout(self, result):
+    def addWidgetstoGridLayout(self, result, param_list, button_text):
         print("second grid")
         widgetno=1
 
         self.label = QLabel(self)
-        self.label.setText("Select data: ")
+        self.label.setText("Select result to plot: ")
         self.grid_layout.addWidget(self.label,widgetno,1)
 
         self.data_label_widget = QComboBox(self)
@@ -185,11 +212,11 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         widgetno+=1
 
         self.label1 = QLabel(self)
-        self.label1.setText("Select parameter: ")
+        self.label1.setText("Select parameter to fix: ")
         self.grid_layout.addWidget(self.label1,widgetno,1)  
         
         self.param_list_widget = QComboBox(self)
-        self.param_list_widget.addItems(self.param_list)
+        self.param_list_widget.addItems(param_list)
         
         self.grid_layout.addWidget(self.param_list_widget,widgetno,2)
         widgetno+=1
@@ -208,13 +235,10 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         self.param_list_widget.currentIndexChanged.connect(self.showSecondParam)
         self.showSecondParam()
 
-        self.button = QtWidgets.QPushButton("Plot Histograms")
+        self.button = QtWidgets.QPushButton(button_text)
         self.button.clicked.connect(partial(self.addPlotsToLayout))
         
         self.grid_layout.addWidget(self.button,widgetno,2)
-        widgetno+=1
-
-        self.grid_layout.addWidget(self.toolbar,widgetno,0,1,3)
         widgetno+=1
 
     def showSecondParam(self):
@@ -243,8 +267,9 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
         print("init2")
-        self.param_list = ["Sampling points in subvolume", "Subvolume size", "All"]
-        super().__init__(parent, result_data_frame)
+        param_list = ["Subvolume size", "Sampling points in subvolume", "None"]
+        super().__init__(parent, result_data_frame, param_list, "Plot histograms")
+        
         
     def addPlotsToLayout(self):
         """And stores mean and std"""#
@@ -284,8 +309,8 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
 class StatisticsResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
         print("init 3")
-        self.param_list = ["Sampling points in subvolume", "Subvolume size"]
-        super().__init__(parent, result_data_frame)
+        param_list = ["Subvolume size", "Sampling points in subvolume"]
+        super().__init__(parent, result_data_frame, param_list)
         
         self.secondParamCombo_subvol_sizes = self.subvol_sizes
         self.secondParamCombo_subvol_points = self.subvol_points
