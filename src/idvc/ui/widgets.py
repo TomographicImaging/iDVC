@@ -34,6 +34,7 @@ class BaseResultsWidget(QtWidgets.QWidget):
         self.result_data_frame = result_data_frame
         single_result = result_data_frame.iloc[0]['result']
         self.run_name = single_result.run_name
+        self.data_label = single_result.data_label
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
         self.subvol_points = result_data_frame['subvol_points'].unique()
         super().__init__(parent = parent)
@@ -57,7 +58,6 @@ class BaseResultsWidget(QtWidgets.QWidget):
         scroll_area_widget = NoBorderScrollArea(self.canvas)
         self.layout.addWidget(scroll_area_widget,1)  
         
-        
     def addInfotoGridLayout(self, result):
         widgetno=0
         self.results_details_label = QLabel(self)
@@ -71,6 +71,15 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
         self.grid_layout.addWidget(self.results_details_label,widgetno,0,5,1)
         self.results_details_label.setAlignment(Qt.AlignTop)        
+
+    def selectRow(self, result_data_frame, selected_subvol_points, selected_subvol_size):
+        df = result_data_frame
+        if len(df) > 1: 
+            df = df[(df['subvol_points'].astype(str) == selected_subvol_points) & (df['subvol_size'].astype(str) == selected_subvol_size)]
+        elif len(df) == 1: 
+            df = self.result_data_frame
+        row = df.iloc[0]   
+        return row         
 
     def addPlotsToLayout(self):
         pass
@@ -110,10 +119,11 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.set_ylabel(ylabel)
         subplot.set_xlabel(xlabel)
         
+
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
-    def __init__(self, parent, result_data_frame, displ_wrt_point0, mean_array, std_array):
+    def __init__(self, parent, result_data_frame):
         '''
         Parameters
         ----------  
@@ -121,12 +131,11 @@ class SingleRunResultsWidget(BaseResultsWidget):
         displ_wrt_point0: bool
         '''
         super().__init__(parent, result_data_frame)
-        single_result = result_data_frame.iloc[0]['result']
         if len(result_data_frame) > 1:
-            self.addWidgetsToGridLayout(single_result)
-        self.addPlotsToLayout(single_result, displ_wrt_point0, mean_array, std_array)
+            self.addWidgetsToGridLayout()
+        self.addPlotsToLayout()
         
-    def addWidgetsToGridLayout(self, result):
+    def addWidgetsToGridLayout(self):
         self.secondParamCombo_subvol_sizes = self.subvol_sizes
         self.secondParamCombo_subvol_points = self.subvol_points
         
@@ -155,7 +164,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.button,widgetno,2)
         widgetno+=1
 
-    def addPlotsToLayout(self, result, displ_wrt_point0, mean_array, std_array):
+    def addPlotsToLayout(self):
         '''
     
         Extracts the data from the disp file.
@@ -167,25 +176,26 @@ class SingleRunResultsWidget(BaseResultsWidget):
         result: RunResults
         displ_wrt_point0: bool
         '''
-        self.fig.suptitle(f"Run '{result.run_name}': points in subvolume {result.subvol_points}, subvolume size {result.subvol_size}",fontsize='xx-large')
-        result_arrays = extractDataFromDispResultFile(result, displ_wrt_point0)
-        numGraphs = len(result_arrays)
-        if numGraphs <= 3:
-            numRows = 1
-        else:
-            numRows = int(np.round(np.sqrt(numGraphs)))
-        numColumns = int(np.ceil(numGraphs/numRows))
-
+        self.fig.clf()
+        numRows = 2
+        numColumns = 2
+        if len(self.result_data_frame) > 1:
+            current_subvol_points = self.subvol_points_widget.currentText()
+            current_subvol_size = self.subvol_size_widget.currentText()
+            row = self.selectRow(self.result_data_frame, current_subvol_points, current_subvol_size)
+        elif len(self.result_data_frame) == 1:
+            row = self.selectRow(self.result_data_frame, None, None)
+        result_arrays = row.result_arrays
+        mean_array = row.mean_array
+        std_array = row.std_array
+        self.fig.suptitle(f"Run '{self.run_name}': points in subvolume {row.subvol_points}, subvolume size {row.subvol_size}",fontsize='xx-large')
         for plotNum, array in enumerate(result_arrays):
-            data_label = result.data_label[plotNum]
+            data_label = self.data_label[plotNum]
             mean = mean_array[plotNum]
             std = std_array[plotNum]
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum + 1)
             self.addHistogramSubplot(subplot, array, data_label, mean, std)
-
-            
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
-
         self.canvas.draw() 
 
 
@@ -247,14 +257,14 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         if index == 0:
             self.secondParamLabel.show()
             self.secondParamCombo.show()
-            self.secondParamLabel.setText("Subvolume Size:")
+            self.secondParamLabel.setText("Subvolume size:")
             self.secondParamCombo.clear()
             self.secondParamCombo.addItems([str(i) for i in self.secondParamCombo_subvol_sizes])
 
         elif index == 1:
             self.secondParamLabel.show()
             self.secondParamCombo.show()
-            self.secondParamLabel.setText("Points in Subvolume:")
+            self.secondParamLabel.setText("Points in subvolume:")
             self.secondParamCombo.clear()
             self.secondParamCombo.addItems([str(i) for i in self.secondParamCombo_subvol_points])   
         
@@ -263,13 +273,11 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
             self.secondParamCombo.hide()
 
 
-    
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
         print("init2")
         param_list = ["Subvolume size", "Sampling points in subvolume", "None"]
         super().__init__(parent, result_data_frame, param_list, "Plot histograms")
-        
         
     def addPlotsToLayout(self):
         """And stores mean and std"""#
@@ -431,7 +439,6 @@ class SaveObjectWindow(QtWidgets.QWidget):
         self.layout.addRow(self.textbox)
         self.layout.addRow(self.save_button, self.quit_button)
         self.setLayout(self.layout)
-
 
     def save(self, save_only):
         if self.object == "mask":

@@ -224,12 +224,8 @@ class GraphsWindow(QMainWindow):
     def CreateDockWidgets(self, displ_wrt_point0 = False):  
         result_data_frame = createResultsDataFrame(self.results_folder, displ_wrt_point0)
         result_data_frame = addMeanAndStdToResultDataFrame(result_data_frame)
-        row = result_data_frame.iloc[0]
-        result = row.result
-        mean_array = row.mean_array
-        std_array = row.std_array
-        single_run_results_widget = SingleRunResultsWidget(self, result_data_frame, displ_wrt_point0, mean_array, std_array)
-        dock1 = QDockWidget(result.title,self)
+        single_run_results_widget = SingleRunResultsWidget(self, result_data_frame)
+        dock1 = QDockWidget("Single", self)
         dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
         dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
         dock1.setWidget(single_run_results_widget)
