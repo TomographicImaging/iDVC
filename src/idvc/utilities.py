@@ -47,7 +47,7 @@ class RunResults(object):
                 count+=1
 
         data_label_dict = {
-            'objmin': "Objective minimum", 'u': "Displacement x component (pixels)", 'v':"Displacement y component (pixels)", 'w':"Displacement z component (pixels)",
+            'objmin': "Objective minimum", 'u': "Displacement x component", 'v':"Displacement y component", 'w':"Displacement z component",
             'phi':"Change in phi",'the':"Change in theta", 'psi':"Change in psi"}
 
         with open(disp_file_name) as f:

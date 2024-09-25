@@ -190,11 +190,13 @@ class SingleRunResultsWidget(BaseResultsWidget):
         std_array = row.std_array
         self.fig.suptitle(f"Run '{self.run_name}': points in subvolume {row.subvol_points}, subvolume size {row.subvol_size}",fontsize='xx-large')
         for plotNum, array in enumerate(result_arrays):
-            data_label = self.data_label[plotNum]
+            x_label = self.data_label[plotNum]
+            if 0<plotNum<4:
+                x_label = x_label + " (pixels)"   
             mean = mean_array[plotNum]
             std = std_array[plotNum]
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum + 1)
-            self.addHistogramSubplot(subplot, array, data_label, mean, std)
+            self.addHistogramSubplot(subplot, array, x_label, mean, std)
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
         self.canvas.draw() 
 
@@ -299,8 +301,15 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
         print("addplotb")
         self.fig.clf()
         param_index = self.parameter_fix_widget.currentIndex()
-        
-        self.fig.suptitle(f"Bulk run '{self.run_name}': {self.data_label_widget.currentText()} for {self.parameter_fix_widget.currentText()} = ",fontsize='xx-large')
+        if param_index == 0: 
+            parameter_value = self.subvol_size_value_widget.currentText()
+            plot_title = f"Bulk run '{self.run_name}': {self.data_label_widget.currentText()} for {self.parameter_fix_widget.currentText()} = {parameter_value}"
+        elif param_index == 1:
+            parameter_value = self.subvol_points_value_widget.currentText()
+            plot_title = f"Bulk run '{self.run_name}': {self.data_label_widget.currentText()} for {self.parameter_fix_widget.currentText()} = {parameter_value}"
+        elif param_index == 2:
+            plot_title = f"Bulk run '{self.run_name}': {self.data_label_widget.currentText()} for all parameters"
+        self.fig.suptitle(plot_title,fontsize='xx-large')
         
         numRows = len(self.subvol_sizes)
         numColumns = len(self.subvol_points)
@@ -308,24 +317,30 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
         
         for row in self.result_data_frame.itertuples():
             result = row.result
-
+            
             if param_index == 0: 
                 numRows = 1
+                subplot_title = f"Points in subvolume = {result.subvol_points}"
                 if result.subvol_size != float(self.subvol_size_value_widget.currentText()):
                     continue
             elif param_index == 1:
                 numColumns = 1
+                subplot_title = f"Subvolume size = {result.subvol_size}"
                 if result.subvol_points != float(self.subvol_points_value_widget.currentText()):
                     continue
-            data_label = f"{self.data_label_widget.currentText()}"
+            elif param_index == 2:
+                subplot_title = f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}"
             data_index = self.data_label_widget.currentIndex()
+            x_label = f"{self.data_label_widget.currentText()}"
+            if 0<data_index<4:
+                x_label = x_label + " (pixels)"  
             mean = row.mean_array[data_index]
             std = row.std_array[data_index]
             plotNum = plotNum + 1
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-            self.addHistogramSubplot(subplot, row.result_arrays[data_index], data_label, mean, std)
-            subplot.set_title(f"Points in subvolume = {result.subvol_points}, Subvolume size = {result.subvol_size}", fontsize='x-large', pad=20)
-        self.fig.subplots_adjust(hspace=2,wspace=0.5)
+            self.addHistogramSubplot(subplot, row.result_arrays[data_index], x_label, mean, std)
+            subplot.set_title(subplot_title, fontsize='x-large', pad=20)
+            self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
         self.canvas.draw()
 
