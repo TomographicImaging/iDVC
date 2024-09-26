@@ -113,12 +113,11 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
         plot.legend(loc='upper right')
 
-    def addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color):
+    def addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label):
         # Create the plot
-        subplot.plot(xpoints, ypoints, color+'-')
+        subplot.plot(xpoints, ypoints, color+'-', label=label)
         subplot.set_ylabel(ylabel)
         subplot.set_xlabel(xlabel)
-        
 
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
@@ -357,6 +356,30 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self.subvol_points_value_widget.addItems(["All"])
         self.subvol_size_value_widget.addItems(["All"])
 
+    def addWidgetstoGridLayout(self, result, param_list, button_text):
+        "Moves the button one row down and inserts the checkbox before the button"
+        super().addWidgetstoGridLayout(result, param_list, button_text)
+        widgetno = self.grid_layout.rowCount() - 2
+        self.collapse_checkbox = QCheckBox("Collapse plots", self)
+        self.collapse_checkbox.setChecked(False)
+        self.grid_layout.addWidget(self.collapse_checkbox,widgetno,2)
+        self.grid_layout.addWidget(self.button,widgetno+1,2)
+        self.subvol_points_value_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
+        self.subvol_size_value_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
+        self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
+        self.collapse_checkbox.hide()
+
+    def hideShowCollapseCheckbox(self):
+        param_index = self.parameter_fix_widget.currentIndex()
+        if param_index == 0: 
+            widget = self.subvol_size_value_widget
+        elif param_index == 1: 
+            widget = self.subvol_points_value_widget
+        if widget.currentText() == "All":
+            self.collapse_checkbox.show()
+        else:
+            self.collapse_checkbox.hide()
+
     def addPlotsToLayout(self):
         self.fig.clf()
         df = self.result_data_frame
@@ -365,7 +388,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         
         
         numColumns = 2
-        plotNum = 0
+        plotNum = 1
         self.fig.suptitle(f"Bulk Run 'self.run_name': self.data_label_widget.currentText()",fontsize='xx-large')
         if param_index == 2: 
             pass
@@ -373,7 +396,14 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
             if param_index == 0: 
                 data_type = 'subvol_points'
                 other_type ='subvol_size'
-                numRows = len(self.subvol_sizes)
+                if not self.collapse_checkbox.isChecked():
+                    numRows = len(self.subvol_sizes)
+                else:
+                    numRows = 1
+                    subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    subplot_mean.legend(loc='upper right')
+                    subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum+1)
+                    subplot_std.legend(loc='upper right')
                 for subvol_size in self.subvol_sizes:
                     if str(subvol_size) != self.subvol_size_value_widget.currentText():
                         if self.subvol_size_value_widget.currentText() == "All":
@@ -385,23 +415,37 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                     df_sz = df[(df[other_type] == subvol_size)]
                     xpoints = df_sz[data_type]
 
-                    plotNum = plotNum + 1
-                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+
+                    if not self.collapse_checkbox.isChecked():
+                        subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
+                        
                     ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
-                    subplot.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
+                    self.addStatisticalAnalysisPlot(subplot_mean, f"{data_type}", data_label +" mean",xpoints,ypoints, 'r', f"{other_type}: {subvol_size}")
+                    subplot_mean.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
                     
                     plotNum = plotNum + 1
-                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    if not self.collapse_checkbox.isChecked():
+                        subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
-                    subplot.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
+                    self.addStatisticalAnalysisPlot(subplot_std, f"{data_type}", data_label + " std", xpoints,ypoints, 'g', f"{other_type}: {subvol_size}")
+                    subplot_std.set_title(f"{other_type}: {subvol_size}", fontsize='x-large', pad=20)
+
+                    if not self.collapse_checkbox.isChecked():
+                        plotNum = plotNum + 1
                         
             #self.fig.subplots_adjust(hspace=0.5,wspace=0.5)
             elif param_index == 1: 
                 data_type = 'subvol_size'
                 other_type = 'subvol_points'
-                numRows = len(self.subvol_points)
+                
+                if not self.collapse_checkbox.isChecked():
+                    numRows = len(self.subvol_points)
+                else:
+                    numRows = 1
+                    subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    subplot_mean.legend(loc='upper right')
+                    subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum+1)
+                    subplot_std.legend(loc='upper right')
                 for subvol_points in self.subvol_points:
                     if str(subvol_points) != self.subvol_points_value_widget.currentText():
                         if self.subvol_points_value_widget.currentText() == "All":
@@ -413,17 +457,21 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                     df_sz = df[(df[other_type] == subvol_points)]
                     xpoints = df_sz[data_type]
 
-                    plotNum = plotNum + 1
-                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    if not self.collapse_checkbox.isChecked():
+                        subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label +" mean",xpoints,ypoints, 'r')
-                    subplot.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
+                    self.addStatisticalAnalysisPlot(subplot_mean, f"{data_type}", data_label +" mean",xpoints,ypoints, 'r',f"{other_type}: {subvol_points}")
+                    subplot_mean.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
                     
                     plotNum = plotNum + 1
-                    subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    if not self.collapse_checkbox.isChecked():
+                        subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum)
                     ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-                    self.addStatisticalAnalysisPlot(subplot, f"{data_type}", data_label + " std", xpoints,ypoints, 'g')
-                    subplot.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
+                    self.addStatisticalAnalysisPlot(subplot_std, f"{data_type}", data_label + " std", xpoints,ypoints, 'g',f"{other_type}: {subvol_points}")
+                    subplot_std.set_title(f"{other_type}: {subvol_points}", fontsize='x-large', pad=20)
+
+                    if not self.collapse_checkbox.isChecked():
+                        plotNum = plotNum + 1
         
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])        
         self.canvas.draw() 
