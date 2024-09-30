@@ -124,6 +124,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.set_ylabel(ylabel + " (pixels)")
         subplot.set_xlabel(xlabel)
 
+
 class SingleRunResultsWidget(BaseResultsWidget):
     '''creates a dockable widget which will display results from a single run of the DVC code
     '''
@@ -294,7 +295,6 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
             self.subvol_size_value_label.hide()
             self.subvol_size_value_widget.hide()
         
-        
 
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
@@ -368,96 +368,133 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
     def addWidgetstoGridLayout(self, result, param_list, button_text):
         "Moves the button one row down and inserts the checkbox before the button"
         super().addWidgetstoGridLayout(result, param_list, button_text)
+        self.data_label_widget.addItem("All")
         widgetno = self.grid_layout.rowCount() - 2
         self.collapse_checkbox = QCheckBox("Collapse plots", self)
         self.collapse_checkbox.setChecked(False)
         self.grid_layout.addWidget(self.collapse_checkbox,widgetno,2)
         self.grid_layout.addWidget(self.button,widgetno+1,2)
+        self.data_label_widget.currentIndexChanged.connect(lambda: self.hideShowAllItemInValueWidget())
         self.subvol_points_value_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
         self.subvol_size_value_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
         self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
         self.collapse_checkbox.hide()
 
-    def meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, param_text, parameter, selected_parameter,x_parameter, x_label, color_mean = 'r', color_std ='g'):
+    def meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, parameter, selected_parameter,x_parameter, x_label, color_mean = 'r', color_std ='g', label_mean = "Mean", label_std = "Std"):
         print("inside meanplot")
         df_sz = self.selectOneParameter(result_data_frame, parameter, selected_parameter)
         xpoints = df_sz[x_parameter]
         ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-        self.addStatisticalAnalysisPlot(subplot_mean, x_label, data_label +" mean",xpoints,ypoints, color_mean, f"{param_text} = {selected_parameter}")       
+        self.addStatisticalAnalysisPlot(subplot_mean, x_label, data_label +" mean",xpoints,ypoints, color_mean, label_mean)       
         ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-        self.addStatisticalAnalysisPlot(subplot_std, x_label, data_label + " std", xpoints,ypoints, color_std, f"{param_text} = {selected_parameter}")
+        self.addStatisticalAnalysisPlot(subplot_std, x_label, data_label + " std", xpoints,ypoints, color_std, label_std)
 
+    def hideShowAllItemInValueWidget(self):
+        index_ss = self.subvol_size_value_widget.findText("All")
+        index_sp = self.subvol_points_value_widget.findText("All")
+        if self.data_label_widget.currentText() == "All":
+            self.subvol_size_value_widget.removeItem(index_ss)
+            self.subvol_points_value_widget.removeItem(index_sp))
+        else:
+            if index_ss == -1:
+                self.subvol_size_value_widget.addItem("All")
+            if index_sp == -1:
+                self.subvol_points_value_widget.addItem("All")
 
     def hideShowCollapseCheckbox(self):
         param_index = self.parameter_fix_widget.currentIndex()
         if param_index == 0: 
             widget = self.subvol_size_value_widget
         elif param_index == 1: 
-            widget = self.subvol_points_value_widget
+            widget = self.subvol_points_value_widget 
         if widget.currentText() == "All":
             self.collapse_checkbox.show()
         else:
             self.collapse_checkbox.hide()
 
+
     def addPlotsToLayout(self):
         self.fig.clf()
         df = self.result_data_frame
+
+        
+        
+
         param_index = self.parameter_fix_widget.currentIndex()
         param_text = self.parameter_fix_widget.currentText().lower()
         x_label = self.parameter_fix_widget.itemText(1 - param_index)
         value_widget = self.parameter_value_widget_list[param_index]
-        numColumns = 2
-        plotNum = 1
+
         
-        data_label = f"{self.data_label_widget.currentText()}"
-        data_index = self.data_label_widget.currentIndex()
-        print(value_widget.currentText())
-        print("checked",self.collapse_checkbox.isChecked())
+        
         self.value_list = [self.subvol_sizes, self.subvol_points]
         label_list = ['subvol_size','subvol_points']
-       
-        if value_widget.currentText() == "All":
-            print("inside all")
-            plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for fixed {param_text}"
-            if not self.collapse_checkbox.isChecked():
-                print("not chgecked")
-                print(self.value_list[param_index])
-                numRows = len(self.value_list[param_index])
-                for value in self.value_list[param_index]:
-                    print(value)
-                    subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
-                    subplot_mean.set_title(f"Mean for {param_text} = {value}", fontsize='x-large', pad=20) 
-                    subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
-                    subplot_std.set_title(f"Standard deviation for {param_text} = {value}", fontsize='x-large', pad=20)
 
-                    self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, param_text, label_list[param_index], value, label_list[1-param_index], x_label)
-                    plotNum = plotNum + 2
-            elif self.collapse_checkbox.isChecked():
+        numColumns = 2
+        plotNum = 1
+        if self.data_label_widget.currentText() == "All":
+            for data_index in range(4):
+                data_label = f"{self.data_label_widget.itemText(data_index)}"
+                numRows = 2
+                numColumns = 2
+                subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
+                subplot.set_title(f"{data_label}", fontsize='x-large', pad=20) 
+                value = value_widget.currentText() 
+                plot_title = f"Bulk run '{self.run_name}': mean and standard deviation for {param_text} = {value}"
+                twin = subplot.twinx()
+                self.meanStdPlots(subplot, twin, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label)
+                lines1, labels1 = subplot.get_legend_handles_labels()
+                lines2, labels2 = twin.get_legend_handles_labels()
+                lines = lines1 + lines2
+                labels = labels1 + labels2
+                subplot.legend(lines, labels, loc='upper right')
+                plotNum += 1
+        else:
+            data_index = self.data_label_widget.currentIndex()
+            data_label = f"{self.data_label_widget.currentText()}"
+            
+            if value_widget.currentText() == "All":
+                print("inside all")
+                plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for fixed {param_text}"
+                if not self.collapse_checkbox.isChecked():
+                    print("not chgecked")
+                    print(self.value_list[param_index])
+                    numRows = len(self.value_list[param_index])
+                    for value in self.value_list[param_index]:
+                        print(value)
+                        subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
+                        subplot_mean.set_title(f"Mean for {param_text} = {value}", fontsize='x-large', pad=20) 
+                        subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
+                        subplot_std.set_title(f"Standard deviation for {param_text} = {value}", fontsize='x-large', pad=20)
+                        label = f"{param_text} = {value}"
+                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label, label_mean = label, label_std = label)
+                        plotNum = plotNum + 2
+                elif self.collapse_checkbox.isChecked():
+                    numRows = 1
+                    subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
+                    subplot_mean.set_title("Mean", fontsize='x-large', pad=20) 
+                    subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
+                    subplot_std.set_title("Standard deviation", fontsize='x-large', pad=20)
+
+                    for value in self.value_list[param_index]:
+                        color1 = np.random.rand(3,)
+                        color2 = np.random.rand(3,)
+                        label = f"{param_text} = {value}"
+                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label, color1,color2, label, label)
+                    subplot_mean.legend(loc='upper right')
+                    subplot_std.legend(loc='upper right')
+            else:
+
+                print("outside all")
                 numRows = 1
                 subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
                 subplot_mean.set_title("Mean", fontsize='x-large', pad=20) 
-                subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
+                subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum+1)
                 subplot_std.set_title("Standard deviation", fontsize='x-large', pad=20)
-
-                for value in self.value_list[param_index]:
-                    color1 = np.random.rand(3,)
-                    color2 = np.random.rand(3,)
-                    print("value",value)
-                    self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, param_text, label_list[param_index], value, label_list[1-param_index], x_label, color1,color2)
-                subplot_mean.legend(loc='upper right')
-                subplot_std.legend(loc='upper right')
-        else:
-
-            print("outside all")
-            numRows = 1
-            subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
-            subplot_mean.set_title("Mean", fontsize='x-large', pad=20) 
-            subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum+1)
-            subplot_std.set_title("Standard deviation", fontsize='x-large', pad=20)
-            value = value_widget.currentText() 
-            plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for {param_text} = {value}"
-            self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, param_text, label_list[param_index], value, label_list[1-param_index], x_label)
-        
+                value = value_widget.currentText() 
+                plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for {param_text} = {value}"
+                self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label)
+            
         self.fig.suptitle(plot_title,fontsize='xx-large')
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])        
         self.canvas.draw() 
