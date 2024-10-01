@@ -17,7 +17,13 @@ class SettingsWindow(FormDialog):
         self.parent = parent
 
 
-        
+        self.fontsize_label = QLabel("Fontsize: ")
+        self.fontsize_widget = QSpinBox()
+        self.fontsize_widget.setMaximum(25)
+        self.fontsize_widget.setMinimum(5)
+        self.fontsize_widget.setSingleStep(1)
+        self.fontsize_widget.setValue(12)
+        self.addWidget(self.fontsize_widget, self.fontsize_label, 'fontsize')
         self.dark_checkbox = QCheckBox("Dark Mode")
         # populate from settings
         if self.parent.settings.value("dark_mode") is not None:
@@ -105,6 +111,8 @@ class SettingsWindow(FormDialog):
 
 
     def onOk(self):
+        font = PySide2.QtGui.QFont("Arial", self.fontsize_widget.value()) 
+        PySide2.QtWidgets.QApplication.setFont(font)
         #self.parent.settings.setValue("settings_chosen", 1)
         if self.dark_checkbox.isChecked():
             self.parent.settings.setValue("dark_mode", True)
