@@ -7,13 +7,11 @@ import glob, os
 def extractDataFromDispResultFile(result, displ_wrt_point0):    
     """
     Gets the filepath of the disp file via `result.disp_file`.
-    Extracts the data in the numpy format by using the converter, does not load the label row.
+    Extracts the data in the numpy format, skips the header.
     This imports the whole row, so the displacement vector is given by indices 6, 7, 8. Index 5 is the objective func minimum.
     'plot_data' is a list of array, where each array is a column of data: objmin, u, v, w.
     """
-    data = np.asarray(
-    PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
-    )
+    data = np.genfromtxt(result.disp_file, delimiter='\t', skip_header=1)
     data_shape = data.shape
     index_objmin = 5
     index_disp = [6,9]
