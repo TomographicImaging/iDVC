@@ -3,8 +3,9 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
+from matplotlib import rcParams
+from cycler import cycler
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from idvc.utils.manipulate_result_files import extractDataFromDispResultFile
@@ -46,6 +47,19 @@ class BaseResultsWidget(QtWidgets.QWidget):
         self.layout.addLayout(self.grid_layout,0)
         self.addInfotoGridLayout(single_result)
 
+        self.color_list = [
+            '#1f77b4',  # Blue
+            '#ff7f0e',  # Orange
+            '#2ca02c',  # Green
+            '#d62728',  # Red
+            '#9467bd',  # Purple
+            '#8c564b',  # Brown
+            '#e377c2',  # Pink
+            '#7f7f7f',  # Gray
+            '#bcbd22',  # Olive
+            '#17becf'   # Cyan
+            ]
+        self.linewidth = 3 #pixels?
         self.fig = Figure(figsize=(10, 8))
         self.canvas = FigureCanvas(self.fig)
         self.fig.clf()
@@ -90,7 +104,6 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         pass
 
     def addWidgetsToGridLayout(self, result):
-        print("parent grid")
         pass
 
     def addHistogramSubplot(self, plot, array, xlabel, mean, std): 
@@ -105,22 +118,21 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         relative_counts = counts*100/ len(array)
         plot.cla()
         bin_widths = np.diff(bins)
-        plot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge')
+        plot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge',color='lightgrey')
         plot.set_ylabel("Relative frequency (% points in run)")
         plot.set_xlabel(xlabel)
-        plot.axvline(mean, color='r', linestyle='--', label=f'mean = {mean:.3f}')
-        plot.axvline(mean-std, color='g', linestyle='--', label=f'std = {std:.3f}')
-        plot.axvline(mean+std, color='g', linestyle='--')
+        plot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.3f}')
+        plot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.3f}')
+        plot.axvline(mean+std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth)
 
         x = np.linspace(min(array), max(array), 1000)
         gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
-        plot.plot(x, gaussian, 'b--', label='gaussian fit')
+        plot.plot(x, gaussian, self.color_list[2],linestyle='--', linewidth=self.linewidth, label='gaussian fit')
 
         plot.legend(loc='upper right')
 
-    def addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label):
-        print("Create the plot")
-        subplot.plot(xpoints, ypoints, color=color, linestyle='-', label=label)
+    def _addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label, linestyle):
+        subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
         subplot.set_ylabel(ylabel + " (pixels)")
         subplot.set_xlabel(xlabel)
 
@@ -298,13 +310,11 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
 
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
-        print("init2")
         param_list = ["Subvolume size", "Sampling points in subvolume", "None"]
         super().__init__(parent, result_data_frame, param_list, "Plot histograms")
         
     def addPlotsToLayout(self):
-        """And stores mean and std"""#
-        print("addplotb")
+        """And stores mean and std"""
         self.fig.clf()
         data_label = self.data_label_widget.currentText()
         param_index = self.parameter_fix_widget.currentIndex()
@@ -354,8 +364,8 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
 
 class StatisticsResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
-        print("init 3")
         param_list = ["Subvolume size", "Sampling points in subvolume"]
+        self.linestyles = ['-','--','-.', ':']
         super().__init__(parent, result_data_frame, param_list)
         
         self.subvol_size_value_list = self.subvol_sizes
@@ -380,21 +390,20 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
         self.collapse_checkbox.hide()
 
-    def meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, parameter, selected_parameter,x_parameter, x_label, color_mean = 'r', color_std ='g', label_mean = "Mean", label_std = "Std"):
-        print("inside meanplot")
+    def meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, parameter, selected_parameter,x_parameter, x_label, color_mean = '#1f77b4', color_std = '#ff7f0e', label_mean = "Mean", label_std = "Std",  linestyle = '-'):
         df_sz = self.selectOneParameter(result_data_frame, parameter, selected_parameter)
         xpoints = df_sz[x_parameter]
         ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-        self.addStatisticalAnalysisPlot(subplot_mean, x_label, data_label +" mean",xpoints,ypoints, color_mean, label_mean)       
+        self._addStatisticalAnalysisPlot(subplot_mean, x_label, data_label +" mean",xpoints,ypoints, color_mean, label_mean, linestyle)       
         ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-        self.addStatisticalAnalysisPlot(subplot_std, x_label, data_label + " std", xpoints,ypoints, color_std, label_std)
+        self._addStatisticalAnalysisPlot(subplot_std, x_label, data_label + " std", xpoints,ypoints, color_std, label_std, linestyle)
 
     def hideShowAllItemInValueWidget(self):
         index_ss = self.subvol_size_value_widget.findText("All")
         index_sp = self.subvol_points_value_widget.findText("All")
         if self.data_label_widget.currentText() == "All":
             self.subvol_size_value_widget.removeItem(index_ss)
-            self.subvol_points_value_widget.removeItem(index_sp))
+            self.subvol_points_value_widget.removeItem(index_sp)
         else:
             if index_ss == -1:
                 self.subvol_size_value_widget.addItem("All")
@@ -454,14 +463,10 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
             data_label = f"{self.data_label_widget.currentText()}"
             
             if value_widget.currentText() == "All":
-                print("inside all")
                 plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for fixed {param_text}"
                 if not self.collapse_checkbox.isChecked():
-                    print("not chgecked")
-                    print(self.value_list[param_index])
                     numRows = len(self.value_list[param_index])
                     for value in self.value_list[param_index]:
-                        print(value)
                         subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
                         subplot_mean.set_title(f"Mean for {param_text} = {value}", fontsize='x-large', pad=20) 
                         subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
@@ -476,16 +481,17 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                     subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
                     subplot_std.set_title("Standard deviation", fontsize='x-large', pad=20)
 
-                    for value in self.value_list[param_index]:
-                        color1 = np.random.rand(3,)
-                        color2 = np.random.rand(3,)
+                    for i, value in enumerate(self.value_list[param_index]):
+                        linestyle = self.linestyles[i // len(self.color_list) % len(self.linestyles)]
+                        if len(self.result_data_frame) <= len(self.color_list) * len(self.linestyles):
+                            color = self.color_list[i % len(self.color_list)]
+                        else:
+                            color = np.random.rand(3,)
                         label = f"{param_text} = {value}"
-                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label, color1,color2, label, label)
+                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
                     subplot_mean.legend(loc='upper right')
                     subplot_std.legend(loc='upper right')
             else:
-
-                print("outside all")
                 numRows = 1
                 subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
                 subplot_mean.set_title("Mean", fontsize='x-large', pad=20) 
@@ -508,7 +514,6 @@ class SaveObjectWindow(QtWidgets.QWidget):
     def __init__(self, parent, object_type, save_only):
         super().__init__(parent = parent)
 
-        #print(save_only)
         self.object = object_type
 
         if self.object == "mask":
