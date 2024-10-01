@@ -3,12 +3,10 @@ from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
 import numpy as np
+import matplotlib
 from matplotlib.figure import Figure
-from matplotlib import rcParams
-from cycler import cycler
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
-from idvc.utils.manipulate_result_files import extractDataFromDispResultFile
 from functools import partial
 import shutil
 import os
@@ -60,11 +58,20 @@ class BaseResultsWidget(QtWidgets.QWidget):
             '#17becf'   # Cyan
             ]
         self.linewidth = 3 #pixels?
-        self.fig = Figure(figsize=(10, 8))
+        self.fontsizes = {'figure_title':18, 'subplot_title':14, 'label':10}
+        self.figsize = (8, 4)  # Size in inches
+        self.dpi = 100
+        self.fig = Figure(figsize=self.figsize, dpi=self.dpi)
         self.canvas = FigureCanvas(self.fig)
-        self.fig.clf()
-        self.canvas.setMinimumSize(400, 400) #needed for scrollbar
+        #self.fig.clf()
+        self.canvas.setMinimumSize(800, 400) #needed for scrollbar
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        #self.canvas.setFixedSize(1200, 600)
+        # Set the canvas size policy to allow width expansion only
+        
+        # Set a fixed height for the canvas (you can adjust the height as needed)
+        #self.canvas.setFixedHeight(800)  # Example fixed height
+        
 
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.layout.addWidget(self.toolbar)
@@ -119,8 +126,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         plot.cla()
         bin_widths = np.diff(bins)
         plot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge',color='lightgrey')
-        plot.set_ylabel("Relative frequency (% points in run)")
-        plot.set_xlabel(xlabel)
+        plot.set_ylabel("Relative frequency (% points in run)", fontsize=self.fontsizes['label'])
+        plot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
         plot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.3f}')
         plot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.3f}')
         plot.axvline(mean+std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth)
@@ -133,8 +140,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
     def _addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label, linestyle):
         subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
-        subplot.set_ylabel(ylabel + " (pixels)")
-        subplot.set_xlabel(xlabel)
+        subplot.set_ylabel(ylabel + " (pixels)", fontsize=self.fontsizes['label'])
+        subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
 
 
 class SingleRunResultsWidget(BaseResultsWidget):
@@ -205,7 +212,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         result_arrays = row.result_arrays
         mean_array = row.mean_array
         std_array = row.std_array
-        self.fig.suptitle(f"Run '{self.run_name}': points in subvolume {row.subvol_points}, subvolume size {row.subvol_size}",fontsize='xx-large')
+        self.fig.suptitle(f"Run '{self.run_name}': points in subvolume {row.subvol_points}, subvolume size {row.subvol_size}",fontsize=self.fontsizes['figure_title'])
         for plotNum, array in enumerate(result_arrays):
             x_label = self.data_label[plotNum]
             if 0<plotNum<4:
@@ -226,6 +233,7 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         single_result = result_data_frame.iloc[0]['result']
         self.addWidgetstoGridLayout(single_result, param_list, button_text)
         self.addPlotsToLayout()
+        
 
     def addWidgetstoGridLayout(self, result, param_list, button_text):
         widgetno=0
@@ -313,6 +321,7 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
         param_list = ["Subvolume size", "Sampling points in subvolume", "None"]
         super().__init__(parent, result_data_frame, param_list, "Plot histograms")
         
+        
     def addPlotsToLayout(self):
         """And stores mean and std"""
         self.fig.clf()
@@ -327,7 +336,7 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             parameter_value = value_widget.currentText()
             param_text = self.parameter_fix_widget.currentText().lower()
             plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} distribution for {param_text} = {parameter_value}"
-        self.fig.suptitle(plot_title,fontsize='xx-large')
+        self.fig.suptitle(plot_title,fontsize=self.fontsizes['figure_title'])
         
         numRows = len(self.subvol_sizes)
         numColumns = len(self.subvol_points)
@@ -338,16 +347,19 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             
             if param_index == 0: 
                 numRows = 1
+                self.canvas.setMinimumSize(300*numColumns, 400)
                 subplot_title = f"Points in subvolume = {result.subvol_points}"
                 if result.subvol_size != float(parameter_value):
                     continue
             elif param_index == 1:
                 numColumns = 1
+                self.canvas.setMinimumSize(800, 300*numRows) #needed for scrollbar
                 subplot_title = f"Subvolume size = {result.subvol_size}"
                 if result.subvol_points != float(parameter_value):
                     continue
             elif param_index == 2:
                 subplot_title = f"Points in subvolume = {result.subvol_points}, subvolume size = {result.subvol_size}"
+                self.canvas.setMinimumSize(300*numColumns, 300*numRows)
             data_index = self.data_label_widget.currentIndex()
             x_label = data_label
             if 0<data_index<4:
@@ -357,7 +369,7 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             plotNum = plotNum + 1
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
             self.addHistogramSubplot(subplot, row.result_arrays[data_index], x_label, mean, std)
-            subplot.set_title(subplot_title, fontsize='x-large', pad=20)
+            subplot.set_title(subplot_title, pad=20, fontsize=self.fontsizes['subplot_title'])
             self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
         self.canvas.draw()
@@ -394,9 +406,9 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         df_sz = self.selectOneParameter(result_data_frame, parameter, selected_parameter)
         xpoints = df_sz[x_parameter]
         ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
-        self._addStatisticalAnalysisPlot(subplot_mean, x_label, data_label +" mean",xpoints,ypoints, color_mean, label_mean, linestyle)       
+        self._addStatisticalAnalysisPlot(subplot_mean, x_label, data_label+"mean",xpoints,ypoints, color_mean, label_mean, linestyle)       
         ypoints = df_sz['std_array'].apply(lambda array: array[data_index])
-        self._addStatisticalAnalysisPlot(subplot_std, x_label, data_label + " std", xpoints,ypoints, color_std, label_std, linestyle)
+        self._addStatisticalAnalysisPlot(subplot_std, x_label, data_label+"std", xpoints,ypoints, color_std, label_std, linestyle)
 
     def hideShowAllItemInValueWidget(self):
         index_ss = self.subvol_size_value_widget.findText("All")
@@ -424,6 +436,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
 
     def addPlotsToLayout(self):
         self.fig.clf()
+        self.canvas.setMinimumSize(800, 400)
         df = self.result_data_frame
 
         
@@ -447,11 +460,11 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 numRows = 2
                 numColumns = 2
                 subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-                subplot.set_title(f"{data_label}", fontsize='x-large', pad=20) 
+                subplot.set_title(f"{data_label}", pad=20, fontsize=self.fontsizes['subplot_title']) 
                 value = value_widget.currentText() 
                 plot_title = f"Bulk run '{self.run_name}': mean and standard deviation for {param_text} = {value}"
                 twin = subplot.twinx()
-                self.meanStdPlots(subplot, twin, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label)
+                self.meanStdPlots(subplot, twin, df, data_index, "", label_list[param_index], value, label_list[1-param_index], x_label)
                 lines1, labels1 = subplot.get_legend_handles_labels()
                 lines2, labels2 = twin.get_legend_handles_labels()
                 lines = lines1 + lines2
@@ -466,20 +479,21 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for fixed {param_text}"
                 if not self.collapse_checkbox.isChecked():
                     numRows = len(self.value_list[param_index])
+                    self.canvas.setMinimumSize(800, 300*numRows)
                     for value in self.value_list[param_index]:
                         subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
-                        subplot_mean.set_title(f"Mean for {param_text} = {value}", fontsize='x-large', pad=20) 
+                        subplot_mean.set_title(f"Mean for {param_text} = {value}", fontsize=self.fontsizes['subplot_title'], pad=20) 
                         subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
-                        subplot_std.set_title(f"Standard deviation for {param_text} = {value}", fontsize='x-large', pad=20)
+                        subplot_std.set_title(f"Standard deviation for {param_text} = {value}", fontsize=self.fontsizes['subplot_title'], pad=20)
                         label = f"{param_text} = {value}"
-                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label, label_mean = label, label_std = label)
+                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, label_mean = label, label_std = label)
                         plotNum = plotNum + 2
                 elif self.collapse_checkbox.isChecked():
                     numRows = 1
                     subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
-                    subplot_mean.set_title("Mean", fontsize='x-large', pad=20) 
+                    subplot_mean.set_title("Mean", fontsize=self.fontsizes['subplot_title'], pad=20) 
                     subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
-                    subplot_std.set_title("Standard deviation", fontsize='x-large', pad=20)
+                    subplot_std.set_title("Standard deviation", fontsize=self.fontsizes['subplot_title'], pad=20)
 
                     for i, value in enumerate(self.value_list[param_index]):
                         linestyle = self.linestyles[i // len(self.color_list) % len(self.linestyles)]
@@ -488,20 +502,20 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                         else:
                             color = np.random.rand(3,)
                         label = f"{param_text} = {value}"
-                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
+                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
                     subplot_mean.legend(loc='upper right')
                     subplot_std.legend(loc='upper right')
             else:
                 numRows = 1
                 subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
-                subplot_mean.set_title("Mean", fontsize='x-large', pad=20) 
+                subplot_mean.set_title("Mean", fontsize=self.fontsizes['subplot_title'], pad=20) 
                 subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum+1)
-                subplot_std.set_title("Standard deviation", fontsize='x-large', pad=20)
+                subplot_std.set_title("Standard deviation", fontsize=self.fontsizes['subplot_title'], pad=20)
                 value = value_widget.currentText() 
                 plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for {param_text} = {value}"
-                self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label, label_list[param_index], value, label_list[1-param_index], x_label)
+                self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label)
             
-        self.fig.suptitle(plot_title,fontsize='xx-large')
+        self.fig.suptitle(plot_title,fontsize=self.fontsizes['figure_title'])
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])        
         self.canvas.draw() 
 
