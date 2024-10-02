@@ -18,7 +18,8 @@ def main():
         logging.info(f"iDVC: Setting debugging level to {args.debug.upper()}")
     app = QtWidgets.QApplication([])
     # Set a global font for the application
-    font = QtGui.QFont("Arial", 12)  # Replace with your preferred font and size
+    default_font_family = app.font().family() 
+    font = QtGui.QFont(default_font_family, 12)  # Replace with your preferred font and size
     QtWidgets.QApplication.setFont(font)
 
     

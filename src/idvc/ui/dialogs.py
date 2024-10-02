@@ -111,7 +111,8 @@ class SettingsWindow(FormDialog):
 
 
     def onOk(self):
-        font = PySide2.QtGui.QFont("Arial", self.fontsize_widget.value()) 
+        default_font_family = PySide2.QtWidgets.QApplication.font().family() 
+        font = PySide2.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
         PySide2.QtWidgets.QApplication.setFont(font)
         #self.parent.settings.setValue("settings_chosen", 1)
         if self.dark_checkbox.isChecked():
