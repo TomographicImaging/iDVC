@@ -36,8 +36,9 @@ class BaseResultsWidget(QtWidgets.QWidget):
         Parameters
         ----------  
         parent : QWidget
-        result_data_frame : pandas dataframe
-            Columns: 'subvol_size', 'subvol_points', 'result', 'result_arrays', 'mean_array', 'std_array'.
+        result_data_frame : pandas.DataFrame
+                Data frame containing the results, with columns: 'subvol_size', 'subvol_points',
+                'result', 'result_arrays', 'mean_array', 'std_array'.
         '''
         self.result_data_frame = result_data_frame
         single_result = result_data_frame.iloc[0]['result']
@@ -105,8 +106,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         
         Parameters
         ----------
-        result_data_frame : pandas dataframe
-                Includes the 'subvol_points' and 'subvol_size' columns.
+        result_data_frame : pandas.DataFrame
+                Data frame containing the results. Includes the 'subvol_points' and 'subvol_size' columns.
         selected_subvol_points : str of an integer
                 Selected points in subvolume.
         selected_subvol_size : str of an integer
@@ -126,8 +127,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
         Parameters
         ----------
-        result_data_frame : pandas dataframe
-                Includes the 'subvol_points' and 'subvol_size' columns.
+        result_data_frame : pandas.DataFrame
+                Data frame containing the results. Includes the 'subvol_points' and 'subvol_size' columns.
         parameter : str
                 'subvol_points' or 'subvol_size'
         selected_parameter : str of an integer
@@ -145,7 +146,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
         Parameters
         ----------
-        plot : matplotlib subplot of a figure
+        subplot : matplotlib subplot of a figure
         array : numpyarray
         xlabel :  str
         mean : float
@@ -186,8 +187,8 @@ class SingleRunResultsWidget(BaseResultsWidget):
         ----------
         parent : QWidget
             The parent widget.
-        result_data_frame : DataFrame
-            A pandas DataFrame containing the result data.
+        result_data_frame : pandas.DataFrame
+                Data frame containing the result data.
         '''
         super().__init__(parent, result_data_frame)
         if len(result_data_frame) > 1:
@@ -292,8 +293,8 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         ----------
         parent : QWidget
             The parent widget.
-        result_data_frame : DataFrame
-            A pandas DataFrame containing the result data.
+        result_data_frame : pandas.DataFrame
+                Data frame containing the results.
         param_list : list of str
             The text items for the QComboBox.
         button_text : str, optional
@@ -515,7 +516,8 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
     def __init__(self, parent, result_data_frame):
         '''
         Defines the parameter list and linestyles. 
-        Initialises the class. 
+        Initialises the class. Adds the option `All` to the
+        subvolume size and subvolume points widgets.
         '''
         param_list = ["Subvolume size", "Sampling points in subvolume"]
         self.linestyles = ['-','--','-.', ':']
@@ -524,7 +526,21 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self.subvol_size_value_widget.addItem("All")
 
     def addWidgetstoGridLayout(self, param_list, button_text):
-        "Moves the button one row down and inserts the checkbox before the button"
+        """
+        Redefines the superclass method to add widgets to the grid layout.
+        Adds "All" to the data label widget.
+        Inserts a checkbox labeled "Collapse plots" into the grid layout and hides it.
+        Moves the button one row down in the grid layout.
+        Connects various signals to the `hideShowAllItemInValueWidget` and
+        `hideShowCollapseCheckbox` methods.
+
+        Parameters
+        ----------
+        param_list : list of str
+                A list of parameters to populate the parameter_fix_widget.
+        button_text : str
+                The text to display on the button.
+        """
         super().addWidgetstoGridLayout(param_list, button_text)
         self.data_label_widget.addItem("All")
         widgetno = self.grid_layout.rowCount() - 2
@@ -538,7 +554,41 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.hideShowCollapseCheckbox())
         self.collapse_checkbox.hide()
 
-    def meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, parameter, selected_parameter,x_parameter, x_label, color_mean = '#1f77b4', color_std = '#ff7f0e', label_mean = "Mean", label_std = "Std",  linestyle = '-'):
+    def _meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, parameter, selected_parameter, x_parameter, x_label, color_mean='#1f77b4', color_std='#ff7f0e', label_mean="Mean", label_std="Std", linestyle='-'):
+        """
+        Plots mean and standard deviation data on given subplots.
+
+        Parameters
+        ----------
+        subplot_mean : matplotlib subplot of a figure
+            Subplot for mean values.
+        subplot_std : matplotlib subplot of a figure
+            Subplot for std values.
+        result_data_frame : pandas.DataFrame
+                Data frame containing the results.
+        data_index : int
+            Index of the data.
+        data_label : str
+            Label for the data.
+        parameter : str
+            Parameter to filter the data frame.
+        selected_parameter : str
+            Value of the parameter to filter.
+        x_parameter : str
+            Column name for x-axis values.
+        x_label : str
+            Label for the x-axis.
+        color_mean : str, optional
+            Color for mean plot line.
+        color_std : str, optional
+            Color for std plot line.
+        label_mean : str, optional
+            Label for mean plot line.
+        label_std : str, optional
+            Label for std plot line.
+        linestyle : str, optional
+            Line style for plot lines.
+        """
         df_sz = self._selectOneParameter(result_data_frame, parameter, selected_parameter)
         xpoints = df_sz[x_parameter]
         ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
@@ -547,6 +597,10 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self._addStatisticalAnalysisPlot(subplot_std, x_label, data_label+"std", xpoints,ypoints, color_std, label_std, linestyle)
 
     def hideShowAllItemInValueWidget(self):
+        """
+        Toggles the visibility of the "All" item in the subvolume size value widget and
+        subvolume points value widget based on the current text of the data label widget.
+        """
         index_ss = self.subvol_size_value_widget.findText("All")
         index_sp = self.subvol_points_value_widget.findText("All")
         if self.data_label_widget.currentText() == "All":
@@ -559,6 +613,10 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 self.subvol_points_value_widget.addItem("All")
 
     def hideShowCollapseCheckbox(self):
+        """
+        Shows or hides the collapse checkbox based on the
+        selection of the fixed parameter.
+        """
         param_index = self.parameter_fix_widget.currentIndex()
         if param_index == 0: 
             widget = self.subvol_size_value_widget
@@ -571,20 +629,29 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
 
 
     def addSubplotsToFigure(self):
+        """
+        Clears the figure and sets a minimum size for the canvas. 
+        Generates subplots for mean and standard deviation of the selected data
+        and parameter values. It supports different configurations based on user selections.
+        The subplots are arranged in a grid layout, where the figure title and subplot titles
+        are dynamically generated based on the selected options. The figure layout is adjusted
+        and the canvas is redrawn.
+
+        The method handles the following cases:
+        - Plotting all data labels with fixed parameter values.
+        - Plotting a specific data label with fixed parameter values.
+        - Plotting a specific data label with all parameter values. An option to
+            collapse the subplots in the same row is available.
+        """
         self.fig.clf()
         self.canvas.setMinimumSize(800, 400)
         df = self.result_data_frame
-
-        
-        
 
         param_index = self.parameter_fix_widget.currentIndex()
         param_text = self.parameter_fix_widget.currentText().lower()
         x_label = self.parameter_fix_widget.itemText(1 - param_index)
         value_widget = self.parameter_value_widget_list[param_index]
 
-        
-        
         self.value_list = [self.subvol_sizes, self.subvol_points]
         label_list = ['subvol_size','subvol_points']
 
@@ -600,7 +667,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 value = value_widget.currentText() 
                 plot_title = f"Bulk run '{self.run_name}': mean and standard deviation for {param_text} = {value}"
                 twin = subplot.twinx()
-                self.meanStdPlots(subplot, twin, df, data_index, "", label_list[param_index], value, label_list[1-param_index], x_label)
+                self._meanStdPlots(subplot, twin, df, data_index, "", label_list[param_index], value, label_list[1-param_index], x_label)
                 lines1, labels1 = subplot.get_legend_handles_labels()
                 lines2, labels2 = twin.get_legend_handles_labels()
                 lines = lines1 + lines2
@@ -622,7 +689,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                         subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
                         subplot_std.set_title(f"Standard deviation for {param_text} = {value}", fontsize=self.fontsizes['subplot_title'], pad=20)
                         label = f"{param_text} = {value}"
-                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, label_mean = label, label_std = label)
+                        self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, label_mean = label, label_std = label)
                         plotNum = plotNum + 2
                 elif self.collapse_checkbox.isChecked():
                     numRows = 1
@@ -638,7 +705,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                         else:
                             color = np.random.rand(3,)
                         label = f"{param_text} = {value}"
-                        self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
+                        self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
                     subplot_mean.legend(loc='upper right')
                     subplot_std.legend(loc='upper right')
             else:
@@ -649,7 +716,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 subplot_std.set_title("Standard deviation", fontsize=self.fontsizes['subplot_title'], pad=20)
                 value = value_widget.currentText() 
                 plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for {param_text} = {value}"
-                self.meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label)
+                self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label)
             
         self.fig.suptitle(plot_title,fontsize=self.fontsizes['figure_title'])
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])        
