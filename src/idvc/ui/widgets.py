@@ -17,18 +17,27 @@ from eqt.ui.NoBorderScrollArea import NoBorderScrollArea
 
 
 class BaseResultsWidget(QtWidgets.QWidget):
-    '''creates a dockable widget which will display graph results from runs of the DVC code
+    '''
+    Creates a widget which can be set in a QDockWidget. 
     '''
     def __init__(self, parent, result_data_frame):
         '''
-        Adds vertical layout.
-        figure.
-        canvas.
-        sets minimum size so scrollbar works.
+        Creates the attributes, including a list of fontsizes and linewidth for the plots, and 
+        a list of colour-blind friendly colours taken from matplotlib
+        (https://matplotlib.org/stable/users/explain/colors/colors.html#colors-def).
+        Initialises the Qwidget, adds a vertical layout to it. 
+        Adds a grid layout containing information about the results to the vertical layout.
+        Creates a figure to be added in a canvas. The canvas is added in a scrool bar wherby
+        its size must be set to a minimum. The figure size and dpi are fixed
+        for consistency among screens. The canvas size policy must be set to expandable
+        to occupy all of the available space in both directions.
+        A toolbar and the scroll bar are added to the vertical layout.
+        
         Parameters
         ----------  
-        results: RunResults
-        displ_wrt_point0: bool
+        parent : QWidget
+        result_data_frame : pandas dataframe
+            Columns: 'subvol_size', 'subvol_points', 'result', 'result_arrays', 'mean_array', 'std_array'.
         '''
         self.result_data_frame = result_data_frame
         single_result = result_data_frame.iloc[0]['result']
@@ -36,15 +45,6 @@ class BaseResultsWidget(QtWidgets.QWidget):
         self.data_label = single_result.data_label
         self.subvol_sizes = result_data_frame['subvol_size'].unique()
         self.subvol_points = result_data_frame['subvol_points'].unique()
-        super().__init__(parent = parent)
-        self.layout = QtWidgets.QVBoxLayout()
-        self.setLayout(self.layout)
-
-        self.grid_layout = QtWidgets.QGridLayout()
-        self.grid_layout.setAlignment(Qt.AlignTop)
-        self.layout.addLayout(self.grid_layout,0)
-        self.addInfotoGridLayout(single_result)
-
         self.color_list = [
             '#1f77b4',  # Blue
             '#ff7f0e',  # Orange
@@ -59,28 +59,26 @@ class BaseResultsWidget(QtWidgets.QWidget):
             ]
         self.linewidth = 3 #pixels?
         self.fontsizes = {'figure_title':18, 'subplot_title':14, 'label':10}
+        super().__init__(parent = parent)
+        self.layout = QtWidgets.QVBoxLayout()
+        self.setLayout(self.layout)
+        self.grid_layout = QtWidgets.QGridLayout()
+        self.grid_layout.setAlignment(Qt.AlignTop)
+        self.layout.addLayout(self.grid_layout,0)
+        self.addInfotoGridLayout(single_result)
         self.figsize = (8, 4)  # Size in inches
         self.dpi = 100
         self.fig = Figure(figsize=self.figsize, dpi=self.dpi)
         self.canvas = FigureCanvas(self.fig)
-        #self.fig.clf()
         self.canvas.setMinimumSize(800, 400) #needed for scrollbar
         self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        #self.canvas.setFixedSize(1200, 600)
-        # Set the canvas size policy to allow width expansion only
-        
-        # Set a fixed height for the canvas (you can adjust the height as needed)
-        #self.canvas.setFixedHeight(800)  # Example fixed height
-        
-
         self.toolbar = NavigationToolbar(self.canvas, self)
         self.layout.addWidget(self.toolbar)
-
         scroll_area_widget = NoBorderScrollArea(self.canvas)
         self.layout.addWidget(scroll_area_widget,1)  
         
     def addInfotoGridLayout(self, result):
-        widgetno=0
+        '''Adds a QLabel widget containing information about the results to the grid layout.'''
         self.results_details_label = QLabel(self)
         self.results_details_label.setText("Subvolume Geometry: {subvol_geom}\n\
 Maximum Displacement: {disp_max}\n\
@@ -90,10 +88,30 @@ Interpolation Type: {interp_type}\n\
 Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
         interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
-        self.grid_layout.addWidget(self.results_details_label,widgetno,0,5,1)
+        self.grid_layout.addWidget(self.results_details_label,0,0,5,1)
         self.results_details_label.setAlignment(Qt.AlignTop)        
 
-    def selectRow(self, result_data_frame, selected_subvol_points, selected_subvol_size):
+    def addPlotsToLayout(self):
+        '''To be defined in the child classes.'''
+        pass
+
+    def addWidgetsToGridLayout(self, result):
+        '''To be defined in the child classes.'''
+        pass
+
+    def _selectRow(self, result_data_frame, selected_subvol_points, selected_subvol_size):
+        '''Given a dataframe, returns the whole row whose 'subvol_points' and 'subvol_size' columns
+        are associated with the selected values.
+        
+        Parameters
+        ----------
+        result_data_frame : pandas dataframe
+                Includes the 'subvol_points' and 'subvol_size' columns.
+        selected_subvol_points : str of an integer
+                Selected points in subvolume.
+        selected_subvol_size : str of an integer
+                Selected subvolume size.
+        '''
         df = result_data_frame
         if len(df) > 1: 
             df = df[(df['subvol_points'].astype(str) == selected_subvol_points) & (df['subvol_size'].astype(str) == selected_subvol_size)]
@@ -102,43 +120,54 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         row = df.iloc[0]   
         return row     
 
-    def selectOneParameter(self, result_data_frame, parameter, selected_parameter):
+    def _selectOneParameter(self, result_data_frame, parameter, selected_parameter):
+        '''Given a dataframe, returns a filtered dataframe whose rows are associated with
+        the selected value of a parameter.
+
+        Parameters
+        ----------
+        result_data_frame : pandas dataframe
+                Includes the 'subvol_points' and 'subvol_size' columns.
+        parameter : str
+                'subvol_points' or 'subvol_size'
+        selected_parameter : str of an integer
+                Selected value of the parameter.
+        '''
         df = result_data_frame
         df = df[(df[parameter].astype(str) == selected_parameter)]  
         return df   
 
-    def addPlotsToLayout(self):
-        pass
+    def _addHistogramSubplot(self, subplot, array, xlabel, mean, std): 
+        '''Given an array, calculates the relative counts by using the mtplotlib
+        histogram functionality. It clears the plot and plots the relative frequency histogram
+        as a bar plot. Sets the x an y labels. Adds the mean and std values as vertical lines. 
+        Plots the gaussian fit. Adds the legend to the plot.
 
-    def addWidgetsToGridLayout(self, result):
-        pass
-
-    def addHistogramSubplot(self, plot, array, xlabel, mean, std): 
-        '''plot the Gaussian curve, legend
-        
-        Returns
-        -------
-        matplotlib.pyplot
-            A plot of the histogram
-        """'''
-        counts, bins = plot.hist(array, bins=20)[0:2]
+        Parameters
+        ----------
+        plot : matplotlib subplot of a figure
+        array : numpyarray
+        xlabel :  str
+        mean : float
+        std : float
+        '''
+        counts, bins = subplot.hist(array, bins=20)[0:2]
         relative_counts = counts*100/ len(array)
-        plot.cla()
+        subplot.cla()
         bin_widths = np.diff(bins)
-        plot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge',color='lightgrey')
-        plot.set_ylabel("Relative frequency (% points in run)", fontsize=self.fontsizes['label'])
-        plot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
-        plot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.3f}')
-        plot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.3f}')
-        plot.axvline(mean+std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth)
-
+        subplot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge',color='lightgrey')
+        subplot.set_ylabel("Relative frequency (% points in run)", fontsize=self.fontsizes['label'])
+        subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
+        subplot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.3f}')
+        subplot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.3f}')
+        subplot.axvline(mean+std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth)
         x = np.linspace(min(array), max(array), 1000)
         gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
-        plot.plot(x, gaussian, self.color_list[2],linestyle='--', linewidth=self.linewidth, label='gaussian fit')
-
-        plot.legend(loc='upper right')
+        subplot.plot(x, gaussian, self.color_list[2],linestyle='--', linewidth=self.linewidth, label='gaussian fit')
+        subplot.legend(loc='upper right')
 
     def _addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label, linestyle):
+        "Draws a line plot in subplot. Adds labels and sets user defined properties."
         subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
         subplot.set_ylabel(ylabel + " (pixels)", fontsize=self.fontsizes['label'])
         subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
@@ -206,9 +235,9 @@ class SingleRunResultsWidget(BaseResultsWidget):
         if len(self.result_data_frame) > 1:
             current_subvol_points = self.subvol_points_widget.currentText()
             current_subvol_size = self.subvol_size_widget.currentText()
-            row = self.selectRow(self.result_data_frame, current_subvol_points, current_subvol_size)
+            row = self._selectRow(self.result_data_frame, current_subvol_points, current_subvol_size)
         elif len(self.result_data_frame) == 1:
-            row = self.selectRow(self.result_data_frame, None, None)
+            row = self._selectRow(self.result_data_frame, None, None)
         result_arrays = row.result_arrays
         mean_array = row.mean_array
         std_array = row.std_array
@@ -220,7 +249,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
             mean = mean_array[plotNum]
             std = std_array[plotNum]
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum + 1)
-            self.addHistogramSubplot(subplot, array, x_label, mean, std)
+            self._addHistogramSubplot(subplot, array, x_label, mean, std)
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
         self.canvas.draw() 
 
@@ -368,7 +397,7 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             std = row.std_array[data_index]
             plotNum = plotNum + 1
             subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
-            self.addHistogramSubplot(subplot, row.result_arrays[data_index], x_label, mean, std)
+            self._addHistogramSubplot(subplot, row.result_arrays[data_index], x_label, mean, std)
             subplot.set_title(subplot_title, pad=20, fontsize=self.fontsizes['subplot_title'])
             self.fig.subplots_adjust(hspace=2,wspace=0.5)
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
@@ -403,7 +432,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self.collapse_checkbox.hide()
 
     def meanStdPlots(self, subplot_mean, subplot_std, result_data_frame, data_index, data_label, parameter, selected_parameter,x_parameter, x_label, color_mean = '#1f77b4', color_std = '#ff7f0e', label_mean = "Mean", label_std = "Std",  linestyle = '-'):
-        df_sz = self.selectOneParameter(result_data_frame, parameter, selected_parameter)
+        df_sz = self._selectOneParameter(result_data_frame, parameter, selected_parameter)
         xpoints = df_sz[x_parameter]
         ypoints = df_sz['mean_array'].apply(lambda array: array[data_index])
         self._addStatisticalAnalysisPlot(subplot_mean, x_label, data_label+"mean",xpoints,ypoints, color_mean, label_mean, linestyle)       
