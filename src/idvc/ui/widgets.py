@@ -91,11 +91,11 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         self.grid_layout.addWidget(self.results_details_label,0,0,5,1)
         self.results_details_label.setAlignment(Qt.AlignTop)        
 
-    def addPlotsToLayout(self):
+    def addSubplotsToFigure(self):
         '''To be defined in the child classes.'''
         pass
 
-    def addWidgetsToGridLayout(self, result):
+    def addWidgetsToGridLayout(self):
         '''To be defined in the child classes.'''
         pass
 
@@ -174,24 +174,33 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
 
 
 class SingleRunResultsWidget(BaseResultsWidget):
-    '''creates a dockable widget which will display results from a single run of the DVC code
+    '''
+    Creates a widget which can be set in a QDockWidget.
+    This will display results from a single run of the DVC code.
     '''
     def __init__(self, parent, result_data_frame):
         '''
+        Initialises the SingleRunResultsWidget.
+
         Parameters
-        ----------  
-        results: RunResults
-        displ_wrt_point0: bool
+        ----------
+        parent : QWidget
+            The parent widget.
+        result_data_frame : DataFrame
+            A pandas DataFrame containing the result data.
         '''
         super().__init__(parent, result_data_frame)
         if len(result_data_frame) > 1:
             self.addWidgetsToGridLayout()
-        self.addPlotsToLayout()
+        self.addSubplotsToFigure()
         
     def addWidgetsToGridLayout(self):
-        self.subvol_size_value_list = self.subvol_sizes
-        self.subvol_points_value_list = self.subvol_points
-        
+        """
+        Initialises and adds the following widgets to the grid layout:
+        - a QLabel and QComboBox for selecting points in a subvolume.
+        - a QLabel and QComboBox for selecting the size of a subvolume.
+        - a QPushButton for plotting histograms, which is connected to the `addSubplotsToFigure` method.
+        """        
         widgetno=1
 
         self.subvol_points_label = QLabel(self)
@@ -199,7 +208,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.subvol_points_label,widgetno,1)  
         
         self.subvol_points_widget = QComboBox(self)
-        self.subvol_points_widget.addItems(self.subvol_points_value_list)
+        self.subvol_points_widget.addItems(self.subvol_points)
         self.grid_layout.addWidget(self.subvol_points_widget,widgetno,2)
         widgetno+=1
 
@@ -208,26 +217,43 @@ class SingleRunResultsWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.subvol_size_label,widgetno,1)  
         
         self.subvol_size_widget = QComboBox(self)
-        self.subvol_size_widget.addItems(self.subvol_size_value_list)
+        self.subvol_size_widget.addItems(self.subvol_sizes)
         self.grid_layout.addWidget(self.subvol_size_widget,widgetno,2)
         widgetno+=1
 
         self.button = QtWidgets.QPushButton("Plot histograms")
-        self.button.clicked.connect(partial(self.addPlotsToLayout))
+        self.button.clicked.connect(partial(self.addSubplotsToFigure))
         self.grid_layout.addWidget(self.button,widgetno,2)
         widgetno+=1
 
-    def addPlotsToLayout(self):
+    def addSubplotsToFigure(self):
         '''
-    
-        Extracts the data from the disp file.
-        Determines the number of graphs, rows and column to group them in.
-        Hist makes an instogram with bins 20.
+        Clears the current figure. Determines the number of rows and
+        columns for the figure layout. Selects the appropriate row
+        from the result data frame based on the user selected subvolume points and size.
+        Extracts result arrays, mean array, and standard deviation array from the selected row.
+        Sets the figure title with details about the run and subvolume.
+        Iterates over the result arrays to create histograms and adds them as subplots.
+        Adjusts the figure layout and redraws the canvas.
         
-        Parameters
-        ----------  
-        result: RunResults
-        displ_wrt_point0: bool
+        Attributes
+        ----------
+        result_data_frame : DataFrame
+            Data frame containing the results.
+        subvol_points_widget : QWidget
+            Widget for selecting subvolume points.
+        subvol_size_widget : QWidget
+            Widget for selecting subvolume size.
+        fig : Figure
+            Matplotlib figure object.
+        run_name : str
+            Name of the current run.
+        data_label : list
+            List of labels for the result data.
+        fontsizes : dict
+            Dictionary containing font sizes for various elements.
+        canvas : FigureCanvas
+            Matplotlib canvas object for rendering the figure.
         '''
         self.fig.clf()
         numRows = 2
@@ -255,16 +281,46 @@ class SingleRunResultsWidget(BaseResultsWidget):
 
 
 class BulkRunResultsBaseWidget(BaseResultsWidget):
-    '''creates a dockable widget which will display results from all runs in a bulk run
+    '''
+    Creates a baseclass widget with common functionality for displaying results from several results in a bulk run.
     '''
     def __init__(self, parent, result_data_frame, param_list, button_text = "Plot"):
+        '''
+        Initialises the BulkRunResultsBaseWidget.
+
+        Parameters
+        ----------
+        parent : QWidget
+            The parent widget.
+        result_data_frame : DataFrame
+            A pandas DataFrame containing the result data.
+        param_list : list of str
+            The text items for the QComboBox.
+        button_text : str, optional
+            The text to display on the QPushButton.
+        '''
         super().__init__(parent, result_data_frame)
         single_result = result_data_frame.iloc[0]['result']
-        self.addWidgetstoGridLayout(single_result, param_list, button_text)
-        self.addPlotsToLayout()
+        self.addWidgetstoGridLayout(param_list, button_text)
+        self.addSubplotsToFigure()
         
+    def addWidgetstoGridLayout(self, param_list, button_text):
+        """
+        Adds the following widgets to the central and right column of the grid layout:
+        - a QLabel and a QComboBox for selecting the result to plot.
+        - a QLabel and a QComboBox for selecting the parameter to fix.
+        - a QLabel and QComboBox for selecting points in subvolume.
+        - a QLabel and QComboBox for selecting the size of the subvolume.
+        - a QPushButton for plotting histograms, which is connected to the `addSubplotsToFigure` method.
+        Hides the subvolume points widget and label by default.
 
-    def addWidgetstoGridLayout(self, result, param_list, button_text):
+        Parameters
+        ----------
+        param_list : list of str
+                A list of parameters to populate the parameter_fix_widget.
+        button_text : str
+                The text to display on the button.
+        """
         widgetno=0
 
         self.data_label_label = QLabel(self)
@@ -272,7 +328,7 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.data_label_label,widgetno,1)
 
         self.data_label_widget = QComboBox(self)
-        self.data_label_widget.addItems(result.data_label)
+        self.data_label_widget.addItems(self.data_label)
         self.grid_layout.addWidget(self.data_label_widget,widgetno,2)  
         
         widgetno+=1
@@ -292,8 +348,7 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.subvol_size_value_label,widgetno,1)
         
         self.subvol_size_value_widget = QComboBox(self)
-        self.subvol_size_value_list = self.subvol_sizes
-        self.subvol_size_value_widget.addItems(self.subvol_size_value_list)
+        self.subvol_size_value_widget.addItems(self.subvol_sizes)
         self.grid_layout.addWidget(self.subvol_size_value_widget,widgetno,2)
 
         self.subvol_points_value_label = QLabel(self)
@@ -301,21 +356,27 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         self.grid_layout.addWidget(self.subvol_points_value_label,widgetno,1)
         
         self.subvol_points_value_widget = QComboBox(self)
-        self.subvol_points_value_list = self.subvol_points
-        self.subvol_points_value_widget.addItems(self.subvol_points_value_list)
+        self.subvol_points_value_widget.addItems(self.subvol_points)
         self.grid_layout.addWidget(self.subvol_points_value_widget,widgetno,2)
         
-        self.showParameterValues(2)
-        self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.showParameterValues(2))
+        self.showParameterValues()
+        self.parameter_fix_widget.currentIndexChanged.connect(lambda: self.showParameterValues())
 
         widgetno+=1
         self.button = QtWidgets.QPushButton(button_text)
-        self.button.clicked.connect(partial(self.addPlotsToLayout))
+        self.button.clicked.connect(partial(self.addSubplotsToFigure))
         self.grid_layout.addWidget(self.button,widgetno,2)
 
         self.parameter_value_widget_list = [self.subvol_size_value_widget, self.subvol_points_value_widget]
 
-    def showParameterValues(self, row):
+    def showParameterValues(self):
+        """
+        Adjusts the visibility of widgets based on the current index 
+        of the parameter to fix widget.
+
+        The widgets are removed and readded to maintain the spacing of the layout.
+        """
+        layout_row = 2
         index = self.parameter_fix_widget.currentIndex()
 
         if index == 0:
@@ -323,14 +384,14 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
             self.subvol_points_value_widget.hide()
             self.grid_layout.removeWidget(self.subvol_points_value_label)
             self.grid_layout.removeWidget(self.subvol_points_value_widget)
-            self.grid_layout.addWidget(self.subvol_size_value_label, row, 1)
-            self.grid_layout.addWidget(self.subvol_size_value_widget, row, 2)
+            self.grid_layout.addWidget(self.subvol_size_value_label, layout_row, 1)
+            self.grid_layout.addWidget(self.subvol_size_value_widget, layout_row, 2)
             self.subvol_size_value_label.show()
             self.subvol_size_value_widget.show()
 
         elif index == 1:
-            self.grid_layout.addWidget(self.subvol_points_value_label, row,1)
-            self.grid_layout.addWidget(self.subvol_points_value_widget, row,2)
+            self.grid_layout.addWidget(self.subvol_points_value_label, layout_row,1)
+            self.grid_layout.addWidget(self.subvol_points_value_widget, layout_row,2)
             self.subvol_points_value_label.show()
             self.subvol_points_value_widget.show() 
             self.subvol_size_value_label.hide()
@@ -346,18 +407,60 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         
 
 class BulkRunResultsWidget(BulkRunResultsBaseWidget):
+    '''
+    Creates a class widget to plot histograms from several results in a bulk run.
+    '''
     def __init__(self, parent, result_data_frame):
+        '''
+        Initialises the class. Includes the option 'None' to
+        the parameter list and tailors the text of the button.
+        '''
         param_list = ["Subvolume size", "Sampling points in subvolume", "None"]
         super().__init__(parent, result_data_frame, param_list, "Plot histograms")
         
+    def addSubplotsToFigure(self):
+        '''
+        Clears the current figure, retrieves the selected data label and parameter index.
+        Constructs the plot title based on the parameter index. 
+        It iterates over the result data frame to create subplots for each result,
+        adjusting the figure and subplot titles accordingly. The canvas size is adjusted
+        based on the parameter index and ensures that the subplots are properly spaced and titled.
+
+        The method handles three cases for the parameter index:
+        - 0: Plots the subplots for all values of the number of points in the subvolume
+            and fixed value of the subvolume size.
+        - 1: Plots the subplots for all values of the the subvolume size and fixed number of points in the subvolume.
+        - 2: Plots the subplots for all values of the subvolume size and number of points in the subvolume.
         
-    def addPlotsToLayout(self):
-        """And stores mean and std"""
+        Adjusts the figure layout and redraws the canvas.
+        
+        Attributes
+        ----------
+            self.fig : matplotlib.figure.Figure
+                The figure object to which subplots are added.
+            self.data_label_widget : QComboBox)
+                Widget to select the data label.
+            self.parameter_fix_widget : QComboBox
+                Widget to select the parameter to fix.
+            self.parameter_value_widget_list : list of QComboBox
+                List of widgets to select parameter values.
+            self.run_name : str
+                Name of the current run.
+            self.fontsizes : dict
+                Dictionary containing font sizes for various plot elements.
+            self.subvol_sizes : list
+                List of subvolume sizes.
+            self.subvol_points : list
+                List of points in subvolumes.
+            self.result_data_frame : pandas.DataFrame
+                Data frame containing the results.
+            self.canvas : matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg
+                Canvas to draw the figure on.
+        '''
         self.fig.clf()
         data_label = self.data_label_widget.currentText()
         param_index = self.parameter_fix_widget.currentIndex()
 
-        
         if param_index == 2:
             plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} distribution for all parameters"
         else:
@@ -400,25 +503,29 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             self._addHistogramSubplot(subplot, row.result_arrays[data_index], x_label, mean, std)
             subplot.set_title(subplot_title, pad=20, fontsize=self.fontsizes['subplot_title'])
             self.fig.subplots_adjust(hspace=2,wspace=0.5)
+
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])
         self.canvas.draw()
 
+
 class StatisticsResultsWidget(BulkRunResultsBaseWidget):
+    '''
+    Creates a class widget to plot statistical analysis from several results in a bulk run.
+    '''
     def __init__(self, parent, result_data_frame):
+        '''
+        Defines the parameter list and linestyles. 
+        Initialises the class. 
+        '''
         param_list = ["Subvolume size", "Sampling points in subvolume"]
         self.linestyles = ['-','--','-.', ':']
         super().__init__(parent, result_data_frame, param_list)
-        
-        self.subvol_size_value_list = self.subvol_sizes
-        self.subvol_points_value_list = self.subvol_points
-        self.subvol_size_value_list = np.append(self.subvol_size_value_list, "All")
-        self.subvol_points_value_list = np.append(self.subvol_points_value_list, "All")
-        self.subvol_points_value_widget.addItems(["All"])
-        self.subvol_size_value_widget.addItems(["All"])
+        self.subvol_points_value_widget.addItem("All")
+        self.subvol_size_value_widget.addItem("All")
 
-    def addWidgetstoGridLayout(self, result, param_list, button_text):
+    def addWidgetstoGridLayout(self, param_list, button_text):
         "Moves the button one row down and inserts the checkbox before the button"
-        super().addWidgetstoGridLayout(result, param_list, button_text)
+        super().addWidgetstoGridLayout(param_list, button_text)
         self.data_label_widget.addItem("All")
         widgetno = self.grid_layout.rowCount() - 2
         self.collapse_checkbox = QCheckBox("Collapse plots", self)
@@ -463,7 +570,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
             self.collapse_checkbox.hide()
 
 
-    def addPlotsToLayout(self):
+    def addSubplotsToFigure(self):
         self.fig.clf()
         self.canvas.setMinimumSize(800, 400)
         df = self.result_data_frame
@@ -548,7 +655,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
         self.fig.tight_layout(rect=[0, 0, 1, 0.95])        
         self.canvas.draw() 
 
-        
+
 class SaveObjectWindow(QtWidgets.QWidget):
     '''a window which will appear when saving a mask or pointcloud
     '''
