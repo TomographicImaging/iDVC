@@ -7,7 +7,7 @@ Installing the App
 ==================
 1.	Install miniconda: https://docs.conda.io/en/latest/miniconda.html 
 2.	Open an anaconda prompt (miniconda).
-3.  Create a new environment and install the software by typing ``conda create --name idvc_environment -c conda-forge -c ccpi idvc=24.0.0`` (or replace ``24.0.0`` with the latest version number).
+3.  Create a new environment and install the software by typing ``conda create --name idvc_environment -c conda-forge -c ccpi idvc=24.0.1`` (or replace ``24.0.1`` with the latest version number).
 4.	Activate the environment by typing ``activate idvc_environment``.
 5.	Run the app by typing ``idvc``.
 
@@ -20,7 +20,7 @@ If you have previously installed the app, to get an updated version:
 
 1.	Open anaconda prompt (miniconda).
 2.	Type ``activate idvc_environment`` (note that when you created your environment, if you called it something else you need to replace ``idvc`` with your environment name.)
-3.	Type ``conda install idvc=24.0.1 -c ccpi -c conda-forge`` (or replace ``24.0.1`` with the latest version number)
+3.	Type ``conda install idvc=24.1.0 -c ccpi -c conda-forge`` (or replace ``24.1.0`` with the latest version number)
 4.	Type ``idvc`` to open up the app, as normal.
 
 Installing the DVC Executable Only
