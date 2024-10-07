@@ -4341,7 +4341,7 @@ Tricubic is computationally expensive, but is the choice if strain is of interst
         widgetno += 1
 
         rdvc_widgets['strain_label'] = QLabel(groupBox)
-        rdvc_widgets['strain_label'].setText("Strain:")
+        rdvc_widgets['strain_label'].setText("Strain")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['strain_label'])
         rdvc_widgets['strain_field'] = QCheckBox(groupBox)
         rdvc_widgets['strain_field'].setChecked(False)
