@@ -126,14 +126,31 @@ class MainWindow(QMainWindow):
         self.CreateDockWindows()
 
         # Menu
-        self.menu = self.menuBar()
-        self.file_menu = self.menu.addMenu("File")
+        self.file_menu = QMenu('File', self)
+        self.file_menu.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        self.menuBar().addMenu(self.file_menu)
 
         #Settings QAction
-        settings_action = QAction("Settings", self)
+        self.settings_menu = QMenu("Settings", self)
+        self.settings_menu.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        self.menuBar().addMenu(self.settings_menu)
+        
         #save_action.setShortcut(QKeySequence.Save)
+        settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
-        self.file_menu.addAction(settings_action)
+        self.settings_menu.addAction(settings_action)
+
+        # Create the Help menu
+        help_menu = QMenu('Help', self)
+        # Set the icon for the Help menu in the menu bar
+        help_menu.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+        self.menuBar().addMenu(help_menu)
+
+        # Add the help action (optional if you still want an item under Help menu)
+        help_action = QAction('Documentation', self)
+        help_action.setStatusTip('Open documentation')
+        help_action.triggered.connect(self.open_help_link)
+        help_menu.addAction(help_action)
 
         #Save QAction
         save_action = QAction("Save", self)
@@ -155,12 +172,6 @@ class MainWindow(QMainWindow):
         export_action = QAction("Export Session", self)
         export_action.triggered.connect(self.ExportSession)
         self.file_menu.addAction(export_action)
-
-        # Exit QAction
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence.Quit)
-        exit_action.triggered.connect(self.close)
-        self.file_menu.addAction(exit_action)
              
         # # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
@@ -189,6 +200,11 @@ class MainWindow(QMainWindow):
 
         else:
             self.CreateSessionSelector("new window")
+
+    def open_help_link(self):
+        # URL for the QMainWindow documentation
+        QDesktopServices.openUrl(QUrl("https://tomographicimaging.github.io/iDVC/"))
+
 
     def createPopupMenu(self):
         '''return an empty menu for the main window to use as a popup menu.
