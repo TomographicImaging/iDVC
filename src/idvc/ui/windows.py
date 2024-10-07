@@ -178,11 +178,16 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             interactor.SetKeyCode("")
 
 class GraphsWindow(QMainWindow):
-    '''creates a new window with graphs from results saved in the selected run folder.
-    '''
+    """
+    Creates a new window with graphs from results saved in the selected run folder.
+    """
     def __init__(self, parent=None):
+        """
+        Initialises the class. Adds an icon to the window. 
+        Adds a menu with the option to show displacement relative to point 0.
+        Sets the position of the tabs in the window and the geometry of the window.
+        """
         super(GraphsWindow, self).__init__(parent)
-        self.setWindowTitle("Digital Volume Correlation Results")
         DVCIcon = QtGui.QIcon()
         DVCIcon.addFile("DVCIconSquare.png")
 
@@ -209,19 +214,35 @@ class GraphsWindow(QMainWindow):
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
 
     def SetResultsFolder(self, folder):
+        """Creates the attribute 'result_folder' and sets the graphs-window title."""
         self.results_folder = folder
         self.setWindowTitle("Run {foldername}".format(foldername=os.path.basename(self.results_folder)))
     
     def ReloadGraphs(self):
+        """Deletes all widgets in the graphs window and creates new ones."""
         self.DeleteAllWidgets()
         self.CreateDockWidgets(displ_wrt_point0 = self.displacement_setting_action.isChecked())
 
     def DeleteAllWidgets(self):
+         """Deletes all dock widgets in the graphs window."""
          for current_dock in self.findChildren(QDockWidget):
             current_dock.close()
             del current_dock
 
     def CreateDockWidgets(self, displ_wrt_point0 = False):  
+        """
+        Creates and configures dock widgets for displaying results.
+
+        Initialises and adds dock widgets to the graphs window.
+        It creates a single-run results widget and, if there are multiple results,
+        a bulk-run results widget and a statistical-analysis widget. 
+        The widgets are added to the right dock widget area and tabified.
+        
+        Parameters
+        ----------
+        displ_wrt_point0 : bool, optional
+            A flag to indicate whether to display results with respect to point 0.
+        """
         result_data_frame = createResultsDataFrame(self.results_folder, displ_wrt_point0)
         result_data_frame = addMeanAndStdToResultDataFrame(result_data_frame)
         single_run_results_widget = SingleRunResultsWidget(self, result_data_frame)
