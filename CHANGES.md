@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v24.1.0
+Bug fixes:
+* use eqt FormDialog in settings #318
+
 ## v24.0.1
 Bug fixes:
 * Use RawInputDialog from the viewer package #314
