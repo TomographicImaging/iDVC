@@ -139,7 +139,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         return df   
 
     def _addHistogramSubplot(self, subplot, array, xlabel, mean, std): 
-        '''Given an array, calculates the relative counts by using the mtplotlib
+        '''Given an array, calculates the relative counts by using the matplotlib
         histogram functionality. It clears the plot and plots the relative frequency histogram
         as a bar plot. Sets the x an y labels. Adds the mean and std values as vertical lines. 
         Plots the gaussian fit. Adds the legend to the plot.
@@ -168,7 +168,7 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.legend(loc='upper right')
 
     def _addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label, linestyle):
-        "Draws a line plot in subplot. Adds labels and sets user defined properties."
+        "Draws a line plot in 'subplot'. Adds labels and sets user-defined properties."
         subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
         subplot.set_ylabel(ylabel + " (pixels)", fontsize=self.fontsizes['label'])
         subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
@@ -188,7 +188,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         parent : QWidget
             The parent widget.
         result_data_frame : pandas.DataFrame
-                Data frame containing the result data.
+                Dataframe containing the result data.
         '''
         super().__init__(parent, result_data_frame)
         if len(result_data_frame) > 1:
@@ -231,7 +231,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         '''
         Clears the current figure. Determines the number of rows and
         columns for the figure layout. Selects the appropriate row
-        from the result data frame based on the user selected subvolume points and size.
+        from the result dataframe based on the user selected subvolume points and size.
         Extracts result arrays, mean array, and standard deviation array from the selected row.
         Sets the figure title with details about the run and subvolume.
         Iterates over the result arrays to create histograms and adds them as subplots.
@@ -301,7 +301,6 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
             The text to display on the QPushButton.
         '''
         super().__init__(parent, result_data_frame)
-        single_result = result_data_frame.iloc[0]['result']
         self.addWidgetstoGridLayout(param_list, button_text)
         self.addSubplotsToFigure()
         
@@ -373,7 +372,7 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
     def showParameterValues(self):
         """
         Adjusts the visibility of widgets based on the current index 
-        of the parameter to fix widget.
+        of the parameter-to-fix widget.
 
         The widgets are removed and readded to maintain the spacing of the layout.
         """
@@ -598,8 +597,8 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
 
     def hideShowAllItemInValueWidget(self):
         """
-        Toggles the visibility of the "All" item in the subvolume size value widget and
-        subvolume points value widget based on the current text of the data label widget.
+        Toggles the visibility of the "All" item in the subvolume-size-value widget and
+        subvolume-points-value widget based on the current text of the data-label widget.
         """
         index_ss = self.subvol_size_value_widget.findText("All")
         index_sp = self.subvol_points_value_widget.findText("All")
