@@ -420,15 +420,6 @@ class DVC_runner(object):
                 )
                 progress_callback.emit(int(start_progress + (end_progress - start_progress) * (subv_num / len(roi_files))))
             progress_callback.emit(100)
-                
-
-    def set_up_strain(self):
-        if platform.system() in ['Linux', 'Darwin']:    
-            exe_file = 'strain'
-        elif platform.system() == 'Windows':
-            exe_file = 'strain.exe'
-        else:
-            raise ValueError('Not supported platform, ', platform.system()) 
         
     def run_dvc(self, **kwargs):
         main_window = self.main_window
