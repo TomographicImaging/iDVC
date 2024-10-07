@@ -6,7 +6,7 @@ Enhancements:
 * Option to edit the app fontsize in settings #335
 
 Dependencies:
-* Added pandas #335
+* Add pandas #335
 
 ## v24.0.1
 Bug fixes:
