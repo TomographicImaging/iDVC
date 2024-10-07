@@ -1,5 +1,13 @@
 # ChangeLog
 
+## v24.1.0
+Enhancements:
+* Improve graphs window #335
+* Option to edit the app fontsize in settings #335
+
+Dependencies:
+* Added pandas #335
+
 ## v24.0.1
 Bug fixes:
 * Use RawInputDialog from the viewer package #314
