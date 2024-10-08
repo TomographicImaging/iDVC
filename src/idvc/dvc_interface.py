@@ -127,12 +127,10 @@ class MainWindow(QMainWindow):
 
         # Menu
         self.file_menu = QMenu('File', self)
-        self.file_menu.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
         self.menuBar().addMenu(self.file_menu)
 
         #Settings QAction
         self.settings_menu = QMenu("Settings", self)
-        self.settings_menu.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
         self.menuBar().addMenu(self.settings_menu)
         
         #save_action.setShortcut(QKeySequence.Save)
@@ -142,8 +140,6 @@ class MainWindow(QMainWindow):
 
         # Create the Help menu
         help_menu = QMenu('Help', self)
-        # Set the icon for the Help menu in the menu bar
-        help_menu.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
         self.menuBar().addMenu(help_menu)
 
         # Add the help action (optional if you still want an item under Help menu)
@@ -173,6 +169,12 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self.ExportSession)
         self.file_menu.addAction(export_action)
              
+        # Exit QAction
+        exit_action = QAction("Exit", self)
+        exit_action.setShortcut(QKeySequence.Quit)
+        exit_action.triggered.connect(self.close)
+        self.file_menu.addAction(exit_action)
+
         # # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
 
