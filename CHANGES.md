@@ -4,6 +4,9 @@
 Bug fixes:
 * use eqt FormDialog in settings #318
 
+Documentation:
+* add citations #
+
 ## v24.0.1
 Bug fixes:
 * Use RawInputDialog from the viewer package #314
