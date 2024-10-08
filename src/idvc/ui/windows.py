@@ -66,11 +66,11 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         return self.viewer
      
     def createEmptyFrame(self):
-        #print("empty")
         self.frame = QCILViewerWidget(self.parent, self.viewer, shape=(600,600), interactorStyle=self.interactorStyle, 
                                       enableSliderWidget=self.enableSliderWidget)
         self.setCentralWidget(self.frame)
         self.image_file = [""]
+        self.frame.viewer.style.htext = "Updated Help Information:"
        
     def displayImageData(self):
         self.createEmptyFrame()
