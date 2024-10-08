@@ -5,7 +5,7 @@ Bug fixes:
 * use eqt FormDialog in settings #318
 
 Documentation:
-* add citations #
+* add citations #349
 
 ## v24.0.1
 Bug fixes:
