@@ -5,7 +5,7 @@ Bug fixes:
 * use eqt FormDialog in settings #318
 
 Enhancements:
-* add icons to menu bar #347
+* add settings and help menu bar #347
 
 ## v24.0.1
 Bug fixes:
