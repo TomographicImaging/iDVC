@@ -204,9 +204,8 @@ class MainWindow(QMainWindow):
             self.CreateSessionSelector("new window")
 
     def open_help_link(self):
-        # URL for the QMainWindow documentation
+        """Open link to iDVC documentation."""
         QDesktopServices.openUrl(QUrl("https://tomographicimaging.github.io/iDVC/"))
-
 
     def createPopupMenu(self):
         '''return an empty menu for the main window to use as a popup menu.
