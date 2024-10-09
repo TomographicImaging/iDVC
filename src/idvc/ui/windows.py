@@ -70,7 +70,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
                                       enableSliderWidget=self.enableSliderWidget)
         self.setCentralWidget(self.frame)
         self.image_file = [""]
-        self.frame.viewer.style.htext = "Updated Help Information:"
+        
        
     def displayImageData(self):
         self.createEmptyFrame()
@@ -79,7 +79,27 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             if self.parent.settings.value("volume_mapper") == "cpu":
                 self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
                 self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
-        else:
+        elif self.viewer == viewer2D:
+            self.frame.viewer.style.htext = """
+            Mouse Interactions:
+                - Slice: Mouse Scroll
+                - Quick Slice: Shift + Mouse Scroll
+                - Zoom: Shift + Right Mouse + Move Up/Down
+                - Pan: Ctrl + Right Mouse + Move
+                - Adjust Window: Alt+ Right Mouse + Move Up/Down
+                - Adjust Level: Alt + Right Mouse + Move Left/Right
+
+            Keyboard Interactions:
+                h: This help
+                x: YZ Plane
+                y: XZ Plane
+                z: XY Plane
+                a: Whole image Auto Window/Level
+                w: Region around cursor Auto Window/Level
+                l: Line Profile at cursor
+                s: Save Current Image
+                i: Toggle interpolation of slice
+                """
             self.frame.viewer.setVisualisationDownsampling(self.parent.resample_rate)
             self.frame.viewer.setDisplayUnsampledCoordinates(True)
 
