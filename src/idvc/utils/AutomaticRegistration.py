@@ -60,7 +60,7 @@ class AutomaticRegistration:
             self.log_folder = log_folder
             logger = logging.getLogger()
             file_handler = logging.FileHandler(
-                filename=log_folder + r'\automatic_registration_logging.log',
+                filename=os.path.join(log_folder, 'automatic_registration_logging.log'),
                 mode='w')
             formatter = logging.Formatter("%(asctime)s %(message)s")
             file_handler.setFormatter(formatter)
