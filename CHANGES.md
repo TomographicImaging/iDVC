@@ -2,6 +2,7 @@
 
 ## v24.1.0
 Enhancements:
+* add settings and help menu bar #347
 * Improve graphs window #335
 * Option to edit the app fontsize in settings #335
 
