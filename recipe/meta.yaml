@@ -34,12 +34,13 @@ requirements:
     - numpy
 
   run:
+    - eqt >=1.0.1
     - openpyxl
     - python
     - numpy
     - pandas
     - scipy
-    - ccpi-viewer >=24.0.1
+    - ccpi-viewer >=24.1.0
     - ccpi-dvc >=22.0.0
     - natsort
     - docopt
