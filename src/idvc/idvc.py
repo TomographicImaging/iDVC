@@ -1,4 +1,3 @@
-import PySide2
 from PySide2 import QtWidgets, QtGui
 import os, sys
 import logging
@@ -16,8 +15,12 @@ def main():
         level = eval(f'logging.{args.debug.upper()}')
         logging.basicConfig(level=level)
         logging.info(f"iDVC: Setting debugging level to {args.debug.upper()}")
-    
     app = QtWidgets.QApplication([])
+    # Set a global font for the application
+    default_font_family = app.font().family() 
+    font = QtGui.QFont(default_font_family, 12)  # Replace with your preferred font and size
+    QtWidgets.QApplication.setFont(font)
+
     
     file_dir = os.path.dirname(__file__)
     owl_file = os.path.join(file_dir, "DVCIconSquare.png")

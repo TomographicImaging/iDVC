@@ -6,6 +6,7 @@ dependencies:
     - openpyxl
     - python
     - numpy
+    - pandas
     - scipy
     - ccpi::ccpi-viewer >=24.0.1
     - ccpi::ccpi-dvc >=22.0.0

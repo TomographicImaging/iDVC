@@ -487,13 +487,21 @@ class MainWindow(QMainWindow):
                              "4. Limit the range of the vectors viewed by changing the 'Vector Range Min' and Vector Range Max'. Then, click 'View Pointcloud/Vectors' to apply the changes.\n"            
                              "5. On the 2D viewer, the vectors are shown as 2D arrows, showing the displacements in the current plane. If the 'x', 'y' or 'z' keys are pressed click 'View Pointcloud/Vectors' to apply the changes.\n\n"
                              "Display Graphs:\n"
-                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window). A tab is created for each run, showing a summary of the parameters.\n"
-                             "1. Select an option from the list for the variable to compare.\n"
-                             "2. Select the parameters to compare from the list.\n"
-                             "3. Click on 'Plot Histograms'.\n"
-                             "Note: This will automatically show the displacements including the translation that you set in the manual registration.\n"
-                             "4. Optionally, go to 'Settings' and select 'Show displacement relative to reference point 0' to adjust the displacements to exclude the initial registration translation.\n"
-                             "5. In the case of a bulk run, a particular variable can be selected and the graphs for this variable in each of the runs can be compared.\n\n"
+                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window).\n"
+                             "A tab is created to visualise a single run. Information on the run is displayed on the left.\n"
+                             "1. Select an option for the result to plot.\n"
+                             "2. Select the parameter to fix and its value.\n"
+                             "3. Click on 'Plot'.\n"
+                             "In the case of a bulk run, an additional tab enables comparison of the results. Information on the bulk run is displayed on the left.\n"
+                             "1. Select an option for the result to plot.\n"
+                             "2. Select the parameter to fix and its value. Alternatively, select 'None' to plot all values.\n"
+                             "3. Click on 'Plot histograms'.\n"
+                             "An additional tab includes quantatitative statistical analysis of the bulk run.\n"
+                             "1. Select an option for the result to plot. Alternatively, select 'All'.\n"
+                             "2. Select the parameter to fix and its value. Alternatively, select 'All' to plot all values. Optionally, collapse the plots.\n"
+                             "3. Click on 'Plot'.\n"
+                             "Note: As a default, the displacements include the translation set in the manual registration.\n"
+                             "4. Optionally, go to 'Settings' and select 'Show displacement relative to reference point 0' to adjust the displacements to exclude the initial registration translation.\n\n"
                             "Results Files:\n"
                             "Select a folder and export a session to access the result files. Two tab-delimited text files are generated for each run at location <session_folder>\Results\<run_name>\dvc_result_*.\n"
                             "1. The status file (dvc_result_*.stat) contains an echo of the input file used for the analysis, information about the point cloud, dvc program version, run date/time, search statistics and timing.\n"
@@ -4959,8 +4967,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         points_list = []
         subvol_list = []
         for folder in glob.glob(os.path.join(directory, "dvc_result_*")):
-            file_path = os.path.join(folder, os.path.basename(folder))
-            result = RunResults(file_path)
+            result = RunResults(folder)
             self.result_list.append(result)
             el = str(result.subvol_points)
             if el not in points_list:
