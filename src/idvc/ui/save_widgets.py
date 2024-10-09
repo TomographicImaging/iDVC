@@ -2,7 +2,6 @@ from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import *
 from PySide2.QtCore import *
 from PySide2.QtGui import *
-
 import shutil
 import os
 import tempfile
@@ -15,8 +14,9 @@ class SaveObjectWindow(QtWidgets.QWidget):
         #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
 
     def __init__(self, parent, object_type, save_only):
-        super().__init__(parent = parent)
+        super().__init__()
 
+        self.parent = parent
         self.object = object_type
 
         if self.object == "mask":
@@ -54,37 +54,37 @@ class SaveObjectWindow(QtWidgets.QWidget):
             #Load Saved Session
             #print("Write mask to file, then carry on")
             filename = self.textbox.text() + ".mha"
-            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent().mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
-            self.parent().mask_parameters['masksList'].addItem(filename)
-            self.parent().mask_details[filename] = self.parent().mask_details['current']
-            #print(self.parent().mask_details)
+            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
+            self.parent.mask_parameters['masksList'].addItem(filename)
+            self.parent.mask_details[filename] = self.parent.mask_details['current']
+            #print(self.parent.mask_details)
 
-            self.parent().mask_parameters['loadButton'].setEnabled(True)
-            self.parent().mask_parameters['masksList'].setEnabled(True)
+            self.parent.mask_parameters['loadButton'].setEnabled(True)
+            self.parent.mask_parameters['masksList'].setEnabled(True)
 
 
             if not save_only:
                 #print("Not save only")
                 #would be better to move this elsewhere
-                self.parent().mask_worker = Worker(self.parent().extendMask)
-                self.parent().create_progress_window("Loading", "Loading Mask")
-                self.parent().mask_worker.signals.progress.connect(self.parent().progress)
-                self.parent().mask_worker.signals.finished.connect(self.parent().DisplayMask)
-                self.parent().threadpool.start(self.parent().mask_worker)
-                self.parent().progress_window.setValue(10)
+                self.parent.mask_worker = Worker(self.parent.extendMask)
+                self.parent.create_progress_window("Loading", "Loading Mask")
+                self.parent.mask_worker.signals.progress.connect(self.parent.progress)
+                self.parent.mask_worker.signals.finished.connect(self.parent.DisplayMask)
+                self.parent.threadpool.start(self.parent.mask_worker)
+                self.parent.progress_window.setValue(10)
             
         if self.object == "pointcloud":
             filename = self.textbox.text() + ".roi"
             shutil.copyfile(os.path.join(tempfile.tempdir, "latest_pointcloud.roi"), os.path.join(tempfile.tempdir, filename))
 
-            self.parent().pointcloud_parameters['loadButton'].setEnabled(True)
-            self.parent().pointcloud_parameters['pointcloudList'].setEnabled(True)
-            self.parent().pointcloud_parameters['pointcloudList'].addItem(filename)
-            self.parent().pointCloud_details[filename] = self.parent().pointCloud_details['latest_pointcloud.roi']
-            #print(self.parent().pointCloud_details)
-            #self.parent().createPointCloud()
+            self.parent.pointcloud_parameters['loadButton'].setEnabled(True)
+            self.parent.pointcloud_parameters['pointcloudList'].setEnabled(True)
+            self.parent.pointcloud_parameters['pointcloudList'].addItem(filename)
+            self.parent.pointCloud_details[filename] = self.parent.pointCloud_details['latest_pointcloud.roi']
+            #print(self.parent.pointCloud_details)
+            #self.parent.createPointCloud()
             if not save_only:
-                self.parent().PointCloudWorker("create")
+                self.parent.PointCloudWorker("create")
             
 
         self.close()
@@ -92,15 +92,15 @@ class SaveObjectWindow(QtWidgets.QWidget):
     def quit(self):
         if self.object == "mask":
             #would be better to move this elsewhere
-            self.parent().mask_worker = Worker(self.parent().extendMask)
-            self.parent().create_progress_window("Loading", "Loading Mask")
-            self.parent().mask_worker.signals.progress.connect(self.parent().progress)
-            self.parent().mask_worker.signals.finished.connect(self.parent().DisplayMask)
-            self.parent().threadpool.start(self.parent().mask_worker)
-            self.parent().progress_window.setValue(10)
+            self.parent.mask_worker = Worker(self.parent.extendMask)
+            self.parent.create_progress_window("Loading", "Loading Mask")
+            self.parent.mask_worker.signals.progress.connect(self.parent.progress)
+            self.parent.mask_worker.signals.finished.connect(self.parent.DisplayMask)
+            self.parent.threadpool.start(self.parent.mask_worker)
+            self.parent.progress_window.setValue(10)
 
         if self.object == "pointcloud":
-            self.parent().PointCloudWorker("create")
-            #self.parent().createPointCloud()
+            self.parent.PointCloudWorker("create")
+            #self.parent.createPointCloud()
 
         self.close()

@@ -31,6 +31,7 @@ class VisualisationWindow(QtWidgets.QMainWindow):
         '''
         return QtWidgets.QMenu(self)
     
+
 class VisualisationWidget(QtWidgets.QMainWindow):
     '''creates a window with a QCILViewerWidget as the central widget
     '''
@@ -167,6 +168,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
         if interactor.GetKeyCode() in self._consume_CharEvent:
             logging.info("Consuming event: " + interactor.GetKeyCode())
             interactor.SetKeyCode("")
+
 
 class GraphsWindow(QtWidgets.QMainWindow):
     """
