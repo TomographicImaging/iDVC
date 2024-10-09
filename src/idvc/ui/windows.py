@@ -1,8 +1,5 @@
-import glob
 import os
-
 import ccpi.viewer.viewerLinker as vlink
-
 import vtk
 from ccpi.viewer import viewer2D, viewer3D
 from ccpi.viewer.CILViewer2D import (SLICE_ORIENTATION_XY,
@@ -12,15 +9,9 @@ from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
 from ccpi.viewer.utils import *
 from ccpi.viewer.utils.error_handling import ErrorObserver
 from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import *
-from PySide2.QtGui import *
-from PySide2.QtWidgets import *
 
-from idvc.ui.widgets import *
-
-from idvc.utilities import RunResults
+from idvc.ui.graphs_widgets import *
 import logging 
-import json
 import pandas as pd
 from idvc.utils.manipulate_result_files import createResultsDataFrame, addMeanAndStdToResultDataFrame
 
@@ -177,7 +168,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             logging.info("Consuming event: " + interactor.GetKeyCode())
             interactor.SetKeyCode("")
 
-class GraphsWindow(QMainWindow):
+class GraphsWindow(QtWidgets.QMainWindow):
     """
     Creates a new window with graphs from results saved in the selected run folder.
     """

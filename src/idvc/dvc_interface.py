@@ -16,7 +16,6 @@
 import os
 from openpyxl import load_workbook
 import sys
-import PySide2
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
                             QThreadPool)
@@ -89,7 +88,8 @@ from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
 
-from idvc.ui.widgets import *
+from idvc.ui.graphs_widgets import *
+from idvc.ui.save_widgets import SaveObjectWindow
 from idvc.ui.dialogs import *
 from idvc.ui.windows import *
 from idvc.utilities import *
