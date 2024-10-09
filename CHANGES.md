@@ -4,6 +4,9 @@
 Bug fixes:
 * use eqt FormDialog in settings #318
 
+Enhancements:
+* edit h text in viewer2D #354
+
 ## v24.0.1
 Bug fixes:
 * Use RawInputDialog from the viewer package #314
