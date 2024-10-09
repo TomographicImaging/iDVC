@@ -37,6 +37,7 @@ class SettingsWindow(FormDialog):
         self.addWidget(self.dark_checkbox, '', 'darkmode')
 
         self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
+        self.copy_files_checkbox.setChecked(False)
         self.addWidget(self.copy_files_checkbox, '', 'copy_file_checkbox')
         self.vis_size_label = QLabel("Maximum downsampled image size (GB): ")
         self.vis_size_entry = QDoubleSpinBox()
