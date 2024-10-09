@@ -1,11 +1,16 @@
 # ChangeLog
 
 ## v24.1.0
+Enhancements:
+* add settings and help menu bar #347
+* Improve graphs window #335
+* Option to edit the app fontsize in settings #335
+
 Bug fixes:
 * use eqt FormDialog in settings #318
 
-Enhancements:
-* add settings and help menu bar #347
+Dependencies:
+* Add pandas #335
 
 ## v24.0.1
 Bug fixes:

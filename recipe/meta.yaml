@@ -37,6 +37,7 @@ requirements:
     - openpyxl
     - python
     - numpy
+    - pandas
     - scipy
     - ccpi-viewer >=24.0.1
     - ccpi-dvc >=22.0.0
