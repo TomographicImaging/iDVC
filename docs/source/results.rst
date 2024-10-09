@@ -10,14 +10,14 @@ Graphs of the Results
 =====================
 Then click on **Display Graphs**.
 Another window will open (once you are done looking at the graphs you can either close or minimize this window and it will take you back to the main app just fine).
-It will start you off on the **Summary** tab.
+It will start you off on the **Bulk** tab.
 This isn’t so useful if you only performed one run. For each run that you performed, there will be a separate tab.
 If you navigate to one of these it will show you graphs for the objective minimum, and displacements in x, y, z as well as changes in φ, θ, ψ for that run.
 The title of the tab also gives the number of sampling points in the subvolume and the subvolume size.
  
 This will automatically show the displacements including the translation that you set in the manual registration.
 You can adjust the displacements to exclude this translation by going to Settings and selecting **Show displacement relative to reference point 0**.
-Now, coming back to the summary tab, this shows the settings for the runs including the subvolume geometry, maximum displacement etc.,
+Now, coming back to the bulk tab, this shows the settings for the runs including the subvolume geometry, maximum displacement etc.,
 and if you have done a bulk run then you can select a particular variable (such as the objective minimum) and then compare the graphs for this variable in each of the runs.
 You can select to just compare for a certain subvolume size or number of sampling points, or you can choose to compare them all (which is what is chosen in the image below).
 

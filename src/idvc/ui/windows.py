@@ -20,6 +20,9 @@ from idvc.ui.widgets import *
 
 from idvc.utilities import RunResults
 import logging 
+import json
+import pandas as pd
+from idvc.utils.manipulate_result_files import createResultsDataFrame, addMeanAndStdToResultDataFrame
 
 
 class VisualisationWindow(QtWidgets.QMainWindow):
@@ -175,18 +178,22 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             interactor.SetKeyCode("")
 
 class GraphsWindow(QMainWindow):
-    '''creates a new window with graphs from results saved in the selected run folder.
-    '''
+    """
+    Creates a new window with graphs from results saved in the selected run folder.
+    """
     def __init__(self, parent=None):
+        """
+        Initialises the class. Adds an icon to the window. 
+        Adds a menu with the option to show displacement relative to point 0.
+        Sets the position of the tabs in the window and the geometry of the window.
+        """
         super(GraphsWindow, self).__init__(parent)
-        self.setWindowTitle("Digital Volume Correlation Results")
         DVCIcon = QtGui.QIcon()
         DVCIcon.addFile("DVCIconSquare.png")
 
         # Menu
         self.menu = self.menuBar()
-        self.file_menu = self.menu.addMenu("File")
-        self.settings_menu = self.menu.addMenu("Settings")
+        self.settings_menu = self.menu.addMenu("Custom options")
 
         displacement_setting_action = QAction("Show Displacement Relative to Reference Point 0", self)
         displacement_setting_action.setCheckable(True)
@@ -195,13 +202,6 @@ class GraphsWindow(QMainWindow):
 
         displacement_setting_action.triggered.connect(self.ReloadGraphs)
         self.settings_menu.addAction(displacement_setting_action)
-
-
-        # Exit QAction
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence.Quit)
-        exit_action.triggered.connect(self.close)
-        self.file_menu.addAction(exit_action)
 
         #Tab positions:
         self.setTabPosition(QtCore.Qt.AllDockWidgetAreas,QTabWidget.North)
@@ -214,33 +214,44 @@ class GraphsWindow(QMainWindow):
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
 
     def SetResultsFolder(self, folder):
+        """Creates the attribute 'result_folder' and sets the graphs-window title."""
         self.results_folder = folder
-        self.setWindowTitle("Digital Volume Correlation Results - {foldername}".format(foldername=os.path.basename(self.results_folder)))
+        self.setWindowTitle("Run {foldername}".format(foldername=os.path.basename(self.results_folder)))
     
     def ReloadGraphs(self):
+        """Deletes all widgets in the graphs window and creates new ones."""
         self.DeleteAllWidgets()
         self.CreateDockWidgets(displ_wrt_point0 = self.displacement_setting_action.isChecked())
 
     def DeleteAllWidgets(self):
+         """Deletes all dock widgets in the graphs window."""
          for current_dock in self.findChildren(QDockWidget):
             current_dock.close()
             del current_dock
 
-    def CreateDockWidgets(self, displ_wrt_point0 = False):
-        result_list=[]
-        #print(results_folder[0])
-        for folder in glob.glob(os.path.join(self.results_folder, "dvc_result_*")):
-            file_path = os.path.join(folder, os.path.basename(folder))
-            result = RunResults(file_path)
-            result_list.append(result)
-    
-            GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
-            dock1 = QDockWidget(result.title,self)
-            dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
-            dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-            dock1.setWidget(GraphWidget)
-            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
-    
+    def CreateDockWidgets(self, displ_wrt_point0 = False):  
+        """
+        Creates and configures dock widgets for displaying results.
+
+        Initialises and adds dock widgets to the graphs window.
+        It creates a single-run results widget and, if there are multiple results,
+        a bulk-run results widget and a statistical-analysis widget. 
+        The widgets are added to the right dock widget area and tabified.
+        
+        Parameters
+        ----------
+        displ_wrt_point0 : bool, optional
+            A flag to indicate whether to display results with respect to point 0.
+        """
+        result_data_frame = createResultsDataFrame(self.results_folder, displ_wrt_point0)
+        result_data_frame = addMeanAndStdToResultDataFrame(result_data_frame)
+        single_run_results_widget = SingleRunResultsWidget(self, result_data_frame)
+        dock1 = QDockWidget("Single", self)
+        dock1.setFeatures(QDockWidget.NoDockWidgetFeatures) 
+        dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+        dock1.setWidget(single_run_results_widget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
+
         prev = None
 
         for current_dock in self.findChildren(QDockWidget):
@@ -251,17 +262,28 @@ class GraphsWindow(QMainWindow):
                     self.tabifyDockWidget(prev,current_dock)
                 prev= current_dock
         
-        SummaryTab = SummaryGraphsWidget(self, result_list)
-        dock = QDockWidget("Summary",self)
-        dock.setFeatures(QDockWidget.NoDockWidgetFeatures) 
-        dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-        dock.setWidget(SummaryTab)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
-        self.tabifyDockWidget(prev,dock)
+        if len(result_data_frame) > 1:
+            bulk_run_results_widget = BulkRunResultsWidget(self, result_data_frame)
+            dock2 = QDockWidget("Bulk",self)
+            dock2.setFeatures(QDockWidget.NoDockWidgetFeatures) 
+            dock2.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+            dock2.setWidget(bulk_run_results_widget)
+            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock2)
+            self.tabifyDockWidget(prev,dock2)
 
-        dock.raise_() # makes summary panel the one that is open by default.
+            dock2.raise_() # makes bulk panel the one that is open by default.
+            
+            # add statistial analysis tab
+            statistical_analisis_widget = StatisticsResultsWidget(self, result_data_frame)
+            dock3 = QDockWidget("Statistical analysis",self)
+            dock3.setFeatures(QDockWidget.NoDockWidgetFeatures) 
+            dock3.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
+            dock3.setWidget(statistical_analisis_widget)
+            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock3)
+            self.tabifyDockWidget(dock2,dock3)
 
         # Stop the widgets in the tab to be moved around
         for wdg in self.findChildren(QTabBar):
             wdg.setMovable(False)
+
 
