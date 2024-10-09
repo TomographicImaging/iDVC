@@ -15,6 +15,8 @@ Documentation:
 Dependencies:
 * Add pandas #335
 
+Backend:
+* Create files graphs_widgets, save_widgets #359
 
 ## v24.0.1
 Bug fixes:
