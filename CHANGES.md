@@ -16,6 +16,8 @@ Dependencies:
 * Add pandas #335
 * Add eqt and upgrade viewer version #364
 
+Backend:
+* Create files graphs_widgets, save_widgets #359
 
 ## v24.0.1
 Bug fixes:
