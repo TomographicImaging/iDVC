@@ -11,7 +11,7 @@ Bug fixes:
 
 Documentation:
 * Add citations #349
-* Add tiff to help text #
+* Add tiff to help text #365
 
 Dependencies:
 * Add pandas #335
