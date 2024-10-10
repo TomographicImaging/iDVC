@@ -19,6 +19,9 @@ Dependencies:
 Backend:
 * Create files graphs_widgets, save_widgets #359
 
+Enhancements:
+* edit h text in viewer2D #354
+
 ## v24.0.1
 Bug fixes:
 * Use RawInputDialog from the viewer package #314
