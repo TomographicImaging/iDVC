@@ -441,7 +441,7 @@ class MainWindow(QMainWindow):
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["Please use 'raw' or 'npy' images.\n"
+        self.help_text = ["Please use 'npy' or 'raw' or 'tiff' images.\n"
         "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append(
