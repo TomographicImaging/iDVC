@@ -208,7 +208,7 @@ class GraphsWindow(QtWidgets.QMainWindow):
         self.menu = self.menuBar()
         self.settings_menu = self.menu.addMenu("Custom options")
 
-        displacement_setting_action = QAction("Show Displacement Relative to Reference Point 0", self)
+        displacement_setting_action = QAction("Show displacement relative to reference point 0", self)
         displacement_setting_action.setCheckable(True)
         displacement_setting_action.setChecked(False)
         self.displacement_setting_action = displacement_setting_action
