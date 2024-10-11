@@ -11,6 +11,7 @@ Bug fixes:
 
 Documentation:
 * Add citations #349
+* Add 'mha', 'mhd', 'TIFF' to help text #365
 
 Dependencies:
 * Add pandas #335
