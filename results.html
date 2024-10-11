@@ -50,7 +50,7 @@
 <li class="toctree-l1"><a class="reference internal" href="dvc_steps.html">DVC Configuration Steps</a></li>
 <li class="toctree-l1"><a class="reference internal" href="saving.html">Saving &amp; Exporting</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">DVC Results</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#graphs-of-the-results">Graphs of the Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#graphs-of-the-results">Graphs of the results</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#displacement-vectors">Displacement Vectors</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#results-files">Results Files</a></li>
 </ul>
@@ -90,20 +90,34 @@
 There are two ways of doing this – looking at graphs, and viewing the displacement vectors.
 First, you need to select the run you would like to view the results for from the dropdown list of all of the runs you have saved.</p>
 <section id="graphs-of-the-results">
-<h2>Graphs of the Results<a class="headerlink" href="#graphs-of-the-results" title="Permalink to this heading"></a></h2>
-<p>Then click on <strong>Display Graphs</strong>.
-Another window will open (once you are done looking at the graphs you can either close or minimize this window and it will take you back to the main app just fine).
-It will start you off on the <strong>Bulk</strong> tab.
-This isn’t so useful if you only performed one run. For each run that you performed, there will be a separate tab.
-If you navigate to one of these it will show you graphs for the objective minimum, and displacements in x, y, z as well as changes in φ, θ, ψ for that run.
-The title of the tab also gives the number of sampling points in the subvolume and the subvolume size.</p>
-<p>This will automatically show the displacements including the translation that you set in the manual registration.
-You can adjust the displacements to exclude this translation by going to Settings and selecting <strong>Show displacement relative to reference point 0</strong>.
-Now, coming back to the bulk tab, this shows the settings for the runs including the subvolume geometry, maximum displacement etc.,
-and if you have done a bulk run then you can select a particular variable (such as the objective minimum) and then compare the graphs for this variable in each of the runs.
-You can select to just compare for a certain subvolume size or number of sampling points, or you can choose to compare them all (which is what is chosen in the image below).</p>
+<h2>Graphs of the results<a class="headerlink" href="#graphs-of-the-results" title="Permalink to this heading"></a></h2>
+<p>A new window containg graphs can be opened by clicking on <strong>Display Graphs</strong>.
+The window contains one tab, when a single run is selected in the main window,
+or three tabs, when a bulk run in selected in the main window.
+The graphs window can either be closed or minimised.
+As a default, the displacements include the translation set in the <strong>Initial Registration</strong> tab.
+Optionally, the displacements can be adjusted to exclude this translation by going
+to <strong>Custom options</strong> and selecting  <strong>Show displacement relative to reference point 0</strong>.</p>
+<p>The <strong>Single</strong> tab shows histograms for the objective minimum and the displacements in x, y, and z, in untis of pixels.
+The histograms ordinates are the frequency of the occurrences divided by the total number of points in the selected run,
+shown as percentages.
+Each histogram includes the mean, standard deviation and gaussian fit.
+For bulk runs, two widgets enable the selection of points within each subvolume and the subvolume size,
+enabling a specific run to be displayed in the plots.</p>
+<img alt="_images/graphs_single_run.png" src="_images/graphs_single_run.png" />
+<p>The <strong>Bulk</strong> tab enables the user to choose the results to plot, the parameter to fix, and its value.
+If the parameter to fix is selected to be ‘None’ then the plots will be shown for all
+values of the points in subvolume and all values of the subvolume size for the selected result.
+This feature is useful to compare the results of different runs.</p>
 <img alt="_images/graphs_bulk_run.png" src="_images/graphs_bulk_run.png" />
-<p><span class="raw-html"><br /></span></p>
+<p>The <strong>Statistical analysis</strong> tab includes quantatitative statistical analysis of the bulk run.
+The user can choose the results to plot, the parameter to fix, and its value.
+An option to draw plots for ‘All’ the results at the same time is available.
+When a specific result is selected, the parameter to fix must be chosen and its value can be selected or
+the plots can be drawn for all the points in the subvolume and all the subvolume sizes.
+This feature is useful to compare the results for different runs.
+An option to collapse the plots is available.</p>
+<img alt="_images/graphs_stat_collapsed.png" src="_images/graphs_stat_collapsed.png" />
 </section>
 <section id="displacement-vectors">
 <h2>Displacement Vectors<a class="headerlink" href="#displacement-vectors" title="Permalink to this heading"></a></h2>
@@ -115,7 +129,6 @@ Both of these latter options will display the displacements of each point in the
 On the 2D viewer, the vectors will be shown as 2D arrows, showing only the displacements in the current plane. E.g. if you pressed the ‘x’ key you would be viewing the YZ plane, so would just see the y and z components of the displacement. Whereas on the 3D viewer, it shows the total displacement, taking into account all components.
 Below is a comparison of some vectors shown in 2D compared to 3D.</p>
 <img alt="_images/2D_3D_vectors_lava.png" src="_images/2D_3D_vectors_lava.png" />
-<p><span class="raw-html"><br /></span></p>
 <p>The arrows are coloured according to their relative size. White arrows are the largest and black the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions.</p>
 <p>Once total or relative displacement vectors are being displayed, you can also limit the range of the vector by changing the inputs <strong>Vector range min</strong> and <strong>Vector range max</strong>, and clicking “View Pointcloud/Vectors” again.
 Notice that this will have a different impact on the 3D and 2D viewers, as the 2D viewer is only taking into account the displacements in the current plane,
@@ -124,7 +137,7 @@ whereas the 3D viewer is taking into account all three components of the displac
 <section id="results-files">
 <h2>Results Files<a class="headerlink" href="#results-files" title="Permalink to this heading"></a></h2>
 <p>The DVC analysis code generates two files for each run it performs.
-These aren’t directly accessible from the app, but you are able to access them if you export your session (see <a class="reference internal" href="saving.html#exporting-sessions"><span class="std std-ref">Exporting Sessions</span></a>).
+These aren’t directly accessible from the app, but you are able to access them if you export your session (see <a class="reference external" href="_ExportingSessions">Exporting Sessions</a> ).
 The two files it produces for each run are as follows:</p>
 <p><strong>Status file</strong> (.stat): This contains:</p>
 <ul class="simple">

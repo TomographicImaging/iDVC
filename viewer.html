@@ -50,7 +50,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#image-selection">Image Selection</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#image-viewers">Image Viewers</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#d-viewer-interactions">2D Viewer Interactions</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#id2">3D Viewer Interactions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">3D Viewer Interactions</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#viewer-settings">Viewer Settings</a></li>
@@ -109,44 +109,40 @@ The image shown on the viewer will most likely be down-sampled (depending on the
 </section>
 <section id="image-viewers">
 <h2>Image Viewers<a class="headerlink" href="#image-viewers" title="Permalink to this heading"></a></h2>
-<p>The app uses the <a class="reference external" href="https://github.com/vais-ral/CILViewer">CILViewer</a> for the 2D and 3D image display.
+<p>The app uses the <a class="reference external" href="https://github.com/TomographicImaging/CILViewer">CILViewer</a> for the 2D and 3D image display.
 Both viewers show the reference image, and are linked, so will show the same orientation and slice number.
-By default, the volume render is switched off on the 3D viewer, but to toggle it on/off, click on the 3D viewer and press <strong>v</strong>.</p>
-<p>To view all of the interactions for the viewers, click on one of the viewers and press <strong>h</strong> on your keyboard. Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
-The interactions for the viewers are as follows (correct as of version &gt;=22.2.0 of the <a class="reference external" href="https://github.com/vais-ral/CILViewer">CILViewer</a>)…</p>
+By default, the volume render is switched off on the 3D viewer,
+but to toggle it on/off, click on the 3D viewer and press <strong>v</strong>.</p>
+<p>To view all of the interactions for the viewers, click on one of the viewers and press <strong>h</strong> on your keyboard.
+Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
+The interactions for the viewers are as follows
+(correct as of version &gt;=24.1.0 of the CILViewer).</p>
 <section id="d-viewer-interactions">
 <h3>2D Viewer Interactions<a class="headerlink" href="#d-viewer-interactions" title="Permalink to this heading"></a></h3>
 <p><strong>Mouse Interactions:</strong></p>
 <ul class="simple">
 <li><p>Slice: Mouse Scroll</p></li>
 <li><p>Quick Slice: Shift + Mouse Scroll</p></li>
-<li><p>Pick: Left Click</p></li>
 <li><p>Zoom: Shift + Right Mouse + Move Up/Down</p></li>
 <li><p>Pan: Ctrl + Right Mouse + Move</p></li>
 <li><p>Adjust Window: Alt+ Right Mouse + Move Up/Down</p></li>
 <li><p>Adjust Level: Alt + Right Mouse + Move Left/Right</p></li>
-<li><p>Region of Interest (ROI):</p></li>
-<li><p>Create: Ctrl + Left Click</p></li>
-<li><p>Delete: Alt + Left Click</p></li>
-<li><p>Resize: Click + Drag handles</p></li>
-<li><p>Translate: Middle Mouse + Move within ROI</p></li>
 </ul>
 <p><strong>Keyboard Interactions:</strong></p>
 <ul class="simple">
+<li><p>h: This help</p></li>
+<li><p>x: YZ Plane</p></li>
+<li><p>y: XZ Plane</p></li>
+<li><p>z: XY Plane</p></li>
 <li><p>a: Whole image Auto Window/Level</p></li>
 <li><p>w: Region around cursor Auto Window/Level</p></li>
 <li><p>l: Line Profile at cursor</p></li>
 <li><p>s: Save Current Image</p></li>
-<li><p>x: YZ Plane</p></li>
-<li><p>y: XZ Plane</p></li>
-<li><p>z: XY Plane</p></li>
-<li><p>t: Tracing</p></li>
 <li><p>i: toggle interpolation of slice</p></li>
-<li><p>h: help</p></li>
 </ul>
 </section>
-<section id="id2">
-<h3>3D Viewer Interactions<a class="headerlink" href="#id2" title="Permalink to this heading"></a></h3>
+<section id="id1">
+<h3>3D Viewer Interactions<a class="headerlink" href="#id1" title="Permalink to this heading"></a></h3>
 <p><strong>Mouse Interactions:</strong></p>
 <ul class="simple">
 <li><p>Slice: Mouse Scroll</p></li>
@@ -157,20 +153,20 @@ The interactions for the viewers are as follows (correct as of version &gt;=22.2
 </ul>
 <p><strong>Keyboard Interactions:</strong></p>
 <ul class="simple">
-<li><p>YZ Plane: x</p></li>
-<li><p>XZ Plane: y</p></li>
-<li><p>XY Plane: z</p></li>
-<li><p>Save render to current_render.png: r</p></li>
-<li><p>Toggle visibility of volume render: v</p></li>
-<li><p>Toggle visibility of slice: s</p></li>
-<li><p>Whole image Auto Window/Level: a</p></li>
-<li><p>Activate volume render clipping widget: c</p></li>
-<li><p>Display help: h</p></li>
+<li><p>h: Display this help</p></li>
+<li><p>x: YZ Plane</p></li>
+<li><p>y: XZ Plane</p></li>
+<li><p>z: XY Plane</p></li>
+<li><p>r: Save render to current_render.png</p></li>
+<li><p>s: Toggle visibility of slice</p></li>
+<li><p>v: Toggle visibility of volume render</p></li>
+<li><p>c: Activates volume render clipping plane widget</p></li>
+<li><p>a: Whole image Auto Window/Level</p></li>
 </ul>
 </section>
 </section>
 <section id="viewer-settings">
-<span id="id3"></span><h2>Viewer Settings<a class="headerlink" href="#viewer-settings" title="Permalink to this heading"></a></h2>
+<span id="id2"></span><h2>Viewer Settings<a class="headerlink" href="#viewer-settings" title="Permalink to this heading"></a></h2>
 <p>The viewer settings panel shows how much the image has been down-sampled:</p>
 <img alt="_images/viewer_settings.png" src="_images/viewer_settings.png" />
 <p>If it has been down-sampled, the image will be interpolated, but you can turn this off by clicking on the viewer and then pressing <strong>i</strong>.
