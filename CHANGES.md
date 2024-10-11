@@ -2,8 +2,8 @@
 
 ## v24.1.0
 Enhancements:
-* edit h text in viewer2D #354
-* add settings and help menu bar #347
+* Edit h text in viewer2D #354
+* Add settings and help menu bar #347
 * Improve graphs window #335
 * Option to edit the app fontsize in settings #335
 
