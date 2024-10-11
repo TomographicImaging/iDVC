@@ -12,7 +12,7 @@ Bug fixes:
 Documentation:
 * Add citations #349
 * Add 'mha', 'mhd', 'TIFF' to help text #365
-* Edit graphs documentation #366
+* Edit graphs and viewers documentation #366
 * Edit version number in welcome page #366
 
 Dependencies:

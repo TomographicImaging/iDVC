@@ -21,12 +21,15 @@ The image shown on the viewer will most likely be down-sampled (depending on the
 
 Image Viewers
 =============
-The app uses the `CILViewer <https://github.com/vais-ral/CILViewer>`_ for the 2D and 3D image display.
+The app uses the `CILViewer <https://github.com/TomographicImaging/CILViewer>`_ for the 2D and 3D image display.
 Both viewers show the reference image, and are linked, so will show the same orientation and slice number.
-By default, the volume render is switched off on the 3D viewer, but to toggle it on/off, click on the 3D viewer and press **v**.
+By default, the volume render is switched off on the 3D viewer,
+but to toggle it on/off, click on the 3D viewer and press **v**.
 
-To view all of the interactions for the viewers, click on one of the viewers and press **h** on your keyboard. Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
-The interactions for the viewers are as follows (correct as of version |cil_viewer_version| of the `CILViewer <https://github.com/vais-ral/CILViewer>`_)…
+To view all of the interactions for the viewers, click on one of the viewers and press **h** on your keyboard.
+Note that the interactions for each viewer differ slightly, so check them for both the 2D and 3D viewer.
+The interactions for the viewers are as follows
+(correct as of version |cil_viewer_version| of the CILViewer).
 
 2D Viewer Interactions
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -35,30 +38,22 @@ The interactions for the viewers are as follows (correct as of version |cil_view
 
 * Slice: Mouse Scroll
 * Quick Slice: Shift + Mouse Scroll
-* Pick: Left Click
 * Zoom: Shift + Right Mouse + Move Up/Down
 * Pan: Ctrl + Right Mouse + Move
 * Adjust Window: Alt+ Right Mouse + Move Up/Down
 * Adjust Level: Alt + Right Mouse + Move Left/Right
-* Region of Interest (ROI):
-* Create: Ctrl + Left Click
-* Delete: Alt + Left Click
-* Resize: Click + Drag handles
-* Translate: Middle Mouse + Move within ROI
 
 **Keyboard Interactions:**
 
+* h: This help
+* x: YZ Plane
+* y: XZ Plane
+* z: XY Plane
 * a: Whole image Auto Window/Level
 * w: Region around cursor Auto Window/Level
 * l: Line Profile at cursor
 * s: Save Current Image
-* x: YZ Plane
-* y: XZ Plane
-* z: XY Plane
-* t: Tracing
 * i: toggle interpolation of slice
-* h: help
-
 
 3D Viewer Interactions
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -73,15 +68,15 @@ The interactions for the viewers are as follows (correct as of version |cil_view
 
 **Keyboard Interactions:**
 
-* YZ Plane: x
-* XZ Plane: y
-* XY Plane: z
-* Save render to current_render.png: r
-* Toggle visibility of volume render: v
-* Toggle visibility of slice: s
-* Whole image Auto Window/Level: a
-* Activate volume render clipping widget: c
-* Display help: h
+* h: Display this help
+* x: YZ Plane
+* y: XZ Plane
+* z: XY Plane
+* r: Save render to current_render.png
+* s: Toggle visibility of slice
+* v: Toggle visibility of volume render
+* c: Activates volume render clipping plane widget
+* a: Whole image Auto Window/Level
 
 .. _Viewer Settings:
 
