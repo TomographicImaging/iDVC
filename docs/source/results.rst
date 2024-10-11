@@ -6,28 +6,43 @@ Once your run has completed, you can look at the results on the **DVC Results** 
 There are two ways of doing this – looking at graphs, and viewing the displacement vectors.
 First, you need to select the run you would like to view the results for from the dropdown list of all of the runs you have saved.
 
-Graphs of the Results
+Graphs of the results
 =====================
-Then click on **Display Graphs**.
-Another window will open (once you are done looking at the graphs you can either close or minimize this window and it will take you back to the main app just fine).
-It will start you off on the **Bulk** tab.
-This isn’t so useful if you only performed one run. For each run that you performed, there will be a separate tab.
-If you navigate to one of these it will show you graphs for the objective minimum, and displacements in x, y, z as well as changes in φ, θ, ψ for that run.
-The title of the tab also gives the number of sampling points in the subvolume and the subvolume size.
- 
-This will automatically show the displacements including the translation that you set in the manual registration.
-You can adjust the displacements to exclude this translation by going to Settings and selecting **Show displacement relative to reference point 0**.
-Now, coming back to the bulk tab, this shows the settings for the runs including the subvolume geometry, maximum displacement etc.,
-and if you have done a bulk run then you can select a particular variable (such as the objective minimum) and then compare the graphs for this variable in each of the runs.
-You can select to just compare for a certain subvolume size or number of sampling points, or you can choose to compare them all (which is what is chosen in the image below).
+
+A new window containg graphs can be opened by clicking on **Display Graphs**.
+The window contains one tab, when a single run is selected in the main window, 
+or three tabs, when a bulk run in selected in the main window. 
+The graphs window can either be closed or minimised. 
+As a default, the displacements include the translation set in the **Initial Registration** tab.
+Optionally, the displacements can be adjusted to exclude this translation by going
+to **Custom options** and selecting  **Show displacement relative to reference point 0**.
+
+The **Single** tab shows histograms for the objective minimum and the displacements in x, y, and z, in untis of pixels. 
+The histograms ordinates are the frequency of the occurrences divided by the total number of points in the selected run,
+shown as percentages.
+Each histogram includes the mean, standard deviation and gaussian fit.
+For bulk runs, two widgets enable the selection of points within each subvolume and the subvolume size,
+enabling a specific run to be displayed in the plots.
+
+.. image:: images/graphs_single_run.png
+
+The **Bulk** tab enables the user to choose the results to plot, the parameter to fix, and its value.
+If the parameter to fix is selected to be 'None' then the plots will be shown for all
+values of the points in subvolume and all values of the subvolume size for the selected result. 
+This feature is useful to compare the results of different runs.
 
 .. image:: images/graphs_bulk_run.png
 
-.. role:: raw-html(raw)
-    :format: html
+The **Statistical analysis** tab includes quantatitative statistical analysis of the bulk run.
+The user can choose the results to plot, the parameter to fix, and its value.
+An option to draw plots for 'All' the results at the same time is available.
+When a specific result is selected, the parameter to fix must be chosen and its value can be selected or
+the plots can be drawn for all the points in the subvolume and all the subvolume sizes.
+This feature is useful to compare the results for different runs.
+An option to collapse the plots is available.
 
-:raw-html:`<br />`
- 
+.. image:: images/graphs_stat_collapsed.png
+
 Displacement Vectors
 ====================
 To view the displacements as vectors overlaid on the reference image, return to the main app.
@@ -40,8 +55,6 @@ On the 2D viewer, the vectors will be shown as 2D arrows, showing only the displ
 Below is a comparison of some vectors shown in 2D compared to 3D.
 
 .. image:: images/2D_3D_vectors_lava.png
-
-:raw-html:`<br />`
  
 The arrows are coloured according to their relative size. White arrows are the largest and black the smallest. Note that the colours of the arrows may differ between the 2D and 3D viewer because the colouring of the 2D arrows is only taking into account the size of the displacements in two, rather than all three directions. 
 
@@ -54,7 +67,7 @@ Results Files
 =============
 
 The DVC analysis code generates two files for each run it performs.
-These aren’t directly accessible from the app, but you are able to access them if you export your session (see :ref:`Exporting Sessions <Exporting Sessions>`).
+These aren’t directly accessible from the app, but you are able to access them if you export your session (see `Exporting Sessions <_Exporting Sessions>`_ ).
 The two files it produces for each run are as follows:
 
 **Status file** (.stat): This contains:

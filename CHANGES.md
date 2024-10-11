@@ -12,6 +12,8 @@ Bug fixes:
 Documentation:
 * Add citations #349
 * Add 'mha', 'mhd', 'TIFF' to help text #365
+* Edit graphs and viewers documentation #366
+* Edit viewer version number in documentation #366
 
 Dependencies:
 * Add pandas #335
