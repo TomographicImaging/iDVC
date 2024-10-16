@@ -3319,7 +3319,6 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
     def createPointCloud(self, **kwargs):
         ## Create the PointCloud
-        #print("Create point cloud")
         filename = kwargs.get('filename', "latest_pointcloud.roi")
         progress_callback = kwargs.get('progress_callback', PrintCallback())
         message_callback = kwargs.get('message_callback', PrintCallback())
@@ -4644,7 +4643,7 @@ This parameter has a strong effect on computation time, so be careful."
                 pointcloud_new_file = os.path.join(results_folder, folder_name, "_" + self.pointcloud_parameters['pointcloud_size_entry'].text() + ".roi")
                 shutil.copyfile(self.roi, pointcloud_new_file)
                 
-            else:
+            elif setting == "bulk":
                 xmin = int(self.rdvc_widgets['points_in_subvol_range_min_value'].text())
                 xmax = int(self.rdvc_widgets['points_in_subvol_range_max_value'].text())
                 xstep = int(self.rdvc_widgets['points_in_subvol_range_step_value'].text())

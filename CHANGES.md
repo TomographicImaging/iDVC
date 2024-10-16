@@ -1,5 +1,10 @@
 # ChangeLog
 
+## v24.1.1
+
+Bug fixes:
+* Fix abscissa order in graphs #372
+
 ## v24.1.0
 Enhancements:
 * Edit h text in viewer2D #354

@@ -38,8 +38,8 @@ class BaseResultsWidget(QWidget):
         single_result = result_data_frame.iloc[0]['result']
         self.run_name = single_result.run_name
         self.data_label = single_result.data_label
-        self.subvol_sizes = result_data_frame['subvol_size'].unique()
-        self.subvol_points = result_data_frame['subvol_points'].unique()
+        self.subvol_sizes = result_data_frame['subvol_size'].unique().astype(str)
+        self.subvol_points = result_data_frame['subvol_points'].unique().astype(str)
         self.color_list = [
             '#1f77b4',  # Blue
             '#ff7f0e',  # Orange
@@ -102,14 +102,14 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         ----------
         result_data_frame : pandas.DataFrame
                 Data frame containing the results. Includes the 'subvol_points' and 'subvol_size' columns.
-        selected_subvol_points : str of an integer
+        selected_subvol_points : int
                 Selected points in subvolume.
-        selected_subvol_size : str of an integer
+        selected_subvol_size : int
                 Selected subvolume size.
         '''
         df = result_data_frame
         if len(df) > 1: 
-            df = df[(df['subvol_points'].astype(str) == selected_subvol_points) & (df['subvol_size'].astype(str) == selected_subvol_size)]
+            df = df[(df['subvol_points'] == selected_subvol_points) & (df['subvol_size'] == selected_subvol_size)]
         elif len(df) == 1: 
             df = self.result_data_frame
         row = df.iloc[0]   
@@ -125,11 +125,11 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
                 Data frame containing the results. Includes the 'subvol_points' and 'subvol_size' columns.
         parameter : str
                 'subvol_points' or 'subvol_size'
-        selected_parameter : str of an integer
+        selected_parameter : int
                 Selected value of the parameter.
         '''
         df = result_data_frame
-        df = df[(df[parameter].astype(str) == selected_parameter)]  
+        df = df[(df[parameter] == selected_parameter)]  
         return df   
 
     def _addHistogramSubplot(self, subplot, array, xlabel, mean, std): 
@@ -204,6 +204,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         
         self.subvol_points_widget = QComboBox(self)
         self.subvol_points_widget.addItems(self.subvol_points)
+        self.subvol_points_widget.setCurrentIndex(0)
         self.grid_layout.addWidget(self.subvol_points_widget,widgetno,2)
         widgetno+=1
 
@@ -213,6 +214,7 @@ class SingleRunResultsWidget(BaseResultsWidget):
         
         self.subvol_size_widget = QComboBox(self)
         self.subvol_size_widget.addItems(self.subvol_sizes)
+        self.subvol_size_widget.setCurrentIndex(0)
         self.grid_layout.addWidget(self.subvol_size_widget,widgetno,2)
         widgetno+=1
 
@@ -254,8 +256,8 @@ class SingleRunResultsWidget(BaseResultsWidget):
         numRows = 2
         numColumns = 2
         if len(self.result_data_frame) > 1:
-            current_subvol_points = self.subvol_points_widget.currentText()
-            current_subvol_size = self.subvol_size_widget.currentText()
+            current_subvol_points = int(self.subvol_points_widget.currentText())
+            current_subvol_size = int(self.subvol_size_widget.currentText())
             row = self._selectRow(self.result_data_frame, current_subvol_points, current_subvol_size)
         elif len(self.result_data_frame) == 1:
             row = self._selectRow(self.result_data_frame, None, None)
@@ -343,6 +345,7 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         
         self.subvol_size_value_widget = QComboBox(self)
         self.subvol_size_value_widget.addItems(self.subvol_sizes)
+        self.subvol_size_value_widget.setCurrentIndex(0)
         self.grid_layout.addWidget(self.subvol_size_value_widget,widgetno,2)
 
         self.subvol_points_value_label = QLabel(self)
@@ -351,6 +354,7 @@ class BulkRunResultsBaseWidget(BaseResultsWidget):
         
         self.subvol_points_value_widget = QComboBox(self)
         self.subvol_points_value_widget.addItems(self.subvol_points)
+        self.subvol_points_value_widget.setCurrentIndex(0)
         self.grid_layout.addWidget(self.subvol_points_value_widget,widgetno,2)
         
         self.showParameterValues()
@@ -459,7 +463,7 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
             plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} distribution for all parameters"
         else:
             value_widget = self.parameter_value_widget_list[param_index]
-            parameter_value = value_widget.currentText()
+            parameter_value = int(value_widget.currentText())
             param_text = self.parameter_fix_widget.currentText().lower()
             plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} distribution for {param_text} = {parameter_value}"
         self.fig.suptitle(plot_title,fontsize=self.fontsizes['figure_title'])
@@ -475,17 +479,17 @@ class BulkRunResultsWidget(BulkRunResultsBaseWidget):
                 numRows = 1
                 self.canvas.setMinimumSize(300*numColumns, 400)
                 subplot_title = f"Points in subvolume = {result.subvol_points}"
-                if result.subvol_size != float(parameter_value):
+                if result.subvol_size != parameter_value:
                     continue
             elif param_index == 1:
                 numColumns = 1
-                self.canvas.setMinimumSize(800, 300*numRows) #needed for scrollbar
+                self.canvas.setMinimumSize(800, 400*numRows) #needed for scrollbar
                 subplot_title = f"Subvolume size = {result.subvol_size}"
-                if result.subvol_points != float(parameter_value):
+                if result.subvol_points != parameter_value:
                     continue
             elif param_index == 2:
                 subplot_title = f"Points in subvolume = {result.subvol_points}, subvolume size = {result.subvol_size}"
-                self.canvas.setMinimumSize(300*numColumns, 300*numRows)
+                self.canvas.setMinimumSize(300*numColumns, 400*numRows)
             data_index = self.data_label_widget.currentIndex()
             x_label = data_label
             if 0<data_index<4:
@@ -565,7 +569,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
             Label for the data.
         parameter : str
             Parameter to filter the data frame.
-        selected_parameter : str
+        selected_parameter : int
             Value of the parameter to filter.
         x_parameter : str
             Column name for x-axis values.
@@ -657,7 +661,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 numColumns = 2
                 subplot = self.fig.add_subplot(numRows, numColumns, plotNum)
                 subplot.set_title(f"{data_label}", pad=20, fontsize=self.fontsizes['subplot_title']) 
-                value = value_widget.currentText() 
+                value = int(value_widget.currentText())
                 plot_title = f"Bulk run '{self.run_name}': mean and standard deviation for {param_text} = {value}"
                 twin = subplot.twinx()
                 self._meanStdPlots(subplot, twin, df, data_index, "", label_list[param_index], value, label_list[1-param_index], x_label)
@@ -675,14 +679,14 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for fixed {param_text}"
                 if not self.collapse_checkbox.isChecked():
                     numRows = len(self.value_list[param_index])
-                    self.canvas.setMinimumSize(800, 300*numRows)
+                    self.canvas.setMinimumSize(800, 400*numRows)
                     for value in self.value_list[param_index]:
                         subplot_mean = self.fig.add_subplot(numRows, numColumns, plotNum)
                         subplot_mean.set_title(f"Mean for {param_text} = {value}", fontsize=self.fontsizes['subplot_title'], pad=20) 
                         subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum +1)
                         subplot_std.set_title(f"Standard deviation for {param_text} = {value}", fontsize=self.fontsizes['subplot_title'], pad=20)
                         label = f"{param_text} = {value}"
-                        self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, label_mean = label, label_std = label)
+                        self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], int(value), label_list[1-param_index], x_label, label_mean = label, label_std = label)
                         plotNum = plotNum + 2
                 elif self.collapse_checkbox.isChecked():
                     numRows = 1
@@ -698,7 +702,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                         else:
                             color = np.random.rand(3,)
                         label = f"{param_text} = {value}"
-                        self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
+                        self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], int(value), label_list[1-param_index], x_label, color, color, label, label, linestyle = linestyle)
                     subplot_mean.legend(loc='upper right')
                     subplot_std.legend(loc='upper right')
             else:
@@ -707,7 +711,7 @@ class StatisticsResultsWidget(BulkRunResultsBaseWidget):
                 subplot_mean.set_title("Mean", fontsize=self.fontsizes['subplot_title'], pad=20) 
                 subplot_std = self.fig.add_subplot(numRows, numColumns, plotNum+1)
                 subplot_std.set_title("Standard deviation", fontsize=self.fontsizes['subplot_title'], pad=20)
-                value = value_widget.currentText() 
+                value = int(value_widget.currentText())
                 plot_title = f"Bulk run '{self.run_name}': {data_label.lower()} mean and standard deviation for {param_text} = {value}"
                 self._meanStdPlots(subplot_mean, subplot_std, df, data_index, data_label+" ", label_list[param_index], value, label_list[1-param_index], x_label)
             
