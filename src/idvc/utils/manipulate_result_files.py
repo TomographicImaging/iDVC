@@ -6,7 +6,7 @@ import glob, os
 
 def _extractDataFromDispResultFile(result, displ_wrt_point0):
     """
-    Extracts objective minimum and displacement vectors from a result file.
+    Extracts objective minimum and displacement vectors from a result file in a numpy 2D array.
     Optionally, adjusts the displacement vectors relative to the displacement of the first point.
 
     The objective function minimum is located at index 5. 
@@ -29,7 +29,7 @@ def _extractDataFromDispResultFile(result, displ_wrt_point0):
         2D array where each row corresponds to a column of data from the file,
         including the objective function minimum and displacement vectors.
     """
-    data = np.genfromtxt(result.disp_file, delimiter='\t', skip_header=1)
+    data = np.genfromtxt(result.disp_file, delimiter='\t', skip_header=1, ndmin=2)
     data_shape = data.shape
     index_objmin = 5
     index_disp = [6, 9]
@@ -56,8 +56,8 @@ def createResultsDataFrame(results_folder, displ_wrt_point0):
     Returns
     -------
     pd.DataFrame: A DataFrame with the following columns:
-            - 'subvol_size': List of subvolume sizes as strings.
-            - 'subvol_points': List of subvolume points as strings.
+            - 'subvol_size': List of subvolume sizes as int.
+            - 'subvol_points': List of subvolume points as int.
             - 'result': List of RunResults objects.
             - 'result_arrays': List of 4 arrays containing extracted data.
     """
@@ -69,8 +69,8 @@ def createResultsDataFrame(results_folder, displ_wrt_point0):
     for folder in glob.glob(os.path.join(results_folder, "dvc_result_*")):
         result = RunResults(folder)
         result_arrays = _extractDataFromDispResultFile(result, displ_wrt_point0)
-        subvol_size_list.append(str(result.subvol_size))
-        subvol_points_list.append(str(result.subvol_points))
+        subvol_size_list.append(int(result.subvol_size))
+        subvol_points_list.append(int(result.subvol_points))
         result_list.append(result)
 
         result_arrays_list.append(result_arrays)
@@ -79,6 +79,7 @@ def createResultsDataFrame(results_folder, displ_wrt_point0):
 'subvol_points': subvol_points_list,
 'result': result_list,
 'result_arrays': result_arrays_list})
+    result_data_frame = result_data_frame.sort_values(by=['subvol_size', 'subvol_points'], ascending=[True, True]).reset_index(drop=True)
     return result_data_frame
 
 def addMeanAndStdToResultDataFrame(result_data_frame):
