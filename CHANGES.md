@@ -1,7 +1,6 @@
 # ChangeLog
 
 ## v24.1.1
-
 Bug fixes:
 * Fix abscissa order in graphs #372
 
