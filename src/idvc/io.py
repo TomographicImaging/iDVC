@@ -77,8 +77,10 @@ class ImageDataCreator(object):
 
     def createImageData(main_window, image_files, output_image, *finish_fn_args, info_var=None, convert_numpy=False, convert_raw=True,  resample=False, target_size=0.125, crop_image=False, origin=(0, 0, 0), target_z_extent=(0, 0), output_dir=None, finish_fn=None,  **finish_fn_kwargs):
         """
-        Reads the extention of the image file/s. Can read '.mha', '.mhd', '.npy','tif', 'tiff', '.tif', '.tiff',
-        '.nxs', '.h5', '.hdf5', '.raw'.
+        Reads the extention of the image file/s. Can read '.mha', '.mhd', '.npy','tiff',
+        '.nxs', '.raw'. Opens dialogs for hdf5 and raw formats. 
+        Creates a progress window. Calls the worker to resample or crop the image and convert it into raw. 
+        Note: 'raw' is the specified file format by the dvc core code. 
         """
         if len(image_files) == 1:
             image = image_files[0]
