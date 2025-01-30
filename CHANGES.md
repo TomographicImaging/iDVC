@@ -1,6 +1,6 @@
 # ChangeLog
 
-## vx.x.x
+## v25.0.0
 
 Enhancements:
 - Adds nexus ".nxs" files reader #387
