@@ -19,11 +19,13 @@ import shutil
 import sys
 import time
 from functools import partial
-
+import h5py
 import numpy
 import vtk
 from ccpi.viewer.utils import Converter
-from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
+from ccpi.viewer.utils.conversion import (cilHDF5CroppedReader,
+                                          cilHDF5ResampleReader,
+                                          cilRawCroppedReader,
                                           cilRawResampleReader,
                                           cilMetaImageCroppedReader,
                                           cilMetaImageResampleReader,
@@ -32,7 +34,7 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           cilTIFFResampleReader,
                                           cilTIFFCroppedReader, 
                                           Converter)
-from ccpi.viewer.ui.dialogs import RawInputDialog
+from ccpi.viewer.ui.dialogs import RawInputDialog, HDF5InputDialog
 from eqt.threading import Worker
 from PySide2 import QtCore, QtGui
 from PySide2.QtCore import QThreadPool
@@ -87,7 +89,7 @@ class ImageDataCreator(object):
                     error_text = "Error reading file: ({filename})".format(
                         filename=image)
                     displayFileErrorDialog(
-                        main_window, message=error_text, title=error_title, detailed_message='When reading multiple files, all files must TIFF formatted.')
+                        main_window, message=error_text, title=error_title, detailed_message='When reading multiple files, all files must be TIFF formatted.')
                     return
 
         if file_extension in ['.mha', '.mhd']:
@@ -110,6 +112,22 @@ class ImageDataCreator(object):
             image_worker = Worker(loadTif, image_files, output_image, convert_numpy=convert_numpy, 
                                   image_info=info_var, resample=resample, crop_image=crop_image, target_size=target_size,
                                   origin=origin, target_z_extent=target_z_extent)
+
+        elif file_extension in ['.nxs', '.h5', '.hdf5']:
+            dialog = HDF5InputDialog(main_window, image)
+            dialog.Ok.clicked.connect(lambda: dialog.getHDF5Attributes())
+            dialog.exec()
+            if dialog.hdf5_attrs == {}:
+                return
+            hdf5_dataset_path = dialog.hdf5_attrs['dataset_name'] 
+            print(hdf5_dataset_path)
+            with h5py.File(image, "r") as f:
+                if hdf5_dataset_path not in f:
+                    raise ValueError(f"Dataset '{hdf5_dataset_path}' not found in the image file.") 
+            createProgressWindow(main_window, "Converting", "Converting Image")
+            image_worker = Worker(loadNxs, image, output_image, dataset_path = hdf5_dataset_path, convert_numpy=convert_numpy, 
+                                 image_info=info_var, resample=resample, crop_image=crop_image, target_size=target_size,
+                                 origin=origin, target_z_extent=target_z_extent)
 
         elif file_extension in ['.raw']:
             if 'file_type' in info_var and info_var['file_type'] == 'raw':
@@ -561,6 +579,78 @@ def loadTif(*args, **kwargs):
     # all good, return 0
     return 0
 
+def loadNxs(*args, **kwargs):
+    filenames, output_image = args
+    image_info = kwargs.get('image_info', None)
+    progress_callback = kwargs.get('progress_callback')
+    dataset_path = kwargs.get('dataset_path', None)  # Path inside .nxs file
+    resample = kwargs.get('resample', False)
+    crop_image = kwargs.get('crop_image', False)
+    target_size = kwargs.get('target_size', 0.125)
+    origin = kwargs.get('origin', (0, 0, 0))
+    target_z_extent = kwargs.get('target_z_extent', (0, 0))
+    bits_per_byte = 16
+
+    if not dataset_path:
+        raise ValueError("dataset_path must be specified for NeXus file")
+    progress_callback.emit(10)
+
+    with h5py.File(filenames, 'r') as f:
+        if dataset_path not in f:
+            raise KeyError(f"Dataset {dataset_path} not found in {filenames}")
+
+        data = f[dataset_path][()]
+        shape = data.shape
+
+        if resample:
+            reader = cilHDF5ResampleReader()
+            reader.SetFileName(filenames)
+            reader.SetDatasetName(dataset_path)
+            reader.SetTargetSize(int(target_size * 1024*1024*1024))
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
+                getProgress, progress_callback=progress_callback))
+            reader.Update()
+            output_image.ShallowCopy(reader.GetOutput())
+
+            header_length = reader.GetFileHeaderLength()
+            print("Length of header: ", header_length)
+
+            if image_info is not None:
+                image_info['isBigEndian'] = reader.GetBigEndian()
+                image_size = shape[0] * shape[1] * shape[2]
+                if image_size <= target_size:
+                    image_info['sampled'] = False
+                else:
+                    image_info['sampled'] = True
+
+        elif crop_image:
+            reader = cilHDF5CroppedReader()
+            reader.SetOrigin(tuple(origin))
+            reader.SetTargetZExtent(target_z_extent)
+            reader.SetDatasetName(dataset_path)
+
+            reader.AddObserver(vtk.vtkCommand.ProgressEvent, partial(
+                getProgress, progress_callback=progress_callback))
+            reader.SetFileName(filenames)
+            reader.Update()
+
+            progress_callback.emit(80)
+            output_image.ShallowCopy(reader.GetOutput())
+            progress_callback.emit(90)
+
+            if image_info is not None:
+                image_info['sampled'] = False
+                image_info['cropped'] = True
+
+        vol_bit_depth = data.dtype.itemsize * bits_per_byte
+
+        if image_info is not None:
+            image_info["vol_bit_depth"] = vol_bit_depth
+            image_info["shape"] = shape
+
+    progress_callback.emit(100)
+    return 0
+
 def getProgress(caller, event, progress_callback):
     progress_callback.emit(caller.GetProgress()*80)
 
@@ -699,8 +789,6 @@ def createRawImportDialog(main_window, fname, output_image, info_var, resample, 
                 'isFortran': dialog.getWidget('is_fortran'),
                 'buttonBox': dialog.buttonBox}   
         
-
-    
 
 def createConvertRawImageWorker(main_window, fname, output_image, info_var, resample, target_size, crop_image, origin, target_z_extent, finish_fn):
     createProgressWindow(main_window, "Converting", "Converting Image")
