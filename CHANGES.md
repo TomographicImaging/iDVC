@@ -1,5 +1,10 @@
 # ChangeLog
 
+## vx.x.x
+
+Enhancements:
+- Adds nexus ".nxs" files reader #387
+
 ## v24.1.1
 Bug fixes:
 * Fix abscissa order in graphs #372
