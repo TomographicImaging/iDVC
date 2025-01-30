@@ -9,7 +9,7 @@ dependencies:
     - numpy
     - pandas
     - scipy
-    - ccpi::ccpi-viewer >=24.1.0
+    - ccpi::ccpi-viewer >24.1.0
     - ccpi::ccpi-dvc >=22.0.0
     - natsort
     - docopt

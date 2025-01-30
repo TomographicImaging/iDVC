@@ -40,7 +40,7 @@ requirements:
     - numpy
     - pandas
     - scipy
-    - ccpi-viewer >=24.1.0
+    - ccpi-viewer >24.1.0
     - ccpi-dvc >=22.0.0
     - natsort
     - docopt
