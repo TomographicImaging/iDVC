@@ -502,10 +502,25 @@ def loadNpyImage(**kwargs):
     return 0
 
 def loadTif(*args, **kwargs):
-    # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None):
-    # filenames, reader, output_image,   convert_numpy = False,  image_info = None, progress_callback=None
-    # var,resample=resample, target_size=target_size,
-    # origin=origin, target_z_extent=target_z_extent
+    """
+    Loads tiff (.tiff) file/s and processes its/their dataset into a raw image format.
+
+    Parameters:
+    -----------
+    *args : tuple
+        - filenames (str): Path to the tiff (.tiff) files.
+        - output_image (vtkImageData): The VTK image object where the output will be stored.
+
+    **kwargs : dict
+        - dataset_path (str, required): The internal HDF5 path to the dataset inside the .nxs file.
+        - image_info (dict, optional): A dictionary to store metadata about the image.
+        - progress_callback (callable, optional): Function to emit progress updates.
+        - resample (bool, default=False): Whether to resample the dataset.
+        - crop_image (bool, default=False): Whether to crop the dataset.
+        - target_size (float, default=0.125): Target size for resampling (in GB).
+        - origin (tuple, default=(0, 0, 0)): The origin coordinates for cropping.
+        - target_z_extent (tuple, default=(0, 0)): The Z extent for cropping.
+    """
     filenames, output_image = args
     image_info = kwargs.get('image_info', None)
     progress_callback = kwargs.get('progress_callback')
@@ -514,6 +529,7 @@ def loadTif(*args, **kwargs):
     target_size = kwargs.get('target_size', 0.125)
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
+
     bits_per_byte = 16
 
     # time.sleep(0.1) #required so that progress window displays
@@ -584,6 +600,25 @@ def loadTif(*args, **kwargs):
     return 0
 
 def loadNxs(*args, **kwargs):
+    """
+    Loads a NeXus (.nxs) file and processes its dataset into a raw image format.
+
+    Parameters:
+    -----------
+    *args : tuple
+        - filenames (str): Path to the NeXus (.nxs) file.
+        - output_image (vtkImageData): The VTK image object where the output will be stored.
+
+    **kwargs : dict
+        - dataset_path (str, required): The internal HDF5 path to the dataset inside the .nxs file.
+        - image_info (dict, optional): A dictionary to store metadata about the image.
+        - progress_callback (callable, optional): Function to emit progress updates.
+        - resample (bool, default=False): Whether to resample the dataset.
+        - crop_image (bool, default=False): Whether to crop the dataset.
+        - target_size (float, default=0.125): Target size for resampling (in GB).
+        - origin (tuple, default=(0, 0, 0)): The origin coordinates for cropping.
+        - target_z_extent (tuple, default=(0, 0)): The Z extent for cropping.
+    """
     filenames, output_image = args
     image_info = kwargs.get('image_info', None)
     progress_callback = kwargs.get('progress_callback')
