@@ -599,18 +599,19 @@ def loadTif(*args, **kwargs):
     # all good, return 0
     return 0
 
-def loadNxs(*args, **kwargs):
+def loadNxs(filenames, output_image, dataset_path, **kwargs):
     """
     Loads a NeXus (.nxs) file and processes its dataset into a vtkImageData.
 
     Parameters:
     -----------
-    *args : tuple
-        - filenames (str): Path to the NeXus (.nxs) file.
-        - output_image (vtkImageData): The VTK image object where the output will be stored.
-
+    filenames : str
+        Path to the NeXus (.nxs) file.
+    output_image : vtkImageData
+        The VTK image object where the output will be stored.
+    dataset_path : str
+        The internal HDF5 path to the dataset inside the .nxs file.
     **kwargs : dict
-        - dataset_path (str, required): The internal HDF5 path to the dataset inside the .nxs file.
         - image_info (dict, optional): A dictionary to store metadata about the image.
         - progress_callback (callable, optional): Function to emit progress updates.
         - resample (bool, default=False): Whether to resample the dataset.
@@ -619,10 +620,8 @@ def loadNxs(*args, **kwargs):
         - origin (tuple, default=(0, 0, 0)): The origin coordinates for cropping.
         - target_z_extent (tuple, default=(0, 0)): The Z extent for cropping.
     """
-    filenames, output_image = args
     image_info = kwargs.get('image_info', None)
     progress_callback = kwargs.get('progress_callback')
-    dataset_path = kwargs.get('dataset_path', None)  # Path inside .nxs file
     resample = kwargs.get('resample', False)
     crop_image = kwargs.get('crop_image', False)
     target_size = kwargs.get('target_size', 0.125)
@@ -681,8 +680,11 @@ def loadNxs(*args, **kwargs):
                 image_info['sampled'] = False
                 image_info['cropped'] = True
 
+        else:
+            raise ValueError(f"Resampling or cropping must be performed when loading an image.")
+    
         vol_bit_depth = data.dtype.itemsize * bits_per_byte
-
+        
         if image_info is not None:
             image_info["vol_bit_depth"] = vol_bit_depth
             image_info["shape"] = shape
