@@ -503,7 +503,7 @@ def loadNpyImage(**kwargs):
 
 def loadTif(*args, **kwargs):
     """
-    Loads tiff (.tiff) file/s and processes its/their dataset into a raw image format.
+    Loads tiff (.tiff) file/s and processes its/their dataset into a vtkImageData.
 
     Parameters:
     -----------
