@@ -1,9 +1,11 @@
 # ChangeLog
 
 ## v25.0.0
-
 Enhancements:
 - Adds nexus ".nxs" files reader #387
+
+Dependencies:
+* Add pyside2 and upgrade viewer version #387
 
 ## v24.1.1
 Bug fixes:
