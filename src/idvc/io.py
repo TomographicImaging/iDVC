@@ -129,9 +129,8 @@ class ImageDataCreator(object):
                 if hdf5_dataset_path not in f:
                     raise ValueError(f"Dataset '{hdf5_dataset_path}' not found in the image file.") 
             createProgressWindow(main_window, "Converting", "Converting Image")
-            image_worker = Worker(loadNxs, image, output_image, dataset_path = hdf5_dataset_path, convert_numpy=convert_numpy, 
-                                 image_info=info_var, resample=resample, crop_image=crop_image, target_size=target_size,
-                                 origin=origin, target_z_extent=target_z_extent)
+            image_worker = Worker(loadNxs, image, output_image, dataset_path = hdf5_dataset_path, resample=resample, crop_image=crop_image, convert_numpy=convert_numpy, 
+                                 image_info=info_var, target_size=target_size, origin=origin, target_z_extent=target_z_extent)
 
         elif file_extension in ['.raw']:
             if 'file_type' in info_var and info_var['file_type'] == 'raw':
@@ -599,7 +598,7 @@ def loadTif(*args, **kwargs):
     # all good, return 0
     return 0
 
-def loadNxs(filenames, output_image, dataset_path, **kwargs):
+def loadNxs(filenames, output_image, dataset_path, resample =  False, crop_image = False, **kwargs):
     """
     Loads a NeXus (.nxs) file and processes its dataset into a vtkImageData.
 
@@ -611,19 +610,20 @@ def loadNxs(filenames, output_image, dataset_path, **kwargs):
         The VTK image object where the output will be stored.
     dataset_path : str
         The internal HDF5 path to the dataset inside the .nxs file.
+    resample : bool, default=False
+        Whether to resample the dataset.
+    crop_image : bool, default=False
+        Whether to crop the dataset.
     **kwargs : dict
         - image_info (dict, optional): A dictionary to store metadata about the image.
         - progress_callback (callable, optional): Function to emit progress updates.
-        - resample (bool, default=False): Whether to resample the dataset.
-        - crop_image (bool, default=False): Whether to crop the dataset.
         - target_size (float, default=0.125): Target size for resampling (in GB).
         - origin (tuple, default=(0, 0, 0)): The origin coordinates for cropping.
         - target_z_extent (tuple, default=(0, 0)): The Z extent for cropping.
     """
     image_info = kwargs.get('image_info', None)
     progress_callback = kwargs.get('progress_callback')
-    resample = kwargs.get('resample', False)
-    crop_image = kwargs.get('crop_image', False)
+
     target_size = kwargs.get('target_size', 0.125)
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
