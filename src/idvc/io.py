@@ -601,7 +601,7 @@ def loadTif(*args, **kwargs):
 
 def loadNxs(*args, **kwargs):
     """
-    Loads a NeXus (.nxs) file and processes its dataset into a raw image format.
+    Loads a NeXus (.nxs) file and processes its dataset into a vtkImageData.
 
     Parameters:
     -----------
