@@ -1220,5 +1220,29 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
                 slice_data = slice_data.astype(numpy.uint16)
             f.write(slice_data.tobytes())
             progress_callback.emit(int(start_progress + (end_progress - start_progress) * (filenames.index(el) / steps)))
-            
+    
+def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
+    """
+    Converts a NeXus (.nxs) file to a raw binary file using the dataset path stored in 'dataset_path'.
+    If the dataset is not uint8 or uint16, it will be scaled to uint16.
 
+    Parameters:
+    -----------
+    nexus_file: Path to the input NeXus file.
+    raw_file: Path to the output RAW file.
+    """
+    with h5py.File(nexus_file, "r") as f:
+        if dataset_path not in f:
+            raise ValueError(f"Dataset '{dataset_path}' not found in {nexus_file}.")
+        data = f[dataset_path]
+        original_dtype = data.dtype
+        m, M = numpy.nanmin(data), numpy.nanmax(data)
+        if M - m == 0:
+            raise ValueError("Data is constant, cannot scale to uint16")
+
+        if original_dtype not in [numpy.uint8, numpy.uint16, numpy.int8, numpy.int16]:
+            convert_to_dtype = numpy.uint16
+            data = ((data.astype(numpy.float32) - m) / (M - m)) * numpy.iinfo(convert_to_dtype).max
+
+        data.astype(numpy.uint16).tofile(raw_file)  
+    

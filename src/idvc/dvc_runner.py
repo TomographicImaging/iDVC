@@ -22,7 +22,7 @@ import json
 import time
 import shutil
 import platform
-from .io import save_tiff_stack_as_raw
+from .io import save_tiff_stack_as_raw, save_nxs_as_raw
 
 class PrintCallback(object):
     '''Class to handle the emit call when no callback is provided'''
@@ -264,6 +264,12 @@ class DVC_runner(object):
             raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
             save_tiff_stack_as_raw(reference_file, raw_reference_file_fname, progress_callback, 10, 50)
             reference_file = raw_reference_file_fname
+        elif reference_file.endswith(('.nxs', '.h5', '.hdf5')):
+            message_callback.emit("Converting reference file to raw format")
+            base = os.path.abspath(self.session_folder)
+            raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
+            save_nxs_as_raw(reference_file, self.main_window.hdf5_dataset_path, raw_reference_file_fname)
+            reference_file = raw_reference_file_fname
         progress_callback.emit(50)
 
         if isinstance(correlate_file, (list, tuple)):
@@ -271,6 +277,12 @@ class DVC_runner(object):
             base = os.path.abspath(self.session_folder)
             raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
             save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname, progress_callback, 50, 90)
+            correlate_file = raw_correlate_file_fname
+        elif correlate_file.endswith(('.nxs', '.h5', '.hdf5')):
+            message_callback.emit("Converting correlate file to raw format")
+            base = os.path.abspath(self.session_folder)
+            raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
+            save_nxs_as_raw(correlate_file, self.main_window.hdf5_dataset_path, raw_correlate_file_fname)
             correlate_file = raw_correlate_file_fname
         progress_callback.emit(90)
 
