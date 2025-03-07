@@ -5288,7 +5288,14 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         os.close(fd)
 
         self.create_progress_window("Saving","Saving")
-  
+        results_folder = os.path.join(tempfile.tempdir, "Results")
+        raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+        raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+                
+        # Remove files if they exist
+        for file_path in [raw_reference_file_fname, raw_correlate_file_fname]:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         zip_worker = Worker(self.ZipDirectory, tempfile.tempdir, compress)
         if type(event) == QCloseEvent:
             zip_worker.signals.finished.connect(lambda: self.RemoveTemp(event))

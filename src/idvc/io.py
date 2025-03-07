@@ -236,8 +236,6 @@ class ImageDataCreator(object):
         **kwargs : dict
             - progress_callback (callable, optional): Function to emit progress updates
         """
-        print("load nxs")
-        print(self.target_z_extent)
         image_info = self.info_var
         progress_callback = kwargs.get('progress_callback')
 

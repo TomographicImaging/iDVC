@@ -237,7 +237,6 @@ class DVC_runner(object):
         - rigid_trans: rigid translation between the reference and correlation volumes
         - point0_world_coordinate: world coordinates of the starting point for the DVC analysis
         '''
-
         self.processes = []
         self.process_num = 0
         message_callback = kwargs.get('message_callback', PrintCallback())
@@ -259,31 +258,41 @@ class DVC_runner(object):
         progress_callback.emit(10)
         # Convert to raw if files are a list of tiffs
         if isinstance(reference_file, (list, tuple)):
-            message_callback.emit("Converting reference file to raw format")
             base = os.path.abspath(self.session_folder)
-            raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
-            save_tiff_stack_as_raw(reference_file, raw_reference_file_fname, progress_callback, 10, 50)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+            if not os.path.exists(raw_reference_file_fname):
+                message_callback.emit("Converting reference file to raw format")
+                save_tiff_stack_as_raw(reference_file, raw_reference_file_fname, progress_callback, 10, 50)
             reference_file = raw_reference_file_fname
         elif reference_file.endswith(('.nxs', '.h5', '.hdf5')):
-            message_callback.emit("Converting reference file to raw format")
             base = os.path.abspath(self.session_folder)
-            raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
-            save_nxs_as_raw(reference_file, self.main_window.hdf5_dataset_path, raw_reference_file_fname)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+            if not os.path.exists(raw_reference_file_fname):
+                message_callback.emit("Converting reference file to raw format")
+                save_nxs_as_raw(reference_file, self.main_window.hdf5_dataset_path, raw_reference_file_fname)
             reference_file = raw_reference_file_fname
         progress_callback.emit(50)
 
         if isinstance(correlate_file, (list, tuple)):
-            message_callback.emit("Converting correlate file to raw format")
             base = os.path.abspath(self.session_folder)
-            raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
-            save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname, progress_callback, 50, 90)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+            if not os.path.exists(raw_correlate_file_fname):
+                message_callback.emit("Converting correlate file to raw format")
+                save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname, progress_callback, 50, 90)
             correlate_file = raw_correlate_file_fname
+
         elif correlate_file.endswith(('.nxs', '.h5', '.hdf5')):
-            message_callback.emit("Converting correlate file to raw format")
             base = os.path.abspath(self.session_folder)
-            raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
-            save_nxs_as_raw(correlate_file, self.main_window.hdf5_dataset_path, raw_correlate_file_fname)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+            if not os.path.exists(raw_correlate_file_fname):
+                message_callback.emit("Converting correlate file to raw format")
+                save_nxs_as_raw(correlate_file, self.main_window.hdf5_dataset_path, raw_correlate_file_fname)
             correlate_file = raw_correlate_file_fname
+
         progress_callback.emit(90)
 
         message_callback.emit("Creating run configurations")
@@ -341,7 +350,6 @@ class DVC_runner(object):
                 for i, l in enumerate(f):
                     pass
             i+=1
-            #print(i)
             if i < points:
                 total_points += i
             else:
