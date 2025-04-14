@@ -1226,6 +1226,8 @@ def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
     Parameters:
     -----------
     nexus_file: Path to the input NeXus file.
+    dataset_path: str
+        Internal path in the NeXus file to the dataset.
     raw_file: Path to the output RAW file.
     """
     with h5py.File(nexus_file, "r") as f:
@@ -1233,13 +1235,29 @@ def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
             raise ValueError(f"Dataset '{dataset_path}' not found in {nexus_file}.")
         data = f[dataset_path]
         original_dtype = data.dtype
-        m, M = numpy.nanmin(data), numpy.nanmax(data)
-        if M - m == 0:
-            raise ValueError("Data is constant, cannot scale to uint16")
 
-        if original_dtype not in [numpy.uint8, numpy.uint16, numpy.int8, numpy.int16]:
+        if original_dtype in [numpy.uint8, numpy.uint16, numpy.int8, numpy.int16]:
+            with open(os.path.abspath(raw_file), 'wb') as f:
+                for i in range(data.shape[0]):
+                    slice_data = data[i:i+1] 
+                    slice_data.tofile(f)
+            return
+        
+        else:
+            for i in range(data.shape[0]):
+                slice_data = data[i:i+1]
+                if i == 0:
+                    m, M = numpy.nanmin(slice_data), numpy.nanmax(slice_data)
+                else:
+                    m = min(m, numpy.nanmin(slice_data))
+                    M = max(M, numpy.nanmax(slice_data))
+            if M - m == 0:
+                raise ValueError("Data is constant, cannot scale to uint16")
+        
             convert_to_dtype = numpy.uint16
-            data = ((data.astype(numpy.float32) - m) / (M - m)) * numpy.iinfo(convert_to_dtype).max
-
-        data.astype(numpy.uint16).tofile(raw_file)  
+            with open(os.path.abspath(raw_file), 'wb') as f:
+                for i in range(data.shape[0]):
+                    slice_data = data[i:i+1]
+                    slice_data = ((slice_data.astype(numpy.float32) - m) / (M - m)) * numpy.iinfo(convert_to_dtype).max
+                    slice_data.astype(numpy.uint16).tofile(f)  
     
