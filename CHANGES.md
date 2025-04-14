@@ -1,6 +1,9 @@
 # ChangeLog
 
 ## v25.0.0
+Bug fixes:
+* Edit the way `vol_bit_depth` is defined in TIFF reader #387
+
 Enhancements:
 - Adds nexus ".nxs" files reader #387
 
