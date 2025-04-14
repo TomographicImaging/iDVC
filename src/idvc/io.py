@@ -239,8 +239,6 @@ class ImageDataCreator(object):
         image_info = self.info_var
         progress_callback = kwargs.get('progress_callback')
 
-        bits_per_byte = 16
-
         if not dataset_path:
             raise ValueError("dataset_path must be specified for NeXus file")
         progress_callback.emit(10)
@@ -296,7 +294,10 @@ class ImageDataCreator(object):
             else:
                 raise ValueError(f"Resampling or cropping must be performed when loading an image.")
         
-            vol_bit_depth = data.dtype.itemsize * bits_per_byte
+            if data.dtype in ["int8", "uint8"]:
+                vol_bit_depth = 8
+            elif data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
+                vol_bit_depth = 16
             
             if image_info is not None:
                 image_info["vol_bit_depth"] = vol_bit_depth
@@ -660,8 +661,6 @@ def loadTif(*args, **kwargs):
     origin = kwargs.get('origin', (0, 0, 0))
     target_z_extent = kwargs.get('target_z_extent', (0, 0))
 
-    bits_per_byte = 16
-
     # time.sleep(0.1) #required so that progress window displays
     # progress_callback.emit(10)
     
@@ -719,8 +718,10 @@ def loadTif(*args, **kwargs):
 
         image_info['sampled'] = False
 
-    # this is dangerous as reader might not be defined!!!
-    vol_bit_depth = reader.GetBytesPerElement() * bits_per_byte
+    if image_data.dtype in ["int8", "uint8"]:
+        vol_bit_depth = 8
+    elif image_data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
+        vol_bit_depth = 16
 
     if image_info is not None:
         image_info["vol_bit_depth"] = vol_bit_depth
@@ -1006,10 +1007,8 @@ def saveRawImageData(**kwargs):
     if info_var is not None:
         if typecode == 0 or typecode == 1:
             info_var['vol_bit_depth'] = '8'
-            bytes_per_element = 1
         else:
             info_var['vol_bit_depth'] = '16'
-            bytes_per_element = 2
 
     # basic sanity check
     file_size = os.stat(fname).st_size
