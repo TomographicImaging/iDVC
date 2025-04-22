@@ -2,7 +2,7 @@
 
 ## v24.x.x
 Documentation:
-* Add GitHub link #
+* Add GitHub link #396
 
 ## v24.1.1
 Bug fixes:
