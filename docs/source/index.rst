@@ -21,5 +21,6 @@ GitHub repository: https://tomographicimaging.github.io/iDVC/.
    saving
    results
    executable
+   strain
    citations
    contact
