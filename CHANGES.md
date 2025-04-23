@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v24.x.x
+Bug fixes:
+* Adds 3D viewer docking option in the settings #398
+
 ## v24.1.1
 Bug fixes:
 * Fix abscissa order in graphs #372
