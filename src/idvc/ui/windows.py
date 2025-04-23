@@ -151,6 +151,8 @@ class VisualisationWidget(QtWidgets.QMainWindow):
             if self.parent.current_slice:
                 if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
                     self.frame.viewer.displaySlice(self.parent.current_slice)
+                    print("display slice")
+                    print("slice is",self.parent.current_slice)
 
 
         if self.viewer == viewer3D:

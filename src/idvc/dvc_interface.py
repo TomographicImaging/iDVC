@@ -1296,7 +1296,7 @@ It is used as a global starting point and a translation reference."
         self.registration_parameters = rp
 
     def createRegistrationViewer(self):
-        # print("Create reg viewer")
+        print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
@@ -1324,6 +1324,7 @@ It is used as a global starting point and a translation reference."
         #Clear for next image visualisation:
         self.orientation = None
         self.current_slice = None
+        self._addColorBarRegistration(self.vis_widget_reg.frame.viewer)
 
         self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
                                     self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
@@ -3923,6 +3924,29 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer.addActor(scalar_bar)
         else:
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
+
+    def _addColorBarRegistration(self, viewer):
+        # create the scalar_bar
+        scalar_bar = vtk.vtkScalarBarActor()
+        # scalar_bar.SetOrientationToHorizontal()
+        scalar_bar.SetOrientationToVertical()
+        scalar_bar.SetTitle('Difference v0-v1')
+        data = self.ref_image_data
+        lut2D = self._createLookupTableGrayscale()
+        scalar_bar.SetLookupTable(lut2D)
+        viewer.getRenderer().AddActor2D(scalar_bar)
+        print("I created the colorbar")
+
+    def _createLookupTableGrayscale(self):
+        lut = vtk.vtkLookupTable()
+        lut.SetNumberOfTableValues(256)
+        lut.SetRange(0.0, 1.0)  # Fixed range
+        lut.Build()
+        list(map(
+        lambda i: lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1.0),
+        range(256)
+    ))
+        return lut
 
     def createVectors2D(self, displ, viewer_widget):
         '''Creates displacement vectors in 2D
