@@ -1701,6 +1701,7 @@ It is used as a global starting point and a translation reference."
         - the widgets for setting point0, the registration box size and the translation are enabled
         - the full dimension (possibly downsampled) reference image is displayed on the viewer.
         """
+        print("confirming")
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         self.registration_parameters['start_registration_button'].setText("Restart Registration")
@@ -1714,9 +1715,11 @@ It is used as a global starting point and a translation reference."
         rp['set_auto_reg_button'].setVisible(False)
         rp['set_auto_reg_label'].setVisible(False)
         v.setInput3DData(self.ref_image_data)
+        self.scalar_bar.SetVisibility(False)
         v.style.UpdatePipeline()
         if rp['point_zero_entry'].text() != "":
             self.createPoint0(self.getPoint0WorldCoords())
+        
 
     def UpdateViewerSettingsPanelForRegistration(self):
         vs_widgets = self.visualisation_setting_widgets
@@ -2108,7 +2111,7 @@ It is used as a global starting point and a translation reference."
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
             self.progress_window.close()
-        
+        v.ren.Render()
         
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
@@ -3992,6 +3995,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         # Check if scalars exist in the data
 
         # Get the min and max scalar values
+        
+        
         cmin, cmax = scalars.GetRange()
         print(f"Updating color bar with range: {cmin} to {cmax}")
 
@@ -4000,7 +4005,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         if (cmin, cmax) != current_range:
             lut2D.SetTableRange(cmin, cmax)  # Set the new range based on the data
             self.scalar_bar.Modified()
-        
+            self.vis_widget_reg.frame.viewer.getRenderer().GetRenderWindow().Render()          
 
     def createVectors2D(self, displ, viewer_widget):
         '''Creates displacement vectors in 2D
