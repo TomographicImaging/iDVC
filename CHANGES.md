@@ -2,7 +2,7 @@
 
 ## v25.0.0
 Enhancements:
-* updated default values in Run DVC tab
+* updated default values in Run DVC tab #402
 
 ## v24.1.1
 Bug fixes:
