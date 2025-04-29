@@ -153,8 +153,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge',color='lightgrey')
         subplot.set_ylabel("Relative frequency (% points in run)", fontsize=self.fontsizes['label'])
         subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
-        subplot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.3f}')
-        subplot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.3f}')
+        subplot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.5g}')
+        subplot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.5g}')
         subplot.axvline(mean+std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth)
         x = np.linspace(min(array), max(array), 1000)
         gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
