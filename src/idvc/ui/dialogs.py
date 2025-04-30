@@ -65,6 +65,7 @@ class SettingsWindow(FormDialog):
         self.gpu_label = QLabel("Please set the size of your GPU memory.")
         self.gpu_size_label = QLabel("GPU Memory (GB): ")
         self.gpu_size_entry = QDoubleSpinBox()
+        self.gpu_size_entry.setEnabled(False)
 
         self.addSpanningWidget(self.gpu_label, 'gpu_label')
         self.addWidget(self.gpu_size_entry, self.gpu_size_label, 'gpu_size')
@@ -74,18 +75,25 @@ class SettingsWindow(FormDialog):
             self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
         else:
             self.gpu_size_entry.setValue(1.0)
+        self.gpu_size_entry.setValue(self.vis_size_entry.value())
+        # mirror the vis size entry
+        self.vis_size_entry.valueChanged.connect(self.gpu_size_entry.setValue)
 
         self.gpu_size_entry.setMaximum(64.0)
         self.gpu_size_entry.setMinimum(0.00)
         self.gpu_size_entry.setSingleStep(0.01)
 
 
-        self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
+        self.gpu_checkbox = QCheckBox("The GPU for volume render will be used if available.")
         self.gpu_checkbox.setChecked(True) #gpu is default
+        self.gpu_checkbox.setEnabled(False)
         if self.parent.settings.value("volume_mapper") == "cpu":
             self.gpu_checkbox.setChecked(False)
+        
+        self.copy_files_checkbox.setChecked(False)
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
+        
         self.addWidget(self.gpu_checkbox, '', 'gpu_checkbox')
 
 
