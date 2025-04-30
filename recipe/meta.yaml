@@ -45,7 +45,7 @@ requirements:
     - natsort
     - docopt
     - matplotlib
-    - openmp                # [osx]
+    - llvm-openmp                # [osx]
     - qdarkstyle
 
 about:
