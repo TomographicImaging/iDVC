@@ -1,5 +1,15 @@
 # ChangeLog
 
+## v25.0.0
+Bug fixes:
+* Edit the way `vol_bit_depth` is defined in TIFF reader #387
+
+Enhancements:
+- Adds nexus ".nxs" files reader #387
+
+Dependencies:
+* Add pyside2 and upgrade viewer version #387
+
 ## v24.1.1
 Bug fixes:
 * Fix abscissa order in graphs #372
