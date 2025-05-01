@@ -105,7 +105,7 @@ allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        """Creates an instance of the setting form dialog."""
+        """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
         self.threadpool = QThreadPool()
@@ -137,6 +137,10 @@ class MainWindow(QMainWindow):
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
         self.settings_menu.addAction(settings_action)
+
+        dock_viewer_action = QAction('Dock 3D viewer', self)
+        dock_viewer_action.triggered.connect(self.Dock3DViewer)
+        self.settings_menu.addAction(dock_viewer_action)
 
         # Create the Help menu
         help_menu = QMenu('Help', self)
@@ -244,6 +248,19 @@ class MainWindow(QMainWindow):
     def OpenSettings(self):
         """Shows the settings dialog."""
         self.settings_window.show()
+
+    def Dock3DViewer(self):
+        """Docks the 3D Viewer."""
+        print("docking the viewer")
+        if self.viewer3D_dock.isFloating():
+            self.viewer3D_dock.setFloating(False)
+        else:
+            self.warningDialog(
+                    window_title='Docking not necessary',
+                    message='The 3D viewer is already docked'
+                )
+
+        #self.dock_widget.show()
 
     def InitialiseSessionVars(self):
         self.config={}
