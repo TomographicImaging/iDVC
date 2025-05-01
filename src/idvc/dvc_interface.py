@@ -4955,6 +4955,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         widgetno += 1
 
         result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['vec_entry'].currentIndexChanged.connect(result_widgets['load_button'].click)
 
         result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
