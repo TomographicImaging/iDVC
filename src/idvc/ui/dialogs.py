@@ -106,12 +106,6 @@ class SettingsWindow(FormDialog):
             self.parent.copy_files = 0
             self.parent.settings.setValue("copy_files", 0)
 
-        if self.gpu_checkbox.isChecked():
-            self.parent.settings.setValue("volume_mapper", "gpu")
-            self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
-        else:
-            self.parent.settings.setValue("volume_mapper", "cpu")
-
         self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
 
         if self.parent.settings.value("first_app_load") != "False":
