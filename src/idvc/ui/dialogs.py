@@ -113,7 +113,7 @@ class SettingsWindow(FormDialog):
             self.parent.settings.setValue("first_app_load", "False")
             
         self.parent.settings.setValue("omp_threads", str(self.omp_threads_entry.value()))
-        self.close()
+        self.accept()
 
 
         #print(self.parent.settings.value("copy_files"))
@@ -121,4 +121,4 @@ class SettingsWindow(FormDialog):
         if self.parent.settings.value("first_app_load") != "False":
             self.parent.CreateSessionSelector("new window")
             self.parent.settings.setValue("first_app_load", "False")
-        self.close()
+        self.reject()
