@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v25.0.0
+Enhancements:
+* updated default values in Run DVC tab #402
+Bug fixes:
+* Adds 3D viewer docking option in the settings #398
+
+
 ## v24.1.1
 Bug fixes:
 * Fix abscissa order in graphs #372
