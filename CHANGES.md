@@ -1,6 +1,6 @@
 # ChangeLog
 
-## v25.0.0
+## v24.2.0
 Enhancements:
 * Update the viewer when the "view" dropdown in the results tab changes #403
 * Update default values in "Run DVC" tab #402
