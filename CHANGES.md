@@ -1,5 +1,9 @@
 # ChangeLog
 
+## v24.2.0
+Bug fixes:
+* Add scrollbar to docked widgets #405
+
 ## v24.1.1
 Bug fixes:
 * Fix abscissa order in graphs #372
