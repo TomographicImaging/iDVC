@@ -5,6 +5,7 @@ from PySide2.QtCore import *
 from PySide2.QtGui import *
 import numpy as np
 import os
+from eqt.ui.NoBorderScrollArea import NoBorderScrollArea
 
 
         
@@ -66,7 +67,9 @@ class RunResults(object):
         n = "subvol_points {}".format(self.subvol_points)
         return "RunResults:\n{}\n{}".format(a , n)
 
-def generateUIDockParameters(self, title): #copied from dvc_configurator.py
+
+
+def generateUIDockParameters(self, title, scrollable = True): #copied from dvc_configurator.py
     '''creates a dockable widget with a form layout group to add things to
 
     basically you can add widget to the returned groupBoxFormLayout and paramsGroupBox
@@ -77,7 +80,6 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     dockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
     dockWidget.setWindowTitle(title)
     dockWidgetContents = QWidget()
-
 
     # Add vertical layout to dock contents
     dockContentsVerticalLayout = QVBoxLayout(dockWidgetContents)
@@ -101,7 +103,13 @@ def generateUIDockParameters(self, title): #copied from dvc_configurator.py
     # Add elements to layout
     internalWidgetVerticalLayout.addWidget(paramsGroupBox)
     dockContentsVerticalLayout.addWidget(internalDockWidget)
-    dockWidget.setWidget(dockWidgetContents)
+
+    if scrollable == True:
+        scrollArea = NoBorderScrollArea(dockWidgetContents)
+        # Set scroll area as the final widget of the dock
+        dockWidget.setWidget(scrollArea)
+    else:
+        dockWidget.setWidget(dockWidgetContents)
 
     #        self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
     #        self.graphDockVL.addWidget(self.dockWidget)

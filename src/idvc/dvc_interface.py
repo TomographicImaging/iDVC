@@ -186,7 +186,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v24.0.1")
+        self.settings = QSettings("CCPi", "DVC Interface v24.1.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -398,7 +398,7 @@ class MainWindow(QMainWindow):
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_warning_label'])
 
         self.visualisation_setting_widgets = vs_widgets
-        
+
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
         vs_widgets = self.visualisation_setting_widgets
@@ -434,7 +434,7 @@ class MainWindow(QMainWindow):
         
         Saves the help text for all tabs.
         Adds a QLabel in the form of scrollable text."""
-        help_panel = generateUIDockParameters(self, "Help")
+        help_panel = generateUIDockParameters(self, "Help", scrollable = False)
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
         groupBox = help_panel[5]
