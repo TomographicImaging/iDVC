@@ -1,8 +1,12 @@
 # ChangeLog
 
 ## v24.2.0
+Enhancements:
+* Update default values in Run DVC tab #402
+
 Bug fixes:
 * Add scrollbar to docked widgets #405
+* Add 3D viewer docking option in the settings #398
 
 ## v24.1.1
 Bug fixes:

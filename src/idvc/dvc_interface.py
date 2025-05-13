@@ -105,7 +105,7 @@ allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        """Creates an instance of the setting form dialog."""
+        """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
         self.threadpool = QThreadPool()
@@ -137,6 +137,10 @@ class MainWindow(QMainWindow):
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
         self.settings_menu.addAction(settings_action)
+
+        dock_viewer_action = QAction('Dock 3D viewer', self)
+        dock_viewer_action.triggered.connect(self.Dock3DViewer)
+        self.settings_menu.addAction(dock_viewer_action)
 
         # Create the Help menu
         help_menu = QMenu('Help', self)
@@ -244,6 +248,19 @@ class MainWindow(QMainWindow):
     def OpenSettings(self):
         """Shows the settings dialog."""
         self.settings_window.show()
+
+    def Dock3DViewer(self):
+        """Docks the 3D Viewer."""
+        print("docking the viewer")
+        if self.viewer3D_dock.isFloating():
+            self.viewer3D_dock.setFloating(False)
+        else:
+            self.warningDialog(
+                    window_title='Docking not necessary',
+                    message='The 3D viewer is already docked'
+                )
+
+        #self.dock_widget.show()
 
     def InitialiseSessionVars(self):
         self.config={}
@@ -4293,7 +4310,7 @@ Future code development will introduce methods for better management of large di
         rdvc_widgets['run_max_displacement_label'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
         rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
-        rdvc_widgets['run_max_displacement_entry'].setValue(15)
+        rdvc_widgets['run_max_displacement_entry'].setValue(5)
         rdvc_widgets['run_max_displacement_entry'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_max_displacement_entry'])
         widgetno += 1
@@ -4313,7 +4330,7 @@ Translation only suffices for a quick, preliminary investigation.\nAdding rotati
         rdvc_widgets['run_ndof_entry'].addItem('3')
         rdvc_widgets['run_ndof_entry'].addItem('6')
         rdvc_widgets['run_ndof_entry'].addItem('12')
-        rdvc_widgets['run_ndof_entry'].setCurrentIndex(1)
+        rdvc_widgets['run_ndof_entry'].setCurrentIndex(2)
         rdvc_widgets['run_ndof_entry'].setToolTip(dof_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_ndof_entry'])
         widgetno += 1
@@ -4404,7 +4421,7 @@ This parameter has a strong effect on computation time, so be careful."
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
         rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
         rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
-        rdvc_widgets['subvol_points_spinbox'].setValue(10000)
+        rdvc_widgets['subvol_points_spinbox'].setValue(1000)
         rdvc_widgets['subvol_points_spinbox'].setToolTip(subvol_points_text)
 
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
