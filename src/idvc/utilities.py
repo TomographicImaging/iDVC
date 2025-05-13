@@ -75,6 +75,7 @@ def generateUIDockParameters(self, title, scrollable = True): #copied from dvc_c
     basically you can add widget to the returned groupBoxFormLayout and paramsGroupBox
     The returned dockWidget must be added with
     self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
+    A scoll area can be added to the widget by setting the flag to True.
     '''
     dockWidget = QDockWidget(self)
     dockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
@@ -106,7 +107,6 @@ def generateUIDockParameters(self, title, scrollable = True): #copied from dvc_c
 
     if scrollable == True:
         scrollArea = NoBorderScrollArea(dockWidgetContents)
-        # Set scroll area as the final widget of the dock
         dockWidget.setWidget(scrollArea)
     else:
         dockWidget.setWidget(dockWidgetContents)
