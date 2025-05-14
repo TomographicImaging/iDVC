@@ -1,10 +1,13 @@
 # ChangeLog
 
-## v25.0.0
+## v24.2.0
 Enhancements:
-* updated default values in Run DVC tab #402
+* Update the viewer when the "view" dropdown in the results tab changes #403
+* Update default values in "Run DVC" tab #402
+
 Bug fixes:
-* Adds 3D viewer docking option in the settings #398
+* Remove GPU size and GPU checkbox for volume render in settings #403
+* Add 3D viewer docking option in the settings #398
 
 
 ## v24.1.1
