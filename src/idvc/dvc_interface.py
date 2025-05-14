@@ -791,19 +791,10 @@ class MainWindow(QMainWindow):
     def view_image(self):
         self.ref_image_data = vtk.vtkImageData()
         self.image_info = dict()
-        if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
-            if self.settings.value("vis_size"):
-                if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
-                    target_size = float(self.settings.value("vis_size"))
-                else:
-                    target_size = (float(self.settings.value("gpu_size")))
-            else:
-                target_size = (float(self.settings.value("gpu_size")))
+        if self.settings.value("vis_size"):
+            target_size = float(self.settings.value("vis_size"))
         else:
-            if self.settings.value("vis_size"):
-                target_size = float(self.settings.value("vis_size"))
-            else:
-                target_size = 0.125
+            target_size = 0.125
         self.target_image_size = target_size
         
         ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
@@ -4981,6 +4972,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         widgetno += 1
 
         result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['vec_entry'].currentIndexChanged.connect(result_widgets['load_button'].click)
 
         result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
@@ -5267,11 +5259,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.config['pc_rotz'] = pc['pointcloud_rotation_z_entry'].text()
 
         #Downsampling level
-        if self.settings.value("gpu_size") is not None: 
-            self.config['gpu_size'] = self.settings.value("gpu_size")
-        else:
-            self.config['gpu_size'] = 1
-
         if self.settings.value("vis_size") is not None:
             self.config['vis_size'] = self.settings.value("vis_size")
         else:
@@ -5746,14 +5733,13 @@ Please select the new location of the file, or move it back to where it was orig
             if 'mask_file' in self.config:
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
-                if 'gpu_size' in self.config and 'vis_size' in self.config:
-                    if float(self.settings.value('gpu_size')) != float(self.config['gpu_size']) \
-                            or float(self.settings.value('vis_size')) != float(self.config['vis_size']):
+                if 'vis_size' in self.config:
+                    if float(self.settings.value('vis_size')) != float(self.config['vis_size']):
 
                         self.mask_load = False
 
-                        self.e('', '', "If you would like to load the mask, open the settings and change the GPU size field to {gpu_size}GB and the maximum visualisation size to {vis_size} GB.\
-    Then reload the session.".format(gpu_size=self.config['gpu_size'], vis_size = self.config['vis_size']))
+                        self.e('', '', "If you would like to load the mask, open the settings and change the maximum visualisation size to {vis_size} GB.\
+    Then reload the session.".format(vis_size = self.config['vis_size']))
                         error_title = "LOAD ERROR"
                         error_text = 'This session was saved with a different level of downsampling. This means the mask could not be loaded.'
                         self.displayFileErrorDialog(message=error_text, title=error_title)
