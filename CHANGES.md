@@ -6,9 +6,9 @@ Enhancements:
 * Update default values in "Run DVC" tab #402
 
 Bug fixes:
+* Add scrollbar to docked widgets #405
 * Remove GPU size and GPU checkbox for volume render in settings #403
 * Add 3D viewer docking option in the settings #398
-
 
 ## v24.1.1
 Bug fixes:
