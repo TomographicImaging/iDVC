@@ -8,7 +8,7 @@ from ccpi.viewer.CILViewer2D import (SLICE_ORIENTATION_XY,
 from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
 from ccpi.viewer.utils import *
 from ccpi.viewer.utils.error_handling import ErrorObserver
-from PySide2 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from idvc.ui.graphs_widgets import *
 import logging 

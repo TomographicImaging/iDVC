@@ -34,9 +34,9 @@ from ccpi.viewer.utils.conversion import (cilRawCroppedReader,
                                           Converter)
 from ccpi.viewer.ui.dialogs import RawInputDialog
 from eqt.threading import Worker
-from PySide2 import QtCore, QtGui
-from PySide2.QtCore import QThreadPool
-from PySide2.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
+from qtpy import QtCore, QtGui
+from qtpy.QtCore import QThreadPool
+from qtpy.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
                                QFormLayout, QGroupBox, QLabel, QLineEdit,
                                QMessageBox, QProgressDialog, QVBoxLayout,
                                QWidget)

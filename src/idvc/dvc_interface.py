@@ -16,11 +16,20 @@
 import os
 from openpyxl import load_workbook
 import sys
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import (QByteArray, QSettings, QSize, Qt,
                             QThreadPool)
-from PySide2.QtGui import QCloseEvent, QKeySequence, QRegExpValidator
-from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
+try:
+    from qtpy.QtCore import QRegExp
+except ImportError:
+    from qtpy.QtCore import QRegularExpression as QRegExp
+try:
+    from qtpy.QtGui import QRegExpValidator
+except ImportError:
+    from qtpy.QtGui import QRegularExpressionValidator as QRegExpValidator
+
+from qtpy.QtGui import QCloseEvent, QKeySequence
+from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QDockWidget,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
@@ -134,7 +143,7 @@ class MainWindow(QMainWindow):
         self.menuBar().addMenu(self.settings_menu)
         
         #save_action.setShortcut(QKeySequence.Save)
-        settings_action = QAction('Settings', self)
+        settings_action = QAction('App Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
         self.settings_menu.addAction(settings_action)
 
@@ -180,7 +189,10 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(exit_action)
 
         # # Window dimensions
-        geometry = qApp.desktop().availableGeometry(self)
+        try:
+            geometry = qApp.desktop().availableGeometry(self)
+        except AttributeError:
+            geometry = qApp.primaryScreen().availableGeometry()
 
         border = 50
         self.setGeometry(border, border, geometry.width()-2*border, geometry.height()-2*border)
@@ -5495,7 +5507,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
             # Try to centre the load session window
-            # from PySide2.QtGui import QScreen
+            # from qtpy.QtGui import QScreen
             # geom = QScreen().availableGeometry()
             # print (geom)
             # centrex = geom.topRight().x() + geom.topLeft().x()

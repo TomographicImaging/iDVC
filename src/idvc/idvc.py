@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui
 import os, sys
 import logging
 import argparse

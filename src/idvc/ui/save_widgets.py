@@ -1,7 +1,7 @@
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from qtpy import QtWidgets, QtCore
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy.QtGui import *
 import shutil
 import os
 import tempfile
