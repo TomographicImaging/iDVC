@@ -4372,6 +4372,16 @@ Tricubic is computationally expensive, but is the choice if strain is of interst
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_iterp_type_entry'])
         widgetno += 1
 
+        rdvc_widgets['strain_label'] = QLabel(groupBox)
+        rdvc_widgets['strain_label'].setText("Strain:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['strain_label'])
+        rdvc_widgets['strain_field'] = QCheckBox(groupBox)
+        rdvc_widgets['strain_field'].setChecked(False)
+        rdvc_widgets['strain_field'].setText("save in result files")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['strain_field'])
+        rdvc_widgets['strain_field'].clicked.connect(self._calculate_strains)
+        widgetno += 1
+
         # Add horizonal seperator
         separators.append(QFrame(groupBox))
         separators[-1].setFrameShape(QFrame.HLine)
@@ -4526,6 +4536,9 @@ This parameter has a strong effect on computation time, so be careful."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
         self.rdvc_widgets = rdvc_widgets
+
+    def _calculate_strains(self):
+        print("calculating strains")
 
     def _set_num_points_in_run_to_all(self):
         if hasattr(self, 'pc_no_points'):
