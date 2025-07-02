@@ -1,8 +1,9 @@
 # ChangeLog
 
-## v24.x.x
+## v25.0.0
 Documentation:
 * Add GitHub link #396
+* Add documentation on strain #396
 
 ## v24.1.1
 Bug fixes:
