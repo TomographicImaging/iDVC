@@ -23,6 +23,8 @@ dvc_result_0-sw25.Lstr.csv
 ...
 n	x	y	z	u_fit	v_fit	w_fit	pts_in_sw	sw_radius	exx	eyy	ezz	exy	eyz	exz	ep1	ep2	ep3
 
+**Help information**
+
 Type ```strain``` on the command line to generate the following help information
 
 strain dvc.disp.csv
@@ -36,7 +38,7 @@ strain dvc.disp.csv dvc.sort.csv
 - use dvc output file dvc.disp.csv and sort file dvc.sort.csv, use default run settings
 - use either a .sort file created during the dvc run or one created during an initial strain run
 
-**Default settings:**
+Default settings:
 
 strain window = 25 points (min = 10, max = 75)
 
