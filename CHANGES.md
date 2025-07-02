@@ -1,6 +1,15 @@
 # ChangeLog
 
 ## v25.0.0
+Enhancements:
+* Update the viewer when the "view" dropdown in the results tab changes #403
+* Update default values in "Run DVC" tab #402
+
+Bug fixes:
+* Add scrollbar to docked widgets #405
+* Remove GPU size and GPU checkbox for volume render in settings #403
+* Add 3D viewer docking option in the settings #398
+
 Documentation:
 * Add GitHub link #396
 * Add documentation on strain #396

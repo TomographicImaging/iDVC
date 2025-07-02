@@ -105,7 +105,7 @@ allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        """Creates an instance of the setting form dialog."""
+        """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
         self.threadpool = QThreadPool()
@@ -137,6 +137,10 @@ class MainWindow(QMainWindow):
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
         self.settings_menu.addAction(settings_action)
+
+        dock_viewer_action = QAction('Dock 3D viewer', self)
+        dock_viewer_action.triggered.connect(self.Dock3DViewer)
+        self.settings_menu.addAction(dock_viewer_action)
 
         # Create the Help menu
         help_menu = QMenu('Help', self)
@@ -186,7 +190,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v24.0.1")
+        self.settings = QSettings("CCPi", "DVC Interface v24.1.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -244,6 +248,19 @@ class MainWindow(QMainWindow):
     def OpenSettings(self):
         """Shows the settings dialog."""
         self.settings_window.show()
+
+    def Dock3DViewer(self):
+        """Docks the 3D Viewer."""
+        print("docking the viewer")
+        if self.viewer3D_dock.isFloating():
+            self.viewer3D_dock.setFloating(False)
+        else:
+            self.warningDialog(
+                    window_title='Docking not necessary',
+                    message='The 3D viewer is already docked'
+                )
+
+        #self.dock_widget.show()
 
     def InitialiseSessionVars(self):
         self.config={}
@@ -398,7 +415,7 @@ class MainWindow(QMainWindow):
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_warning_label'])
 
         self.visualisation_setting_widgets = vs_widgets
-        
+
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
         vs_widgets = self.visualisation_setting_widgets
@@ -434,7 +451,7 @@ class MainWindow(QMainWindow):
         
         Saves the help text for all tabs.
         Adds a QLabel in the form of scrollable text."""
-        help_panel = generateUIDockParameters(self, "Help")
+        help_panel = generateUIDockParameters(self, "Help", scrollable = False)
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
         groupBox = help_panel[5]
@@ -774,19 +791,10 @@ class MainWindow(QMainWindow):
     def view_image(self):
         self.ref_image_data = vtk.vtkImageData()
         self.image_info = dict()
-        if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
-            if self.settings.value("vis_size"):
-                if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
-                    target_size = float(self.settings.value("vis_size"))
-                else:
-                    target_size = (float(self.settings.value("gpu_size")))
-            else:
-                target_size = (float(self.settings.value("gpu_size")))
+        if self.settings.value("vis_size"):
+            target_size = float(self.settings.value("vis_size"))
         else:
-            if self.settings.value("vis_size"):
-                target_size = float(self.settings.value("vis_size"))
-            else:
-                target_size = 0.125
+            target_size = 0.125
         self.target_image_size = target_size
         
         ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
@@ -4293,7 +4301,7 @@ Future code development will introduce methods for better management of large di
         rdvc_widgets['run_max_displacement_label'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
         rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
-        rdvc_widgets['run_max_displacement_entry'].setValue(15)
+        rdvc_widgets['run_max_displacement_entry'].setValue(5)
         rdvc_widgets['run_max_displacement_entry'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_max_displacement_entry'])
         widgetno += 1
@@ -4313,7 +4321,7 @@ Translation only suffices for a quick, preliminary investigation.\nAdding rotati
         rdvc_widgets['run_ndof_entry'].addItem('3')
         rdvc_widgets['run_ndof_entry'].addItem('6')
         rdvc_widgets['run_ndof_entry'].addItem('12')
-        rdvc_widgets['run_ndof_entry'].setCurrentIndex(1)
+        rdvc_widgets['run_ndof_entry'].setCurrentIndex(2)
         rdvc_widgets['run_ndof_entry'].setToolTip(dof_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_ndof_entry'])
         widgetno += 1
@@ -4404,7 +4412,7 @@ This parameter has a strong effect on computation time, so be careful."
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
         rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
         rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
-        rdvc_widgets['subvol_points_spinbox'].setValue(10000)
+        rdvc_widgets['subvol_points_spinbox'].setValue(1000)
         rdvc_widgets['subvol_points_spinbox'].setToolTip(subvol_points_text)
 
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
@@ -4964,6 +4972,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         widgetno += 1
 
         result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['vec_entry'].currentIndexChanged.connect(result_widgets['load_button'].click)
 
         result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
@@ -5250,11 +5259,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.config['pc_rotz'] = pc['pointcloud_rotation_z_entry'].text()
 
         #Downsampling level
-        if self.settings.value("gpu_size") is not None: 
-            self.config['gpu_size'] = self.settings.value("gpu_size")
-        else:
-            self.config['gpu_size'] = 1
-
         if self.settings.value("vis_size") is not None:
             self.config['vis_size'] = self.settings.value("vis_size")
         else:
@@ -5729,14 +5733,13 @@ Please select the new location of the file, or move it back to where it was orig
             if 'mask_file' in self.config:
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
-                if 'gpu_size' in self.config and 'vis_size' in self.config:
-                    if float(self.settings.value('gpu_size')) != float(self.config['gpu_size']) \
-                            or float(self.settings.value('vis_size')) != float(self.config['vis_size']):
+                if 'vis_size' in self.config:
+                    if float(self.settings.value('vis_size')) != float(self.config['vis_size']):
 
                         self.mask_load = False
 
-                        self.e('', '', "If you would like to load the mask, open the settings and change the GPU size field to {gpu_size}GB and the maximum visualisation size to {vis_size} GB.\
-    Then reload the session.".format(gpu_size=self.config['gpu_size'], vis_size = self.config['vis_size']))
+                        self.e('', '', "If you would like to load the mask, open the settings and change the maximum visualisation size to {vis_size} GB.\
+    Then reload the session.".format(vis_size = self.config['vis_size']))
                         error_title = "LOAD ERROR"
                         error_text = 'This session was saved with a different level of downsampling. This means the mask could not be loaded.'
                         self.displayFileErrorDialog(message=error_text, title=error_title)
