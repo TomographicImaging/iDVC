@@ -1,5 +1,5 @@
-Calculate the strain
-**************
+Strain calculation from the command line
+****************************************
 Whether you have installed the full gui, or just the executable, you are able to calculate the strain from the command line, in the environment where you have installed it.
 Please note that the latest release does not allow the calculation of the strain in the GUI, this needs to be implemented in the command line.
 
@@ -23,3 +23,40 @@ dvc_result_0-sw25.Lstr.csv
 ...
 n	x	y	z	u_fit	v_fit	w_fit	pts_in_sw	sw_radius	exx	eyy	ezz	exy	eyz	exz	ep1	ep2	ep3
 
+Type ```strain``` on the command line to generate the following help information
+
+strain dvc.disp.csv
+
+- use dvc output file dvc.disp.csv, create sort file, use default run settings
+- it is much more efficient to read an existing .sort file, particularly for large point clouds
+- strain will run with only a .disp file, creating a .sort file in the process for subsequent use
+
+strain dvc.disp.csv dvc.sort.csv
+
+- use dvc output file dvc.disp.csv and sort file dvc.sort.csv, use default run settings
+- use either a .sort file created during the dvc run or one created during an initial strain run
+
+**Default settings:**
+
+strain window = 25 points (min = 10, max = 75)
+
+- reset with -sw flag
+
+objmin threshold = 1 (min = 0.0001, max = 1)
+
+-  values lower than the threshold are used in filling the strain window
+- the default value of 1.0 passes all convergent points into the strain window
+- reset with -t flag
+
+output Lagrangian strain values
+
+- adjust output with -E, -D, and -A flags
+
+Command line flags: 
+
+- -sw 30 specify a target number of points for the strain windows (e.g. 30) 
+- -t 0.01 specify the objmin threshold value (e.g. 0.01)
+- -r refill strain window with points passing threshold (may expand strain window size)
+- -E add engineering strain output (default is Lagrangian)
+- -D add displacement gradient tensor output
+- -A write all output files
