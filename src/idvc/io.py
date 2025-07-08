@@ -731,7 +731,7 @@ def loadTif(*args, **kwargs):
     elif image_data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
         vol_bit_depth = 16
 
-    if (numpy.issubdtype(image_data.dtype , numpy.signedinteger) or numpy.issubdtype(image_data.dtype , numpy.floating)) and numpy.any(data < 0):
+    if (numpy.issubdtype(image_data.dtype , numpy.signedinteger) or numpy.issubdtype(image_data.dtype , numpy.floating)) and numpy.any(image_data < 0):
         warnings.warn(
         f"Data of type {image_data.dtype} contains negative values. "
         f"Negative values will be reinterpreted as positive values when cast to uint16.",
