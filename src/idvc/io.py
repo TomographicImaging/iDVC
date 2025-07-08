@@ -1221,7 +1221,7 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
 def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
     """
     Converts a NeXus (.nxs) file to a raw binary file using the dataset path stored in 'dataset_path'.
-    If the dataset is not uint8 or uint16, it will be scaled to uint16.
+    If the dataset is not uint8 or uint16, it will be scaled to uint16. Negative values are clipped to zero.
 
     Parameters:
     -----------
@@ -1236,7 +1236,7 @@ def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
         data = f[dataset_path]
         original_dtype = data.dtype
 
-        if original_dtype in [numpy.uint8, numpy.uint16, numpy.int8, numpy.int16]:
+        if original_dtype in [numpy.uint8, numpy.uint16]:
             with open(os.path.abspath(raw_file), 'wb') as f:
                 for i in range(data.shape[0]):
                     slice_data = data[i:i+1] 
@@ -1244,6 +1244,9 @@ def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
             return
         
         else:
+            if numpy.issubdtype(original_dtype, numpy.signedinteger) or numpy.issubdtype(original_dtype, numpy.floating):
+                print("Clipping data negative values to zero.")
+                data = numpy.clip(data, 0, None)
             for i in range(data.shape[0]):
                 slice_data = data[i:i+1]
                 if i == 0:
