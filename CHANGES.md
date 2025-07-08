@@ -1,11 +1,17 @@
 # ChangeLog
 
 ## v25.0.0
+Enhancements:
+* Adds nexus ".nxs" files reader #387
+* Update the viewer when the "view" dropdown in the results tab changes #403
+* Update default values in "Run DVC" tab #402
+
 Bug fixes:
 * Edit the way `vol_bit_depth` is defined in TIFF reader #387
-
-Enhancements:
-- Adds nexus ".nxs" files reader #387
+* Fix statistical analysis graphs for 1 data point #419
+* Add scrollbar to docked widgets #405
+* Remove GPU size and GPU checkbox for volume render in settings #403
+* Add 3D viewer docking option in the settings #398
 
 Dependencies:
 * Add pyside2 and upgrade viewer version #387

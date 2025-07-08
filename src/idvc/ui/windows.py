@@ -69,12 +69,7 @@ class VisualisationWidget(QtWidgets.QMainWindow):
        
     def displayImageData(self):
         self.createEmptyFrame()
-        if self.viewer == viewer3D:
-            #set volume mapper according to user settings:
-            if self.parent.settings.value("volume_mapper") == "cpu":
-                self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
-                self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
-        elif self.viewer == viewer2D:
+        if self.viewer == viewer2D:
             self.frame.viewer.style.htext = """
             Mouse Interactions:
                 - Slice: Mouse Scroll
