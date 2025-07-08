@@ -191,7 +191,7 @@ class ImageDataCreator(object):
                 main_window, message=error_text, title=error_title, 
                 detailed_message='File format is not supported. Accepted formats include: .hdf5, .mhd, .mha, .npy, .nxs, .tif, .raw')
             return
-
+    
         main_window.progress_window.setValue(10)
 
         # connect signals and slots
@@ -208,6 +208,7 @@ class ImageDataCreator(object):
         
         main_window.threadpool = QThreadPool()
         main_window.threadpool.start(image_worker)
+
 
     def HDF5InputDialog_onOk_redefined(self, dialog):
         dialog.getHDF5Attributes()
@@ -1220,7 +1221,7 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
 def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
     """
     Converts a NeXus (.nxs) file to a raw binary file using the dataset path stored in 'dataset_path'.
-    If the dataset is not uint8 or uint16, it will be scaled to uint16. Negative values are clipped to zero.
+    If the dataset is not uint8 or uint16, it will be scaled to uint16.
 
     Parameters:
     -----------
@@ -1243,9 +1244,6 @@ def save_nxs_as_raw(nexus_file, dataset_path, raw_file):
             return
         
         else:
-            if numpy.issubdtype(original_dtype, numpy.signedinteger) or numpy.issubdtype(original_dtype, numpy.floating):
-                print("Clipping data negative values to zero.")
-                data = numpy.clip(data, 0, None)
             for i in range(data.shape[0]):
                 slice_data = data[i:i+1]
                 if i == 0:
