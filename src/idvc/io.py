@@ -566,7 +566,6 @@ def loadNpyImage(**kwargs):
             else:
                 image_info['sampled'] = True
         # print("Header", header_length)
-        # print("vol_bit_depth", vol_bit_depth)
 
     elif crop_image:
         reader = cilNumpyCroppedReader()
