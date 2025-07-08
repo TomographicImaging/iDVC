@@ -7,6 +7,7 @@ Enhancements:
 * Update default values in "Run DVC" tab #402
 
 Bug fixes:
+* Add casting of int8 and int16 in TIFF conversion to raw #387
 * Edit the way `vol_bit_depth` is defined in TIFF reader #387
 * Fix statistical analysis graphs for 1 data point #419
 * Add scrollbar to docked widgets #405
