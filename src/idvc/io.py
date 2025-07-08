@@ -1206,7 +1206,7 @@ def save_tiff_stack_as_raw(filenames: list, output_fname: str, progress_callback
             reader.SetFileName(el)
             reader.Update()
             slice_data = Converter.vtk2numpy(reader.GetOutput())
-            if slice_data.dtype not in [numpy.uint8, numpy.uint16, numpy.int8, numpy.int16]:
+            if slice_data.dtype not in [numpy.uint8, numpy.uint16]:
                 # scale to uint16
                 convert_to_dtype = numpy.uint16
                 # rescale as float32
