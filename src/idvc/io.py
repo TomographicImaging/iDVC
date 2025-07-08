@@ -613,6 +613,11 @@ def loadNpyImage(**kwargs):
         else:
             vol_bit_depth = None  # in this case we can't run the DVC code
             output_image = None
+            if numpy.issubdtype(numpy_array.dtype , numpy.signedinteger) or numpy.issubdtype(numpy_array.dtype , numpy.floating):
+                warnings.warn(
+                f"Cast data of type {numpy_array.dtype} to uint8 or uint16 before proceeding.",
+                RuntimeWarning
+                )
             return
 
         if image_info is not None:
