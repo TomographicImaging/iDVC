@@ -2,7 +2,8 @@
 
 ## v25.0.0
 Enhancements:
-* Adds nexus ".nxs" files reader #387
+* Add nexus ".nxs" files reader #387
+* Add warning for casting of nagative values in nxs and TIFF #387
 * Update the viewer when the "view" dropdown in the results tab changes #403
 * Update default values in "Run DVC" tab #402
 

@@ -43,6 +43,7 @@ from PySide2.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
                                QMessageBox, QProgressDialog, QVBoxLayout,
                                QWidget)
 import logging
+import warnings
 
 logger = logging.getLogger(__name__)
 # ImageCreator class
@@ -300,6 +301,13 @@ class ImageDataCreator(object):
             elif data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
                 vol_bit_depth = 16
             
+            if (numpy.issubdtype(data.dtype , numpy.signedinteger) or numpy.issubdtype(data.dtype , numpy.floating)) and numpy.any(data < 0):
+                warnings.warn(
+                f"Data of type {data.dtype} contains negative values. "
+                f"Negative values will be reinterpreted as positive values when cast to uint16.",
+                RuntimeWarning
+                )
+         
             if image_info is not None:
                 image_info["vol_bit_depth"] = vol_bit_depth
                 image_info["shape"] = shape
@@ -723,6 +731,13 @@ def loadTif(*args, **kwargs):
     elif image_data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
         vol_bit_depth = 16
 
+    if (numpy.issubdtype(image_data.dtype , numpy.signedinteger) or numpy.issubdtype(image_data.dtype , numpy.floating)) and numpy.any(data < 0):
+        warnings.warn(
+        f"Data of type {image_data.dtype} contains negative values. "
+        f"Negative values will be reinterpreted as positive values when cast to uint16.",
+        RuntimeWarning
+        )
+                
     if image_info is not None:
         image_info["vol_bit_depth"] = vol_bit_depth
         image_info["shape"] = shape
