@@ -162,8 +162,13 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.legend(loc='upper right')
 
     def _addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label, linestyle):
-        "Draws a line plot in 'subplot'. Adds labels and sets user-defined properties."
-        subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
+        "Draws a line plot in 'subplot' or a marker for a single data point. Adds labels and sets user-defined properties."
+        if len(xpoints) == 1:
+        # Only one point: draw it as a marker
+            subplot.plot(xpoints, ypoints, color=color, marker='o', linestyle='None',
+                     label=label, linewidth=self.linewidth)
+        else:
+            subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
         subplot.set_ylabel(ylabel + " (pixels)", fontsize=self.fontsizes['label'])
         subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
 
