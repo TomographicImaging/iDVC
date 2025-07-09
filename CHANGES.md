@@ -2,7 +2,7 @@
 
 ## v25.0.0
 Enhancements:
-* Add nexus ".nxs" files reader #387
+* Add nexus ".nxs" files reader and converter into raw for the dvc_runner #387
 * Removes raw (temporary) files created from nxs and TIFF from the session folder #387
 * Connect error dialog to run_dvc worker #387
 * Add warning for casting of nagative values in nxs and TIFF #387
