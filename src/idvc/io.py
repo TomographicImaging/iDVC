@@ -212,6 +212,10 @@ class ImageDataCreator(object):
 
 
     def HDF5InputDialog_onOk_redefined(self, dialog):
+        """
+        Redefines the ok button in the HDF5 input dialog. It returns if the file has been read before.
+        Else, it stores the dataset path as an attribute and starts the worker.
+        """
         dialog.getHDF5Attributes()
         if dialog.hdf5_attrs == {}:
             return
@@ -224,6 +228,7 @@ class ImageDataCreator(object):
         self.createProgressWindowAndNxsWorker()
         
     def createProgressWindowAndNxsWorker(self):
+        """Creates a progress window and starts the worker to load the nexus file."""
         createProgressWindow(self.main_window, "Converting", "Converting Image")
         self.image_worker = Worker(self.loadNxs, dataset_path = self.main_window.hdf5_dataset_path)
 
@@ -261,9 +266,6 @@ class ImageDataCreator(object):
                     getProgress, progress_callback=progress_callback))
                 reader.Update()
                 self.output_image.ShallowCopy(reader.GetOutput())
-
-                header_length = reader.GetFileHeaderLength()
-                print("Length of header: ", header_length)
 
                 if image_info is not None:
                     image_info['isBigEndian'] = reader.GetBigEndian()
@@ -574,7 +576,6 @@ def loadNpyImage(**kwargs):
                 image_info['sampled'] = False
             else:
                 image_info['sampled'] = True
-        # print("Header", header_length)
 
     elif crop_image:
         reader = cilNumpyCroppedReader()
