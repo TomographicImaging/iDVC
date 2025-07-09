@@ -4774,6 +4774,7 @@ This parameter has a strong effect on computation time, so be careful."
             #TODO: test this and see if we need to stop the worker, or if not returning anything is enough
 
     def run_external_code(self, error = None):
+        "The error signal of the setup worker is connected to a dialog."
         if error == "subvolume error":
             self.progress_window.setValue(100)
             self.warningDialog("Minimum number of sampling points in subvolume value higher than maximum", window_title="Value Error")
@@ -4807,6 +4808,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         setup.signals.progress.connect(self.progress)
         # should connect also the error message
         setup.signals.finished.connect(self.dvc_runner.run_dvc)
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, self)
+        setup.signals.error.connect(ff)
         self.threadpool.start(setup)
         # self.dvc_runner.run_dvc()
 
