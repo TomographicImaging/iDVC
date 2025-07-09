@@ -5156,6 +5156,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
 
     def SaveSession(self, text_value, compress, event):
+        """Saves a software session. If raw files are created from nxs or TIFF input files"
+        they are removed from the session folder."""
         # Save window geometry and state of dockwindows
         # https://doc.qt.io/qt-5/qwidget.html#saveGeometry
         g = self.saveGeometry()
@@ -5300,7 +5302,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
         raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
                 
-        # Remove files if they exist
         for file_path in [raw_reference_file_fname, raw_correlate_file_fname]:
             if os.path.exists(file_path):
                 os.remove(file_path)
