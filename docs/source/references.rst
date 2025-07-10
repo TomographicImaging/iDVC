@@ -1,5 +1,5 @@
 References
-*********
+**********
 
 Some useful references for iDVC are listed below.
 
