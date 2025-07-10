@@ -11,6 +11,9 @@ Bug fixes:
 * Remove GPU size and GPU checkbox for volume render in settings #403
 * Add 3D viewer docking option in the settings #398
 
+Documentation:
+* Add link to magma dataset #426
+
 ## v24.1.1
 Bug fixes:
 * Fix abscissa order in graphs #372
