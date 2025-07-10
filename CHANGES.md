@@ -7,7 +7,7 @@ Enhancements:
 
 Bug fixes:
 * Fix statistical analysis graphs for 1 data point #419
-* Add scrollbar to docked widgets #405 with correct darkstyle #
+* Add scrollbar to docked widgets #405 with correct darkstyle #425
 * Remove GPU size and GPU checkbox for volume render in settings #403
 * Add 3D viewer docking option in the settings #398
 
