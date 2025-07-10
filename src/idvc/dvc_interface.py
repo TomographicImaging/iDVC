@@ -461,7 +461,7 @@ class MainWindow(QMainWindow):
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["Please use 'mha', 'mhd', npy', 'raw' or 'TIFF' images.\n"
+        self.help_text = ["Please use 'hdf5', 'mha', 'mhd', npy', 'nxs', 'raw' or 'TIFF' images.\n"
         "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append(
@@ -795,6 +795,8 @@ class MainWindow(QMainWindow):
         msg.exec_()
 
     def view_image(self):
+        """Called when the view image button is clicked in the first tab, or
+        when a session is loaded."""
         self.ref_image_data = vtk.vtkImageData()
         self.image_info = dict()
         if self.settings.value("vis_size"):
@@ -802,9 +804,9 @@ class MainWindow(QMainWindow):
         else:
             target_size = 0.125
         self.target_image_size = target_size
-        
-        ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
-        finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
+        image_data_creator = ImageDataCreator(self, self.image[0], self.ref_image_data, info_var = self.image_info, resample= True, target_size = target_size)
+        image_data_creator.createImageData(convert_raw = True,  
+        finish_fn = partial(self.save_image_info, "ref"), output_dir='.')
 
     def save_image_info(self, image_type):
         """Sets the value of the registration box size to the 1/10 of the max dimension."""
@@ -863,7 +865,8 @@ class MainWindow(QMainWindow):
                 self.dvc_input_image[0] = image_file
                 if os.path.splitext(self.image[0][0])[1] in ['.mhd', '.mha']: #need to call create image data so we read header and save image to file w/o header
                     self.temp_image_data = vtk.vtkImageData()
-                    ImageDataCreator.createImageData(self, self.image[1], self.temp_image_data, info_var=self.image_info, convert_raw=True,  finish_fn=partial(
+                    image_data_creator = ImageDataCreator(self, self.image[1], self.temp_image_data, info_var=self.image_info) 
+                    image_data_creator.createImageData(convert_raw=True,  finish_fn=partial(
                         self.save_image_info, "corr"), output_dir='.')
             elif image_type == "corr":
                 self.dvc_input_image[1] = image_file
@@ -1801,14 +1804,16 @@ It is used as a global starting point and a translation reference."
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
             if previous_reg_box_extent != reg_box_extent: # If registration box is changed need to update the cropped images.
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1853,8 +1858,8 @@ It is used as a global starting point and a translation reference."
         z_extent = self.target_cropped_image_z_extent
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image,
-                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
+        image_data_creator = ImageDataCreator(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image, crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent)
+        image_data_creator.createImageData(finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
         """It shows the registration difference volume in the viewer and sets up the tab for the registration. 
@@ -4784,6 +4789,7 @@ This parameter has a strong effect on computation time, so be careful."
             #TODO: test this and see if we need to stop the worker, or if not returning anything is enough
 
     def run_external_code(self, error = None):
+        "The error signal of the setup worker is connected to a dialog."
         if error == "subvolume error":
             self.progress_window.setValue(100)
             self.warningDialog("Minimum number of sampling points in subvolume value higher than maximum", window_title="Value Error")
@@ -4817,6 +4823,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         setup.signals.progress.connect(self.progress)
         # should connect also the error message
         setup.signals.finished.connect(self.dvc_runner.run_dvc)
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, self)
+        setup.signals.error.connect(ff)
         self.threadpool.start(setup)
         # self.dvc_runner.run_dvc()
 
@@ -5165,6 +5174,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
 
     def SaveSession(self, text_value, compress, event):
+        """Saves a software session. If raw files are created from nxs or TIFF input files"
+        they are removed from the session folder."""
         # Save window geometry and state of dockwindows
         # https://doc.qt.io/qt-5/qwidget.html#saveGeometry
         g = self.saveGeometry()
@@ -5305,7 +5316,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         os.close(fd)
 
         self.create_progress_window("Saving","Saving")
-  
+        results_folder = os.path.join(tempfile.tempdir, "Results")
+        raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+        raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+                
+        for file_path in [raw_reference_file_fname, raw_correlate_file_fname]:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         zip_worker = Worker(self.ZipDirectory, tempfile.tempdir, compress)
         if type(event) == QCloseEvent:
             zip_worker.signals.finished.connect(lambda: self.RemoveTemp(event))
