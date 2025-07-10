@@ -12,7 +12,7 @@ Bug fixes:
 * Add 3D viewer docking option in the settings #398
 
 Documentation:
-* Add link to magma dataset #426
+* Add link to magma dataset and references #426
 
 ## v24.1.1
 Bug fixes:
