@@ -303,9 +303,9 @@ class ImageDataCreator(object):
             elif data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
                 vol_bit_depth = 16
             
-            if (numpy.issubdtype(data.dtype , numpy.signedinteger) or numpy.issubdtype(data.dtype , numpy.floating)) and numpy.any(data < 0):
+            if numpy.issubdtype(data.dtype , numpy.signedinteger) or numpy.issubdtype(data.dtype , numpy.floating):
                 warnings.warn(
-                f"Data of type {data.dtype} contains negative values. "
+                f"Data of type {data.dtype} may contain negative values. "
                 f"Negative values will be reinterpreted as positive values when cast to uint16.",
                 RuntimeWarning
                 )
@@ -732,14 +732,18 @@ def loadTif(*args, **kwargs):
 
         image_info['sampled'] = False
 
-    if image_data.dtype in ["int8", "uint8"]:
-        vol_bit_depth = 8
-    elif image_data.dtype in ["int16", "uint16", "int32", "uint32", "float32", "float64"]:
-        vol_bit_depth = 16
+    dtype = reader.GetOutputVTKType()
+    print(dtype)
 
-    if (numpy.issubdtype(image_data.dtype , numpy.signedinteger) or numpy.issubdtype(image_data.dtype , numpy.floating)) and numpy.any(image_data < 0):
+    if dtype in [vtk.VTK_CHAR, vtk.VTK_UNSIGNED_CHAR]:
+        vol_bit_depth = 8
+    elif dtype in [vtk.VTK_SHORT, vtk.VTK_UNSIGNED_SHORT, vtk.VTK_INT, vtk.VTK_UNSIGNED_INT,vtk.VTK_FLOAT, vtk.VTK_DOUBLE]:
+        vol_bit_depth = 16
+    print(vol_bit_depth)
+        
+    if dtype in [vtk.VTK_CHAR, vtk.VTK_SHORT, vtk.VTK_INT] or dtype in [vtk.VTK_FLOAT, vtk.VTK_DOUBLE]:
         warnings.warn(
-        f"Data of type {image_data.dtype} contains negative values. "
+        f"Data of type {dtype} may contain negative values. "
         f"Negative values will be reinterpreted as positive values when cast to uint16.",
         RuntimeWarning
         )
