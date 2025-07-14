@@ -14,7 +14,7 @@ Bug fixes:
 * Add casting of int8 and int16 in TIFF conversion to raw #387
 * Edit the way `vol_bit_depth` is defined in TIFF reader #387
 * Fix statistical analysis graphs for 1 data point #419
-* Add scrollbar to docked widgets #405
+* Add scrollbar to docked widgets #405 with correct darkstyle #425
 * Remove GPU size and GPU checkbox for volume render in settings #403
 * Add 3D viewer docking option in the settings #398
 

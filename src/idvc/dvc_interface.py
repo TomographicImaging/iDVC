@@ -416,6 +416,9 @@ class MainWindow(QMainWindow):
 
         self.visualisation_setting_widgets = vs_widgets
 
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.viewer_settings_panel[1])
+
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
         vs_widgets = self.visualisation_setting_widgets
@@ -635,6 +638,9 @@ class MainWindow(QMainWindow):
         si_widgets['view_button'].clicked.connect(self.view_and_load_images)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
+        
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.select_image_panel[1])
 
         self.si_widgets = si_widgets
     
@@ -1305,6 +1311,9 @@ It is used as a global starting point and a translation reference."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
         self.registration_parameters = rp
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.registration_panel[1])
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -2345,6 +2354,9 @@ It is used as a global starting point and a translation reference."
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.mask_panel[1])
+
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
             self.warningDialog(window_title="Attention", 
@@ -2739,9 +2751,7 @@ It is used as a global starting point and a translation reference."
         # Create widget for dock contents
         self.dockWidget = QWidget(self.pointCloudDockWidgetContents)
 
-        scroll_area_point_cloud = QScrollArea()
-        scroll_area_point_cloud.setWidgetResizable(True)
-        scroll_area_point_cloud.setWidget(self.dockWidget)
+        scroll_area_point_cloud = NoBorderScrollArea(self.dockWidget)
 
         # Add vertical layout to dock widget
         self.graphWidgetVL = QVBoxLayout(self.dockWidget)
@@ -3098,6 +3108,8 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         pc['pc_points_value'] = QLabel("0")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
+
+        scroll_area_point_cloud.apply_qdarkstyle_to_buttons(self.dockWidget)
 
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
@@ -4532,6 +4544,9 @@ This parameter has a strong effect on computation time, so be careful."
 
         self.rdvc_widgets = rdvc_widgets
 
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.run_dvc_panel[1])
+
     def _set_num_points_in_run_to_all(self):
         if hasattr(self, 'pc_no_points'):
             maxpoints = int(self.pc_no_points)
@@ -4988,6 +5003,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
      
     def show_run_pcs(self):
         #show pointcloud files in list
