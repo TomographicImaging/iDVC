@@ -733,13 +733,11 @@ def loadTif(*args, **kwargs):
         image_info['sampled'] = False
 
     dtype = reader.GetOutputVTKType()
-    print(dtype)
 
     if dtype in [vtk.VTK_CHAR, vtk.VTK_UNSIGNED_CHAR]:
         vol_bit_depth = 8
     elif dtype in [vtk.VTK_SHORT, vtk.VTK_UNSIGNED_SHORT, vtk.VTK_INT, vtk.VTK_UNSIGNED_INT,vtk.VTK_FLOAT, vtk.VTK_DOUBLE]:
         vol_bit_depth = 16
-    print(vol_bit_depth)
         
     if dtype in [vtk.VTK_CHAR, vtk.VTK_SHORT, vtk.VTK_INT] or dtype in [vtk.VTK_FLOAT, vtk.VTK_DOUBLE]:
         warnings.warn(
