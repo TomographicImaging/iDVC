@@ -101,6 +101,8 @@ import logging
 from idvc.utils.AutomaticRegistration import AutomaticRegistration
 from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
+import warnings
+
 allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
@@ -3603,41 +3605,61 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
         Stores the pointcloud in a temporary txt file, whose path is stored in 'self.roi'.
         """
+        print("inside load")
+        self.pc_no_points = 0
+        self.polydata_masker = cilNumpyPointCloudToPolyData()
+        
+
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
+        filename = os.path.basename(pointcloud_file)
+        path = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+        self.roi = path
         progress_callback = kwargs.get('progress_callback', None)
         progress_callback.emit(20)
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
         
-        if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
-            points = np.loadtxt(pointcloud_file)
-        elif pointcloud_file.endswith('.csv'):
-            with tempfile.NamedTemporaryFile(delete=False, mode='w+', suffix='.csv', newline='', encoding='utf-8') as temp_file:
-                with open(pointcloud_file, 'r', encoding='utf-8-sig') as f:
-                    lines = f.readlines()
-                temp_file.writelines(lines)
-                temp_file_path = temp_file.name
-            points = np.genfromtxt(temp_file_path, delimiter=',', dtype=float)
-            os.remove(temp_file_path)
-        elif pointcloud_file.endswith('.xlsx'):
-            workbook = load_workbook(pointcloud_file, read_only=True)
-            sheet = workbook.active
-            points = np.array(list(sheet.values))
-        elif pointcloud_file.endswith('.inp'):
-            points =  extract_point_cloud_from_inp_file(args[0])
-        filename = os.path.basename(pointcloud_file)
-        path = os.path.abspath(os.path.join(tempfile.tempdir, filename))
-        np.savetxt(path, points,fmt=('%d','%f','%f','%f'))
-        self.roi = path
-
-        # except ValueError as ve:
-        #     print(ve)
-        #     return
-
-        self.pc_no_points = np.shape(points)[0]
+        try:
+            if pointcloud_file.endswith('.txt', '.roi'):
+                points = np.loadtxt(pointcloud_file)
+            elif pointcloud_file.endswith('.csv'):
+                with tempfile.NamedTemporaryFile(delete=False, mode='w+', suffix='.csv', newline='', encoding='utf-8') as temp_file:
+                    with open(pointcloud_file, 'r', encoding='utf-8-sig') as f:
+                        lines = f.readlines()
+                    temp_file.writelines(lines)
+                    temp_file_path = temp_file.name
+                points = np.genfromtxt(temp_file_path, delimiter=',', dtype=float)
+                os.remove(temp_file_path)
+            elif pointcloud_file.endswith('.xlsx'):
+                workbook = load_workbook(pointcloud_file, read_only=True)
+                sheet = workbook.active
+                points = np.array(list(sheet.values))
+            elif pointcloud_file.endswith('.inp'):
+                points =  extract_point_cloud_from_inp_file(args[0])
+            else:
+                warnings.warn(f"Unsupported file format: {pointcloud_file}")
+            
+        except Exception as e:
+            warnings.warn(f"Failed to load point cloud: {e}")
+            return
+        
+        points = np.asarray(points)
+        print("points", points)
+        
+        if points.size == 0:
+            warnings.warn("No points found in file.")
+            open(path, 'w').close()  # write empty file
+        elif points.ndim == 1:
+            np.savetxt(path, [points], fmt=('%d', '%f', '%f', '%f'))
+        elif points.ndim == 2:
+            np.savetxt(path, points, fmt=('%d', '%f', '%f', '%f'))
+        
+        
+        self.pc_no_points = points.shape[0] if points.ndim == 2 else 1
+        print(self.pc_no_points,"self.pc_no_points")
         progress_callback.emit(50)
-        self.polydata_masker = cilNumpyPointCloudToPolyData()
+        
         self.polydata_masker.SetData(points)
         self.polydata_masker.Update()
         progress_callback.emit(80)
