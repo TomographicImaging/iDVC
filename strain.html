@@ -1,0 +1,206 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strain calculation from the command line &mdash; iDVC  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=b3ba4146"></script>
+      <script src="_static/doctools.js?v=888ff710"></script>
+      <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Example datasets" href="example_datasets.html" />
+    <link rel="prev" title="DVC Executable" href="executable.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            iDVC
+              <img src="_static/DVCIconSquare.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="viewer.html">Datasets &amp; Visualisation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="dvc_steps.html">DVC Configuration Steps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="saving.html">Saving &amp; Exporting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">DVC Results</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executable.html">DVC Executable</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Strain calculation from the command line</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#help-information">Help information</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="example_datasets.html">Example datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citations.html">Citations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="references.html">References</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contact.html">Mailing List</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">iDVC</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Strain calculation from the command line</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/strain.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="strain-calculation-from-the-command-line">
+<h1>Strain calculation from the command line<a class="headerlink" href="#strain-calculation-from-the-command-line" title="Permalink to this heading"></a></h1>
+<p>The strain can be calculated from the command line, within the environment where iDVC is installed. This holds with the full GUI but also for the executable DVC core code.
+Please note that the latest release does not allow the calculation of the strain from the GUI directly.</p>
+<p>The DVC results are saved in the folder “Results”, which is generated by running the DVC code, either in the GUI or in the executable. Navigate in the results folder from the command line.
+Note that this is generated in the GUI only after a session is saved.</p>
+<p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">Results</span></code></p>
+<p>From this folder, in the terminal, type</p>
+<p><code class="docutils literal notranslate"><span class="pre">strain</span>&#160; <span class="pre">dvc_result_0.disp</span></code></p>
+<p>where the result file ending with “.disp” could have a different name in a bulk run.
+This command creates 2 strain output files calculated from the displacement file: “dvc_result_0.sort.csv” and “dvc_result_0-sw25.Lstr.csv”.
+The following fields are included in the latter.</p>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">n</span></code></dt><dd><p>Index of the subvolume or point.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">x</span></code>, <code class="docutils literal notranslate"><span class="pre">y</span></code>, <code class="docutils literal notranslate"><span class="pre">z</span></code></dt><dd><p>Coordinates of the center of the subvolume (in voxels units).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">u_fit</span></code></dt><dd><p>Displacement in the x-direction.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">v_fit</span></code></dt><dd><p>Displacement in the y-direction.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">w_fit</span></code></dt><dd><p>Displacement in the z-direction.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">pts_in_sw</span></code></dt><dd><p>Number of points in the subvolume.</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">sw_radius</span></code></dt><dd><p>Radius (half-size) of the subvolume used for correlation (in voxels).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">exx</span></code></dt><dd><p>Normal strain in the x-direction (∂u/∂x).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">eyy</span></code></dt><dd><p>Normal strain in the y-direction (∂v/∂y).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ezz</span></code></dt><dd><p>Normal strain in the z-direction (∂w/∂z).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">exy</span></code></dt><dd><p>Shear strain in the xy-plane (½(∂u/∂y + ∂v/∂x)).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">eyz</span></code></dt><dd><p>Shear strain in the yz-plane (½(∂v/∂z + ∂w/∂y)).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">exz</span></code></dt><dd><p>Shear strain in the xz-plane (½(∂u/∂z + ∂w/∂x)).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ep1</span></code></dt><dd><p>First principal strain (maximum eigenvalue of the strain tensor).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ep2</span></code></dt><dd><p>Second principal strain (middle eigenvalue of the strain tensor).</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">ep3</span></code></dt><dd><p>Third principal strain (minimum eigenvalue of the strain tensor).</p>
+</dd>
+</dl>
+<section id="help-information">
+<h2>Help information<a class="headerlink" href="#help-information" title="Permalink to this heading"></a></h2>
+<p>Type <code class="docutils literal notranslate"><span class="pre">`strain`</span></code> on the command line to generate the following help information</p>
+<p>strain dvc.disp.csv</p>
+<ul class="simple">
+<li><p>use dvc output file dvc.disp.csv, create sort file, use default run settings</p></li>
+<li><p>it is much more efficient to read an existing .sort file, particularly for large point clouds</p></li>
+<li><p>strain will run with only a .disp file, creating a .sort file in the process for subsequent use</p></li>
+</ul>
+<p>strain dvc.disp.csv dvc.sort.csv</p>
+<ul class="simple">
+<li><p>use dvc output file dvc.disp.csv and sort file dvc.sort.csv, use default run settings</p></li>
+<li><p>use either a .sort file created during the dvc run or one created during an initial strain run</p></li>
+</ul>
+<p>Default settings:</p>
+<p>strain window = 25 points (min = 10, max = 75)</p>
+<ul class="simple">
+<li><p>reset with -sw flag</p></li>
+</ul>
+<p>objmin threshold = 1 (min = 0.0001, max = 1)</p>
+<ul class="simple">
+<li><p>values lower than the threshold are used in filling the strain window</p></li>
+<li><p>the default value of 1.0 passes all convergent points into the strain window</p></li>
+<li><p>reset with -t flag</p></li>
+</ul>
+<p>output Lagrangian strain values</p>
+<ul class="simple">
+<li><p>adjust output with -E, -D, and -A flags</p></li>
+</ul>
+<p>Command line flags:</p>
+<ul class="simple">
+<li><p>-sw 30 specify a target number of points for the strain windows (e.g. 30)</p></li>
+<li><p>-t 0.01 specify the objmin threshold value (e.g. 0.01)</p></li>
+<li><p>-r refill strain window with points passing threshold (may expand strain window size)</p></li>
+<li><p>-E add engineering strain output (default is Lagrangian)</p></li>
+<li><p>-D add displacement gradient tensor output</p></li>
+<li><p>-A write all output files</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="executable.html" class="btn btn-neutral float-left" title="DVC Executable" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="example_datasets.html" class="btn btn-neutral float-right" title="Example datasets" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, UKRI STFC.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
