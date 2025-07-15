@@ -1,6 +1,7 @@
 # ChangeLog
 
 ## v25.0.0
+
 Enhancements:
 * Add nexus ".nxs" files reader and converter into raw for the dvc_runner #387
 * Improve `ImageDataCreator` #387
@@ -19,11 +20,12 @@ Bug fixes:
 * Add 3D viewer docking option in the settings #398
 
 Documentation:
+* Add GitHub link #396
+* Add documentation on strain #396
 * Add link to magma dataset and references #426
 
 Dependencies:
 * Add pyside2 and upgrade viewer version #387
-
 
 ## v24.1.1
 Bug fixes:
