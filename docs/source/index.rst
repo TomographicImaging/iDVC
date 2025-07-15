@@ -6,7 +6,7 @@
 Welcome to iDVC's documentation!
 ================================
 The iDVC app allows a digital volume correlation analysis to be performed on a reference and correlate image volume. You may either use a point cloud you have pre-created, or generate this in the app.
-This manual was written at the time of version 24.1.1 being the latest release.
+This manual was written at the time of version 25.0.0 being the latest release.
 
 GitHub repository: https://tomographicimaging.github.io/iDVC/.
 
