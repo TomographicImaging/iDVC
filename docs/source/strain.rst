@@ -1,5 +1,5 @@
-Strain calculation from the command line
-****************************************
+Strain calculation
+******************
 The strain can be calculated from the command line, within the environment where iDVC is installed. This holds with the full GUI but also for the executable DVC core code. 
 Please note that the latest release does not allow the calculation of the strain from the GUI directly.
 
