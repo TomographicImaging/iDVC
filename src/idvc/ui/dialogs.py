@@ -61,33 +61,10 @@ class SettingsWindow(FormDialog):
         self.addSpanningWidget(separator,'separator')
         self.addSpanningWidget(self.adv_settings_label, 'advanced_label')
 
-
-        self.gpu_label = QLabel("Please set the size of your GPU memory.")
-        self.gpu_size_label = QLabel("GPU Memory (GB): ")
-        self.gpu_size_entry = QDoubleSpinBox()
-
-        self.addSpanningWidget(self.gpu_label, 'gpu_label')
-        self.addWidget(self.gpu_size_entry, self.gpu_size_label, 'gpu_size')
-
-        # populate from settings
-        if self.parent.settings.value("gpu_size") is not None:
-            self.gpu_size_entry.setValue(float(self.parent.settings.value("gpu_size")))
-        else:
-            self.gpu_size_entry.setValue(1.0)
-
-        self.gpu_size_entry.setMaximum(64.0)
-        self.gpu_size_entry.setMinimum(0.00)
-        self.gpu_size_entry.setSingleStep(0.01)
-
-
-        self.gpu_checkbox = QCheckBox("Use GPU for volume render. (Recommended) ")
-        self.gpu_checkbox.setChecked(True) #gpu is default
-        if self.parent.settings.value("volume_mapper") == "cpu":
-            self.gpu_checkbox.setChecked(False)
+        
+        self.copy_files_checkbox.setChecked(False)
         if hasattr(self.parent, 'copy_files'):
             self.copy_files_checkbox.setChecked(self.parent.copy_files)
-        self.addWidget(self.gpu_checkbox, '', 'gpu_checkbox')
-
 
         self.omp_threads_entry = QSpinBox(self)
         # default OMP_THREADS based on the number of cores available
@@ -129,13 +106,6 @@ class SettingsWindow(FormDialog):
             self.parent.copy_files = 0
             self.parent.settings.setValue("copy_files", 0)
 
-        if self.gpu_checkbox.isChecked():
-            self.parent.settings.setValue("volume_mapper", "gpu")
-            self.parent.vis_widget_3D.volume_mapper = vtk.vtkSmartVolumeMapper()
-        else:
-            self.parent.settings.setValue("volume_mapper", "cpu")
-
-        self.parent.settings.setValue("gpu_size", float(self.gpu_size_entry.value()))
         self.parent.settings.setValue("vis_size", float(self.vis_size_entry.value()))
 
         if self.parent.settings.value("first_app_load") != "False":

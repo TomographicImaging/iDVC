@@ -105,7 +105,7 @@ allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        """Creates an instance of the setting form dialog."""
+        """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
         self.threadpool = QThreadPool()
@@ -137,6 +137,10 @@ class MainWindow(QMainWindow):
         settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
         self.settings_menu.addAction(settings_action)
+
+        dock_viewer_action = QAction('Dock 3D viewer', self)
+        dock_viewer_action.triggered.connect(self.Dock3DViewer)
+        self.settings_menu.addAction(dock_viewer_action)
 
         # Create the Help menu
         help_menu = QMenu('Help', self)
@@ -186,7 +190,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v24.0.1")
+        self.settings = QSettings("CCPi", "DVC Interface v24.1.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -244,6 +248,19 @@ class MainWindow(QMainWindow):
     def OpenSettings(self):
         """Shows the settings dialog."""
         self.settings_window.show()
+
+    def Dock3DViewer(self):
+        """Docks the 3D Viewer."""
+        print("docking the viewer")
+        if self.viewer3D_dock.isFloating():
+            self.viewer3D_dock.setFloating(False)
+        else:
+            self.warningDialog(
+                    window_title='Docking not necessary',
+                    message='The 3D viewer is already docked'
+                )
+
+        #self.dock_widget.show()
 
     def InitialiseSessionVars(self):
         self.config={}
@@ -398,7 +415,10 @@ class MainWindow(QMainWindow):
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_warning_label'])
 
         self.visualisation_setting_widgets = vs_widgets
-        
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.viewer_settings_panel[1])
+
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
         vs_widgets = self.visualisation_setting_widgets
@@ -434,14 +454,14 @@ class MainWindow(QMainWindow):
         
         Saves the help text for all tabs.
         Adds a QLabel in the form of scrollable text."""
-        help_panel = generateUIDockParameters(self, "Help")
+        help_panel = generateUIDockParameters(self, "Help", scrollable = False)
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
         groupBox = help_panel[5]
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["Please use 'mha', 'mhd', npy', 'raw' or 'TIFF' images.\n"
+        self.help_text = ["Please use 'hdf5', 'mha', 'mhd', npy', 'nxs', 'raw' or 'TIFF' images.\n"
         "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append(
@@ -618,6 +638,9 @@ class MainWindow(QMainWindow):
         si_widgets['view_button'].clicked.connect(self.view_and_load_images)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
+        
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.select_image_panel[1])
 
         self.si_widgets = si_widgets
     
@@ -772,25 +795,18 @@ class MainWindow(QMainWindow):
         msg.exec_()
 
     def view_image(self):
+        """Called when the view image button is clicked in the first tab, or
+        when a session is loaded."""
         self.ref_image_data = vtk.vtkImageData()
         self.image_info = dict()
-        if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
-            if self.settings.value("vis_size"):
-                if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
-                    target_size = float(self.settings.value("vis_size"))
-                else:
-                    target_size = (float(self.settings.value("gpu_size")))
-            else:
-                target_size = (float(self.settings.value("gpu_size")))
+        if self.settings.value("vis_size"):
+            target_size = float(self.settings.value("vis_size"))
         else:
-            if self.settings.value("vis_size"):
-                target_size = float(self.settings.value("vis_size"))
-            else:
-                target_size = 0.125
+            target_size = 0.125
         self.target_image_size = target_size
-        
-        ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
-        finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
+        image_data_creator = ImageDataCreator(self, self.image[0], self.ref_image_data, info_var = self.image_info, resample= True, target_size = target_size)
+        image_data_creator.createImageData(convert_raw = True,  
+        finish_fn = partial(self.save_image_info, "ref"), output_dir='.')
 
     def save_image_info(self, image_type):
         """Sets the value of the registration box size to the 1/10 of the max dimension."""
@@ -849,7 +865,8 @@ class MainWindow(QMainWindow):
                 self.dvc_input_image[0] = image_file
                 if os.path.splitext(self.image[0][0])[1] in ['.mhd', '.mha']: #need to call create image data so we read header and save image to file w/o header
                     self.temp_image_data = vtk.vtkImageData()
-                    ImageDataCreator.createImageData(self, self.image[1], self.temp_image_data, info_var=self.image_info, convert_raw=True,  finish_fn=partial(
+                    image_data_creator = ImageDataCreator(self, self.image[1], self.temp_image_data, info_var=self.image_info) 
+                    image_data_creator.createImageData(convert_raw=True,  finish_fn=partial(
                         self.save_image_info, "corr"), output_dir='.')
             elif image_type == "corr":
                 self.dvc_input_image[1] = image_file
@@ -1294,6 +1311,9 @@ It is used as a global starting point and a translation reference."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
         self.registration_parameters = rp
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.registration_panel[1])
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -1784,14 +1804,16 @@ It is used as a global starting point and a translation reference."
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
             if previous_reg_box_extent != reg_box_extent: # If registration box is changed need to update the cropped images.
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1836,8 +1858,8 @@ It is used as a global starting point and a translation reference."
         z_extent = self.target_cropped_image_z_extent
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image,
-                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
+        image_data_creator = ImageDataCreator(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image, crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent)
+        image_data_creator.createImageData(finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
         """It shows the registration difference volume in the viewer and sets up the tab for the registration. 
@@ -2332,6 +2354,9 @@ It is used as a global starting point and a translation reference."
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.mask_panel[1])
+
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
             self.warningDialog(window_title="Attention", 
@@ -2726,9 +2751,7 @@ It is used as a global starting point and a translation reference."
         # Create widget for dock contents
         self.dockWidget = QWidget(self.pointCloudDockWidgetContents)
 
-        scroll_area_point_cloud = QScrollArea()
-        scroll_area_point_cloud.setWidgetResizable(True)
-        scroll_area_point_cloud.setWidget(self.dockWidget)
+        scroll_area_point_cloud = NoBorderScrollArea(self.dockWidget)
 
         # Add vertical layout to dock widget
         self.graphWidgetVL = QVBoxLayout(self.dockWidget)
@@ -3085,6 +3108,8 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         pc['pc_points_value'] = QLabel("0")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
+
+        scroll_area_point_cloud.apply_qdarkstyle_to_buttons(self.dockWidget)
 
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
@@ -4293,7 +4318,7 @@ Future code development will introduce methods for better management of large di
         rdvc_widgets['run_max_displacement_label'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
         rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
-        rdvc_widgets['run_max_displacement_entry'].setValue(15)
+        rdvc_widgets['run_max_displacement_entry'].setValue(5)
         rdvc_widgets['run_max_displacement_entry'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_max_displacement_entry'])
         widgetno += 1
@@ -4313,7 +4338,7 @@ Translation only suffices for a quick, preliminary investigation.\nAdding rotati
         rdvc_widgets['run_ndof_entry'].addItem('3')
         rdvc_widgets['run_ndof_entry'].addItem('6')
         rdvc_widgets['run_ndof_entry'].addItem('12')
-        rdvc_widgets['run_ndof_entry'].setCurrentIndex(1)
+        rdvc_widgets['run_ndof_entry'].setCurrentIndex(2)
         rdvc_widgets['run_ndof_entry'].setToolTip(dof_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_ndof_entry'])
         widgetno += 1
@@ -4404,7 +4429,7 @@ This parameter has a strong effect on computation time, so be careful."
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
         rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
         rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
-        rdvc_widgets['subvol_points_spinbox'].setValue(10000)
+        rdvc_widgets['subvol_points_spinbox'].setValue(1000)
         rdvc_widgets['subvol_points_spinbox'].setToolTip(subvol_points_text)
 
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
@@ -4518,6 +4543,9 @@ This parameter has a strong effect on computation time, so be careful."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
         self.rdvc_widgets = rdvc_widgets
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.run_dvc_panel[1])
 
     def _set_num_points_in_run_to_all(self):
         if hasattr(self, 'pc_no_points'):
@@ -4761,6 +4789,7 @@ This parameter has a strong effect on computation time, so be careful."
             #TODO: test this and see if we need to stop the worker, or if not returning anything is enough
 
     def run_external_code(self, error = None):
+        "The error signal of the setup worker is connected to a dialog."
         if error == "subvolume error":
             self.progress_window.setValue(100)
             self.warningDialog("Minimum number of sampling points in subvolume value higher than maximum", window_title="Value Error")
@@ -4794,6 +4823,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         setup.signals.progress.connect(self.progress)
         # should connect also the error message
         setup.signals.finished.connect(self.dvc_runner.run_dvc)
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, self)
+        setup.signals.error.connect(ff)
         self.threadpool.start(setup)
         # self.dvc_runner.run_dvc()
 
@@ -4964,12 +4996,16 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         widgetno += 1
 
         result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['vec_entry'].currentIndexChanged.connect(result_widgets['load_button'].click)
 
         result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
      
     def show_run_pcs(self):
         #show pointcloud files in list
@@ -5138,6 +5174,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
 
     def SaveSession(self, text_value, compress, event):
+        """Saves a software session. If raw files are created from nxs or TIFF input files"
+        they are removed from the session folder."""
         # Save window geometry and state of dockwindows
         # https://doc.qt.io/qt-5/qwidget.html#saveGeometry
         g = self.saveGeometry()
@@ -5250,11 +5288,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.config['pc_rotz'] = pc['pointcloud_rotation_z_entry'].text()
 
         #Downsampling level
-        if self.settings.value("gpu_size") is not None: 
-            self.config['gpu_size'] = self.settings.value("gpu_size")
-        else:
-            self.config['gpu_size'] = 1
-
         if self.settings.value("vis_size") is not None:
             self.config['vis_size'] = self.settings.value("vis_size")
         else:
@@ -5283,7 +5316,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         os.close(fd)
 
         self.create_progress_window("Saving","Saving")
-  
+        results_folder = os.path.join(tempfile.tempdir, "Results")
+        raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+        raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+                
+        for file_path in [raw_reference_file_fname, raw_correlate_file_fname]:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         zip_worker = Worker(self.ZipDirectory, tempfile.tempdir, compress)
         if type(event) == QCloseEvent:
             zip_worker.signals.finished.connect(lambda: self.RemoveTemp(event))
@@ -5729,14 +5768,13 @@ Please select the new location of the file, or move it back to where it was orig
             if 'mask_file' in self.config:
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
-                if 'gpu_size' in self.config and 'vis_size' in self.config:
-                    if float(self.settings.value('gpu_size')) != float(self.config['gpu_size']) \
-                            or float(self.settings.value('vis_size')) != float(self.config['vis_size']):
+                if 'vis_size' in self.config:
+                    if float(self.settings.value('vis_size')) != float(self.config['vis_size']):
 
                         self.mask_load = False
 
-                        self.e('', '', "If you would like to load the mask, open the settings and change the GPU size field to {gpu_size}GB and the maximum visualisation size to {vis_size} GB.\
-    Then reload the session.".format(gpu_size=self.config['gpu_size'], vis_size = self.config['vis_size']))
+                        self.e('', '', "If you would like to load the mask, open the settings and change the maximum visualisation size to {vis_size} GB.\
+    Then reload the session.".format(vis_size = self.config['vis_size']))
                         error_title = "LOAD ERROR"
                         error_text = 'This session was saved with a different level of downsampling. This means the mask could not be loaded.'
                         self.displayFileErrorDialog(message=error_text, title=error_title)

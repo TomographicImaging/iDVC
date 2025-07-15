@@ -1,9 +1,31 @@
 # ChangeLog
 
 ## v25.0.0
+
+Enhancements:
+* Add nexus ".nxs" files reader and converter into raw for the dvc_runner #387
+* Improve `ImageDataCreator` #387
+* Removes raw (temporary) files created from nxs and TIFF from the session folder #387
+* Connect error dialog to run_dvc worker #387
+* Add warning for casting of negative values in nxs and TIFF #387
+* Update the viewer when the "view" dropdown in the results tab changes #403
+* Update default values in "Run DVC" tab #402
+
+Bug fixes:
+* Add casting of int8 and int16 in TIFF conversion to raw #387
+* Edit the way `vol_bit_depth` is defined in TIFF reader #387
+* Fix statistical analysis graphs for 1 data point #419
+* Add scrollbar to docked widgets #405 with correct darkstyle #425
+* Remove GPU size and GPU checkbox for volume render in settings #403
+* Add 3D viewer docking option in the settings #398
+
 Documentation:
 * Add GitHub link #396
 * Add documentation on strain #396
+* Add link to magma dataset and references #426
+
+Dependencies:
+* Add pyside2 and upgrade viewer version #387
 
 ## v24.1.1
 Bug fixes:

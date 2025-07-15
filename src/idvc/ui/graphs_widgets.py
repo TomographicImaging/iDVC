@@ -153,8 +153,8 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.bar(bins[:-1], relative_counts, width=bin_widths, align='edge',color='lightgrey')
         subplot.set_ylabel("Relative frequency (% points in run)", fontsize=self.fontsizes['label'])
         subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
-        subplot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.3f}')
-        subplot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.3f}')
+        subplot.axvline(mean, color=self.color_list[0], linestyle='--', linewidth=self.linewidth, label=f'mean = {mean:.5g}')
+        subplot.axvline(mean-std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth, label=f'std = {std:.5g}')
         subplot.axvline(mean+std, color=self.color_list[1], linestyle='--', linewidth=self.linewidth)
         x = np.linspace(min(array), max(array), 1000)
         gaussian = norm.pdf(x, mean, std) * (bins[1] - bins[0]) *100
@@ -162,8 +162,13 @@ Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
         subplot.legend(loc='upper right')
 
     def _addStatisticalAnalysisPlot(self, subplot, xlabel, ylabel, xpoints, ypoints, color, label, linestyle):
-        "Draws a line plot in 'subplot'. Adds labels and sets user-defined properties."
-        subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
+        "Draws a line plot in 'subplot' or a marker for a single data point. Adds labels and sets user-defined properties."
+        if len(xpoints) == 1:
+        # Only one point: draw it as a marker
+            subplot.plot(xpoints, ypoints, color=color, marker='o', linestyle='None',
+                     label=label, linewidth=self.linewidth)
+        else:
+            subplot.plot(xpoints, ypoints, color=color, linestyle=linestyle, linewidth=self.linewidth, label=label)
         subplot.set_ylabel(ylabel + " (pixels)", fontsize=self.fontsizes['label'])
         subplot.set_xlabel(xlabel, fontsize=self.fontsizes['label'])
 
