@@ -1316,7 +1316,7 @@ It is used as a global starting point and a translation reference."
         scroll_area.apply_qdarkstyle_to_buttons(self.registration_panel[1])
 
     def createRegistrationViewer(self):
-        # print("Create reg viewer")
+        print("Create reg viewer")
         #Get current orientation and slice of 2D viewer, registration viewer will be set up to have these
         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
@@ -1344,6 +1344,7 @@ It is used as a global starting point and a translation reference."
         #Clear for next image visualisation:
         self.orientation = None
         self.current_slice = None
+        self._addColorBarRegistration(self.vis_widget_reg.frame.viewer)
 
         self.vis_widget_reg.frame.viewer.style.AddObserver("MouseWheelForwardEvent",
                                     self.vis_widget_reg.PlaneClipper.UpdateClippingPlanes, 0.9)
@@ -1720,6 +1721,7 @@ It is used as a global starting point and a translation reference."
         - the widgets for setting point0, the registration box size and the translation are enabled
         - the full dimension (possibly downsampled) reference image is displayed on the viewer.
         """
+        print("confirming")
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
         self.registration_parameters['start_registration_button'].setText("Restart Registration")
@@ -1733,9 +1735,11 @@ It is used as a global starting point and a translation reference."
         rp['set_auto_reg_button'].setVisible(False)
         rp['set_auto_reg_label'].setVisible(False)
         v.setInput3DData(self.ref_image_data)
+        self.scalar_bar.SetVisibility(False)
         v.style.UpdatePipeline()
         if rp['point_zero_entry'].text() != "":
             self.createPoint0(self.getPoint0WorldCoords())
+        
 
     def UpdateViewerSettingsPanelForRegistration(self):
         vs_widgets = self.visualisation_setting_widgets
@@ -2114,6 +2118,7 @@ It is used as a global starting point and a translation reference."
         self.subtract.Update()
         # update 
         v.setInputData(self.subtract.GetOutput())
+        self.updateColorBarFromDifferenceImage()
 
 
         if type == 'starting registration':
@@ -2128,6 +2133,7 @@ It is used as a global starting point and a translation reference."
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
             self.progress_window.close()
+        v.ren.Render()
         
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
@@ -3948,6 +3954,83 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             viewer.addActor(scalar_bar)
         else:
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
+
+    def _addColorBarRegistration(self, viewer):
+        # create the scalar_bar
+        scalar_bar = vtk.vtkScalarBarActor()
+        # scalar_bar.SetOrientationToHorizontal()
+        scalar_bar.SetOrientationToVertical()
+        
+        # Adjust the size of the scalar bar (set width and height as needed)
+        # Width as a fraction of the window or scene size
+        original_height = scalar_bar.GetHeight()
+        scalar_bar.SetHeight(0.4)  # Height as a fraction of the window or scene size
+        scalar_bar.SetWidth(scalar_bar.GetWidth() * scalar_bar.GetHeight() / original_height)
+        scalar_bar.SetTitle('Difference \nVref − Vcor')
+        fontsize = self.settings_window.fontsize_widget.value()
+        title_property = scalar_bar.GetTitleTextProperty()
+        title_property.SetJustificationToCentered()
+        title_property.SetFontSize(fontsize)
+        title_property.SetItalic(False)
+        print(scalar_bar.GetVerticalTitleSeparation())
+        scalar_bar.SetVerticalTitleSeparation(20)
+        label_property = scalar_bar.GetLabelTextProperty()
+        label_property.SetFontSize(fontsize)
+        label_property.SetItalic(False)
+        scalar_bar.SetTextPad(4)
+        #data = self.ref_image_data
+        #data = self.subtract.GetOutput()
+        #scalars = data.GetPointData().GetScalars()
+        #if scalars:
+        #    cmin, cmax = scalars.GetRange()
+        #else:
+        #    print("No scalars found in ref_image_data.")
+        #    cmin, cmax = 0, 1  # fallback
+        #print("cmin cmax", cmin, cmax)
+        lut2D = self._createLookupTableGrayscale()
+        #lut2D.SetTableRange(cmin, cmax)
+        #lut2D.Build()
+        scalar_bar.SetLookupTable(lut2D)
+        viewer.getRenderer().AddActor2D(scalar_bar)
+        print("I created the colorbar")
+        scalar_bar.SetVisibility(False)
+        self.scalar_bar = scalar_bar
+        
+
+    def _createLookupTableGrayscale(self):
+        lut = vtk.vtkLookupTable()
+        lut.SetNumberOfTableValues(256)
+        lut.SetRange(0.0, 1.0)  # Fixed range
+        
+        list(map(
+        lambda i: lut.SetTableValue(i, i / 255.0, i / 255.0, i / 255.0, 1.0),
+        range(256)
+    ))
+        lut.Build()
+        return lut
+
+    def updateColorBarFromDifferenceImage(self):
+        self.scalar_bar.SetVisibility(True)
+        # Get the output data from the subtract filter
+        data = self.subtract.GetOutput()
+
+        # Retrieve the scalar data from the output
+        scalars = data.GetPointData().GetScalars()
+
+        # Check if scalars exist in the data
+
+        # Get the min and max scalar values
+        
+        
+        cmin, cmax = scalars.GetRange()
+        print(f"Updating color bar with range: {cmin} to {cmax}")
+
+        lut2D = self.scalar_bar.GetLookupTable()
+        current_range = lut2D.GetTableRange()
+        if (cmin, cmax) != current_range:
+            lut2D.SetTableRange(cmin, cmax)  # Set the new range based on the data
+            self.scalar_bar.Modified()
+            self.vis_widget_reg.frame.viewer.getRenderer().GetRenderWindow().Render()          
 
     def createVectors2D(self, displ, viewer_widget):
         '''Creates displacement vectors in 2D
