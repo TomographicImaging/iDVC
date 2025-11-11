@@ -20,7 +20,7 @@ If you have previously installed the app, to get an updated version:
 
 1.	Open anaconda prompt (miniconda).
 2.	Type ``activate idvc_environment`` (note that when you created your environment, if you called it something else you need to replace ``idvc`` with your environment name.)
-3.	Type ``conda install idvc=25.1.0 -c ccpi -c conda-forge`` (or replace ``25.1.0`` with the latest version number)
+3.	Type ``conda install idvc=25.0.0 -c ccpi -c conda-forge`` (or replace ``25.0.0`` with the latest version number)
 4.	Type ``idvc`` to open up the app, as normal.
 
 Installing the DVC Executable Only
