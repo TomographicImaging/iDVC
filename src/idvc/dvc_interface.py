@@ -15,27 +15,26 @@ import pysnooper
 #   Author: Edoardo Pasca (UKRI-STFC)
 
 import os
+from openpyxl import load_workbook
 import sys
-import PySide2
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
                             QThreadPool)
 from PySide2.QtGui import QCloseEvent, QKeySequence, QRegExpValidator
 from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
-                               QDialog, QDialogButtonBox, QDockWidget,
+                               QDockWidget,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
                                QMainWindow, QMessageBox,
-                               QProgressDialog, QPushButton, QSpinBox,
-                               QStatusBar, QStyle, QTabWidget, QVBoxLayout,
+                               QProgressDialog, QPushButton, QScrollArea, QSpinBox,
+                               QTabWidget, QTabBar, QVBoxLayout,
                                QHBoxLayout, QSizePolicy,
-                               QWidget)
+                               QWidget) 
 import time
 import numpy as np
 import math
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+
 import matplotlib.pyplot as plt
 
 from functools import partial
@@ -76,7 +75,7 @@ from functools import reduce
 
 import copy
 
-from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker
+from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker, warningDialog
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
@@ -95,62 +94,24 @@ from brem.ui import RemoteFileDialog
 from brem import AsyncCopyOverSSH
 from idvc.dvc_remote import DVCRemoteRunControl
 
+from idvc.ui.graphs_widgets import *
+from idvc.ui.save_widgets import SaveObjectWindow
+from idvc.ui.dialogs import *
+from idvc.ui.windows import *
+from idvc.utilities import *
+
 __version__ = gui_version.version
 
 import logging
 
-class PrintCallback(object):
-    '''Class to handle the emit call when no callback is provided'''
-    def emit(self, *args, **kwargs):
-        print (args, kwargs)
+from idvc.utils.AutomaticRegistration import AutomaticRegistration
+from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 
-def reduce_displ(raw_displ, min_size, max_size, pzero=False):
-    '''filter the diplacement vectors based on their size'''
-    offset = 6 # 6 in the case of the iDVC
-    
-    # sizes = []
-    # dmin = np.inf
-    # dmax = 0.
-    # for el in raw_displ:
-    #     size = 0
-    #     for i in range(3):
-    #         #calculate size of vector
-    #         size += el[i+offset]*el[i+offset]
-    #     size = np.sqrt(size)
-    #     if size > dmax:
-    #         dmax = size
-    #     if size < dmin:
-    #         dmin = size
-    #     sizes.append(size)
-    vec = np.asarray(raw_displ)[:,offset:offset+3]
-    if pzero:
-        vec -= np.asarray(raw_displ[0][offset:offset+3])
-
-    sizes = np.sqrt( np.sum( np.power(vec, 2), axis=1) )
-
-    dmin = sizes.min()
-    dmax = sizes.max()
-    if min_size is None and max_size is None:
-        displ = raw_displ
-    else:
-        displ = []
-        if pzero:
-            for i in range(len(raw_displ)):
-                size = sizes[i]
-                if size > min_size  and size < max_size :
-                    line = raw_displ[i]
-                    line[offset:offset+3] -= vec[0]
-                    displ.append(line)
-        else:
-            for i in range(len(raw_displ)):
-                size = sizes[i]
-                if size > min_size  and size < max_size :
-                    displ.append(raw_displ[i])
-    displ = np.asarray(displ)
-    return displ, dmin, dmax
+allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
     def __init__(self):
+        """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
         self.threadpool = QThreadPool()
@@ -171,14 +132,31 @@ class MainWindow(QMainWindow):
         self.CreateDockWindows()
 
         # Menu
-        self.menu = self.menuBar()
-        self.file_menu = self.menu.addMenu("File")
+        self.file_menu = QMenu('File', self)
+        self.menuBar().addMenu(self.file_menu)
 
         #Settings QAction
-        settings_action = QAction("Settings", self)
+        self.settings_menu = QMenu("Settings", self)
+        self.menuBar().addMenu(self.settings_menu)
+        
         #save_action.setShortcut(QKeySequence.Save)
+        settings_action = QAction('Settings', self)
         settings_action.triggered.connect(self.OpenSettings)
-        self.file_menu.addAction(settings_action)
+        self.settings_menu.addAction(settings_action)
+
+        dock_viewer_action = QAction('Dock 3D viewer', self)
+        dock_viewer_action.triggered.connect(self.Dock3DViewer)
+        self.settings_menu.addAction(dock_viewer_action)
+
+        # Create the Help menu
+        help_menu = QMenu('Help', self)
+        self.menuBar().addMenu(help_menu)
+
+        # Add the help action (optional if you still want an item under Help menu)
+        help_action = QAction('Documentation', self)
+        help_action.setStatusTip('Open documentation')
+        help_action.triggered.connect(self.open_help_link)
+        help_menu.addAction(help_action)
 
         #Save QAction
         save_action = QAction("Save", self)
@@ -200,13 +178,13 @@ class MainWindow(QMainWindow):
         export_action = QAction("Export Session", self)
         export_action.triggered.connect(self.ExportSession)
         self.file_menu.addAction(export_action)
-
+             
         # Exit QAction
         exit_action = QAction("Exit", self)
         exit_action.setShortcut(QKeySequence.Quit)
         exit_action.triggered.connect(self.close)
         self.file_menu.addAction(exit_action)
-             
+
         # # Window dimensions
         geometry = qApp.desktop().availableGeometry(self)
 
@@ -218,7 +196,7 @@ class MainWindow(QMainWindow):
         self.CreateWorkingTempFolder()
 
         #Load Settings:
-        self.settings = QSettings("CCPi", "DVC Interface v20.7.2")
+        self.settings = QSettings("CCPi", "DVC Interface v24.1.1")
 
         if self.settings.value("copy_files"):
             self.copy_files = True
@@ -227,6 +205,7 @@ class MainWindow(QMainWindow):
 
         self.SetAppStyle()
 
+        self.settings_window = SettingsWindow(self)
         if self.settings.value("first_app_load") != "False":
             self.OpenSettings()
             # self.settings.setValue("first_app_load", False)
@@ -234,6 +213,17 @@ class MainWindow(QMainWindow):
         else:
             self.CreateSessionSelector("new window")
 
+    def open_help_link(self):
+        """Open link to iDVC documentation."""
+        QDesktopServices.openUrl(QUrl("https://tomographicimaging.github.io/iDVC/"))
+
+    def createPopupMenu(self):
+        '''return an empty menu for the main window to use as a popup menu.
+        
+        https://doc.qt.io/qt-6/qmainwindow.html#createPopupMenu
+        '''
+        return QtWidgets.QMenu(self) # Create a new menu
+    
     def SetAppStyle(self):
         if self.settings.value("dark_mode") is None:
             self.settings.setValue("dark_mode", True)
@@ -262,9 +252,21 @@ class MainWindow(QMainWindow):
         os.mkdir("Results")
 
     def OpenSettings(self):
-        if not hasattr(self, 'settings_window'):
-            self.settings_window = SettingsWindow(self)
+        """Shows the settings dialog."""
         self.settings_window.show()
+
+    def Dock3DViewer(self):
+        """Docks the 3D Viewer."""
+        print("docking the viewer")
+        if self.viewer3D_dock.isFloating():
+            self.viewer3D_dock.setFloating(False)
+        else:
+            self.warningDialog(
+                    window_title='Docking not necessary',
+                    message='The 3D viewer is already docked'
+                )
+
+        #self.dock_widget.show()
 
     def InitialiseSessionVars(self):
         self.config={}
@@ -318,19 +320,16 @@ class MainWindow(QMainWindow):
 
         self.viewer3D_dock = QDockWidget("3D View")
         self.viewer3D_dock.setObjectName("3DImageView")
+        self.viewer3D_dock.setMinimumHeight(300)
         self.viewer3D_dock.setWidget(self.vis_widget_3D)
         self.viewer3D_dock.setAllowedAreas(Qt.LeftDockWidgetArea)
-        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
-            QDockWidget.DockWidgetMovable)
-        
+        self.viewer3D_dock.setFeatures(QDockWidget.DockWidgetFloatable)   
 
         #Tabifies dockwidgets in LeftDockWidgetArea:
         prev = None
         first_dock = None
         docks = []
         for current_dock in self.findChildren(QDockWidget):
-            current_dock.setFeatures(QDockWidget.DockWidgetFloatable | 
-                QDockWidget.DockWidgetMovable)
             if self.dockWidgetArea(current_dock) == QtCore.Qt.LeftDockWidgetArea:
                 if prev:
                     self.tabifyDockWidget(prev,current_dock)                    
@@ -338,13 +337,12 @@ class MainWindow(QMainWindow):
                     first_dock = current_dock
                 prev= current_dock
                 docks.append(current_dock)
-                
-        first_dock.raise_() # makes first panel the one that is open by default.
+        
+        # makes first panel the one that is open by default.
+        first_dock.raise_()
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.viewer3D_dock)
         
-
-
         # Make a window to house the right dockwidgets
         # This ensures the 2D viewer is large and allows us to position the help and settings below it
 
@@ -357,8 +355,11 @@ class MainWindow(QMainWindow):
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.help_dock)
 
         self.RightDockWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea,self.viewer_settings_dock)
-        
 
+        # Stop the widgets in the tab to be moved around
+        for wdg in self.findChildren(QTabBar):
+            wdg.setMovable(False)
+        
     def CreateViewerSettingsPanel(self):
         self.viewer_settings_panel = generateUIDockParameters(self, "Viewer Settings")
         dockWidget = self.viewer_settings_panel[0]
@@ -421,7 +422,9 @@ class MainWindow(QMainWindow):
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, vs_widgets['coords_warning_label'])
 
         self.visualisation_setting_widgets = vs_widgets
-        
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.viewer_settings_panel[1])
 
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
@@ -453,45 +456,116 @@ class MainWindow(QMainWindow):
 
                     viewer.updatePipeline()
 
-
     def CreateHelpPanel(self):
-        help_panel = generateUIDockParameters(self, "Help")
+        """Creates the help-text dock widget.
+        
+        Saves the help text for all tabs.
+        Adds a QLabel in the form of scrollable text."""
+        help_panel = generateUIDockParameters(self, "Help", scrollable = False)
         dockWidget = help_panel[0]
         dockWidget.setObjectName("HelpPanel")
         groupBox = help_panel[5]
         formLayout = help_panel[6]
         self.help_dock = dockWidget
 
-        self.help_text = ["Please use 'raw' or 'npy' images.\n"
+        self.help_text = ["Please use 'hdf5', 'mha', 'mhd', npy', 'nxs', 'raw' or 'TIFF' images.\n"
         "You can view the shortcuts for the viewer by clicking on the 2D image and then pressing the 'h' key."]
 
         self.help_text.append(
-            "Click 'Select point 0' to select a point and region for registering the image, and then modify the registration box size.\n"
-            "Then click 'Start Registration'. You can move the two images relative to eachother using the keys: j, n, b and m and switch orientation using 'x, y, z'.\n"
-            "Once you are satisfied with the registration, make sure the point 0 you have selected is the point you want the DVC to start from."
+            "1. Click 'Select point 0' to choose a point and region for the registration.\n"
+            "2. Adjust the registration box size. The box should enclose enough material-texture details but be kept relatively small compared to the size of the image. E.g., 1/10 of one image dimension.\n"
+            "3. Click 'Start Registration' to begin the registration process.\n"
+            "4. The suggested registration will be displayed, and the difference volume of the registered image will be shown in the viewer.\n"
+            "5. Use the mouse wheel to navigate in the third direction, and the 'x', 'y', or 'z' keys to control the slicing orientation.\n"
+            "6. To manually adjust the registration, click on the image and move the two images relative to each other using the 'j' (up), 'n' (down), 'b' (right), and 'm' (left) keys.\n"
+            "7. You can 'Reset' the registration values or 'Set to Automatic Registration'.\n"
+            "8. You can 'Confirm Registration' or 'Cancel'.\n"
+            "9. Once satisfied with the registration, move to the next tab. Be aware that point 0 is the point from which DVC will start."
             )
         
-        self.help_text.append("To create a mask you need to create a selection. Start tracing a freehand region for the selection by clicking 'Start Tracing' button.\n"
-            "When you are happy with your region click 'Create Mask'.")
-
-        self.help_text.append("Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
+        self.help_text.append(
+            "The mask dictates where the point cloud lies.\n\n"
+            "1. Click on 'Load Mask from File' to upload a mask file (format '.mha').\n"
+            "2. To create a new mask click 'Start tracing'. This enables freehand tracing on the viewer. The mask design consists of either the tracing of a single curve or the insertion of multiple spline segments separated by point handles.\n\n"
+            "- Draw a free hand line: left button click over the image, hold and drag.\n"
+            "- Erase the line: left button click and release.\n"
+            "- Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key.\n"
+            "- Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle.\n" 
+            "- Point handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points.\n" 
+            "- Erase any point handle: ctrl key + right button down on the handle.\n"
+            "- Split a segment at the cursor position: shift key + right button down on any snap drawn line segment.\n\n"
+            "3. If you are not happy with the tracing, click on 'Stop tracing'.\n"
+            "4. The mask is used across multiple slices in 3D. The volume can be adjusted by editing the 'Slices Above' and 'Slices Below' values.\n"
+            "5. Click on 'Create mask' when the tracing is finalised.\n"
+            "6. Tick the 'Extend Mask' checkbox if the mask needs to cover more than one area, or the area of the mask needs to be enlarged. Then, draw another region and press the button 'Extend Mask'.\n"
+            "7. The most recent mask will automatically be applied. If it is intended to draw more than one mask click on 'Save Mask' and name it in the pop-up dialog.\n"
+            "8. To restart the mask creation, click on 'Clear mask'.\n"
+            "9. Each mask can be selected and reloaded by clicking on 'Load Saved Mask'.")
+        
+        self.help_text.append("A point cloud for the DVC analysis can be generated or imported from file.\n"
+            "Dense point clouds that accurately reflect sample geometry and reflect measurement objectives yield the best results.\n"
             "The first point in the cloud is significant, as it is used as a global starting point and reference for the rigid translation between the two images.\n"
-            "If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n"
-            "If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
-            "It will be the first point in the file that is used as the reference point.")
-
+            "The reference point for the DVC analysis is the first point in the point-cloud file.\n\n"
+            "Generate a point cloud:\n"
+            "1. A 3D point cloud will be created across the entire extent of the mask unless the 2D dimensionality is selected i.e. the point cloud is created on the currently displayed slice of the image.\n" 
+            "2. Set the overlap, representing the percentage overlap of the subvolume regions.\n"
+            "3. Optionally, set the rotation angle of the subvolumes in degrees, relative to any of the three axes.\n"
+            "4. Tick 'Erode mask' to ensure the entirety of all of the subvolume regions lies within the mask. The erosion multiplier changes the weight of the erosion process.\n"
+            "Note: If the point 0 you selected in image registration falls inside the mask, then the pointcloud will be created with the first point at the location of point 0.\n\n"
+            "Load a point cloud from file:\n"
+            "1. If you load a pointcloud from a file, you must still specify the subvolume size on this panel, which will later be input to the DVC code.\n"
+            f"2. Import the point cloud file in the format {allowed_point_cloud_file_formats}.\n\n"
+            "Click on 'Clear Point Cloud' button to delete the point cloud.\n"
+            "Tick 'Display Subvolume Regions' to turn on/off viewing the subvolumes.\n"
+            "Tick 'Display Registration Region' toggles on/off the view of the registration box centred on point 0.")
+        
         self.help_text.append("Once the code is run it is recommended that you save or export your session, to back up your results."
             "You can access these options under 'File'.")
 
-        self.help_text.append("Vectors can be displayed for the displacement of points either including or excluding the rigid body offset."
-            "You may also scale the vectors to make them larger and easier to view.")
+        self.help_text.append("Results are displayed in the form of graphs and displacement vectors.\n\n"
+                             "Select the run from the dropdown list of all of the saved runs. For each run, select the subvolume size and the points in the subvolume.\n\n"
+                             "Visualise displacements:\n"
+                             "1. Choose what to view. The list includes the point cloud or the displacement vectors including, or excluding, the rigid body offset stored during the initial registration.\n"
+                             "2. Click 'View Pointcloud/Vectors' to visualise the pointcloud/vectors on the 2D and 3D viewers.\n"
+                             "3. When the vector scaling is set to 1, the displacement vectors are shown in true size. Edit the value to rescale the vectors on the viewers and click 'View Pointcloud/Vectors' to apply the changes.\n"
+                             "4. Limit the range of the vectors viewed by changing the 'Vector Range Min' and Vector Range Max'. Then, click 'View Pointcloud/Vectors' to apply the changes.\n"            
+                             "5. On the 2D viewer, the vectors are shown as 2D arrows, showing the displacements in the current plane. If the 'x', 'y' or 'z' keys are pressed click 'View Pointcloud/Vectors' to apply the changes.\n\n"
+                             "Display Graphs:\n"
+                             "Graphs are displayed in a new window (once you are done looking at the graphs you can either close or minimize this window).\n"
+                             "A tab is created to visualise a single run. Information on the run is displayed on the left.\n"
+                             "1. Select an option for the result to plot.\n"
+                             "2. Select the parameter to fix and its value.\n"
+                             "3. Click on 'Plot'.\n"
+                             "In the case of a bulk run, an additional tab enables comparison of the results. Information on the bulk run is displayed on the left.\n"
+                             "1. Select an option for the result to plot.\n"
+                             "2. Select the parameter to fix and its value. Alternatively, select 'None' to plot all values.\n"
+                             "3. Click on 'Plot histograms'.\n"
+                             "An additional tab includes quantatitative statistical analysis of the bulk run.\n"
+                             "1. Select an option for the result to plot. Alternatively, select 'All'.\n"
+                             "2. Select the parameter to fix and its value. Alternatively, select 'All' to plot all values. Optionally, collapse the plots.\n"
+                             "3. Click on 'Plot'.\n"
+                             "Note: As a default, the displacements include the translation set in the manual registration.\n"
+                             "4. Optionally, go to 'Settings' and select 'Show displacement relative to reference point 0' to adjust the displacements to exclude the initial registration translation.\n\n"
+                            "Results Files:\n"
+                            "Select a folder and export a session to access the result files. Two tab-delimited text files are generated for each run at location <session_folder>\Results\<run_name>\dvc_result_*.\n"
+                            "1. The status file (dvc_result_*.stat) contains an echo of the input file used for the analysis, information about the point cloud, dvc program version, run date/time, search statistics and timing.\n"
+                            "2. The displacement file (dvc_result_*.disp) records status, objective function and displacement vector for each point in the analysis."
+                            )
 
         self.help_label = QLabel(groupBox)
+        scroll_area_widget = QScrollArea()
+    
         self.help_label.setWordWrap(True)
         self.help_label.setText(self.help_text[0])
-        formLayout.setWidget(1, QFormLayout.SpanningRole, self.help_label)
+
+        scroll_area_widget.setWidget(self.help_label)
+        scroll_area_widget.setFrameShape(QFrame.NoFrame)
+        scroll_area_widget.setFrameShadow(QFrame.Plain)
+        scroll_area_widget.setStyleSheet("border: 0px;")
+        scroll_area_widget.setWidgetResizable(True)
 
 
+        formLayout.setWidget(1, QFormLayout.SpanningRole, scroll_area_widget)
 
     def displayHelp(self, open, panel_no = None):
         if open:
@@ -571,6 +645,9 @@ class MainWindow(QMainWindow):
         si_widgets['view_button'].clicked.connect(self.view_and_load_images)
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
+        
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.select_image_panel[1])
 
         self.si_widgets = si_widgets
     
@@ -707,82 +784,119 @@ class MainWindow(QMainWindow):
     def _UpdateSelectFileUI(self, files, image_var, image, label=None, next_button=None):
         if len(files) > 0:
             if self.copy_files:
-                self.image_copied[image_var] = True
+                new_file_name = 'reference'
+                if image_var == 1:
+                    new_file_name = 'correlate'
+                # first of all we need to remove the files that were copied in the previous run
                 self.create_progress_window("Copying", "Copying files", 100, None)
-                self.progress_window.setValue(1)
+                # self.progress_window.setValue(1)
+                
+
+                self.image_copied[image_var] = True
+                new_file_dest = []
                 for file_num, f in enumerate(files):
                     file_name = os.path.basename(f)
                     file_ext = file_name.split(".")[-1]
-                    if file_ext == "mhd":
-                        new_file_dest = os.path.join(file_name[:-3] + "mha")
-                    else:
-                        new_file_dest = os.path.join(file_name)
-
-                    copy_worker = Worker(self.copy_file, start_location=f, end_location=new_file_dest)
-                    self.threadpool.start(copy_worker)
-                    files[file_num] = new_file_dest
                     if len(files) == 1:
-                        self.show_copy_progress(f, new_file_dest, 1, file_ext, len(files))
+                        if file_ext == "mhd":
+                            new_file_dest.append( os.path.join(new_file_name + "." + "mha") )
+                        else:
+                            new_file_dest.append( os.path.join(new_file_name + "." + file_ext) )
                     else:
-                        self.progress_window.setValue((file_num+1)/len(files)*100)
+                        new_file_dest.append( os.path.join(new_file_name + "_" + str(file_num) + "." + file_ext) )
+
+                    # files[file_num] = new_file_dest[-1]
+                copy_worker = Worker(self.copy_file, start_location=files, end_location=new_file_dest, image_var=image_var)
+                copy_worker.signals.progress.connect(self.progress_window.setValue)
+                copy_worker.signals.finished.connect(partial(self.update_interface_on_copy_complete, image, image_var, label, next_button))
+                copy_worker.signals.error.connect(partial(self.worker_error, progress_dialog=self.progress_window))
+                self.threadpool.start(copy_worker)
+                    
             else:
                 self.image_copied[image_var] = False
-
-            if len(files) == 1: #@todo
-                if(image[image_var]):
-                    image[image_var]= files
-                else:
-                    image[image_var].append(files[0])
-                if label is not None:
-                    label.setText(files[0])
+                self.update_interface_no_copy(files, image, image_var, label, next_button)
                 
-            else:
-                # Make sure that the files are sorted 0 - end
-                filenames = natsorted(files)
-                # Basic test for tiff images
-                for f in filenames:
-                    ftype = imghdr.what(f)
-                    if ftype != 'tiff':
-                        # A non-TIFF file has been loaded, present error message and exit method
-                        self.e(
-                            '', '', 'When reading multiple files, all files must TIFF formatted.')
-                        error_title = "READ ERROR"
-                        error_text = "Error reading file: ({filename})".format(filename=f)
-                        self.displayFileErrorDialog(message=error_text, title=error_title)
-                        return #prevents dialog showing for every single file by exiting the for loop
-                image[image_var] = filenames
-                if label is not None:
-                    label.setText(
-                        os.path.dirname(self.image[image_var][0]) + "\n" +\
-                        os.path.basename(self.image[image_var][0]) + " + " + str(len(files)) + " more files.")
+    def worker_error(self, error, **kwargs):
+        if 'progress_dialog' in kwargs.keys():
+            kwargs['progress_dialog'].close()
+        dialog_retval = warningDialog(self, str(error[1]), "Error", str(error[2]))
 
-            if next_button is not None:
-                try:
-                    for el in next_button:
-                        el.setEnabled(True)
-                except:
-                    next_button.setEnabled(True)
+    def update_interface_on_copy_complete(self, image, image_var, label, next_button):
 
-
-    def copy_file(self, **kwargs):
+        new_file_name = 'reference'
+        if image_var == 1:
+            new_file_name = 'correlate'
+        files = glob.glob(new_file_name+"*")
         
-        start_location = kwargs.get('start_location')
-        end_location   = kwargs.get('end_location')
-        progress_callback = kwargs.get('progress_callback')
+        self.update_interface_no_copy(files, image, image_var, label, next_button)
+    
+    def update_interface_no_copy(self, files, image, image_var, label, next_button):
+        
+        if len(files) == 1: #@todo
+            if(image[image_var]):
+                image[image_var]= files
+            else:
+                image[image_var].append(files[0])
+            if label is not None:
+                label.setText(os.path.basename(files[0]))
+            
+        elif len(files) > 1:
+            # Make sure that the files are sorted 0 - end
+            filenames = natsorted(files)
+            
+            image[image_var] = filenames
+            if label is not None:
+                label.setText(
+                    os.path.dirname(self.image[image_var][0]) + "\n" +\
+                    os.path.basename(self.image[image_var][0]) + " + " + str(len(files)-1) + " more files.")
+        else:
+            raise ValueError('Something went wrong with the file copy')
 
-        file_extension = os.path.splitext(start_location)[1]
+        if next_button is not None:
+            next_button.setEnabled(True)
 
+    def copy_file(self, start_location, end_location, image_var, **kwargs):
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        # message_callback = kwargs.get('message_callback', PrintCallback())
+
+        # first of all we need to remove the files that were copied in the previous run
+        new_file_name = 'reference'
+        if image_var == 1:
+            new_file_name = 'correlate'
+        files_to_remove = glob.glob(new_file_name+"*")
+        N = len(files_to_remove)
+        for i,f in enumerate(files_to_remove):
+            progress_callback.emit(i/N*100)
+            os.remove(f)
+
+        self.image_copied[image_var] = True
+        
+        file_extension = os.path.splitext(start_location[0])[1]
+
+        # if the file is a mhd file we have a header and the data blob, i.e. 2 files
         if file_extension == '.mhd':
+            progress_callback.emit(0)
             reader = vtk.vtkMetaImageReader()
-            reader.SetFileName(start_location)
+            reader.SetFileName(start_location[0])
             reader.Update()
+            progress_callback.emit(50)
             writer = vtk.vtkMetaImageWriter()
-            tmpdir = tempfile.gettempdir()
-            writer.SetFileName(end_location)
+            # tmpdir = tempfile.gettempdir()
+            writer.SetFileName(end_location[0])
+            writer.SetCompression(False)
             writer.SetInputData(reader.GetOutput())
             writer.Write()
+            progress_callback.emit(100)
         else:
-            shutil.copyfile(start_location, end_location)
+            N = len(start_location)
+            for i,fs in enumerate(zip(start_location, end_location)):
+                if N > 1:
+                    ftype = imghdr.what(fs[0])
+                    if ftype != 'tiff':
+                        raise ValueError('File type not supported: {}'.format(fs[0]))
+                progress_callback.emit(i/N*100)
+                shutil.copyfile(fs[0], fs[1])
+            progress_callback.emit(100)
 
     def show_copy_progress(self, _file, new_file_dest,ratio, file_type, num_files):
 
@@ -795,7 +909,6 @@ class MainWindow(QMainWindow):
                 time.sleep(0.1)
                 
         self.progress_window.setValue(100)
-
 
     def displayFileErrorDialog(self, message, title, action_button=None):
         msg = QMessageBox(self)
@@ -811,27 +924,21 @@ class MainWindow(QMainWindow):
         msg.exec_()
 
     def view_image(self):
+        """Called when the view image button is clicked in the first tab, or
+        when a session is loaded."""
         self.ref_image_data = vtk.vtkImageData()
         self.image_info = dict()
-        if self.settings.value("gpu_size") is not None and self.settings.value("volume_mapper") == "gpu":
-            if self.settings.value("vis_size"):
-                if float(self.settings.value("vis_size")) < float(self.settings.value("gpu_size")):
-                    target_size = float(self.settings.value("vis_size"))
-                else:
-                    target_size = (float(self.settings.value("gpu_size")))
-            else:
-                target_size = (float(self.settings.value("gpu_size")))
+        if self.settings.value("vis_size"):
+            target_size = float(self.settings.value("vis_size"))
         else:
-            if self.settings.value("vis_size"):
-                target_size = float(self.settings.value("vis_size"))
-            else:
-                target_size = 0.125
+            target_size = 0.125
         self.target_image_size = target_size
-        
-        ImageDataCreator.createImageData(self, self.image[0], self.ref_image_data, info_var = self.image_info, convert_raw = True,  
-        finish_fn = partial(self.save_image_info, "ref"), resample= True, target_size = target_size, output_dir='.')
+        image_data_creator = ImageDataCreator(self, self.image[0], self.ref_image_data, info_var = self.image_info, resample= True, target_size = target_size)
+        image_data_creator.createImageData(convert_raw = True,  
+        finish_fn = partial(self.save_image_info, "ref"), output_dir='.')
 
     def save_image_info(self, image_type):
+        """Sets the value of the registration box size to the 1/10 of the max dimension."""
         if 'vol_bit_depth' in self.image_info:
             self.vol_bit_depth = self.image_info['vol_bit_depth']
 
@@ -843,7 +950,7 @@ class MainWindow(QMainWindow):
 
             #Update registration box size according to target size and vol bit depth
             self.registration_parameters['registration_box_size_entry'].setMaximum(maximum_value)
-            self.registration_parameters['registration_box_size_entry'].setValue(maximum_value)
+            self.registration_parameters['registration_box_size_entry'].setValue(round(np.max(self.ref_image_data.GetDimensions())/10))
         
         
         #Update mask slices above/below to be max extent of downsampled image
@@ -887,7 +994,8 @@ class MainWindow(QMainWindow):
                 self.dvc_input_image[0] = image_file
                 if os.path.splitext(self.image[0][0])[1] in ['.mhd', '.mha']: #need to call create image data so we read header and save image to file w/o header
                     self.temp_image_data = vtk.vtkImageData()
-                    ImageDataCreator.createImageData(self, self.image[1], self.temp_image_data, info_var=self.image_info, convert_raw=True,  finish_fn=partial(
+                    image_data_creator = ImageDataCreator(self, self.image[1], self.temp_image_data, info_var=self.image_info) 
+                    image_data_creator.createImageData(convert_raw=True,  finish_fn=partial(
                         self.save_image_info, "corr"), output_dir='.')
             elif image_type == "corr":
                 self.dvc_input_image[1] = image_file
@@ -1017,7 +1125,6 @@ class MainWindow(QMainWindow):
             self.progress_window.canceled.connect(cancel)
         self.progress_window.show()
 
-
     def setup2DPointCloudPipeline(self):
 
         self.vis_widget_2D.PlaneClipper.AddDataToClip('pc_actor', self.polydata_masker.GetOutputPort())
@@ -1123,12 +1230,13 @@ class MainWindow(QMainWindow):
         sphere_actor.GetProperty().SetLineWidth(2.0)
         sphere_actor.GetProperty().SetEdgeVisibility(True)
         sphere_actor.GetProperty().SetEdgeColor(1, .2, .2)
+        sphere_actor.GetProperty().SetRenderLinesAsTubes(True)
+        sphere_actor.GetProperty().SetRepresentationToWireframe()
 
         self.vis_widget_2D.frame.viewer.AddActor(actor, 'pc_actor')
         self.vis_widget_2D.frame.viewer.AddActor(sphere_actor, 'subvol_actor')
         self.cubesphere.Update()
         
-
     def setup3DPointCloudPipeline(self):
         #polydata_masker = self.polydata_masker
 
@@ -1179,11 +1287,11 @@ class MainWindow(QMainWindow):
         self.actors_3D['pc_actor'] = actor
         self.actors_3D ['subvol_actor'] = sphere_actor
 
-#Registration Panel:
+# Registration Panel:
     def CreateRegistrationPanel(self):
-        '''Create the Registration Dockable Widget'''
+        """Create the Registration Dockable Widget"""
 
-        self.registration_panel = generateUIDockParameters(self, '2 - Manual Registration')
+        self.registration_panel = generateUIDockParameters(self, '2 - Initial Registration')
         dockWidget = self.registration_panel[0]
         dockWidget.setObjectName("RegistrationPanel")
         groupBox = self.registration_panel[5]
@@ -1310,28 +1418,43 @@ It is used as a global starting point and a translation reference."
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rp['start_registration_button'])
         widgetno += 1
 
+        # Add cancel automatic registration button
+        rp['cancel_auto_reg_button'] = QPushButton(groupBox)
+        rp['cancel_auto_reg_button'].setText("Reset")
+        rp['cancel_auto_reg_button'].setEnabled(True)
+        rp['cancel_auto_reg_button'].clicked.connect(self.cancelAutomaticRegistration)
+        formLayout.insertRow(widgetno - 1, '', rp['cancel_auto_reg_button'])
+        widgetno += 1
+        rp['cancel_auto_reg_button'].setVisible(False)
+
+        # Add set to automatic registration button
+        rp['set_auto_reg_button'] = QPushButton(groupBox)
+        rp['set_auto_reg_label'] = QLabel(groupBox)
+        rp['set_auto_reg_button'].setText("Set to Automatic Registration")
+        rp['set_auto_reg_label'].setText("Automatic registration [0, 0, 0]")
+        rp['set_auto_reg_button'].setEnabled(True)
+        rp['set_auto_reg_button'].clicked.connect(self.setToAutomaticRegistration)
+        formLayout.insertRow(widgetno - 1, rp['set_auto_reg_label'] , rp['set_auto_reg_button'])
+        widgetno += 1
+        rp['set_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_label'].setVisible(False)
+
+        # Add cancel registration button
+        rp['cancel_reg_button'] = QPushButton(groupBox)
+        rp['cancel_reg_button'].setText("Cancel")
+        rp['cancel_reg_button'].setEnabled(True)
+        rp['cancel_reg_button'].clicked.connect(self.cancelRegistration)
+        formLayout.insertRow(widgetno, '', rp['cancel_reg_button'])
+        widgetno += 1
+        rp['cancel_reg_button'].setVisible(False)
+
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         # save to instance
         self.registration_parameters = rp
 
-    
-    def _updateTranslateObject(self, text, **kwargs):
-        rp = self.registration_parameters
-
-        
-        # setup the appropriate stuff to run the registration
-        if not hasattr(self, 'translate'):
-            self.translate = vtk.vtkImageTranslateExtent()
-        elif self.translate is None:
-            self.translate = vtk.vtkImageTranslateExtent()
-        
-        self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),
-                                      -int(rp['translate_Y_entry'].text()),
-                                      -int(rp['translate_Z_entry'].text())
-                                      )
-        
-
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.registration_panel[1])
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -1339,10 +1462,11 @@ It is used as a global starting point and a translation reference."
         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
 
-        self.vis_widget_reg = VisualisationWidget(self, viewer2D)
+        self.vis_widget_reg = VisualisationWidget(self, viewer2D, enableSliderWidget=False)
         
 
         reg_viewer_dock = QDockWidget("Image Registration",self.RightDockWindow)
+        reg_viewer_dock.setFeatures(QDockWidget.NoDockWidgetFeatures)
         reg_viewer_dock.setObjectName("2DRegView")
         reg_viewer_dock.setWidget(self.vis_widget_reg)
         #reg_viewer_dock.setMinimumHeight(self.size().height()*0.9)
@@ -1392,8 +1516,9 @@ It is used as a global starting point and a translation reference."
                     if self.vis_widget_reg.getImageData() != self.ref_image_data:
                         self.orientation = self.vis_widget_2D.frame.viewer.getSliceOrientation()
                         self.current_slice = self.vis_widget_2D.frame.viewer.getActiveSlice()
-                        self.vis_widget_reg.setImageData(self.ref_image_data)
-                        self.vis_widget_reg.displayImageData()
+                        # EDO disabling this initial image display
+                        # self.vis_widget_reg.setImageData(self.ref_image_data)
+                        # self.vis_widget_reg.displayImageData()
 
                     self.viewer2D_dock.setVisible(False)
                     self.viewer3D_dock.setVisible(False)
@@ -1429,7 +1554,13 @@ It is used as a global starting point and a translation reference."
         
         else:
             self.warningDialog("Load an image on the viewer first.", "Error")
-        
+    
+    def openFinishRegistrationDialog(self):       
+        self.warningDialog(
+            window_title='Registration Completed',
+            message='Move to the next tab or restart the registration.'
+            )
+
     def OnLeftButtonPressEventForPointZero(self, interactor, event):
         # print('OnLeftButtonPressEventForPointZero', event)
         v = self.vis_widget_reg.frame.viewer
@@ -1442,6 +1573,10 @@ It is used as a global starting point and a translation reference."
             self.createPoint0(p0l)
 
     def updatePoint0Display(self):
+        """Updates the point 0 vtk.vtkCursor3D on the viewer to be centred
+        on the current value of self.point0_world_coords (returned by getPoint0WorldCoords()).
+        """
+        #point0 , point0Mapper, point0Actor
         vox = self.getPoint0WorldCoords()
         for point0 in self.point0:
             point0[0].SetFocalPoint(*vox)
@@ -1513,8 +1648,12 @@ It is used as a global starting point and a translation reference."
                 self.registration_parameters['point_zero_entry'].setText(str([round(self.point0_sampled_image_coords[i]) for i in range(3)]))
 
     def centerOnPointZero(self):
-        #print("Center on point0")
-        '''Centers the viewing slice where Point 0 is'''
+        """Centers the viewing slice on the registration viewer where Point 0 is.
+        This makes sure that the point 0 is visible on the viewer, in the slicing direction.
+        E.g. if point0 is at (5,6,7) and we are slicing in the Z direction, the viewer will 
+        display slice Z=7.
+        Produces a warning dialog if point0 has not yet been selected.
+        """
         if hasattr(self, 'vis_widget_reg'):
             v = self.vis_widget_reg.frame.viewer
 
@@ -1533,7 +1672,6 @@ It is used as a global starting point and a translation reference."
                     self.warningDialog("Choose a Point 0 first.", "Error")
             else:
                 self.warningDialog("Choose a Point 0 first.", "Error")
-
 
     def displayRegistrationSelection(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1574,14 +1712,15 @@ It is used as a global starting point and a translation reference."
                     RegistrationBoxActor.GetProperty().SetColor(0.,.5,.5)
                     RegistrationBoxActor.GetProperty().SetLineWidth(2.0)
                     RegistrationBoxActor.GetProperty().SetEdgeColor(0.,.5,.5)
+                    RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
 
                     if viewer_widget.viewer == viewer2D:
                         RegistrationBoxActor.GetProperty().SetOpacity(0.5)
                         RegistrationBoxActor.GetProperty().SetLineWidth(4.0)
                         RegistrationBoxActor.GetProperty().SetEdgeVisibility(True)
+                        RegistrationBoxActor.GetProperty().SetRenderLinesAsTubes(True)
                         viewer_widget.frame.viewer.AddActor(RegistrationBoxActor, 'registration_box_actor')
                     else:
-                        RegistrationBoxActor.GetProperty().SetRepresentationToWireframe()
                         viewer_widget.frame.viewer.getRenderer().AddActor(RegistrationBoxActor)
                         if not hasattr(self, 'actors_3D'):
                             self.actors_3D = {}
@@ -1612,6 +1751,11 @@ It is used as a global starting point and a translation reference."
         return reg_box_size
 
     def getRegistrationBoxExtentInWorldCoords(self):
+        '''
+        Sets self.registration_box_extent to the extent of the registration box in world coordinates.
+        The extent is a list of 6 values: [xmin, xmax, ymin, ymax, zmin, zmax]
+        Returns self.registration_box_extent
+        '''
         p0 = self.getPoint0WorldCoords()
         reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
 
@@ -1645,65 +1789,96 @@ It is used as a global starting point and a translation reference."
         return p0
 
     def OnStartStopRegistrationPushed(self):
+        ''' This method is triggered by pressing the "Start Registration" button or the "Confirm Registration" button.
+        When the button is pressed for the first time, the buttons in the "Select Image" tab are disabled and the help text for that tab is changed.
+        When the button is pressed again after the first registration, the button text is "Restart Registration".
+        
+        '''
+        rp = self.registration_parameters
+        if "Start Registration" in rp['start_registration_button'].text():
+            self.si_widgets['ref_browse'].setEnabled(False)
+            self.si_widgets['cor_browse'].setEnabled(False)
+            self.si_widgets['view_button'].setEnabled(False)
+            self.help_text[0] = """If you wish to upload a new set of data, and the buttons are not enabled, close and restart the iDVC app."""
+        elif "Restart Registration" in rp['start_registration_button'].text():
+            self.translate = None
+            rp['translate_X_entry'].setText("0")
+            rp['translate_Y_entry'].setText("0")
+            rp['translate_Z_entry'].setText("0")
+       
         if hasattr(self, 'vis_widget_reg'):
             self.UpdateViewerSettingsPanelForRegistration()
-            rp = self.registration_parameters
-            v = self.vis_widget_reg.frame.viewer
-            if rp['start_registration_button'].isChecked():
+            if rp['start_registration_button'].isChecked(): # "Start Registration" has been pressed
+                self.startRegistration()            
+            else: # "Confirm Registration" has been pressed
+                self.confirmRegistration()     
+                self.openFinishRegistrationDialog()        
 
-                # check if we can make registration box, by checking
-                # if the size of registration box is smaller than the difference 
-                # between the current slice and the extent on the current dimension:
-                registration_box_size = rp['registration_box_size_entry'].value()
-                current_orientation = self.vis_widget_reg.frame.viewer.style.GetSliceOrientation()
-                current_slice = self.vis_widget_reg.frame.viewer.getActiveSlice()
-                extent_on_axis = self.vis_widget_reg.frame.viewer.img3D.GetExtent()[2*current_orientation+1] -1
+    def startRegistration(self):
+        """
+        If "Start Registration" is pressed:
+        - the text on the button is changed to "Confirm Registration"
+        - the widgets for setting point0, the registration box size and the translation are disabled
+        - the size of the registration box may be updated to make sure it does not exceed the image extent
+        - sets up self.translate, which is a vtk.vtkImageTranslateExtent() object, with translation values linked to the values in the translation widgets
+        - calls LoadImagesAndCompleteRegistration()
+        """
+        rp = self.registration_parameters
+        # check if we can make registration box, by checking
+        # if the size of registration box is smaller than the difference 
+        # between the current slice and the extent on the current dimension:
+        registration_box_size = rp['registration_box_size_entry'].value()
+        current_orientation = self.vis_widget_reg.frame.viewer.style.GetSliceOrientation()
+        current_slice = self.vis_widget_reg.frame.viewer.getActiveSlice()
+        extent_on_axis = self.vis_widget_reg.frame.viewer.img3D.GetExtent()[2*current_orientation+1] -1
 
-                max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])*2
+        max_size_of_box = np.min([current_slice-1, extent_on_axis-current_slice])*2
 
-                # if we can't make the registration box with the set size, then update
-                # the size to the largest size possible:
-                if max_size_of_box < registration_box_size:
-                    rp['registration_box_size_entry'].setValue(max_size_of_box)
-                
-                # print ("Start Registration Checked")
-                rp['start_registration_button'].setText("Confirm Registration")
-                rp['registration_box_size_entry'].setEnabled(False)
-                
-                rp['select_point_zero'].setChecked(False)
-                rp['select_point_zero'].setCheckable(False)
-                rp['translate_X_entry'].setEnabled(False)
-                rp['translate_Y_entry'].setEnabled(False)
-                rp['translate_Z_entry'].setEnabled(False)
+        # if we can't make the registration box with the set size, then update
+        # the size to the largest size possible:
+        if max_size_of_box < registration_box_size:
+            rp['registration_box_size_entry'].setMaximum(max_size_of_box)
+        self.registration_parameters['start_registration_button'].setText("Confirm Registration")
+        rp['cancel_reg_button'].setVisible(True)
+        rp['registration_box_size_entry'].setEnabled(False)
+        rp['select_point_zero'].setChecked(False)
+        rp['select_point_zero'].setCheckable(False)
+        rp['translate_X_entry'].setEnabled(False)
+        rp['translate_Y_entry'].setEnabled(False)
+        rp['translate_Z_entry'].setEnabled(False)
+        # setup the appropriate stuff to run the registration
+        if not hasattr(self, 'translate'):
+            self.translate = vtk.vtkImageTranslateExtent()
+        elif self.translate is None:
+            self.translate = vtk.vtkImageTranslateExtent()
+        #self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
+        self.LoadImagesAndCompleteRegistration()
 
-                # setup the appropriate stuff to run the registration
-                if not hasattr(self, 'translate'):
-                    self.translate = vtk.vtkImageTranslateExtent()
-                elif self.translate is None:
-                    self.translate = vtk.vtkImageTranslateExtent()
-                self.translate.SetTranslation(-int(rp['translate_X_entry'].text()),-int(rp['translate_Y_entry'].text()),-int(rp['translate_Z_entry'].text()))
-
-                self.LoadImagesAndCompleteRegistration()
-                
-            
-            else:
-                # print ("Start Registration Unchecked")
-                rp['start_registration_button'].setText("Start Registration")
-                rp['registration_box_size_entry'].setEnabled(True)
-                rp['select_point_zero'].setCheckable(True)
-
-                rp['select_point_zero'].setChecked(False)
-                rp['translate_X_entry'].setEnabled(True)
-                rp['translate_Y_entry'].setEnabled(True)
-                rp['translate_Z_entry'].setEnabled(True)
-                
-                v.setInput3DData(self.ref_image_data)
-                v.style.UpdatePipeline()
-                if rp['point_zero_entry'].text() != "":
-                    self.createPoint0(self.getPoint0WorldCoords())
+    def confirmRegistration(self):
+        """
+        if "Confirm Registration" is pressed:
+        - the text on the button is changed to "Start Registration"
+        - the widgets for setting point0, the registration box size and the translation are enabled
+        - the full dimension (possibly downsampled) reference image is displayed on the viewer.
+        """
+        rp = self.registration_parameters
+        v = self.vis_widget_reg.frame.viewer
+        self.registration_parameters['start_registration_button'].setText("Restart Registration")
+        rp['registration_box_size_entry'].setEnabled(True)
+        rp['select_point_zero'].setCheckable(True)
+        rp['select_point_zero'].setChecked(False)
+        #rp['translate_X_entry'].setEnabled(True)
+        #rp['translate_Y_entry'].setEnabled(True)
+        #rp['translate_Z_entry'].setEnabled(True)
+        rp['cancel_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_button'].setVisible(False)
+        rp['set_auto_reg_label'].setVisible(False)
+        v.setInput3DData(self.ref_image_data)
+        v.style.UpdatePipeline()
+        if rp['point_zero_entry'].text() != "":
+            self.createPoint0(self.getPoint0WorldCoords())
 
     def UpdateViewerSettingsPanelForRegistration(self):
-        # print("UpdateViewerSettings")
         vs_widgets = self.visualisation_setting_widgets
         rp = self.registration_parameters
         if rp['start_registration_button'].isChecked():
@@ -1743,21 +1918,19 @@ It is used as a global starting point and a translation reference."
                 vs_widgets['loaded_image_dims_label'].setText("Original Image Size: ")
     
     def LoadImagesAndCompleteRegistration(self):
+        '''
+        1. Update self.unsampled_ref_image_data and self.unsampled_corr_image_data to contain the full resolution (unsampled) reference and correlate images,
+           cropped on the Z axis to the current registration box extent.
+        2. Run self.completeRegistration()
+        '''
 
         if hasattr(self, 'registration_box_extent'):
             previous_reg_box_extent = copy.deepcopy(self.registration_box_extent)
-            # print("Prev", previous_reg_box_extent)
         else:
             previous_reg_box_extent = None
 
-        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
-        point0 = self.getPoint0WorldCoords()
         reg_box_extent = self.getRegistrationBoxExtentInWorldCoords()
-
-        target_z_extent = [reg_box_extent[4], reg_box_extent[5]]
-        if target_z_extent[0] <0:
-            target_z_extent[0] = 0
-        target_z_extent = tuple(target_z_extent)
+        target_z_extent = tuple(self.enlarge_extent(2))
 
         self.target_cropped_image_z_extent = target_z_extent
 
@@ -1772,14 +1945,16 @@ It is used as a global starting point and a translation reference."
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
-            if previous_reg_box_extent != reg_box_extent:
-                ImageDataCreator.createImageData(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent, output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+            if previous_reg_box_extent != reg_box_extent: # If registration box is changed need to update the cropped images.
+                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
+                                                 target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1789,22 +1964,136 @@ It is used as a global starting point and a translation reference."
                 self.unsampled_ref_image_data = self.ref_image_data 
                 self.LoadCorrImageForReg(crop_corr_image=True)
             else:
-                self.completeRegistration()
+                if previous_reg_box_extent != reg_box_extent:
+                    self.LoadCorrImageForReg(crop_corr_image=True)
+                else:
+                    self.completeRegistration()
+
+    def enlarge_extent(self, dim):
+        """
+        Given the regitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
+        it returns 2*the box size in the direction specified by `dim`.         
+        If the registration box is not fully included in the volumetric data, it accounts of the borders in both the negative 
+        and positive directions.
+        
+        Parameters:
+        dim : int
+            Dimension along which to calculate the extent.
+        """
+        point0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        target_extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+        if target_extent[0] < 0:
+            target_extent[0] = 0 
+        if target_extent[1] > self.unsampled_image_dimensions[dim]:
+            target_extent[1] = self.unsampled_image_dimensions[dim] 
+        return target_extent
 
     def LoadCorrImageForReg(self,resample_corr_image= False, crop_corr_image = False): 
+        """
+        Loads the full resolution correlate image, cropped on the Z axis to the current registration box extent.
+        Saves the result in self.unsampled_corr_image_data.
+        Then runs self.completeRegistration()
+        """
         origin = self.target_cropped_image_origin 
         z_extent = self.target_cropped_image_z_extent
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        ImageDataCreator.createImageData(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image,
-                                         crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent, finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
+        image_data_creator = ImageDataCreator(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image, crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent)
+        image_data_creator.createImageData(finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
+        """It shows the registration difference volume in the viewer and sets up the tab for the registration. 
+        It runs the automatic registration and shows the results and the extra buttons."""
+        self.manualRegistration()
+        automatic_reg_worker = Worker(self.automatic_reg_run)
+        automatic_reg_worker.signals.result.connect(self.setRegistrationWidgetsFromWorker)
+        self.threadpool.start(automatic_reg_worker)
+
+    def setRegistrationWidgetsFromWorker(self,result):
+        """
+        Flips the result from the automatic registration class as numpy and vtk have different conventions.
+        Updates widgets and viewer by calling `setRegistrationWidgets`.
+        Updates the buttons.
+        """
+        self.auto_reg_result = np.flip(result)
+        self.setRegistrationWidgets(self.auto_reg_result)
+        rp = self.registration_parameters
+        rp['set_auto_reg_label'].setText(f'Automatic registration [{self.auto_reg_result[0]}, {self.auto_reg_result[1]}, {self.auto_reg_result[2]}]')
+        rp['cancel_auto_reg_button'].setVisible(True)
+        rp['set_auto_reg_label'].setVisible(True)
+        rp['set_auto_reg_button'].setVisible(True)
+        
+    def setRegistrationWidgets(self, array):
+        """
+        Updates the widgets and translates the viewer with the values stored in `array`.
+        """
+        
+        # update widgets
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(array[0])) 
+        rp['translate_Y_entry'].setText(str(array[1])) 
+        rp['translate_Z_entry'].setText(str(array[2]))
+        # update viewer
+        self.translate.SetTranslation(-int(array[0]),-int(array[1]),-int(array[2]))
+        self.translate.Update()
+        self.subtract.Update()
+        # for c in self.cast:
+        #     c.Update()
+        self.reg_viewer_update(type = 'after automatic registration')
+
+    def setRegistrationWidgetsShift(self, shift):   
+        """
+        Gets the total translation from the widgets.
+        Updates the widgets and translates the viewer with the extra `shift`.
+        """
+        total_translation = self.getRegistrationTranslation()
+        rp = self.registration_parameters
+        rp['translate_X_entry'].setText(str(total_translation[0] + shift[0])) 
+        rp['translate_Y_entry'].setText(str(total_translation[1] + shift[1])) 
+        rp['translate_Z_entry'].setText(str(total_translation[2] + shift[2]))
+        self.translate.SetTranslation(-int(total_translation[0] + shift[0]),-int(total_translation[1] + shift[1]),-int(total_translation[2] + shift[2]))
+        self.translate.Update()
+        self.subtract.Update()
+        # for c in self.cast:
+        #     c.Update()
+        self.reg_viewer_update(type = 'after automatic registration')
+
+    def getRegistrationTranslation(self):
+        """Reads the current translation in the widgets and returns it."""
+        rp = self.registration_parameters
+        current_translation = np.array([int(rp['translate_X_entry'].text()),int(rp['translate_Y_entry'].text()),int(rp['translate_Z_entry'].text())])
+        return current_translation
+        
+    def cancelAutomaticRegistration(self):
+        """Resets the widgets and the viewer to no translation."""
+        rp = self.registration_parameters
+        self.setRegistrationWidgets(np.array([0,0,0]))
+
+    def cancelRegistration(self):
+        """Resets the widgets and the wiever to no translation and confirms the registration. Updates the buttons."""
+        self.cancelAutomaticRegistration()
+        self.confirmRegistration()
+        self.registration_parameters['cancel_reg_button'].setVisible(False)
+        self.registration_parameters['start_registration_button'].setChecked(False)
+
+    def setToAutomaticRegistration(self):
+        """Sets the widgets and the viewer to the translation calculated with the automatic registration procedure."""
+        rp = self.registration_parameters
+        self.setRegistrationWidgets(self.auto_reg_result)
+
+    def manualRegistration(self):
+        """
+        1. Updates the point0 widget on the viewer to be centred on the location selected by the user.
+        2. Translates the correlate image by the translation values set in the translation widgets, and subtracts the reference image from the translated correlate image.
+        3. Updates the viewer to display the result of the subtraction.
+        4. Centres the viewer on the slice that contains point 0.
+        """
         self.updatePoint0Display()
         self.translateImages()
+        #reg viewer update makes the text 0
         self.reg_viewer_update(type = 'starting registration')
         self.centerOnPointZero() 
-
 
     def resetRegistration(self):
         if hasattr(self, 'vis_widget_reg'):
@@ -1829,8 +2118,12 @@ It is used as a global starting point and a translation reference."
             if hasattr(self, 'point0_world_coords'):
                 del self.point0_world_coords
 
-
     def translateImages(self, progress_callback = None):
+        '''
+        Subtracts the reference image from the translated correlate image. Result is saved in self.subtract
+        To do this the images must be cast to float first, and self.cast contains a list of the vtkImageCast
+        objects set up for the reference and correlate images. 
+        '''
         #progress_callback.emit(10)
         data = self.getRegistrationVOIs()
         data1 = data[0]
@@ -1843,16 +2136,33 @@ It is used as a global starting point and a translation reference."
         # print ("out of the reader", reader.GetOutput())
 
         cast1 = vtk.vtkImageCast()
-        cast2 = vtk.vtkImageCast()
         cast1.SetInputData(data1)
         cast1.SetOutputScalarTypeToFloat()
+        cast1.Update()
+
+        cast2 = vtk.vtkImageCast()
         cast2.SetInputConnection(self.translate.GetOutputPort())
         cast2.SetOutputScalarTypeToFloat()
+        cast2.Update()
+
+        extent_overlap = find_extent_overlap(cast1.GetOutput().GetExtent(), 
+                                             cast2.GetOutput().GetExtent())
+        
+        voi1 = vtk.vtkExtractVOI()
+        voi1.SetInputData(cast1.GetOutput())
+        voi1.SetVOI(extent_overlap)
+        voi1.Update()
+
+        voi2 = vtk.vtkExtractVOI()
+        voi2.SetInputData(cast2.GetOutput())
+        voi2.SetVOI(extent_overlap)
+        voi2.Update()
+        
         #progress_callback.emit(50)
         subtract = vtk.vtkImageMathematics()
         subtract.SetOperationToSubtract()
-        subtract.SetInputConnection(1,cast1.GetOutputPort())
-        subtract.SetInputConnection(0,cast2.GetOutputPort())
+        subtract.SetInput1Data(voi1.GetOutput())
+        subtract.SetInput2Data(voi2.GetOutput())
         #progress_callback.emit(70)
         
         subtract.Update()
@@ -1867,14 +2177,14 @@ It is used as a global starting point and a translation reference."
         # print ("stats ", stats.GetMinimum(), stats.GetMaximum(), stats.GetMean(), stats.GetMedian())
         self.subtract = subtract
         self.cast = [cast1, cast2]
+        self.subtract_voi = [voi1, voi2]
+        self.stats = stats
+        self.cast_data = data
         #progress_callback.emit(95)
 
-
-    def getRegistrationVOIs(self):            
-
-        extent = self.getRegistrationBoxExtentInWorldCoords()
-
-        #print("Registration box extent", extent )
+    def getRegistrationVOIs(self, extent = None):            
+        if extent is None:
+            extent = self.getRegistrationBoxExtentInWorldCoords()
 
         # get the selected ROI
         voi = vtk.vtkExtractVOI()
@@ -1887,8 +2197,6 @@ It is used as a global starting point and a translation reference."
         # copy the data to be registered if selection 
         data1 = vtk.vtkImageData()
         data1.DeepCopy(voi.GetOutput())
-        
-        #print ("Reading image 2")
         
         voi.SetInputData(self.unsampled_corr_image_data)
         
@@ -1906,66 +2214,85 @@ It is used as a global starting point and a translation reference."
 
         return [data1, data2]
 
-
     def reg_viewer_update(self, type = None):
-        # print("Reg viewer update")
+        '''
+        Updates the translation widgets with the current translation on each axis.
+        Updates the registration viewer to display the result of the difference between
+        the reference and translated correlate image.
+
+        Parameters
+        ----------
+        type : str
+            If 'starting registration' then the registration viewer is centred on the slice that contains point 0.
+            This is the case if the "Start Registration" button is pressed. Otherwise, when type=None we are in the middle of 
+            registration and the viewer is centred on the current slice
+            If 'manual registration' then the translation widgets are updated with the current translation on each axis.
+            If 'automatic registration' then the translation widgets are not updated.
+        '''
         # update the current translation on the interface:
         rp = self.registration_parameters
-        rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
-        rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
-        rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
-
+        if type == 'after automatic registration':
+            pass
+        if type == 'manual registration':
+            rp['translate_X_entry'].setText(str(self.translate.GetTranslation()[0]*-1))
+            rp['translate_Y_entry'].setText(str(self.translate.GetTranslation()[1]*-1))
+            rp['translate_Z_entry'].setText(str(self.translate.GetTranslation()[2]*-1))
+        printme = str(self.registration_parameters['translate_X_entry'].text())
+        #print("after reg"+printme)
         #update the viewer:
         v = self.vis_widget_reg.frame.viewer
         if hasattr(v, 'img3D'):
             current_slice = v.getActiveSlice()
         
+        self.translate.Update()
+        self.cast[1].Update()
+        voi_overlap = find_extent_overlap(self.cast[0].GetOutput().GetExtent(), 
+                                          self.cast[1].GetOutput().GetExtent())
+        self.subtract_voi[0].SetVOI(voi_overlap)
+        self.subtract_voi[1].SetVOI(voi_overlap)
+        self.subtract_voi[0].Update()
+        self.subtract_voi[1].Update()
+        self.subtract.Update()
+        # update 
         v.setInputData(self.subtract.GetOutput())
-        # print("Set the input data")
+
 
         if type == 'starting registration':
             v.style.UpdatePipeline()
-            v.startRenderLoop()
-            # print("About to center on point0")
+            # v.startRenderLoop()
             self.centerOnPointZero()
         else:
             v.style.SetActiveSlice(round(current_slice))
-            v.style.UpdatePipeline()
-            v.startRenderLoop()
+            # v.updatePipeline(True)
+            # v.style.Render()
 
         if (self.progress_window.isVisible()):
             self.progress_window.setValue(100)
             self.progress_window.close()
         
-
     def OnKeyPressEventForRegistration(self, interactor, event):
         key_code = interactor.GetKeyCode()
-        # print('OnKeyPressEventForRegistration', key_code)
 
         rp = self.registration_parameters
         if key_code in ['j','n','b','m'] and \
             rp['start_registration_button'].isChecked():
             self.translate_image_reg(key_code, event)
-            self.reg_viewer_update()
-
+            self.reg_viewer_update(type = 'manual registration')
 
     def AfterKeyPressEventForRegistration(self, interactor, event):
         #Have to re-adjust registration VOI after the orientation has been switched by the viewer.
         key_code = interactor.GetKeyCode()
-        # print('AfterKeyPressEventForRegistration', key_code) #,event)
         rp = self.registration_parameters
 
         if key_code in ['x','y','z'] and rp['start_registration_button'].isChecked():
             rp['start_registration_button'].setChecked(True) #restart registration on correct orientation
-            self.completeRegistration()
+            self.manualRegistration()
 
-        
     def translate_image_reg(self, *args, **kwargs):
         '''https://gitlab.kitware.com/vtk/vtk/issues/15777'''
         key_code, event = args
         rp = self.registration_parameters
         v = self.vis_widget_reg.frame.viewer
-        # print("Current slice", current_slice)
         trans = list(self.translate.GetTranslation())
         orientation = v.style.GetSliceOrientation()
         ij = [0,1]
@@ -1990,9 +2317,66 @@ It is used as a global starting point and a translation reference."
         self.translate.SetTranslation(*trans)
         self.translate.Update()
         self.subtract.Update()
-        #print ("Translation", trans)
 
-            
+    def automatic_reg_run(self, **kwargs):
+        """Runs the automatic registration. 
+        
+        This method prepares the arguments for the class `AutomaticRegistration` class and performs the registration process. 
+        It retrieves the images in full resolution and crops them with an extended box.
+        It evaluates the size of the box and the point zero in the box coordinate system.
+        Then, it runs the registration procedure and returns the calculated shift.
+        The class also outputs a logging file in the session directory.
+
+        Returns:
+        ----------------------------------------------------------------
+        DD3d_accumulate : np.ndarray [int, int, int]
+            The calculated 3D shift to register the two volumes.
+        """
+        # get images
+        target_x_extent = self.enlarge_extent(0)
+        target_y_extent = self.enlarge_extent(1)
+        target_z_extent = self.enlarge_extent(2)
+        extent = target_x_extent + target_y_extent + target_z_extent
+        data = self.getRegistrationVOIs(extent)
+        [image0,image1]=[Converter.vtk2numpy(el) for el in data]
+
+        # get point zero and size in the box coordinate system
+        p3d_0, size = self.find_p0_and_size()
+        # run automatic registration class
+        automatic_registration_object = AutomaticRegistration(image0,image1, p3d_0, size, log_folder = os.path.join(working_directory, 'DVC_Sessions'))
+        automatic_registration_object.run()
+        DD3d_accumulate=automatic_registration_object.DD3d_accumulate 
+        return DD3d_accumulate
+
+    def find_p0_and_size(self):
+        """Finds the point zero and size of the registration box in the coordinate system of the registration box 
+        and with the xyz ordering convention of `self.unsampled_ref_image_data`.
+        If the registration box is not fully included in the volumetric data, it accounts for the borders in both the negative 
+        and positive directions.
+        
+        Returns:
+        tuple: A tuple containing the point zero and size of the registration box.
+            - p3d_0 (np.ndarray) : The point zero in the registration box coordinate system.
+            - size (np.ndarray) : The size of the registration box in each dimension.
+        """
+        point0 = self.getPoint0WorldCoords()
+        reg_box_size = self.getRegistrationBoxSizeInWorldCoords()
+        p3d_0 = np.array([reg_box_size, reg_box_size, reg_box_size])
+        size = np.array([[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2],[reg_box_size//2,3*reg_box_size//2]])
+        for dim in range(0,3):
+            extent = [round(point0[dim] - reg_box_size), round(point0[dim] + reg_box_size)]
+            size_extent = [round(point0[dim] - reg_box_size//2), round(point0[dim] + reg_box_size//2)]
+            if extent[0] < 0:
+                p3d_0[dim] = round(point0[dim])
+                size[dim][1] = size_extent[1]
+                if size_extent[0] < 0:
+                    size[dim][0] = 0
+                elif size_extent[0] > 0:
+                    size[dim][0] = size_extent[0]
+            if size_extent[1] > self.unsampled_image_dimensions[dim]:
+                size[dim][1] = size[dim][1] - size_extent[1] + self.unsampled_image_dimensions[dim]
+
+        return np.flip(p3d_0), np.flip(size, axis=0)
 
 #Mask Panel:
     def CreateMaskPanel(self):
@@ -2059,6 +2443,7 @@ It is used as a global starting point and a translation reference."
         widgetno += 1
 
         mp_widgets['mask_downsampled_coords_warning'] = QLabel(groupBox)
+        mp_widgets['mask_downsampled_coords_warning'].setWordWrap(True)
         mp_widgets['mask_downsampled_coords_warning'].setText("Note: if your image has been downsampled, the number of slices is in the coordinates of the downsampled image.")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, mp_widgets['mask_downsampled_coords_warning'])
         widgetno += 1
@@ -2110,12 +2495,13 @@ It is used as a global starting point and a translation reference."
         # Add elements to layout
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.mask_panel[1])
 
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
             self.warningDialog(window_title="Attention", 
                                message="If you do not clear the mask and draw again the app will be very sad!" )
-
 
     def ToggleTracing(self):
         '''Toggles the tracing widget for tracing the mask'''
@@ -2133,7 +2519,6 @@ It is used as a global starting point and a translation reference."
             # disable tracing
             mp_widgets['start_tracing'].setText("Start Tracing")
             viewer.imageTracer.Off()
-
 
     def MaskWorker(self, type):
         v = self.vis_widget_2D.frame.viewer
@@ -2213,9 +2598,6 @@ It is used as a global starting point and a translation reference."
         
         # create a blank image
         dims = image_data.GetDimensions()
-        # print("Dims:" + str(dims))
-
-        #print(image_data.GetSpacing())
         
         # progress_callback.emit(40)
 
@@ -2428,7 +2810,6 @@ It is used as a global starting point and a translation reference."
             else:
                 self.warningDialog("Please select a .mha file", "Error")
 
-
     def clearMask(self):
         self.mask_parameters['extendMaskCheck'].setEnabled(False)
         self.mask_parameters['extendMaskCheck'].setChecked(False)
@@ -2492,8 +2873,8 @@ It is used as a global starting point and a translation reference."
 # Point Cloud Panel:
 
     def CreatePointCloudPanel(self):
-
         self.pointCloudDockWidget = QDockWidget(self)
+        self.pointCloudDockWidget.setFeatures(QDockWidget.NoDockWidgetFeatures)
         self.pointCloudDockWidget.setWindowTitle('4 - Point Cloud')
         self.pointCloudDockWidget.setObjectName("PointCloudPanel")
         self.pointCloudDockWidgetContents = QWidget()
@@ -2502,11 +2883,16 @@ It is used as a global starting point and a translation reference."
 
 
         # Add vertical layout to dock contents
+
         self.graphDockVL = QVBoxLayout(self.pointCloudDockWidgetContents)
         self.graphDockVL.setContentsMargins(0, 0, 0, 0)
 
+        
+
         # Create widget for dock contents
         self.dockWidget = QWidget(self.pointCloudDockWidgetContents)
+
+        scroll_area_point_cloud = NoBorderScrollArea(self.dockWidget)
 
         # Add vertical layout to dock widget
         self.graphWidgetVL = QVBoxLayout(self.dockWidget)
@@ -2536,22 +2922,24 @@ It is used as a global starting point and a translation reference."
         # Add ISO Value field
         self.isoValueLabel = QLabel(self.graphParamsGroupBox)
         self.isoValueLabel.setText("Subvolume size")
-        self.isoValueLabel.setToolTip("Defines the diameter or side length of the subvolumes created around each search point. This is in units of voxels on the original image.")
+        tooltip_subvolume_size = "Defines the diameter of a spherical subvolume region or the side length of a cubic subvolume region created around each point. This is in units of voxels on the original image."
+        self.isoValueLabel.setToolTip(tooltip_subvolume_size)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.isoValueLabel)
         self.isoValueEntry= QLineEdit(self.graphParamsGroupBox)
         self.isoValueEntry.setValidator(validatorint)
         self.isoValueEntry.setText('30')
-        self.isoValueEntry.setToolTip("Defines the diameter or side length of the subvolumes created around each search point. This is in units of voxels on the original image.")
+        self.isoValueEntry.setToolTip(tooltip_subvolume_size)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.isoValueEntry)
         self.isoValueEntry.textChanged.connect(self.displaySubvolumePreview)
 
         widgetno += 1
         pc['pointcloud_size_entry'] = self.isoValueEntry
-
+        tooltip_display_subvolume_preview = "A preview of the size of each subvolume will be shown in the viewer."
         pc['subvolume_preview_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['subvolume_preview_check'].setText("Display Subvolume Preview")
         pc['subvolume_preview_check'].setChecked(True)
         pc['subvolume_preview_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_preview_actor') )
+        pc['subvolume_preview_check'].setToolTip(tooltip_display_subvolume_preview)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolume_preview_check'])
         widgetno += 1
 
@@ -2586,15 +2974,15 @@ It is used as a global starting point and a translation reference."
         # Add collapse priority field
         self.dimensionalityLabel = QLabel(self.graphParamsGroupBox)
         self.dimensionalityLabel.setText("Dimensionality")
-        self.dimensionalityLabel.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
-A 3D pointcloud is created within the full extent of the mask.")
+        tooltip_dimensionality = "A 2D pointcloud is created only on the currently viewed plane.\n\
+A 3D pointcloud is created within the full extent of the mask."
+        self.dimensionalityLabel.setToolTip(tooltip_dimensionality)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.dimensionalityLabel)
         self.dimensionalityValue = QComboBox(self.graphParamsGroupBox)
         self.dimensionalityValue.addItems(["3D","2D"])
-        self.dimensionalityValue.setCurrentIndex(1)
+        self.dimensionalityValue.setCurrentIndex(0)
         self.dimensionalityValue.currentIndexChanged.connect(self.updatePointCloudPanel)
-        self.dimensionalityValue.setToolTip("A 2D pointcloud is created only on the currently viewed plane.\n\
-A 3D pointcloud is created within the full extent of the mask.")
+        self.dimensionalityValue.setToolTip(tooltip_dimensionality)
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.dimensionalityValue)
         widgetno += 1
@@ -2682,7 +3070,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         rotation_layout = QHBoxLayout()
         rotation_layout.setContentsMargins(0,0,0,0)
 
-        self.rotationLabel = QLabel("Rotation Angle", self.graphParamsGroupBox)
+        self.rotationLabel = QLabel("Rotation Angle [deg]", self.graphParamsGroupBox)
         self.rotationLabel.setToolTip(rotation_tooltip_text)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.rotationLabel)
 
@@ -2774,7 +3162,7 @@ A 3D pointcloud is created within the full extent of the mask.")
         widgetno += 1
         # Add elements to layout
         self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
-        self.graphDockVL.addWidget(self.dockWidget)
+        self.graphDockVL.addWidget(scroll_area_point_cloud)
         self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.pointCloudDockWidget)
         widgetno += 1
@@ -2813,7 +3201,9 @@ Each line in the tab delimited file contains an integer point label followed by 
 2   300   750.2  209\n\
 etc.\n\
 Non-integer voxel locations are admitted, with reference volume interpolation used as needed.\n\
-The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.")
+The first point is significant, as it is used as a global starting point and reference for the rigid_trans variable.\n\
+File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
+        
         pc['roi_browse'].clicked.connect(self.select_pointcloud)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['roi_browse'])
         widgetno += 1
@@ -2836,16 +3226,20 @@ The first point is significant, as it is used as a global starting point and ref
         widgetno += 1
 
         pc['subvolumes_check'] = QCheckBox(self.graphParamsGroupBox)
+        tooltip_display_subvolume_regions = "Allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed."
         pc['subvolumes_check'].setText("Display Subvolume Regions")
         pc['subvolumes_check'].setChecked(False)
         pc['subvolumes_check'].stateChanged.connect( partial(self.showHideActor,actor_name='subvol_actor') )
+        pc['subvolumes_check'].setToolTip(tooltip_display_subvolume_regions)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['subvolumes_check'])
         widgetno += 1
 
         pc['reg_box_check'] = QCheckBox(self.graphParamsGroupBox)
         pc['reg_box_check'].setText("Display Registration Region")
+        tooltip_display_registration_region = "Toggles on/off the view of the registration box centred on point 0."
         pc['reg_box_check'].setChecked(True)
         pc['reg_box_check'].stateChanged.connect( partial(self.showHideActor,actor_name='registration_box_actor') )
+        pc['reg_box_check'].setToolTip(tooltip_display_registration_region)
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['reg_box_check'])
         widgetno += 1
 
@@ -2855,6 +3249,8 @@ The first point is significant, as it is used as a global starting point and ref
         pc['pc_points_value'] = QLabel("0")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
+
+        scroll_area_point_cloud.apply_qdarkstyle_to_buttons(self.dockWidget)
 
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
@@ -2952,16 +3348,17 @@ The first point is significant, as it is used as a global starting point and ref
                     subvol_actor.GetProperty().SetColor(0.,0,0)
                     subvol_actor.GetProperty().SetLineWidth(2.0)
                     subvol_actor.GetProperty().SetEdgeColor(0.,0,0)
+                    subvol_actor.GetProperty().SetRepresentationToWireframe()
 
                     if viewer_widget.viewer == viewer2D:
                         subvol_actor.GetProperty().SetOpacity(0.5)
                         subvol_actor.GetProperty().SetLineWidth(4.0)
                         subvol_actor.GetProperty().SetEdgeVisibility(True)
                         subvol_actor.GetProperty().SetEdgeColor(0, 0, 0)
+                        subvol_actor.GetProperty().SetRenderLinesAsTubes(True)
                         if not 'subvol_preview_actor' in viewer_widget.frame.viewer.actors:
                             viewer_widget.frame.viewer.AddActor(subvol_actor, 'subvol_preview_actor')
                     else:
-                        subvol_actor.GetProperty().SetRepresentationToWireframe()
                         subvol_actor.GetProperty().SetColor(0, 0, 0)
                         subvol_actor.GetProperty().SetOpacity(1)
                         subvol_actor.GetProperty().SetLineWidth(3.0)
@@ -2969,8 +3366,7 @@ The first point is significant, as it is used as a global starting point and ref
                             viewer_widget.frame.viewer.getRenderer().AddActor(subvol_actor)
                         self.actors_3D ['subvol_preview_actor'] = subvol_actor
                     viewer_widget.frame.viewer.style.UpdatePipeline()
-                # print("Added preview")
-        
+                # print("Added preview")  
 
     def updatePointCloudPanel(self):
         #updates which settings can be changed when orientation/dimensions of image changed
@@ -2990,6 +3386,9 @@ The first point is significant, as it is used as a global starting point and ref
                 self.overlapXValueEntry.setEnabled(False)
 
     def select_pointcloud(self): #, label):
+        """Opens a dialog to select the pointcloud from a file. 
+        Runs the creation or loading of the point cloud in a worker.
+        Sets the attribut `self.pointcloud_is` to 'loaded'."""
         dialogue = QFileDialog()
         self.roi = None
         self.roi = dialogue.getOpenFileName(self,"Select a roi")[0]
@@ -3006,8 +3405,9 @@ The first point is significant, as it is used as a global starting point and ref
         if self.roi is not None:
             self.pointcloud_is = 'loaded'
 
-
     def PointCloudWorker(self, type, filename = None, disp_file = None, vector_dim = None):
+        """Runs the worker to create or load the point cloud.
+        If the format of the point-cloud file is not in the allowed list it displays an error dialog."""
         if type == "create":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
@@ -3019,8 +3419,15 @@ The first point is significant, as it is used as a global starting point and ref
             self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
         elif type == "load pointcloud file":
             self.clearPointCloud()
-            self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
-            self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
+            if self.roi.endswith(allowed_point_cloud_file_formats):
+                self.pointcloud_worker = Worker(self.loadPointCloud, self.roi)
+                self.pointcloud_worker.signals.result.connect(self.DisplayLoadedPointCloud)
+            else:
+                error_title = "FILE FORMAT ERROR"
+                error_text = f"Error reading the point-cloud file {self.roi}. Allowed formats are {allowed_point_cloud_file_formats}."
+                self.displayFileErrorDialog(message=error_text, title=error_title)
+                return
+                
         elif type == "create without loading":
             #if not self.pointCloudCreated:
             self.clearPointCloud()
@@ -3078,7 +3485,6 @@ The first point is significant, as it is used as a global starting point and ref
 
     def createPointCloud(self, **kwargs):
         ## Create the PointCloud
-        #print("Create point cloud")
         filename = kwargs.get('filename', "latest_pointcloud.roi")
         progress_callback = kwargs.get('progress_callback', PrintCallback())
         message_callback = kwargs.get('message_callback', PrintCallback())
@@ -3331,19 +3737,41 @@ The first point is significant, as it is used as a global starting point and ref
         self.roi = filename
 
         return True
-            
 
     def loadPointCloud(self, *args, **kwargs):
+        """Loads a pointcloud from file. 
+        Handles BOM in csv file.
+        File formats allowed are 'roi', 'txt', 'csv', 'xlxs' and 'inp'. 
+        Stores the pointcloud in a temporary txt file, whose path is stored in 'self.roi'.
+        """
         time.sleep(0.1) #required so that progress window displays
         pointcloud_file = os.path.abspath(args[0])
         progress_callback = kwargs.get('progress_callback', None)
         progress_callback.emit(20)
         #self.clearPointCloud() #need to clear current pointcloud before we load next one TODO: move outside thread
         progress_callback.emit(30)
-        self.roi = pointcloud_file
-        #print(self.roi)
+        
+        if pointcloud_file.endswith('.txt') or pointcloud_file.endswith('.roi'):
+            points = np.loadtxt(pointcloud_file)
+        elif pointcloud_file.endswith('.csv'):
+            with tempfile.NamedTemporaryFile(delete=False, mode='w+', suffix='.csv', newline='', encoding='utf-8') as temp_file:
+                with open(pointcloud_file, 'r', encoding='utf-8-sig') as f:
+                    lines = f.readlines()
+                temp_file.writelines(lines)
+                temp_file_path = temp_file.name
+            points = np.genfromtxt(temp_file_path, delimiter=',', dtype=float)
+            os.remove(temp_file_path)
+        elif pointcloud_file.endswith('.xlsx'):
+            workbook = load_workbook(pointcloud_file, read_only=True)
+            sheet = workbook.active
+            points = np.array(list(sheet.values))
+        elif pointcloud_file.endswith('.inp'):
+            points =  extract_point_cloud_from_inp_file(args[0])
+        filename = os.path.basename(pointcloud_file)
+        path = os.path.abspath(os.path.join(tempfile.tempdir, filename))
+        np.savetxt(path, points,fmt=('%d','%f','%f','%f'))
+        self.roi = path
 
-        points = np.loadtxt(self.roi)
         # except ValueError as ve:
         #     print(ve)
         #     return
@@ -3393,13 +3821,15 @@ The first point is significant, as it is used as a global starting point and ref
         # self.rotateZValueEntry.setText(str("{:.2f}".format(self.pointCloud_rotation[2])))
         # print("Set the values")
 
+
+    
+
     def DisplayNumberOfPointcloudPoints(self):
-        # print("Update DisplayNumberOfPointcloudPoints to ", self.pc_no_points)
+        "Updates the number of points in the widgets."
         self.pointcloud_parameters['pc_points_value'].setText(str(self.pc_no_points))
         self.rdvc_widgets['run_points_spinbox'].setMaximum(int(self.pc_no_points))
         if hasattr(self, 'num_processed_points'):
             self.result_widgets['pc_points_value'].setText(str(self.num_processed_points))
-        
 
     def DisplayLoadedPointCloud(self):
         self.setup2DPointCloudPipeline()
@@ -3420,7 +3850,6 @@ The first point is significant, as it is used as a global starting point and ref
         self.DisplayNumberOfPointcloudPoints()
         self.pointcloud_is = 'loaded'
         
-
     def DisplayPointCloud(self):
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
         if self.pointCloud.GetNumberOfPoints() == 0:
@@ -3545,7 +3974,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
             if hasattr(self.vis_widget_2D, 'PlaneClipper'):
                 self.vis_widget_2D.PlaneClipper.UpdateClippingPlanes()
 
-
     def displayVectors(self,disp_file):
         self.clearPointCloud()
         self.pointcloud_parameters['subvolume_preview_check'].setChecked(False)
@@ -3567,6 +3995,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self._addColorBar(self.vis_widget_2D)
         logging.info('Adding color bar 3D')
         self._addColorBar(self.vis_widget_3D)
+
+        # trigger a drawing
+        self.vis_widget_2D.frame.viewer.renWin.Render()
+        self.vis_widget_3D.frame.viewer.renWin.Render()
         
     def _removeColormap(self):
         '''remove vectors and colormap'''
@@ -3585,8 +4017,6 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_max_entry'].setValue(dmax)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
     
-
-
     def _updateUIwithDisplacementVectorRange(self, dmin, dmax):
         single_step = 1e-6
 
@@ -3601,10 +4031,13 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         self.result_widgets['range_vectors_min_entry'].setMinimum(dmin)
         self.result_widgets['range_vectors_min_entry'].setValue(dmin)
         self.result_widgets['range_vectors_min_entry'].setEnabled(True)
-
         self.result_widgets['range_vectors_all_entry'].setEnabled(True)
         
     def loadDisplacementFile(self, displ_file, disp_wrt_point0 = False, multiplier = 1):
+        """Loads the point cloud from file. If the min is enabled it resamples the vectors to the range selected by the user,
+        else, it extracts the range of the vectors magnitude and updates the min and max widgets.
+        If the multiplier is not 1 it rescales the vectors.
+        The method is invoked when the widget 'View' is set to 'total displacement' or 'displacement with respect to point 0'"""
         
         raw_displ = np.asarray(
             PointCloudConverter.loadPointCloudFromCSV(displ_file,'\t')[:]
@@ -3638,7 +4071,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         scalar_bar = vtk.vtkScalarBarActor()
         # scalar_bar.SetOrientationToHorizontal()
         scalar_bar.SetOrientationToVertical()
-               
+        scalar_bar.SetTitle('Displacement (pixels)')
+        
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3656,10 +4090,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         else:
             logging.warning('Wrong viewer type {}'.format(type(viewer)))
 
-        
-
-
     def createVectors2D(self, displ, viewer_widget):
+        '''Creates displacement vectors in 2D
+        
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
+        '''
         viewer = viewer_widget.frame.viewer
         # print("CREATE VECTORS", viewer.GetSliceOrientation())
         if isinstance(viewer, viewer2D):
@@ -3686,6 +4121,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
             orientation = viewer.getSliceOrientation()
 
+            # the vectors are scaled with multiplier
+            multiplier = float(self.result_widgets['scale_vectors_entry'].value())
             for count in range(len(displ)):
                 p = pc.InsertNextPoint(displ[count][1],displ[count][2], displ[count][3]) #xyz coords of pc
                 arrow_start_vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
@@ -3700,9 +4137,11 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 for i, value in enumerate(arrow_shaft_centre):
                     if i != orientation:
                         arrow_vector[i] = displ[count][i+6] 
-                        arrowhead_vector[i] = (displ[count][i+6]*0.3) # Vector for arrowhead - determines height of triangle that forms arrowhead
-                        arrow_shaft_vector[i] = displ[count][i+6]*0.8 # Vector for arrow shaft - determines length of arrow shaft
-                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.4
+                        # Vector for arrowhead - determines height of triangle that forms arrowhead
+                        arrowhead_vector[i] = (displ[count][i+6] * 0.3)
+                         # Vector for arrow shaft - determines length of arrow shaft
+                        arrow_shaft_vector[i] = displ[count][i+6] * 0.8
+                        arrow_shaft_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6]) * 0.4
                         arrowhead_centre[i] = arrow_shaft_centre[i] + (displ[count][i+6])*0.3 + displ[count][i+6]*0.15
 
                 p = arrow_shaft_centres_pc.InsertNextPoint(arrow_shaft_centre[0], arrow_shaft_centre[1], arrow_shaft_centre[2])
@@ -3726,13 +4165,14 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                 # print("Arrow head loc: ", [arrowhead_centre[0], arrowhead_centre[1], arrowhead_centre[2]])
                 # print("Arrow head size: ", arrowhead_vector) 
                 #print(count, reduce(lambda x,y: x + y**2, (*new_points,0), 0))
-
+                
+                
                 acolor.InsertNextValue(np.sqrt(
-                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0)
-                    ) 
+                    reduce(lambda x,y: x + y**2, (*arrow_vector,0), 0) 
+                    ) / multiplier
                 )#inserts u^2 + v^2 + w^2
                 
-            lut = self._createLookupTable()
+            lut = self._createLookupTable(cmap='turbo')
 
             pointPolyData = vtk.vtkPolyData()
             pointPolyData.SetPoints( pc ) # (x,y,z)
@@ -3844,9 +4284,9 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
     def _createLookupTable(self, cmap='magma'):
         lut = vtk.vtkLookupTable()
         
-        cmap = CILColorMaps.get_color_map('magma')
-        lut.SetNumberOfTableValues(len(cmap))
-        for i,el in enumerate(cmap):
+        dcmap = CILColorMaps.get_color_map(cmap)
+        lut.SetNumberOfTableValues(len(dcmap))
+        for i,el in enumerate(dcmap):
             lut.SetTableValue(i, *el, 1)
 
         lut.Build()
@@ -3866,6 +4306,10 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                     self.createVectors2D(displ, self.vis_widget_2D)
 
     def createVectors3D(self, displ, viewer_widget, actor_list):
+        '''Creates displacement vectors in 3D
+        
+        Uses the "vector scaling" multiplier from the UI to scale the vectors whilst keeping the value range in the color bar fixed.
+        '''
         viewer = viewer_widget.frame.viewer
         if isinstance(viewer, viewer3D):
             v = viewer
@@ -3881,10 +4325,13 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
                                 displ[count][3]) #xyz coords
                 vertices.InsertNextCell(1) # Create cells by specifying a count of total points to be inserted
                 vertices.InsertCellPoint(p)
+                # these are scaled with multiplier
+                multiplier = float(self.result_widgets['scale_vectors_entry'].value())
                 arrow.InsertNextTuple3(displ[count][6],displ[count][7],displ[count][8]) #u and v are set for x and y
-                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)) #inserts u^2 + v^2
+                # the colors need to remain the quantitative ones, independent on the multiplier
+                acolor.InsertNextValue(np.sqrt(displ[count][6]**2+displ[count][7]**2+displ[count][8]**2)/multiplier) #inserts u^2 + v^2
                 
-            lut = self._createLookupTable()
+            lut = self._createLookupTable(cmap='turbo')
         
             #2. Add the points to a vtkPolyData.
             pointPolyData = vtk.vtkPolyData()
@@ -3940,6 +4387,7 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
 
 #Run DVC  Panel:
     def CreateRunDVCPanel(self):
+        """Creates the 'Run DVC' tab. Creates the widgets in it and connects them."""
         self.run_dvc_panel = generateUIDockParameters(self, "5 - Run DVC")
         dockWidget = self.run_dvc_panel[0]
         dockWidget.setObjectName("RunDVCPanel")
@@ -4011,18 +4459,18 @@ Future code development will introduce methods for better management of large di
         rdvc_widgets['run_max_displacement_label'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['run_max_displacement_label'])
         rdvc_widgets['run_max_displacement_entry'] = QSpinBox(groupBox)
-        rdvc_widgets['run_max_displacement_entry'].setValue(15)
+        rdvc_widgets['run_max_displacement_entry'].setValue(5)
         rdvc_widgets['run_max_displacement_entry'].setToolTip(displacement_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_max_displacement_entry'])
         widgetno += 1
 
         rdvc_widgets['run_ndof_label'] = QLabel(groupBox)
-        rdvc_widgets['run_ndof_label'].setText("Number of Degrees of Freedom")
+        rdvc_widgets['run_ndof_label'].setText("Number of Optimisation Parameters")
         
-        dof_text = "Defines the degree-of-freedom set for the final stage of the search.\nThe actual search process introduces degrees-of-freedom in stages up to this value.\n\
-Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nReserve strain degrees-of-freedom for cases when the highest precision is required.\n\
+        dof_text = "Defines the optimisation parameters in the final stage of the search.\n\
+Translation only suffices for a quick, preliminary investigation.\nAdding rotation will significantly improve displacement accuracy in most cases.\nUse strain degrees of freedom for cases when the highest precision is required.\n\
 3 = translation only,\n\
-6 = translation plus rotation,\n\
+6 = translation and rotation,\n\
 12 = translation, rotation and strain."
         rdvc_widgets['run_ndof_label'].setToolTip(dof_text)
 
@@ -4031,7 +4479,7 @@ Translation only suffices for a quick, preliminary investigation.\nAdding rotati
         rdvc_widgets['run_ndof_entry'].addItem('3')
         rdvc_widgets['run_ndof_entry'].addItem('6')
         rdvc_widgets['run_ndof_entry'].addItem('12')
-        rdvc_widgets['run_ndof_entry'].setCurrentIndex(1)
+        rdvc_widgets['run_ndof_entry'].setCurrentIndex(2)
         rdvc_widgets['run_ndof_entry'].setToolTip(dof_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_ndof_entry'])
         widgetno += 1
@@ -4122,7 +4570,7 @@ This parameter has a strong effect on computation time, so be careful."
         rdvc_widgets['subvol_points_spinbox'] = QSpinBox(singleRun_groupBox)
         rdvc_widgets['subvol_points_spinbox'].setMinimum(100)
         rdvc_widgets['subvol_points_spinbox'].setMaximum(50000)
-        rdvc_widgets['subvol_points_spinbox'].setValue(10000)
+        rdvc_widgets['subvol_points_spinbox'].setValue(1000)
         rdvc_widgets['subvol_points_spinbox'].setToolTip(subvol_points_text)
 
         singleRun_groupBoxFormLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['subvol_points_spinbox'])
@@ -4238,6 +4686,9 @@ This parameter has a strong effect on computation time, so be careful."
 
         self.rdvc_widgets = rdvc_widgets
 
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.run_dvc_panel[1])
+
     def _set_num_points_in_run_to_all(self):
         if hasattr(self, 'pc_no_points'):
             maxpoints = int(self.pc_no_points)
@@ -4279,6 +4730,8 @@ This parameter has a strong effect on computation time, so be careful."
 
 
     def create_config_worker(self):
+        """Creates warning dialogs if information is missing to run DVC.
+        Calls the worker."""
         if hasattr(self, 'translate'):
             if self.translate is None:
                 self.warningDialog("Complete image registration first.", "Error")
@@ -4286,7 +4739,7 @@ This parameter has a strong effect on computation time, so be careful."
         if not hasattr(self, 'translate'):
             self.warningDialog("Complete image registration first.", "Error")
             return
-
+        
         if self.pointcloud_is == 'loaded':
             if not self.roi:
                 self.warningDialog(window_title="Error", 
@@ -4437,7 +4890,7 @@ This parameter has a strong effect on computation time, so be careful."
                 pointcloud_new_file = os.path.join(results_folder, folder_name, "_" + self.pointcloud_parameters['pointcloud_size_entry'].text() + ".roi")
                 shutil.copyfile(self.roi, pointcloud_new_file)
                 
-            else:
+            elif setting == "bulk":
                 xmin = int(self.rdvc_widgets['points_in_subvol_range_min_value'].text())
                 xmax = int(self.rdvc_widgets['points_in_subvol_range_max_value'].text())
                 xstep = int(self.rdvc_widgets['points_in_subvol_range_step_value'].text())
@@ -4557,6 +5010,7 @@ This parameter has a strong effect on computation time, so be careful."
             #TODO: test this and see if we need to stop the worker, or if not returning anything is enough
 
     def run_external_code(self, error = None):
+        "The error signal of the setup worker is connected to a dialog."
         if error == "subvolume error":
             self.progress_window.setValue(100)
             self.warningDialog("Minimum number of sampling points in subvolume value higher than maximum", window_title="Value Error")
@@ -4583,7 +5037,16 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.dvc_runner = DVC_runner(self, os.path.abspath(self.run_config_file), 
                                      self.finished_run, self.run_succeeded, tempfile.tempdir)
 
-        self.dvc_runner.run_dvc()
+        setup = Worker(self.dvc_runner.set_up)
+        setup.signals.message.connect(self.updateProgressDialogMessage)
+        setup.signals.progress.connect(self.progress)
+        # should connect also the error message
+        setup.signals.finished.connect(self.dvc_runner.run_dvc)
+        # connect error signal to an ErrorDialog
+        ff = partial(displayErrorDialogFromWorker, self)
+        setup.signals.error.connect(ff)
+        self.threadpool.start(setup)
+        # self.dvc_runner.run_dvc()
 
 
     def update_progress(self, exe = None):
@@ -4605,16 +5068,15 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             self.progress_window.setValue(self.progress_window.value()+1)
 
-
     def finished_run(self):
         if self.run_succeeded:
             self.result_widgets['run_entry'].addItem(self.rdvc_widgets['name_entry'].text())
             self.show_run_pcs()
 
 
-
 # DVC Results Panel:
     def CreateViewDVCResultsPanel(self):
+        "Creates the 'DVC Results' tab. Creates the widgets in it and connects them."
         self.dvc_results_panel = generateUIDockParameters(self, "6 - DVC Results")
         dockWidget = self.dvc_results_panel[0]
         dockWidget.setObjectName("DVCResultsPanel")
@@ -4637,6 +5099,21 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['run_entry'])
         widgetno += 1
 
+        result_widgets['pc_label'] = QLabel(groupBox)
+        result_widgets['pc_label'].setText("Subvolume Size:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_label'])
+        result_widgets['pc_entry'] = QComboBox(groupBox)
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_entry'])
+        widgetno += 1
+
+        result_widgets['subvol_label'] = QLabel(groupBox)
+        result_widgets['subvol_label'].setText("Points in Subvolume:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
+        result_widgets['subvol_entry'] = QComboBox(groupBox)
+        result_widgets['subvol_entry'].setCurrentText("1000")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
+        widgetno += 1
+
         separators = []
         separators.append(QFrame(groupBox))
         separators[-1].setFrameShape(QFrame.HLine)
@@ -4654,23 +5131,15 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
         widgetno += 1  
 
-        result_widgets['pc_label'] = QLabel(groupBox)
-        result_widgets['pc_label'].setText("Subvolume Size:")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_label'])
-        result_widgets['pc_entry'] = QComboBox(groupBox)
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_entry'])
-        widgetno += 1
-
-        result_widgets['subvol_label'] = QLabel(groupBox)
-        result_widgets['subvol_label'].setText("Points in Subvolume:")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['subvol_label'])
-        result_widgets['subvol_entry'] = QComboBox(groupBox)
-        result_widgets['subvol_entry'].setCurrentText("1000")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['subvol_entry'])
+        #Pointcloud points label
+        result_widgets['pc_points_label'] = QLabel("Points in current pointcloud:")
+        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_points_label'])
+        result_widgets['pc_points_value'] = QLabel("0")
+        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_points_value'])
         widgetno += 1
 
         result_widgets['vec_label'] = QLabel(groupBox)
-        result_widgets['vec_label'].setText("View vectors:")
+        result_widgets['vec_label'].setText("View:")
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['vec_label'])
 
         result_widgets['vec_entry'] = QComboBox(groupBox)
@@ -4678,6 +5147,12 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         result_widgets['vec_entry'].currentIndexChanged.connect(self._DVCResultsDisableRanges)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['vec_entry'])
         widgetno += 1
+
+        separators.append(QFrame(groupBox))
+        separators[-1].setFrameShape(QFrame.HLine)
+        separators[-1].setFrameShadow(QFrame.Raised)
+        formLayout.setWidget(widgetno, QFormLayout.SpanningRole, separators[-1])
+        widgetno += 1  
 
         result_widgets['scale_vectors_label'] =  QLabel(groupBox)
         result_widgets['scale_vectors_label'].setText("Vector Scaling:")
@@ -4729,34 +5204,29 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         single_step = 0.00001
         result_widgets['range_vectors_max_entry'] = QDoubleSpinBox(groupBox)
         result_widgets['range_vectors_max_entry'].setSingleStep(single_step)
-        result_widgets['range_vectors_max_entry'].setMaximum(1.)
         result_widgets['range_vectors_max_entry'].setMinimum(single_step)
         result_widgets['range_vectors_max_entry'].setValue(1.00)
         result_widgets['range_vectors_max_entry'].setToolTip("Adjust the range of the vectors. The full range is between 0 and 1.")
         result_widgets['range_vectors_max_entry'].setEnabled(False)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['range_vectors_max_entry'])
         widgetno += 1
+
         result_widgets['load_button'] = QPushButton("View Pointcloud/Vectors")
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['load_button'])
         widgetno += 1
-        
 
-        result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)
-        
         result_widgets['load_button'].clicked.connect(self.LoadResultsOnViewer)
+        result_widgets['vec_entry'].currentIndexChanged.connect(result_widgets['load_button'].click)
 
+        result_widgets['run_entry'].currentIndexChanged.connect(self.show_run_pcs)   
         result_widgets['graphs_button'].clicked.connect(self.CreateGraphsWindow)
-
-        #Pointcloud points label
-        result_widgets['pc_points_label'] = QLabel("Points in current pointcloud:")
-        formLayout.setWidget(widgetno, QFormLayout.LabelRole, result_widgets['pc_points_label'])
-        result_widgets['pc_points_value'] = QLabel("0")
-        formLayout.setWidget(widgetno, QFormLayout.FieldRole, result_widgets['pc_points_value'])
 
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
         self.result_widgets = result_widgets
+
+        scroll_area = dockWidget.widget()
+        scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
      
-    @pysnooper.snoop()
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -4769,11 +5239,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         points_list = []
         subvol_list = []
         for folder in glob.glob(os.path.join(directory, "dvc_result_*")):
-            file_path = os.path.join(folder, os.path.basename(folder))
-            result = RunResults(file_path)
-            # print (result)
+            result = RunResults(folder)
             self.result_list.append(result)
-            #print(result.subvol_points)
             el = str(result.subvol_points)
             if el not in points_list:
                 points_list.append(el)
@@ -4785,13 +5252,11 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets['pc_entry'].addItems(subvol_list)
         self.result_widgets['subvol_entry'].addItems(points_list)
                
-
     def LoadResultsOnViewer(self):
-
-        #print("LOAD RESULTS")
-        #print("Number of results:")
+        """Opens a warning dialog if the entries on 'subvolume size' and 'points in subvolume' are not suitable.
+        If the point cloud is selected in 'view' it loads the point cloud on the viewers, 
+        else, it shows the vectors on the viewers."""
         if hasattr(self, 'result_list'):
-            # print(len(self.result_list))
             try:
                 subvol_size = int(self.result_widgets['pc_entry'].currentText())
             except ValueError as ve:
@@ -4810,7 +5275,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
             results_folder = os.path.join(tempfile.tempdir, "Results", self.result_widgets['run_entry'].currentText())
             self.roi = os.path.join(results_folder ,"_" + str(subvol_size) + ".roi")
-            #print("New roi is", self.roi)
             self.results_folder = results_folder
 
             if (self.result_widgets['vec_entry'].currentText() == "Pointcloud"):
@@ -4824,22 +5288,17 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                 self.DisplayNumberOfPointcloudPoints()
 
             else: 
-                # print("Result list", self.result_list, len(self.result_list))
                 for result in self.result_list:
-                    # print("Subvolume size match? ", result.subvol_size, subvol_size)
                     if result.subvol_size == subvol_size:
-                        # print ("YES")
-                        # print("Subv points match? {} {}".format(result.subvol_points, subvol_points))
                         if result.subvol_points == subvol_points:
-                            # print ("YES")
                             run_file = result.disp_file
                             self.displayVectors(run_file)
-                        # else:
-                        #     print ("NO")    
-                    # else:
-                    #     print ("NO")
+
 
     def _DVCResultsDisableRanges(self, index):
+        """Disables the range-vectors widgets. 
+        Note: The min is used as a checker in 'loadDisplacementFile', hence when editing this method make
+        sure the points/vectors are visualised correctly in the viewer. """
         # reset the interface
         self.result_widgets['range_vectors_max_entry'].setEnabled(False)
         self.result_widgets['range_vectors_min_entry'].setEnabled(False)
@@ -4916,7 +5375,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, None)
 
-
     def save_quit_accepted(self):
         #Load Saved Session
         self.should_really_close = True
@@ -4924,7 +5382,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.SaveWindow.close()
         self.SaveSession(self.SaveWindow.widgets['session_name_field'].text(), compress, QCloseEvent())
         
-
     def save_quit_just_quit(self):
         event = QCloseEvent()
         self.SaveWindow.close()
@@ -4936,8 +5393,9 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.should_really_close = False
         self.SaveWindow.close()
 
-
     def SaveSession(self, text_value, compress, event):
+        """Saves a software session. If raw files are created from nxs or TIFF input files"
+        they are removed from the session folder."""
         # Save window geometry and state of dockwindows
         # https://doc.qt.io/qt-5/qwidget.html#saveGeometry
         g = self.saveGeometry()
@@ -5050,11 +5508,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.config['pc_rotz'] = pc['pointcloud_rotation_z_entry'].text()
 
         #Downsampling level
-        if self.settings.value("gpu_size") is not None: 
-            self.config['gpu_size'] = self.settings.value("gpu_size")
-        else:
-            self.config['gpu_size'] = 1
-
         if self.settings.value("vis_size") is not None:
             self.config['vis_size'] = self.settings.value("vis_size")
         else:
@@ -5083,7 +5536,13 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         os.close(fd)
 
         self.create_progress_window("Saving","Saving")
-  
+        results_folder = os.path.join(tempfile.tempdir, "Results")
+        raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+        raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+                
+        for file_path in [raw_reference_file_fname, raw_correlate_file_fname]:
+            if os.path.exists(file_path):
+                os.remove(file_path)
         zip_worker = Worker(self.ZipDirectory, tempfile.tempdir, compress)
         if type(event) == QCloseEvent:
             zip_worker.signals.finished.connect(lambda: self.RemoveTemp(event))
@@ -5187,7 +5646,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         for dirpath, dirnames, filenames in os.walk(folder):
             for f in filenames:
                 fp = os.path.join(dirpath, f)
-                #print(fp)
                 temp_size += os.path.getsize(fp)
 
         while not os.path.exists(new_file_dest):
@@ -5200,7 +5658,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             self.progress_window.setValue((float(zip_size)/(float(temp_size)*ratio))*100)
             time.sleep(0.1)
 
-    
     def ShowExportProgress(self, folder, new_file_dest):
         
         self.progress_window.setValue(10)
@@ -5209,7 +5666,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         for dirpath, dirnames, filenames in os.walk(folder):
                 for f in filenames:
                     fp = os.path.join(dirpath, f)
-                    #print(fp)
                     temp_size += os.path.getsize(fp)
 
         while not os.path.exists(new_file_dest):
@@ -5221,9 +5677,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     fp = os.path.join(dirpath, f)
                     #print(fp)
                     exp_size += os.path.getsize(fp) 
-
-        #print(temp_size) 
-
 
         while temp_size != exp_size and self.progress_window.value() < 98 and self.progress_window.value() !=-1:
             # print((float(exp_size)/(float(temp_size)))*100)
@@ -5305,7 +5758,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             # dialog.move(centrex/2,centrey/2)
             dialog.open()
         
-
     def load_session_load(self):
         #Load Saved Session
         self.InitialiseSessionVars()
@@ -5313,6 +5765,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         config_worker = Worker(self.LoadConfigWorker, selected_text=self.SessionSelectionWindow.widgets['select_session_field'].currentText())
         self.create_progress_window("Loading", "Loading Session")
         config_worker.signals.progress.connect(self.progress)
+        config_worker.signals.message.connect(self.updateProgressDialogMessage)
         config_worker.signals.finished.connect(self.LoadSession)
         self.threadpool.start(config_worker)
         self.progress_window.setValue(10)
@@ -5336,7 +5789,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
     
     def LoadConfigWorker(self, **kwargs): 
         selected_text = kwargs.get('selected_text', None)
-        progress_callback = kwargs.get('progress_callback', None)
+        progress_callback = kwargs.get('progress_callback', PrintCallback())
+        message_callback = kwargs.get('message_callback', PrintCallback())
         date_and_time = selected_text.split(' ')[-1]
         #print(date_and_time)
         selected_folder = ""
@@ -5350,9 +5804,20 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     selected_folder =  os.path.join(self.temp_folder, _file)
                     break
         if progress_callback is not None:
-            progress_callback.emit(50)
+            progress_callback.emit(20)
         
-        shutil.unpack_archive(selected_folder, selected_folder[:-4])
+        message_callback.emit('Unpacking session file...')
+        import zipfile
+        
+        with zipfile.ZipFile(selected_folder, 'r') as zip_ref:
+            infolist = zip_ref.infolist()
+            start_progress = 20
+            end_progress = 70
+            for i,info in enumerate(infolist):
+                message_callback.emit('Extracting ' + info.filename)
+                zip_ref.extract(info.filename, selected_folder[:-4])
+                progress_callback.emit(int(start_progress + (end_progress - start_progress) * (i / len(infolist))))
+        # shutil.unpack_archive(selected_folder, selected_folder[:-4])
         loaded_tempdir = selected_folder[:-4]
         
         if progress_callback is not None:
@@ -5393,6 +5858,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
                     #print(file)
                     selected_file = os.path.join(loaded_tempdir, _file)
 
+        message_callback.emit('Loading session configuration')
         with open(selected_file) as tmp:
             self.config = json.load(tmp)
         
@@ -5522,14 +5988,13 @@ Please select the new location of the file, or move it back to where it was orig
             if 'mask_file' in self.config:
                 self.mask_details=self.config['mask_details']
                 self.mask_load = True
-                if 'gpu_size' in self.config and 'vis_size' in self.config:
-                    if float(self.settings.value('gpu_size')) != float(self.config['gpu_size']) \
-                            or float(self.settings.value('vis_size')) != float(self.config['vis_size']):
+                if 'vis_size' in self.config:
+                    if float(self.settings.value('vis_size')) != float(self.config['vis_size']):
 
                         self.mask_load = False
 
-                        self.e('', '', "If you would like to load the mask, open the settings and change the GPU size field to {gpu_size}GB and the maximum visualisation size to {vis_size} GB.\
-    Then reload the session.".format(gpu_size=self.config['gpu_size'], vis_size = self.config['vis_size']))
+                        self.e('', '', "If you would like to load the mask, open the settings and change the maximum visualisation size to {vis_size} GB.\
+    Then reload the session.".format(vis_size = self.config['vis_size']))
                         error_title = "LOAD ERROR"
                         error_text = 'This session was saved with a different level of downsampling. This means the mask could not be loaded.'
                         self.displayFileErrorDialog(message=error_text, title=error_title)
@@ -5644,7 +6109,6 @@ Please select the new location of the file, or move it back to where it was orig
         #bring image loading panel to front if it isnt already:        
         self.select_image_dock.raise_()
 
-
     def warningDialog(self, message='', window_title='', detailed_text=''):
         dialog = QMessageBox(self)
         dialog.setIcon(QMessageBox.Information)
@@ -5664,700 +6128,13 @@ Please select the new location of the file, or move it back to where it was orig
         
 
 
-
+def find_extent_overlap(extent1, extent2):
+    '''Find the overlap extent of two extents.'''
+    overlap = [0,0,0,0,0,0]
+    for i in range(3):
+        overlap[2*i] = max(extent1[2*i], extent2[2*i])
+        overlap[2*i+1] = min(extent1[2*i+1], extent2[2*i+1])
+        if overlap[2*i] > overlap[2*i+1]:
+            raise ValueError("No overlap in extent")
+    return overlap
         
-
-
-class SaveObjectWindow(QtWidgets.QWidget):
-    '''a window which will appear when saving a mask or pointcloud
-    '''
-        #self.copy_files_label = QLabel("Allow a copy of the image files to be stored: ")
-
-    def __init__(self, parent, object_type, save_only):
-        super().__init__()
-
-        #print(save_only)
-
-        self.parent = parent
-        self.object = object_type
-
-        if self.object == "mask":
-            self.setWindowTitle("Save Existing Mask")
-            self.label = QLabel("Save mask as:")
-        elif self.object == "pointcloud":
-            self.setWindowTitle("Save Existing Point Cloud")
-            self.label = QLabel("Save Point Cloud as:")
-
-
-        self.setWindowModality(QtCore.Qt.ApplicationModal)
-        #self.setInputMode(QtWidgets.QInputDialog.TextInput)
-
-        self.textbox = QLineEdit(self)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, self.textbox) #need to check this
-        self.textbox.setValidator(validator)
-
-        self.save_button = QPushButton("Save")
-        self.quit_button = QPushButton("Discard")
-        self.save_button.clicked.connect(lambda: self.save(save_only))
-        self.quit_button.clicked.connect(self.quit)
-        
-        self.setWindowFlags(QtCore.Qt.WindowTitleHint )
-        #self.setCancelButtonText("New Session")
-        #self.setAttribute(Qt.WA_DeleteOnClose)
-        self.layout = QtWidgets.QFormLayout()
-        self.layout.addRow(self.label)
-        self.layout.addRow(self.textbox)
-        self.layout.addRow(self.save_button, self.quit_button)
-        self.setLayout(self.layout)
-
-
-    def save(self, save_only):
-        if self.object == "mask":
-            #Load Saved Session
-            #print("Write mask to file, then carry on")
-            filename = self.textbox.text() + ".mha"
-            shutil.copyfile(os.path.join(tempfile.tempdir, self.parent.mask_file), os.path.join(tempfile.tempdir, "Masks", filename))
-            self.parent.mask_parameters['masksList'].addItem(filename)
-            self.parent.mask_details[filename] = self.parent.mask_details['current']
-            #print(self.parent.mask_details)
-
-            self.parent.mask_parameters['loadButton'].setEnabled(True)
-            self.parent.mask_parameters['masksList'].setEnabled(True)
-
-
-            if not save_only:
-                #print("Not save only")
-                #would be better to move this elsewhere
-                self.parent.mask_worker = Worker(self.parent.extendMask)
-                self.parent.create_progress_window("Loading", "Loading Mask")
-                self.parent.mask_worker.signals.progress.connect(self.parent.progress)
-                self.parent.mask_worker.signals.finished.connect(self.parent.DisplayMask)
-                self.parent.threadpool.start(self.parent.mask_worker)
-                self.parent.progress_window.setValue(10)
-            
-        if self.object == "pointcloud":
-            filename = self.textbox.text() + ".roi"
-            shutil.copyfile(os.path.join(tempfile.tempdir, "latest_pointcloud.roi"), os.path.join(tempfile.tempdir, filename))
-
-            self.parent.pointcloud_parameters['loadButton'].setEnabled(True)
-            self.parent.pointcloud_parameters['pointcloudList'].setEnabled(True)
-            self.parent.pointcloud_parameters['pointcloudList'].addItem(filename)
-            self.parent.pointCloud_details[filename] = self.parent.pointCloud_details['latest_pointcloud.roi']
-            #print(self.parent.pointCloud_details)
-            #self.parent.createPointCloud()
-            if not save_only:
-                self.parent.PointCloudWorker("create")
-            
-
-        self.close()
-
-    def quit(self):
-        if self.object == "mask":
-            #would be better to move this elsewhere
-            self.parent.mask_worker = Worker(self.parent.extendMask)
-            self.parent.create_progress_window("Loading", "Loading Mask")
-            self.parent.mask_worker.signals.progress.connect(self.parent.progress)
-            self.parent.mask_worker.signals.finished.connect(self.parent.DisplayMask)
-            self.parent.threadpool.start(self.parent.mask_worker)
-            self.parent.progress_window.setValue(10)
-
-        if self.object == "pointcloud":
-            self.parent.PointCloudWorker("create")
-            #self.parent.createPointCloud()
-
-        self.close()
-
-class VisualisationWindow(QtWidgets.QMainWindow):
-    '''creates a window which will contain the VisualisationWidgets
-    '''
-    def __init__(self, parent):
-        super().__init__()
-        self.parent = parent
-        self.setMinimumSize(200,200)
-
-class VisualisationWidget(QtWidgets.QMainWindow):
-    '''creates a window with a QCILViewerWidget as the central widget
-    '''
-    def __init__(self, parent, viewer=viewer2D, interactorStyle=vlink.Linked2DInteractorStyle):
-        super().__init__()
-        self.parent = parent
-
-        self.e = ErrorObserver()
-        self.viewer = viewer
-        self.interactorStyle = interactorStyle
-        self.createEmptyFrame()
-        self.threadpool = QThreadPool()
-
-    def getViewer(self):
-        return self.frame.viewer
-
-    def getInteractor(self):
-        return self.getViewer().getInteractor()
-
-    def getInteractorStyle(self):
-        return self.getViewer().style
-
-    def getViewerType(self):
-        return self.viewer
-
-        
-    def createEmptyFrame(self):
-        #print("empty")
-        self.frame = QCILViewerWidget(viewer=self.viewer, shape=(600,600), interactorStyle=self.interactorStyle)
-        self.setCentralWidget(self.frame)
-        self.image_file = [""]
-       
-    def displayImageData(self):
-        self.createEmptyFrame()
-        if self.viewer == viewer3D:
-            #set volume mapper according to user settings:
-            if self.parent.settings.value("volume_mapper") == "cpu":
-                self.frame.viewer.volume_mapper = vtk.vtkFixedPointVolumeRayCastMapper()
-                self.frame.viewer.volume.SetMapper(self.frame.viewer.volume_mapper)
-        else:
-            self.frame.viewer.setVisualisationDownsampling(self.parent.resample_rate)
-            self.frame.viewer.setDisplayUnsampledCoordinates(True)
-
-            vs_widgets = self.parent.visualisation_setting_widgets
-
-            vs_widgets['loaded_image_dims_value'].setVisible(True)
-            vs_widgets['loaded_image_dims_value'].setText(str(self.parent.unsampled_image_dimensions))
-
-            #print("resample rate: ", self.parent.resample_rate)
-
-            if self.parent.resample_rate != [1,1,1]:
-                vs_widgets['displayed_image_dims_value'].setVisible(True)
-                vs_widgets['displayed_image_dims_label'].setVisible(True)
-                #print("Disp image size ", [self.parent.ref_image_data.GetDimensions()[i] for i in range(3)])
-                vs_widgets['displayed_image_dims_value'].setText(str([round(self.parent.ref_image_data.GetDimensions()[i]) for i in range(3)]))
-                vs_widgets['coords_combobox'].setEnabled(True)
-                vs_widgets['coords_combobox'].setCurrentIndex(0)
-                vs_widgets['coords_warning_label'].setVisible(True)
-                vs_widgets['coords_info_label'].setVisible(True)
-
-            
-            else:
-                vs_widgets['displayed_image_dims_value'].setVisible(False)
-                vs_widgets['displayed_image_dims_label'].setVisible(False)
-                vs_widgets['coords_warning_label'].setVisible(False)
-                vs_widgets['coords_info_label'].setVisible(False)
-
-                vs_widgets['coords_combobox'].setEnabled(False)
-                vs_widgets['coords_combobox'].setCurrentIndex(0)
-
-        self.frame.viewer.setInput3DData(self.image_data)  
-        interactor = self.frame.viewer.getInteractor()
-
-
-        if hasattr(self.parent, 'orientation'):
-                orientation = self.parent.orientation
-        else:
-            orientation = self.frame.viewer.getSliceOrientation()
-        
-        if orientation == SLICE_ORIENTATION_XZ:
-            axis = 'y'
-        elif orientation == SLICE_ORIENTATION_YZ:
-            axis = 'x'
-        else:
-            axis = 'z'
-        interactor.SetKeyCode(axis)
-
-        if self.viewer == viewer2D:
-            self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
-            if self.parent.current_slice:
-                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
-                    self.frame.viewer.displaySlice(self.parent.current_slice)
-
-
-        if self.viewer == viewer3D:
-            self.frame.viewer.style.OnKeyPress(interactor, 'KeyPressEvent')
-            # Depth peeling for volumes doesn't work as we would like when we have the vtk.vtkFixedPointVolumeRayCastMapper() instead of the vtk.vtkSmartVolumeMapper()
-            # self.frame.viewer.sliceActor.GetProperty().SetOpacity(0.99)
-            # self.frame.viewer.ren.SetUseDepthPeeling(True)
-            # self.frame.viewer.renWin.SetAlphaBitPlanes(True)
-            # self.frame.viewer.renWin.SetMultiSamples(False)
-            # self.frame.viewer.ren.UseDepthPeelingForVolumesOn()
-    
-            if self.parent.current_slice:
-                if self.parent.current_slice <= self.frame.viewer.img3D.GetExtent()[self.frame.viewer.getSliceOrientation()*2+1]:
-                    self.frame.viewer.style.SetActiveSlice(self.parent.current_slice)
-                    self.frame.viewer.style.UpdatePipeline()
-
-        # print("set input data for" + str(self.viewer))
-
-        if self.viewer == viewer2D:
-            self.PlaneClipper = cilPlaneClipper()
-            self.PlaneClipper.SetInteractorStyle(self.frame.viewer.style)
-
-
-    def setImageData(self, image_data):
-        self.image_data = image_data
-
-    def getImageData(self):
-        return self.image_data
-
-class GraphsWindow(QMainWindow):
-    '''creates a new window with graphs from results saved in the selected run folder.
-    '''
-    def __init__(self, parent=None):
-        super(GraphsWindow, self).__init__(parent)
-        self.setWindowTitle("Digital Volume Correlation Results")
-        DVCIcon = QtGui.QIcon()
-        DVCIcon.addFile("DVCIconSquare.png")
-
-        # Menu
-        self.menu = self.menuBar()
-        self.file_menu = self.menu.addMenu("File")
-        self.settings_menu = self.menu.addMenu("Settings")
-
-        displacement_setting_action = QAction("Show Displacement Relative to Reference Point 0", self)
-        displacement_setting_action.setCheckable(True)
-        displacement_setting_action.setChecked(False)
-        self.displacement_setting_action = displacement_setting_action
-
-        displacement_setting_action.triggered.connect(self.ReloadGraphs)
-        self.settings_menu.addAction(displacement_setting_action)
-
-
-        # Exit QAction
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut(QKeySequence.Quit)
-        exit_action.triggered.connect(self.close)
-        self.file_menu.addAction(exit_action)
-
-        #Tab positions:
-        self.setTabPosition(QtCore.Qt.AllDockWidgetAreas,QTabWidget.North)
-        self.setDockOptions(QMainWindow.ForceTabbedDocks)
-             
-        # Window dimensions
-        geometry = qApp.desktop().availableGeometry(self)
-
-        self.setGeometry(50,50, geometry.width()-100, geometry.height()-100)
-        #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)
-
-    def SetResultsFolder(self, folder):
-        self.results_folder = folder
-        self.setWindowTitle("Digital Volume Correlation Results - {foldername}".format(foldername=os.path.basename(self.results_folder)))
-    
-    def ReloadGraphs(self):
-        self.DeleteAllWidgets()
-        self.CreateDockWidgets(displ_wrt_point0 = self.displacement_setting_action.isChecked())
-
-    def DeleteAllWidgets(self):
-         for current_dock in self.findChildren(QDockWidget):
-            current_dock.close()
-            del current_dock
-
-    def CreateDockWidgets(self, displ_wrt_point0 = False):
-        result_list=[]
-        #print(results_folder[0])
-        for folder in glob.glob(os.path.join(self.results_folder, "dvc_result_*")):
-            file_path = os.path.join(folder, os.path.basename(folder))
-            result = RunResults(file_path)
-            result_list.append(result)
-    
-            GraphWidget = SingleRunResultsWidget(self, result, displ_wrt_point0)
-            dock1 = QDockWidget(result.title,self)
-            dock1.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-            dock1.setWidget(GraphWidget)
-            self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock1)
-    
-        prev = None
-
-        for current_dock in self.findChildren(QDockWidget):
-            if self.dockWidgetArea(current_dock) == QtCore.Qt.RightDockWidgetArea:
-                existing_widget = current_dock
-
-                if prev:
-                    self.tabifyDockWidget(prev,current_dock)
-                prev= current_dock
-        
-        SummaryTab = SummaryGraphsWidget(self, result_list)
-        dock = QDockWidget("Summary",self)
-        dock.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-        dock.setWidget(SummaryTab)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea,dock)
-        self.tabifyDockWidget(prev,dock)
-
-        dock.raise_() # makes summary panel the one that is open by default.
-
-class SingleRunResultsWidget(QtWidgets.QWidget):
-    '''creates a dockable widget which will display results from a single run of the DVC code
-    '''
-    def __init__(self, parent, plot_data, displ_wrt_point0 = False):
-        super().__init__()
-        self.parent = parent
-
-        self.figure = plt.figure()
-        self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
-
-        #Layout
-        self.layout = QtWidgets.QVBoxLayout()
-        self.layout.addWidget(self.toolbar)
-        self.layout.addWidget(self.canvas)
-        self.setLayout(self.layout)
-
-        self.CreateHistogram(plot_data, displ_wrt_point0)
-
-    def CreateHistogram(self, result, displ_wrt_point0):
-        displ = np.asarray(
-        PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
-        )
-        if displ_wrt_point0:
-            point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-            for count in range(len(displ)):
-                for i in range(3):
-                    displ[count][i+6] = displ[count][i+6] - point0_disp[i]
-
-        plot_data = [displ[:,i] for i in range(5, displ.shape[1])]
-
-        numGraphs = len(plot_data)
-        if numGraphs <= 3:
-            numRows = 1
-        else:
-            numRows = np.round(np.sqrt(numGraphs))
-        numColumns = np.ceil(numGraphs/numRows)
-
-        plotNum = 0
-        for array in plot_data:
-            plotNum = plotNum + 1
-            ax = self.figure.add_subplot(int(numRows), int(numColumns), int(plotNum))
-            ax.set_ylabel("")
-            #ax.set_xlabel(plot_titles[plotNum-1])
-            ax.set_title(result.plot_titles[plotNum-1])
-            ax.hist(array,20)
-
-        plt.tight_layout() # Provides proper spacing between figures
-
-        self.canvas.draw() 
-
-class SummaryGraphsWidget(QtWidgets.QWidget):
-    '''creates a dockable widget which will display results from all runs in a bulk run
-    '''
-    def __init__(self, parent, result_list, displ_wrt_point0 = False):
-        super().__init__()
-        self.parent = parent
-
-        #Layout
-        self.layout = QtWidgets.QGridLayout()
-        #self.layout.setSpacing(1)
-        self.layout.setAlignment(Qt.AlignTop)
-
-        widgetno=0
-
-        if len(result_list) >=1:
-            result = result_list[0] #These options were the same for all runs:
-
-            self.results_details_label = QLabel(self)
-            self.results_details_label.setText("Subvolume Geometry: {subvol_geom}\n\
-Maximum Displacement: {disp_max}\n\
-Degrees of Freedom: {num_srch_dof}\n\
-Objective Function: {obj_function}\n\
-Interpolation Type: {interp_type}\n\
-Rigid Body Offset: {rigid_trans}".format(subvol_geom=result.subvol_geom, \
-            disp_max=result.disp_max, num_srch_dof=str(result.num_srch_dof), obj_function=result.obj_function, \
-            interp_type=result.interp_type, rigid_trans=str(result.rigid_trans)))
-            self.layout.addWidget(self.results_details_label,widgetno,0,5,1)
-            self.results_details_label.setAlignment(Qt.AlignTop)        
-            widgetno+=1
-
-
-        self.label = QLabel(self)
-        self.label.setText("Select which variable would like to compare: ")
-        self.layout.addWidget(self.label,widgetno,1)
-
-        self.combo = QComboBox(self)
-        self.combo.addItems(result.plot_titles)
-        self.layout.addWidget(self.combo,widgetno,2)  
-        widgetno+=1
-
-        self.label1 = QLabel(self)
-        self.label1.setText("Select which parameter you would like to compare: ")
-        self.layout.addWidget(self.label1,widgetno,1)  
-        
-        self.combo1 = QComboBox(self)
-        self.param_list = ["All","Sampling Points in Subvolume", "Subvolume Size"]
-        self.combo1.addItems(self.param_list)
-        self.layout.addWidget(self.combo1,widgetno,2)
-        widgetno+=1
-
-        self.subvol_points=[]
-        self.subvol_sizes=[]
-
-        for result in result_list:
-            if result.subvol_points not in self.subvol_points:
-                self.subvol_points.append(result.subvol_points)
-            if result.subvol_size not in self.subvol_sizes:
-                self.subvol_sizes.append(result.subvol_size)
-        self.subvol_points.sort()
-        self.subvol_sizes.sort()
-
-        self.secondParamLabel = QLabel(self)
-        self.secondParamLabel.setText("Subvolume size:")
-        self.layout.addWidget(self.secondParamLabel,widgetno,1)
-        
-        self.secondParamCombo = QComboBox(self)
-        self.secondParamList = [str(i) for i in self.subvol_sizes]
-        self.secondParamCombo.addItems(self.secondParamList)
-        self.layout.addWidget(self.secondParamCombo,widgetno,2)
-        widgetno+=1
-
-        self.combo1.currentIndexChanged.connect(self.showSecondParam)
-        self.secondParamLabel.hide()
-        self.secondParamCombo.hide()
-
-        self.button = QtWidgets.QPushButton("Plot Histograms")
-        self.button.clicked.connect(partial(self.CreateHistogram,result_list, displ_wrt_point0))
-        self.layout.addWidget(self.button,widgetno,2)
-        widgetno+=1
-
-        self.figure = plt.figure()
-        
-        self.canvas = FigureCanvas(self.figure)
-        self.toolbar = NavigationToolbar(self.canvas, self)
-        self.layout.addWidget(self.toolbar,widgetno,0,1,3)
-        widgetno+=1
-        self.layout.addWidget(self.canvas,widgetno,0,3,3)
-        widgetno+=1
-
-        self.setLayout(self.layout)
-
-    def showSecondParam(self):
-        index = self.combo1.currentIndex()
-        if index ==0:
-            self.secondParamLabel.hide()
-            self.secondParamCombo.hide()
-
-        elif index == 1:
-            self.secondParamLabel.show()
-            self.secondParamCombo.show()
-            self.secondParamLabel.setText("Subvolume Size:")
-            self.secondParamCombo.clear()
-            self.secondParamCombo.addItems([str(i) for i in self.subvol_sizes])
-
-        elif index == 2:
-            self.secondParamLabel.show()
-            self.secondParamCombo.show()
-            self.secondParamLabel.setText("Points in Subvolume:")
-            self.secondParamCombo.clear()
-            newList = []
-            self.secondParamCombo.addItems([str(i) for i in self.subvol_points])   
-        
-    
-    def CreateHistogram(self, result_list, displ_wrt_point0):
-
-        self.figure.clear()
-
-        index = self.combo1.currentIndex()
-        
-        points_list = []
-
-        resultsToPlot= []
-
-        displacements = []
-
-        for result in result_list:
-            displ = np.asarray(
-            PointCloudConverter.loadPointCloudFromCSV(result.disp_file,'\t')[:]
-            )
-            if displ_wrt_point0:
-                point0_disp = [displ[0][6],displ[0][7], displ[0][8]]
-                for count in range(len(displ)):
-                    for i in range(3):
-                        displ[count][i+6] = displ[count][i+6] - point0_disp[i]
-
-            no_points = np.shape(displ[0])
-
-            if no_points not in points_list:
-                points_list.append(no_points)
-
-            if index == 1: # Points in subvolume is compared
-                if result.subvol_size != float(self.secondParamCombo.currentText()):
-                    pass
-
-            elif index ==2:
-                if result.subvol_points != float(self.secondParamCombo.currentText()):
-                    pass
-            
-            resultsToPlot.append(result)
-            displacements.append(displ)
-
-        points_list.sort()
-
-        if index ==0:
-            numRows = len(self.subvol_points)
-            numColumns = len(self.subvol_sizes)
-
-        else:
-            if len(resultsToPlot) <= 3:
-                numRows = 1
-            else:
-                numRows = np.round(np.sqrt(len(resultsToPlot)))
-            numColumns = np.ceil(len(resultsToPlot)/numRows)
-
-        plotNum = 0
-        for i, result in enumerate(resultsToPlot):
-            if index ==0:
-                row = self.subvol_points.index(result.subvol_points) + 1
-                column= self.subvol_sizes.index(result.subvol_size) + 1
-                plotNum = (row-1)*numColumns + column
-                ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-                
-                if row ==1:
-                    ax.set_title("Subvolume Size:" + str(result.subvol_size) )
-                if column == 1:
-                    text = str(result.subvol_points) 
-                    ax.set_ylabel(text + " " + "Points in subvol")
-
-            else:
-                plotNum = plotNum + 1
-                ax = self.figure.add_subplot(numRows, numColumns, plotNum)
-    
-                if index ==1:
-                    text = str(result.subvol_points) 
-                if index ==2:
-                    text = str(result.subvol_size) 
-                ax.set_ylabel(text + " " + self.combo1.currentText())
-
-            plot_data = [displacements[i][:,k] for k in range(5, displacements[i].shape[1])]
-
-            #get variable to display graphs for:
-            ax.hist(plot_data[self.combo.currentIndex()], 20)
-
-        self.figure.suptitle(self.combo.currentText(),size ="large")
-
-        plt.tight_layout() # Provides proper spacing between figures
-        plt.subplots_adjust(top=0.88) # Means heading doesn't overlap with subplot titles
-        self.canvas.draw()
-        
-class RunResults(object):
-    def __init__(self, file_name):
-        
-        self.points = None
-
-        disp_file_name = file_name + ".disp"
-        stat_file_name = file_name + ".stat"
-
-        with open(stat_file_name,"r") as stat_file:
-            
-            count = 0
-            offset = 0
-            for line in stat_file:
-                if count == 9:
-                    if line.split('\t')[0] == "vol_endian":
-                        offset = 1
-
-                if count == 14 + offset:
-                    self.subvol_geom = str(line.split('\t')[1])
-                if count == 15 + offset:
-                    self.subvol_size = round(int(line.split('\t')[1]))
-                if count == 16 +offset:
-                    self.subvol_points = int(line.split('\t')[1])
-                if count == 20 + offset:
-                    self.disp_max = int(line.split('\t')[1])
-                if count == 21 + offset:
-                    self.num_srch_dof = int(line.split('\t')[1])
-                if count == 22 + offset:
-                    self.obj_function = str(line.split('\t')[1])
-                if count == 23 + offset:
-                    self.interp_type = str(line.split('\t')[1])
-                if count == 25 + offset:
-                    self.rigid_trans = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
-                # if count == 26 + offset:
-                #     self.basin_radius = int(line.split('\t')[1])
-                # if count == 27 + offset:
-                #     self.subvol_aspect = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
-                count+=1
-
-        plot_titles_dict = {
-            'objmin': "Objective Minimum", 'u': "Displacement in x", 'v':"Displacement in y", 'w':"Displacement in z",
-            'phi':"Change in phi",'the':"Change in theta", 'psi':"Change in psi"}
-
-        with open(disp_file_name) as f:
-            # first 4 columns are: n, x, y, z, status - we don't want these
-            self.plot_titles = f.readline().split()[5:]
-            self.plot_titles = [plot_titles_dict.get(text, text) for text in self.plot_titles]
-
-        
-        self.disp_file = disp_file_name
-
-        self.title =  str(self.subvol_points) + " Points in Subvolume," + " Subvolume Size: " + str(self.subvol_size)
-
-    def __str__(self):
-
-        a = "subvol_size {}".format(self.subvol_size)
-        n = "subvol_points {}".format(self.subvol_points)
-        return "RunResults:\n{}\n{}".format(a , n)
-
-def generateUIDockParameters(self, title): #copied from dvc_configurator.py
-    '''creates a dockable widget with a form layout group to add things to
-
-    basically you can add widget to the returned groupBoxFormLayout and paramsGroupBox
-    The returned dockWidget must be added with
-    self.addDockWidget(QtCore.Qt.RightDockWidgetArea, dockWidget)
-    '''
-    dockWidget = QDockWidget(self)
-    dockWidget.setWindowTitle(title)
-    dockWidgetContents = QWidget()
-
-
-    # Add vertical layout to dock contents
-    dockContentsVerticalLayout = QVBoxLayout(dockWidgetContents)
-    dockContentsVerticalLayout.setContentsMargins(0, 0, 0, 0)
-
-    # Create widget for dock contents
-    internalDockWidget = QWidget(dockWidgetContents)
-
-    # Add vertical layout to dock widget
-    internalWidgetVerticalLayout = QVBoxLayout(internalDockWidget)
-    internalWidgetVerticalLayout.setContentsMargins(0, 0, 0, 0)
-
-    # Add group box
-    paramsGroupBox = QGroupBox(internalDockWidget)
-
-
-    # Add form layout to group box
-    groupBoxFormLayout = QFormLayout(paramsGroupBox)
-    #groupBoxFormLayout.setFormAlignment(Qt.AlignCenter)
-
-    # Add elements to layout
-    internalWidgetVerticalLayout.addWidget(paramsGroupBox)
-    dockContentsVerticalLayout.addWidget(internalDockWidget)
-    dockWidget.setWidget(dockWidgetContents)
-
-    #        self.graphWidgetVL.addWidget(self.graphParamsGroupBox)
-    #        self.graphDockVL.addWidget(self.dockWidget)
-    #        self.pointCloudDockWidget.setWidget(self.pointCloudDockWidgetContents)
-    #
-    # self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.pointCloudDockWidget)
-    return (dockWidget, dockWidgetContents,
-            dockContentsVerticalLayout, internalDockWidget,
-            internalWidgetVerticalLayout, paramsGroupBox,
-            groupBoxFormLayout)
-
-
-def main():
-    app = QtWidgets.QApplication([])
-    
-    file_dir = os.path.dirname(__file__)
-    owl_file = os.path.join(file_dir, "DVCIconSquare.png")
-    owl = QtGui.QPixmap(owl_file)
-    splash = QtWidgets.QSplashScreen(owl)
-    splash.show()
-    
-    err = vtk.vtkFileOutputWindow()
-    err.SetFileName("../viewer.log")
-    vtk.vtkOutputWindow.SetInstance(err)
-
-    
-    window = MainWindow()
-    
-    window.show()
-    splash.finish(window)
-
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-    main()

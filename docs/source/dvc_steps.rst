@@ -4,32 +4,39 @@ DVC Configuration Steps
 Each panel contains a different step in the DVC configuration process.
 When moving between each panel, the Help section is updated. Additional help can be viewed by hovering the mouse over some of the buttons and labels on the interface.
 
-Manual Registration
-===================
+Initial Registration
+====================
 
-The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the **Manual Registration** tab to get started with this.
+The first step of the DVC analysis is to line up the reference and correlate images. The rigid body translation between the images will be input to the DVC analysis code. Go to the **Initial Registration** tab to get started with this.
 
 The Point 0 Location
 ~~~~~~~~~~~~~~~~~~~~
 
-First you will need to click on **Select point 0**. This will allow you to press shift and left click on a point in the image. Then change the size of the registration box.
-If you scroll through slices of the image, clicking **Center on Point 0** will return you to the slice where point 0 is.
-You should try to select point 0 to be at the position you would like to start your DVC analysis from. Later when you select your mask, if your point 0 lies within the mask then when you generate a point cloud, it will guarantee that a point lies at the location of point 0. Then this will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
-Otherwise, a random point in the cloud will be selected to begin with.
+First, the button **Select point 0** needs to be clicked. Then, point 0 is selected by pressing "shift" and left clicking on a point in the image. 
+Next, the size of the registration box can be edited.
+The slice where point 0 lies can always be visualised by clicking on the button **Center on Point 0**. In particular, this becomes useful after other slices of the 3D image have been visualised.
+
+Point 0 will be used as the global starting point in the DVC analysis, as well as the reference point for the translation.
+Point 0 is used in the "Point Cloud" tab, where a point cloud is loaded or generated from the mask selected in the "Mask" tab. 
+If point 0 does not lie within the mask, it will be added as the first point in the cloud.
+
 
 Registering the Images
 ~~~~~~~~~~~~~~~~~~~~~~
 
-You can set an initial translation if you already know some information about how the images are translated relative to each other.
+After selecting point 0 and the registration box size, the registration process is initialised by clicking on **Start Registration**. 
+This runs an automatic registration procedure and the results are displayed in the widgets **Translate X**, **Translate Y**, and **Translate Z**, as well as in the label widget **Automatic registration [...]**. 
+The viewer shows an image representing the difference between the reference volume and the correlate volume. 
+This is shown in a square with side equal to the chosen "registration box size". 
+The image can be spanned in 3D and it is initially centred on the slice embedding point 0. 
+This view can be retrieved by clicking on the button **Centre on Point 0**.
+The difference image is calculated from the full-resolution volumes, not their down-sampled versions.
+If two volumes were identical, their difference volume would result in pixels of value 0 and the viewer would show a black square. 
+Two images are registered optimally when their difference volume is as uniform as possible, and shown with large numbers of grey pixels in the viewer.
+The registration procedure can be manually adjusted by clicking on the difference image and moving the two volumes with respect to each other by using the keys: "j", "n", "b", and "m".
+The image orientation cab be changed using the "x", "y" and "z" keys, and scroll through the image slices. 
 
-When you click **Start Registration** this will crop the image to the size of the reference box you chose, centred on the point 0. It will do the same for the correlate image, and then it will subtract one image from the other, and display that on the viewer. It does this for the original images, not the down-sampled versions.
-If you were to load two identical images, then the subtraction would result in nothing, so you would just see a black square. The idea is that to register the images, you need to align them such that the subtraction results in as uniform an image as possible.
-If you have set an initial translation then the images will start off being translated relative to each other accordingly.
-
-You can then move the two images relative to each other by using the keys: j, n, b and m.
-You can also still change the orientation using the x, y and z keys, and scroll through the image slices. 
-
-Here is an example of what an image registration would look like as you begin to align the images – you can see it becomes more grey where you have a good overlap.
+An example of an optimal registration is shown below, where the difference image is largely grey.
 
 .. image:: images/registration_example_0.png
     :width: 49%
@@ -42,36 +49,76 @@ Here is an example of what an image registration would look like as you begin to
 
 :raw-html:`<br />`
 
-Once you are satisfied with the registration, click **Confirm Registration** to save the translation. This will be provided to the DVC analysis code later on.
-Then move on to the **Mask** tab. 
+Click on the button **Reset** to set the translation to [0, 0, 0].
+Click on the button **Set to Automatic Registration** to reset the translation the value of the automatic registration.
+Click on the button **Confirm Registration** when satisfied with the registration and store the translation value for the DVC analysis in the next tabs.
+Click on the button **Cancel** to terminate the registration procedure and retrieve the previous translation value.
+Click on the button **Restart registration** to restart the regitration process again.
+
+Move to the **Mask** tab only when the registration has been confirmed at least once.
 
 Mask Creation
 =============
+The point cloud will be created inside a mask defined by the user. A mask is a binary image where ones represent where the points will lie. iDVC allows you to create or import a mask via file. 
+Once satisfied with the mask, move on to the **Point Cloud** panel.
 
 Creating a mask
 ~~~~~~~~~~~~~~~
+A mask is created by tracing the cross section of the mask and extending it above and below the current slice by **Slices Above** and **Slices Below** values. 
+More complex masks can be created by extending the mask by multiple tracing.
 
-A mask needs to be created to dictate where the point cloud will lie.
-To draw a mask, click on the **Start Tracing** button.
-This will allow you to trace a region freehand by left button clicking and dragging the mouse.
+The user can trace in 2 modalities: free hand and or by inserting multiple segments separated by point handles.
 
-To extend the mask in 3D, above and below the current slice, you may adjust the **Slices Above** and **Slices Below** settings,
-before clicking **create mask**.
-The **Slices Above** and **Slices Below** are in the coordinate system of the down-sampled image (if your image has been down-sampled).
+Click on the **Start Tracing** button to draw a mask and enable tracing on the viewer. 
 
-If you would like your mask to cover more than one area, or you would like to increase the area of the mask, tick the **Extend Mask** checkbox.
-Then you can draw another region and press **Extend Mask** to extend the mask to this region as well.
+Freehand tracing:
 
-Saving and Loading a mask
-~~~~~~~~~~~~~~~~~~~~~~~~~
+- Draw a free hand line: left button click over the image, hold and drag.
 
-The most recent mask you have created will automatically be saved, but if you would like to create a new mask, you will be prompted to then save the previous one, otherwise it will be discarded.
+- Erase the line: left button click and release.
 
-The names of all of the masks you have saved will appear in a dropdown list. You can select one from here and reload it.
+Multisegment tracing:
 
-Note that the mask is created in the coordinate system of the down-sampled image, so if you change the down-sampling level, you may not be able to reload a mask you have previously generated.
-Alternatively, you may load a mask from a file you have saved. This must be an uncompressed metaimage file, with the extension .mha.
-Once you are satisfied with the mask, move on to the **Point Cloud** panel.
+- Start a snap drawn line: middle button click. Terminate the line by clicking the middle button while depressing the ctrl key. 
+
+- Form a closed loop with the line: trace a continuous or snap drawn line and place the last cursor position close to the first handle. 
+
+- Point handle dragging: right button click and hold on any handle that is part of a snap drawn line. The path can be closed by overlappingg the first and last points. 
+
+- Erase any point handle: ctrl key + right button down on the handle.
+
+- Split a segment at the cursor position: shift key + right button down on any snap drawn line segment.
+
+The 2D mask drawn in the viewer is used across multiple slices in 3D, above and below the current slice; the volume can be adjusted by editing the **Slices Above** and **Slices Below** values.
+Click on **Create mask** when the tracing is finalised.
+
+Note: the **Slices Above** and **Slices Below** are in the coordinate system of the downsampled image (if the images have been downsampled).
+
+Extending a mask
+~~~~~~~~~~~~~~~~
+
+Tick the **Extend Mask** checkbox if the mask needs to cover more than one area, or the area of the mask needs to be enlarged. 
+Then, draw another region and press the button **Extend Mask**.
+
+If **Extend Mask** is not checked the mask will be reset when tracing.
+
+Saving a mask
+~~~~~~~~~~~~~
+
+The most recent mask that has been created will automatically be applied. 
+If it is intended to draw more than one mask click on the **Save Mask** button. Else, the older mask will be discarded if a new mask is created without saving the previous one.
+
+The names of all of the saved masks will appear in a dropdown list. 
+Each mask can be selected and reloaded by clicking on **Load Saved Mask**.
+
+Note: the mask is created in the coordinate system of the down-sampled image.
+If the down-sampling level is changed, you may not be able to reload a mask you have previously generated.
+
+Loading a mask from file
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+As an alternative to creating a mask, this may be loaded from a file by clicking **Load Mask from File**. 
+The file format should be an uncompressed metaimage file, with extension '.mha'.
 
 Point Cloud
 ===========
@@ -92,17 +139,17 @@ centred on the location of the reference point 0.
 If you select a **2D** point cloud, then the point cloud will only be created on the currently displayed slice of the image.
 A **3D** point cloud will be created across the entire extent of the mask. 
 
-The overlap is the percentage overlap of the subvolume regions.
-You can also set a rotation of the subvolumes in degrees, relative to any of the three axes.
+The **Overlap** is the percentage overlap of the subvolume regions.
+You can also set a **Rotation Angle** of the subvolumes in degrees, relative to any of the three axes.
 
-You may choose to **erode** the mask.
-Without doing this, although all of the points will lie within the mask, parts of some of the subvolumes may lie outside of the mask.
-Eroding the mask will help to ensure the entirety of all of the subvolume regions lies within the mask.
+Parts of some of the subvolumes may lie outside of the mask, although all of the points will lie within the mask.
+You may choose to erode the mask by ticking **Erode mask**.
+Eroding the mask will help ensure the entirety of all of the subvolume regions lies within the mask.
 Be aware that this is quite a time consuming process.
-You may also adjust the multiplier on the erosion, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter to you if some subvolumes are partially outside of the mask.
+You may also adjust the **Erosion multiplier**, which will change how heavily this erosion process takes place – you may decrease the multiplier if it does not matter if some subvolumes are partially outside of the mask.
 
-The **display subvolume regions** option allows you to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
-The display registration region toggles on/off the view of the registration box centred on point 0.
+The **Display Subvolume Regions** option allows to turn on/off viewing the subvolumes, but the points themselves will still be displayed.
+The **Display Registration Region** toggles on/off the view of the registration box centred on point 0.
 
 .. image:: images/3D_pointcloud.png
 
@@ -116,7 +163,8 @@ The names of all of the point clouds you have saved to the current session will 
 You can select one from here and reload it.
 
 Alternatively, you may load a point cloud from a file you have saved.
-This must be a tab-delimited text file with the point number in the first column, followed by the x, y and z coordinates of each point.
+Allowed file formats are `txt`, `csv`, `xlxs`, `inp`.
+This could be a tab-delimited text file with the point number in the first column, followed by the x, y and z coordinates of each point.
 
 An example is shown below. The first point in the file will be used as the starting point for the DVC analysis.
 Note that you may use non-integer coordinates.
@@ -128,7 +176,7 @@ Note that you may use non-integer coordinates.
 Note that the point cloud is in the coordinate system of the original image, and is not affected by the down-sampling, it is displayed at the true location of the points.
 Once you are happy with your point cloud, you can move on to the **Run DVC** panel.
 
-To delete a PointCloud you should press the `Clear Point Cloud` button.
+To delete a PointCloud you should press the **Clear Point Cloud** button.
 
 .. _Running DVC Analysis:
 

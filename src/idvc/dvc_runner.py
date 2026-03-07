@@ -26,7 +26,12 @@ import pysnooper
 from brem import AsyncCopyOverSSH, BasicRemoteExecutionManager
 import tempfile
 import ntpath, posixpath
-from .io import save_tiff_stack_as_raw
+from .io import save_tiff_stack_as_raw, save_nxs_as_raw
+
+class PrintCallback(object):
+    '''Class to handle the emit call when no callback is provided'''
+    def emit(self, *args, **kwargs):
+        print (args, kwargs)
 
 count = 0
 runs_completed = 0
@@ -200,12 +205,50 @@ class DVC_runner(object):
         self.input_file = input_file
         self.finish_fn = finish_fn
         self.run_succeeded = run_succeeded
+        self.session_folder = session_folder
 
+    def set_up(self, *args, **kwargs):
+        '''This function sets up the DVC run, creating the run configurations and setting up the run folders.
+        
+        Parameters:
+        -----------
+        *args: not used
+        **kwargs: 
+            message_callback: callback function for messages
+            progress_callback: callback function for progress updates
+
+        Returns:
+        --------
+        None
+
+        This function reads a json file containing the run configuration and creates the run configurations.
+        The json file contains the following:
+        - subvolume_points: list of number of points to process at each subvolume
+        - subvolume_sizes: list of subvolume sizes, if not an integer multiple runs will be created
+        - points: number of points to process in the point cloud
+        - roi_files: list of point cloud files
+        - reference_file: reference image volume
+        - correlate_file: correlation image volume
+        - vol_bit_depth: bit depth of the image volumes. If loading an image not of type int8 or int16, the image will be converted to uint16.
+        - vol_hdr_lngth: header length of the image volumes
+        - dims: dimensions of the image volumes
+        - subvol_geom: geometry of the subvolume, either cube or sphere
+        - subvol_npts: number of points in the subvolume, not used
+        - disp_max: maximum displacement in voxels
+        - dof: number of parameters in the optimisation, 3,6, or 12
+        - obj: objective function, either sad, ssd, zssd, nssd, or znssd
+        - interp_type: interpolation type, either trilinear or tricubic
+        - run_folder: folder to save the run results and configurations
+        - rigid_trans: rigid translation between the reference and correlation volumes
+        - point0_world_coordinate: world coordinates of the starting point for the DVC analysis
+        '''
         self.processes = []
         self.process_num = 0
+        message_callback = kwargs.get('message_callback', PrintCallback())
+        progress_callback = kwargs.get('progress_callback', PrintCallback())  
         
         # created in dvc_interface create_run_config
-        with open(input_file) as tmp:
+        with open(self.input_file) as tmp:
             config = json.load(tmp)
 
         subvolume_points = config['subvolume_points'] 
@@ -216,18 +259,53 @@ class DVC_runner(object):
         roi_files = config['roi_files']
         reference_file = config['reference_file']
         correlate_file = config['correlate_file']
+        
+        progress_callback.emit(10)
         # Convert to raw if files are a list of tiffs
         if isinstance(reference_file, (list, tuple)):
-            base = os.path.abspath(session_folder)
-            raw_reference_file_fname = os.path.join(base, config['run_folder'], 'reference.raw')
-            save_tiff_stack_as_raw(reference_file, raw_reference_file_fname)
+            base = os.path.abspath(self.session_folder)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+            if not os.path.exists(raw_reference_file_fname):
+                message_callback.emit("Converting reference file to raw format")
+                save_tiff_stack_as_raw(reference_file, raw_reference_file_fname, progress_callback, 10, 50)
             reference_file = raw_reference_file_fname
+        elif reference_file.endswith(('.nxs', '.h5', '.hdf5')):
+            base = os.path.abspath(self.session_folder)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_reference_file_fname = os.path.join(results_folder, 'reference.raw')
+            if not os.path.exists(raw_reference_file_fname):
+                message_callback.emit("Converting reference file to raw format")
+                save_nxs_as_raw(reference_file, self.main_window.hdf5_dataset_path, raw_reference_file_fname)
+            reference_file = raw_reference_file_fname
+        progress_callback.emit(50)
+
         if isinstance(correlate_file, (list, tuple)):
-            base = os.path.abspath(session_folder)
-            raw_correlate_file_fname = os.path.join(base, config['run_folder'], 'correlate.raw')
-            save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname)
+            base = os.path.abspath(self.session_folder)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+            if not os.path.exists(raw_correlate_file_fname):
+                message_callback.emit("Converting correlate file to raw format")
+                save_tiff_stack_as_raw(correlate_file, raw_correlate_file_fname, progress_callback, 50, 90)
             correlate_file = raw_correlate_file_fname
+
+        elif correlate_file.endswith(('.nxs', '.h5', '.hdf5')):
+            base = os.path.abspath(self.session_folder)
+            results_folder = os.path.dirname(os.path.join(base, config['run_folder']))
+            raw_correlate_file_fname = os.path.join(results_folder, 'correlate.raw')
+            if not os.path.exists(raw_correlate_file_fname):
+                message_callback.emit("Converting correlate file to raw format")
+                save_nxs_as_raw(correlate_file, self.main_window.hdf5_dataset_path, raw_correlate_file_fname)
+            correlate_file = raw_correlate_file_fname
+
+        progress_callback.emit(90)
+
+        message_callback.emit("Creating run configurations")
         vol_bit_depth = int(config['vol_bit_depth'])
+        if vol_bit_depth not in [8, 16]:
+            # the data will be converted to 16 bit by save_tiff_stack_as_raw
+            # it won't work with other formats
+            vol_bit_depth = 16
         vol_hdr_lngth = int(config['vol_hdr_lngth'])
 
         if 'vol_endian' in config:
@@ -250,7 +328,7 @@ class DVC_runner(object):
         starting_point = config['point0_world_coordinate']
 
         # Change directory into the folder where the run will be saved:
-        os.chdir(session_folder)
+        os.chdir(self.session_folder)
         # this is the one directory we created where we will run the dvc command in
         # we want to change this to create multiple directories first and then run through
         # all the directory created https://github.com/TomographicImaging/iDVC/issues/37
@@ -277,7 +355,6 @@ class DVC_runner(object):
                 for i, l in enumerate(f):
                     pass
             i+=1
-            #print(i)
             if i < points:
                 total_points += i
             else:
@@ -291,7 +368,8 @@ class DVC_runner(object):
         #    required_runs, run_succeeded))
         
 
-
+        start_progress = 90
+        end_progress = 99
         file_count = -1
         # point0 = main_window.getPoint0WorldCoords()
             
@@ -315,9 +393,9 @@ class DVC_runner(object):
                 # copies the pointcloud file as a whole in the run directory
                 try:
                     shutil.copyfile(roi_file, grid_roi_fname)
-                except Error as err:
+                except Exception as err:
                     # this is not really a nice way to open an error message!
-                    mainwindow.displayFileErrorDialog(message=str(err), title="Error creating config files")
+                    self.main_window.displayFileErrorDialog(message=str(err), title="Error creating config files")
                     return
 
                 newline = None    
@@ -376,7 +454,6 @@ class DVC_runner(object):
                 # wait for process to finish before doing next run
                 
                 # process.waitForFinished(msecs=2147483647)
-                
                 self.processes.append( 
                     (exe_file, [ config_filename ], required_runs, total_points, num_points_to_process)
                 )
@@ -479,7 +556,7 @@ class DVC_runner(object):
             stdout, stderr = conn.run('cd {} && . ~/condarc && conda activate dvc && dvc dvc_config.txt'.format(wdir))
 
 
-    def run_dvc(self):
+    def run_dvc(self, **kwargs):
         main_window = self.main_window
         input_file = self.input_file
         finish_fn = self.finish_fn
@@ -487,6 +564,15 @@ class DVC_runner(object):
         
         process = QtCore.QProcess()
         
+        env = QtCore.QProcessEnvironment.systemEnvironment()
+        try:
+            nthreads = main_window.settings.value('omp_threads')
+        except Exception as err:
+            nthreads = '4'
+            print (err)
+        env.insert("OMP_NUM_THREADS", nthreads)
+        process.setProcessEnvironment(env)
+
         # print("Processes: ", self.processes)
         # print("num: ", self.process_num)        
 
@@ -517,7 +603,7 @@ class DVC_runner(object):
             lambda: update_progress(main_window, process, total_points, required_runs,\
                                     run_succeeded, start_time, num_points_to_process))
         # process.finished.connect(self.run_dvc())
-        process.start( exe_file , param_file )
+        process.start(exe_file , param_file )
 
     def onStarted(self):
         pass

@@ -1,9 +1,124 @@
 # ChangeLog
 
-## vx.x.x
-* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths
+## v25.0.0
+
+Enhancements:
+* Add nexus ".nxs" files reader and converter into raw for the dvc_runner #387
+* Improve `ImageDataCreator` #387
+* Removes raw (temporary) files created from nxs and TIFF from the session folder #387
+* Connect error dialog to run_dvc worker #387
+* Add warning for casting of negative values in nxs and TIFF #387
+* Update the viewer when the "view" dropdown in the results tab changes #403
+* Update default values in "Run DVC" tab #402
+
+Bug fixes:
+* Add casting of int8 and int16 in TIFF conversion to raw #387
+* Edit the way `vol_bit_depth` is defined in TIFF reader #387
+* Fix statistical analysis graphs for 1 data point #419
+* Add scrollbar to docked widgets #405 with correct darkstyle #425
+* Remove GPU size and GPU checkbox for volume render in settings #403
+* Add 3D viewer docking option in the settings #398
+
+Documentation:
+* Add GitHub link #396
+* Add documentation on strain #396
+* Add link to magma dataset and references #426
+
+Dependencies:
+* Add pyside2 and upgrade viewer version #387
+
+## v24.1.1
+Bug fixes:
+* Fix abscissa order in graphs #372
+
+## v24.1.0
+Enhancements:
+* Edit h text in viewer2D #354
+* Add settings and help menu bar #347
+* Improve graphs window #335
+* Option to edit the app fontsize in settings #335
+
+Bug fixes:
+* Use eqt FormDialog in settings #318
+
+Documentation:
+* Add citations #349
+* Add 'mha', 'mhd', 'TIFF' to help text #365
+* Edit graphs and viewers documentation #366
+* Edit viewer version number in documentation #366
+
+Dependencies:
+* Add pandas #335
+* Add eqt and upgrade viewer version #364
+
+Backend:
+* Create files graphs_widgets, save_widgets #359
+
+## v24.0.1
+Bug fixes:
+* Use RawInputDialog from the viewer package #314
+* Fix bug with loading of TIFF files not char or short #262
+* Fix bug on sampling points in subvolume #302
+* Fix text on automatic registration widget #310
+
+Enhancements:
+* Add units to rotation angle in point cloud #311
+
+Documentation:
+* Edit results documentation and help text #309
+* Edit installation documentation #313
+
+## v24.0.0
+New features:
+* Edit DVC-Results tab #231
+* Add scrolling widget in the help text #260
+* Allow csv, xlxs and inp formats in point-cloud file & add error dialog #262 #269 #284
+* Set registration-box-size default and help text #259
+* Make dimensionality 3D the default #256
+* Enable loading of TIFF files with non integer pixel values. Data will be rescaled to uint16 #228
+* Edit registration-tab name from "Manual" to "Initial" #241
+* Add automatic registration functionality #304
+* Added argument parser to idvc command. This allows the user to specify the debugging level #218
+* Add setting to set the number of OpenMP threads to use during DVC analysis #194
+* Renames input files with names reference and correlate for the relative images, if data are copied in the session #186
 * More efficient pointcloud creation by not shifting the pointcloud to the make such that point0 is one point of the 
-  created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid.
+  created cloud. Point0 is simply added as first point of the cloud even if it does not lie on the regular grid #163
+* Improves progress reporting when loading a saved session, including displaying file names as they are loaded #195
+* Make splash screen appear instantly when app is opened #198
+* Restructure to create:
+  * ui/dialogs.py
+  * ui/widgets.py
+  * ui/windows.py
+  * utils.py
+  * idvc.py - which launches the app #198
+  
+Bug fixes:
+* Edit methods for registration viewer to be compatible with vtk in viewer v24.0.0
+* Make 3D viewer dock widget floatable, add minimum height. Add scroll area to point-cloud tab #289
+* Disables buttons in Select-Image tab after first registration #293
+* Scales the displacement vectors keeping the color bar with the displacement values. Adds title to color bar #270
+* Edit "degrees of freedom" widget to be "optimisation parameters" #254
+* Set empty pop-up menus for the main windows #217
+* Set Tabified widgets not to move or close #226 #217
+* Set QDockWidgets flag to NoDockWidgetFeatures to prevent them being moved or lost #226 #217
+* Consume events 'w' and 's' in viewers to avoid render changes between wireframe and surface respectively #218
+* Add workaround for box clipping due to VTK behaviour change from 9.1 #216
+* Use os.path.join to create all filepaths, previously in some cases we were forcing "\" or "/" to be in some paths #175
+* Updates progress bar for setting up a DVC run configuration - previously this was hanging #195
+  
+CI:
+* Fix vtk version #291
+* Add `openpyxl` to recipe files #262
+* Fix some missing pip dependencies & update workflows & fix tests #233
+* Add build directory to gitignore #216
+* Revert to v1.4.4 of conda build action #202
+
+Documentation:
+* Edit point 0/registration/mask/point-cloud/results tooltips, help text and documentation #257 #264 #268 #286 #287
+* Edit README.md to include Prof. Bay citations and ref to DVC executable #255
+
+Dependencies:
+* Update CILViewer to v24.0.1
 
 ## v22.3.0
 * Fix bug with size of 'overlap' spinboxes expanding in the vertical direction

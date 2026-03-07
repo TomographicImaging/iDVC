@@ -37,13 +37,13 @@ import os
 
 project = 'iDVC'
 copyright = '2022, UKRI STFC'
-author = 'Edoardo Pasca and Laura Murgatroyd'
+author = 'Edoardo Pasca, Danica Sugic,  Laura Murgatroyd'
 
 version = re.sub('^v', '', os.popen('git describe').read().strip())
 version = version.split('-')[0]
 
 rst_epilog = """
-.. |cil_viewer_version| replace:: >=22.2.0
+.. |cil_viewer_version| replace:: >=24.1.0
 """
 
 # -- General configuration ---------------------------------------------------
