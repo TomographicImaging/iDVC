@@ -15,9 +15,9 @@
 
 import os
 import numpy as np
-from PySide2 import QtCore
+from qtpy import QtCore
 from datetime import datetime
-from PySide2.QtWidgets import QMessageBox
+from qtpy.QtWidgets import QMessageBox
 import json
 import time
 import shutil

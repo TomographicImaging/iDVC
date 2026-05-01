@@ -36,9 +36,9 @@ from ccpi.viewer.utils.conversion import (cilHDF5CroppedReader,
                                           Converter)
 from ccpi.viewer.ui.dialogs import RawInputDialog, HDF5InputDialog
 from eqt.threading import Worker
-from PySide2 import QtCore, QtGui
-from PySide2.QtCore import QThreadPool
-from PySide2.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
+from qtpy import QtCore, QtGui
+from qtpy.QtCore import QThreadPool
+from qtpy.QtWidgets import (QComboBox, QDialog, QDialogButtonBox,
                                QFormLayout, QGroupBox, QLabel, QLineEdit,
                                QMessageBox, QProgressDialog, QVBoxLayout,
                                QWidget)

@@ -1,7 +1,7 @@
-import PySide2
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+import qtpy
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy.QtGui import *
 import multiprocessing
 import vtk
 
@@ -22,7 +22,8 @@ class SettingsWindow(FormDialog):
         self.fontsize_widget.setMaximum(25)
         self.fontsize_widget.setMinimum(5)
         self.fontsize_widget.setSingleStep(1)
-        self.fontsize_widget.setValue(12)
+        saved_fontsize = self.parent.settings.value("fontsize")
+        self.fontsize_widget.setValue(int(saved_fontsize) if saved_fontsize is not None else 12)
         self.addWidget(self.fontsize_widget, self.fontsize_label, 'fontsize')
         self.dark_checkbox = QCheckBox("Dark Mode")
         # populate from settings
@@ -80,7 +81,8 @@ class SettingsWindow(FormDialog):
         else:
             omp_threads = 1
         
-        self.omp_threads_entry.setValue(omp_threads)
+        saved_omp = self.parent.settings.value("omp_threads")
+        self.omp_threads_entry.setValue(int(saved_omp) if saved_omp is not None else omp_threads)
         self.omp_threads_entry.setRange(1, n_cores)
         self.omp_threads_entry.setSingleStep(1)
         self.omp_threads_label = QLabel("OMP Threads: ")
@@ -89,9 +91,10 @@ class SettingsWindow(FormDialog):
 
 
     def onOk(self):
-        default_font_family = PySide2.QtWidgets.QApplication.font().family() 
-        font = PySide2.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
-        PySide2.QtWidgets.QApplication.setFont(font)
+        default_font_family = qtpy.QtWidgets.QApplication.font().family() 
+        font = qtpy.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
+        qtpy.QtWidgets.QApplication.setFont(font)
+        self.parent.settings.setValue("fontsize", self.fontsize_widget.value())
         #self.parent.settings.setValue("settings_chosen", 1)
         if self.dark_checkbox.isChecked():
             self.parent.settings.setValue("dark_mode", True)

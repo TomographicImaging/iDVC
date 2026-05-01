@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui
 import os, sys
 import logging
 import argparse
@@ -22,11 +22,11 @@ def main():
     QtWidgets.QApplication.setFont(font)
 
     
-    file_dir = os.path.dirname(__file__)
-    owl_file = os.path.join(file_dir, "DVCIconSquare.png")
-    owl = QtGui.QPixmap(owl_file)
-    splash = QtWidgets.QSplashScreen(owl)
-    splash.show()
+    # file_dir = os.path.dirname(__file__)
+    # owl_file = os.path.join(file_dir, "DVCIconSquare.png")
+    # owl = QtGui.QPixmap(owl_file)
+    # splash = QtWidgets.QSplashScreen(owl)
+    # splash.show()
     
 
     import vtk
@@ -38,7 +38,7 @@ def main():
     window = MainWindow()
     
     window.show()
-    splash.finish(window)
+    # splash.finish(window)
 
     
 
