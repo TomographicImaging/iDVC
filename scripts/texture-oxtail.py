@@ -6,6 +6,9 @@ from skimage.feature import graycomatrix, graycoprops
 import matplotlib.pyplot as plt
 import vtk
 from ccpi.viewer.utils.conversion import cilRawCroppedReader
+import os
+
+output_dir = os.path.abspath( "/Users/edoardo.pasca/Analysis/ALC-421/plots" )
 
 #%%
 # data = np.load("/Users/edoardo.pasca/Data/DVC_test_images/frame_000_f.npy")
@@ -64,19 +67,19 @@ box = Rectangle((registration_p0[1], registration_p0[0]), registration_region, r
 fig, ax = plt.subplots()
 ax.imshow(data, cmap='gray')
 start = 600
-ax.plot([start + i for i in range(dsize)], [registration_p0[1] + registration_region//2 for i in range(dsize)], color='C1', linewidth=2)
+ax.plot([start + i for i in range(dsize)], [registration_p0[0] + registration_region//2 for i in range(dsize)], color='C1', linewidth=2)
 ax.add_patch(box)
 sax = ax.inset_axes([0, 0.5, 0.5, 0.5])
 sax.imshow(sub_image, cmap='gray')
 sax.get_xaxis().set_visible(False)
 sax.get_yaxis().set_visible(False)
-start = start - registration_p0[0]
+start = start - registration_p0[1]
 sax.plot([start + i for i in range(dsize)], [registration_region//2 for i in range(dsize)], color='C1', linewidth=2)
 plt.show()
 
 # %%
-distances = [i for i in range(80)]
-angles = [0, np.pi/2, np.pi/4, 3*np.pi/4]
+distances = np.asarray([i for i in range(40)])
+angles = [ i * np.pi/4 for i in range(4)]
 
 result = graycomatrix(sub_image, distances=distances, angles=angles, levels=256, 
                       symmetric=False, normed=False)
@@ -96,27 +99,42 @@ plt.plot(energy.T[0], label='Energy')
 plt.legend()
 # %%
 # plt.plot(dissimilarity.T[0], label='Dissimilarity')
+
+# yy = np.gradient(contrast.T[0], distances/2)
+# threshold = yy < (yy.max() * 0.1)
+# for i in range(len(yy)):
+#     if threshold[i]:
+#         break
+# print (i, distances[i]*2)
+
 for a in angles:
-    plt.plot(contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+    plt.plot(distances*2,contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+    # plt.plot(distances*2,
+    #          yy,
+    #          label=f'angle {np.degrees(a)}')
 plt.title('Contrast')
-plt.xlabel('Distance')
+plt.xlabel('Subvolume size')
 plt.legend()
 # plt.legend()
 # %%
 for a in angles:
-    plt.plot(dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+    plt.plot(distances*2,dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
 plt.title('Dissimilarity')
-plt.xlabel('Distance')
+plt.xlabel('Subvolume size')
 plt.legend()
 # %%
 fig, ax = plt.subplots(2, 1, figsize=(10, 10))
-
+x = distances*2
 for a in angles:
-    ax[0].plot(contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
-    ax[1].plot(dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+    ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+    ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
 ax[0].set_title('Contrast')
 ax[1].set_title('Dissimilarity')
-ax[1].set_xlabel('Distance')
+ax[1].set_xlabel('Subvolume size')
 ax[0].legend()
 ax[1].legend()
+# %%
+fig.savefig(os.path.join(output_dir, "oxtail-texture_analysis.png"), 
+            dpi=300,
+            bbox_inches="tight")
 # %%
