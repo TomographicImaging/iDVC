@@ -1804,16 +1804,26 @@ It is used as a global starting point and a translation reference."
             if not (hasattr(self, 'unsampled_ref_image_data') and hasattr(self, 'unsampled_corr_image_data')):
                 #print("About to create image")
                 self.unsampled_ref_image_data = vtk.vtkImageData()
-                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent)
-                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, 
+                                                      self.image[0], 
+                                                      self.unsampled_ref_image_data, 
+                                                      info_var=self.unsampled_image_info, crop_image=True, 
+                                                      origin=origin,
+                                                      target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir),
+                                                   finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
                 #TODO: move to doing both image data creators simultaneously - would this work?
                 return
 
             if previous_reg_box_extent != reg_box_extent: # If registration box is changed need to update the cropped images.
-                image_data_creator = ImageDataCreator(self, self.image[0], self.unsampled_ref_image_data, info_var=self.unsampled_image_info, crop_image=True, origin=origin,
-                                                 target_z_extent=target_z_extent)
-                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir), finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
+                image_data_creator = ImageDataCreator(self, 
+                                                      self.image[0], 
+                                                      self.unsampled_ref_image_data, 
+                                                      info_var=self.unsampled_image_info, crop_image=True, 
+                                                      origin=origin,
+                                                      target_z_extent=target_z_extent)
+                image_data_creator.createImageData(output_dir=os.path.abspath(tempfile.tempdir),
+                                                   finish_fn=self.LoadCorrImageForReg, crop_corr_image=True)
             else:
                 self.completeRegistration()
             
@@ -1828,6 +1838,7 @@ It is used as a global starting point and a translation reference."
                 else:
                     self.completeRegistration()
 
+    
     def enlarge_extent(self, dim):
         """
         Given the regitration box size inputted by the user and the coordinates of the point zero wrt the unsampled volumes, 
@@ -1858,8 +1869,14 @@ It is used as a global starting point and a translation reference."
         z_extent = self.target_cropped_image_z_extent
 
         self.unsampled_corr_image_data = vtk.vtkImageData()
-        image_data_creator = ImageDataCreator(self, self.image[1], self.unsampled_corr_image_data, info_var=self.unsampled_image_info, resample=resample_corr_image, crop_image=crop_corr_image, origin=origin, target_z_extent=z_extent)
-        image_data_creator.createImageData(finish_fn=self.completeRegistration, output_dir=os.path.abspath(tempfile.tempdir))
+        image_data_creator = ImageDataCreator(self, 
+                                              self.image[1], 
+                                              self.unsampled_corr_image_data, 
+                                              info_var=self.unsampled_image_info, resample=resample_corr_image, crop_image=crop_corr_image, 
+                                              origin=origin, 
+                                              target_z_extent=z_extent)
+        image_data_creator.createImageData(finish_fn=self.completeRegistration, 
+                                           output_dir=os.path.abspath(tempfile.tempdir))
 
     def completeRegistration(self):
         """It shows the registration difference volume in the viewer and sets up the tab for the registration. 
@@ -2811,10 +2828,22 @@ It is used as a global starting point and a translation reference."
         self.subvolumeShapeValue.addItem("Sphere")
         self.subvolumeShapeValue.setCurrentIndex(0)
         self.subvolumeShapeValue.currentTextChanged.connect(self.displaySubvolumePreview)
+        pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeShapeValue)
         widgetno += 1
-        pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
+
+        # Add show texture measurement
+        self.subvolumeTextureLabel = QLabel(self.graphParamsGroupBox)
+        self.subvolumeTextureLabel.setText("Volume texture measurement")
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.subvolumeTextureLabel)
+        self.subvolumeTextureValue = QPushButton(self.graphParamsGroupBox)
+        self.subvolumeTextureValue.setText("Show")
+        self.subvolumeTextureValue.clicked.connect(self.displaySubvolumeTexture)
+
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeTextureValue)
+        widgetno += 1
+        pc['pointcloud_volume_texture_entry'] = self.subvolumeTextureValue
 
         # Add horizonal seperator
         # Generate panel
@@ -3114,6 +3143,83 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
         self.createSavePointCloudWindow(save_only=False)
+
+    import pysnooper
+    @pysnooper.snoop()
+    def displaySubvolumeTexture(self):
+        window = FormDialog(None, "Test FormDialog")
+        # read as list
+        p0 = eval(str(self.registration_parameters['point_zero_entry'].text()))
+        regbox = self.registration_parameters['registration_box_size_entry'].value()
+
+        window.addWidget(QLabel(f"Point 0: {p0}"), qlabel="P0", name='P0',)
+        window.addWidget(QLabel(f"Registration box size: {regbox}"), qlabel="RegBox", name='RegBox',)
+
+        origin = self.target_cropped_image_origin 
+        z_extent = self.target_cropped_image_z_extent
+        vtkdata3d = self.unsampled_corr_image_data
+        extent = vtkdata3d.GetExtent()
+
+        extent = self.getRegistrationBoxExtentInWorldCoords()
+
+        # get the selected ROI
+        voi = vtk.vtkExtractVOI()
+        
+        voi.SetInputData(self.unsampled_ref_image_data) 
+
+        voi.SetVOI(*extent)
+        voi.Update()
+        # vtkdata3d.SetOrigin((0,0,z_extent[0]))
+
+        from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
+        from ccpi.viewer import viewer2D
+        frame = QCILViewerWidget(window, 
+                                 viewer=viewer2D, shape=(200, 200),
+                                 debug=False)
+        vtkdata3d = voi.GetOutput()
+        frame.viewer.setInputData(vtkdata3d)
+        
+        data3d = Converter.vtk2numpy(vtkdata3d)
+
+        
+        # data3d = load_data3d(stored_size, roi3d)
+        # print (f"Data shape: {data.shape}, Data3D shape: {data3d.shape}")
+    
+        # exit()
+        max_size = 40
+        
+        distances = np.asarray([i for i in range(max_size)])
+        angles = [ i * np.pi/4 for i in range(4)]
+    
+        # XY plane
+    
+        # fig, ax = plt.subplots(3, 1, figsize=(10, 10))
+        # ax[2].imshow(data, cmap='gray')
+        # create_plots(data, distances, angles, fig, ax)
+    
+        # fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+        # ax[0,0].imshow(data[roi3d[2]:roi3d[3], roi3d[0]:roi3d[1]], cmap='gray')
+        
+        # ax[0,1].imshow(data3d[0, roi3d[2]:roi3d[3], roi3d[0]:roi3d[1]], cmap='gray')
+    
+        # # Z has been already cropped on read
+        # print("Shape y cut", data3d[:, 0, roi3d[0]:roi3d[1]].shape)
+        # ax[1,0].imshow(np.squeeze(data3d[:, 0, roi3d[0]:roi3d[1]]), cmap='gray')
+        # ax[1,1].imshow(np.squeeze(data3d[:, roi3d[2]:roi3d[3], 0]), cmap='gray')
+        # Create canvas and optional toolbar for interactive navigation
+        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+        # ax[0].plot(distances, label='Distances')
+        # ax[0].legend()
+        ax.imshow(data3d[regbox//2,:,:], cmap='gray')
+        canvas = FigureCanvas(fig)
+        toolbar = NavigationToolbar(canvas, window)
+    
+        # Put toolbar + canvas into a vertical layout and set it on the dialog
+        window.addSpanningWidget(toolbar, name='toolbar')
+        window.addSpanningWidget(canvas, name='canvas')
+        window.addSpanningWidget(frame, name='viewer')
+        
+        window.exec_()
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
