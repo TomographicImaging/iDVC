@@ -3147,7 +3147,8 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
     import pysnooper
     @pysnooper.snoop()
     def displaySubvolumeTexture(self):
-        window = FormDialog(None, "Test FormDialog")
+        window = FormDialog(None, "Image Texture Analysis")
+        self.texture_form = window
         # read as list
         p0 = eval(str(self.registration_parameters['point_zero_entry'].text()))
         regbox = self.registration_parameters['registration_box_size_entry'].value()
@@ -3178,7 +3179,24 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
                                  debug=False)
         vtkdata3d = voi.GetOutput()
         frame.viewer.setInputData(vtkdata3d)
+
+        style = frame.viewer.style
+        style.AddObserver("MouseWheelForwardEvent", self.updateTextureAnalysis, 0.5)
+        style.AddObserver("MouseWheelBackwardEvent", self.updateTextureAnalysis, 0.5)
+
+        window.addSpanningWidget(frame, name='viewer')
         
+        self.updateTextureAnalysis(None, None)
+
+    import pysnooper
+    @pysnooper.snoop()
+    def updateTextureAnalysis(self, obj, event):
+
+        window = self.texture_form
+        widgets = window.widgets
+
+        frame = window.getWidget('viewer')
+        vtkdata3d = frame.viewer.voi.GetOutput()
         data3d = Converter.vtk2numpy(vtkdata3d)
 
         
@@ -3210,14 +3228,18 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         fig, ax = plt.subplots(1, 1, figsize=(5, 5))
         # ax[0].plot(distances, label='Distances')
         # ax[0].legend()
-        ax.imshow(data3d[regbox//2,:,:], cmap='gray')
+
+        texture_data = frame.viewer.voi.GetOutput()
+        np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
+
+        ax.imshow(np_texture_data, cmap='gray')
         canvas = FigureCanvas(fig)
         toolbar = NavigationToolbar(canvas, window)
     
         # Put toolbar + canvas into a vertical layout and set it on the dialog
         window.addSpanningWidget(toolbar, name='toolbar')
         window.addSpanningWidget(canvas, name='canvas')
-        window.addSpanningWidget(frame, name='viewer')
+
         
         window.exec_()
 
