@@ -2811,6 +2811,7 @@ It is used as a global starting point and a translation reference."
         self.subvolumeShapeValue.addItem("Sphere")
         self.subvolumeShapeValue.setCurrentIndex(0)
         self.subvolumeShapeValue.currentTextChanged.connect(self.displaySubvolumePreview)
+        pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeShapeValue)
         widgetno += 1
@@ -2820,6 +2821,7 @@ It is used as a global starting point and a translation reference."
         self.subvolumeTextureLabel.setText("Volume texture measurement")
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.subvolumeTextureLabel)
         self.subvolumeTextureValue = QPushButton(self.graphParamsGroupBox)
+        self.subvolumeTextureValue.setText("Show")
         self.subvolumeTextureValue.clicked.connect(self.displaySubvolumeTexture)
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeTextureValue)
@@ -3125,13 +3127,15 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         self.pointcloud_is = 'generated'
         self.createSavePointCloudWindow(save_only=False)
 
+    import pysnooper
+    @pysnooper.snoop()
     def displaySubvolumeTexture(self):
         window = FormDialog(None, "Test FormDialog")
-        p0 = self.registration_parameters['point_zero_location'].value()
+        p0 = self.registration_parameters['point_zero_entry'].text()
         regbox = self.registration_parameters['registration_box_size_entry'].value()
 
-        window.addWidget('P0', QLabel(f"Point 0: {p0}"))
-        window.addWidget('RegBox', QLabel(f"Registration box size: {regbox}"))
+        window.addWidget(QLabel(f"Point 0: {p0}"), qlabel="P0", name='P0',)
+        window.addWidget(QLabel(f"Registration box size: {regbox}"), qlabel="RegBox", name='RegBox',)
         
         # data3d = load_data3d(stored_size, roi3d)
         # print (f"Data shape: {data.shape}, Data3D shape: {data3d.shape}")
@@ -3168,7 +3172,7 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         window.addSpanningWidget(toolbar, name='toolbar')
         window.addSpanningWidget(canvas, name='canvas')
         
-        window.show()
+        window.exec_()
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
