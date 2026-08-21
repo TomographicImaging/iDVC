@@ -2814,7 +2814,17 @@ It is used as a global starting point and a translation reference."
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeShapeValue)
         widgetno += 1
-        pc['pointcloud_volume_shape_entry'] = self.subvolumeShapeValue
+
+        # Add show texture measurement
+        self.subvolumeTextureLabel = QLabel(self.graphParamsGroupBox)
+        self.subvolumeTextureLabel.setText("Volume texture measurement")
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.LabelRole, self.subvolumeTextureLabel)
+        self.subvolumeTextureValue = QPushButton(self.graphParamsGroupBox)
+        self.subvolumeTextureValue.clicked.connect(self.displaySubvolumeTexture)
+
+        self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, self.subvolumeTextureValue)
+        widgetno += 1
+        pc['pointcloud_volume_texture_entry'] = self.subvolumeTextureValue
 
         # Add horizonal seperator
         # Generate panel
@@ -3114,6 +3124,51 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
         self.createSavePointCloudWindow(save_only=False)
+
+    def displaySubvolumeTexture(self):
+        window = FormDialog(None, "Test FormDialog")
+        p0 = self.registration_parameters['point_zero_location'].value()
+        regbox = self.registration_parameters['registration_box_size_entry'].value()
+
+        window.addWidget('P0', QLabel(f"Point 0: {p0}"))
+        window.addWidget('RegBox', QLabel(f"Registration box size: {regbox}"))
+        
+        # data3d = load_data3d(stored_size, roi3d)
+        # print (f"Data shape: {data.shape}, Data3D shape: {data3d.shape}")
+    
+        # exit()
+        max_size = 40
+        
+        distances = np.asarray([i for i in range(max_size)])
+        angles = [ i * np.pi/4 for i in range(4)]
+    
+        # XY plane
+    
+        # fig, ax = plt.subplots(3, 1, figsize=(10, 10))
+        # ax[2].imshow(data, cmap='gray')
+        # create_plots(data, distances, angles, fig, ax)
+    
+        # fig, ax = plt.subplots(2, 2, figsize=(10, 10))
+        # ax[0,0].imshow(data[roi3d[2]:roi3d[3], roi3d[0]:roi3d[1]], cmap='gray')
+        
+        # ax[0,1].imshow(data3d[0, roi3d[2]:roi3d[3], roi3d[0]:roi3d[1]], cmap='gray')
+    
+        # # Z has been already cropped on read
+        # print("Shape y cut", data3d[:, 0, roi3d[0]:roi3d[1]].shape)
+        # ax[1,0].imshow(np.squeeze(data3d[:, 0, roi3d[0]:roi3d[1]]), cmap='gray')
+        # ax[1,1].imshow(np.squeeze(data3d[:, roi3d[2]:roi3d[3], 0]), cmap='gray')
+        # Create canvas and optional toolbar for interactive navigation
+        fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+        ax.plot(distances, label='Distances')
+        ax.legend()
+        canvas = FigureCanvas(fig)
+        toolbar = NavigationToolbar(canvas, window)
+    
+        # Put toolbar + canvas into a vertical layout and set it on the dialog
+        window.addSpanningWidget(toolbar, name='toolbar')
+        window.addSpanningWidget(canvas, name='canvas')
+        
+        window.show()
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
