@@ -3186,62 +3186,74 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
         window.addSpanningWidget(frame, name='viewer')
         
-        self.updateTextureAnalysis(None, None)
+        self.updateTextureAnalysis(None, None, True)
 
     import pysnooper
     @pysnooper.snoop()
-    def updateTextureAnalysis(self, obj, event):
+    def updateTextureAnalysis(self, obj, event, first=False):
 
         window = self.texture_form
-        widgets = window.widgets
-
-        frame = window.getWidget('viewer')
-        vtkdata3d = frame.viewer.voi.GetOutput()
-        data3d = Converter.vtk2numpy(vtkdata3d)
-
         
-        # data3d = load_data3d(stored_size, roi3d)
-        # print (f"Data shape: {data.shape}, Data3D shape: {data3d.shape}")
-    
-        # exit()
+        frame = window.getWidget('viewer')
+        
         max_size = 40
         
         distances = np.asarray([i for i in range(max_size)])
         angles = [ i * np.pi/4 for i in range(4)]
     
-        # XY plane
-    
-        # fig, ax = plt.subplots(3, 1, figsize=(10, 10))
-        # ax[2].imshow(data, cmap='gray')
-        # create_plots(data, distances, angles, fig, ax)
-    
-        # fig, ax = plt.subplots(2, 2, figsize=(10, 10))
-        # ax[0,0].imshow(data[roi3d[2]:roi3d[3], roi3d[0]:roi3d[1]], cmap='gray')
         
-        # ax[0,1].imshow(data3d[0, roi3d[2]:roi3d[3], roi3d[0]:roi3d[1]], cmap='gray')
-    
-        # # Z has been already cropped on read
-        # print("Shape y cut", data3d[:, 0, roi3d[0]:roi3d[1]].shape)
-        # ax[1,0].imshow(np.squeeze(data3d[:, 0, roi3d[0]:roi3d[1]]), cmap='gray')
-        # ax[1,1].imshow(np.squeeze(data3d[:, roi3d[2]:roi3d[3], 0]), cmap='gray')
-        # Create canvas and optional toolbar for interactive navigation
-        fig, ax = plt.subplots(1, 1, figsize=(5, 5))
-        # ax[0].plot(distances, label='Distances')
-        # ax[0].legend()
+        if first:
+            fig, ax = plt.subplots(1, 3, figsize=(5, 5))
+            # ax[0].plot(distances, label='Distances')
+            # ax[0].legend()
 
-        texture_data = frame.viewer.voi.GetOutput()
-        np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
+            texture_data = frame.viewer.voi.GetOutput()
+            np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
 
-        ax.imshow(np_texture_data, cmap='gray')
-        canvas = FigureCanvas(fig)
-        toolbar = NavigationToolbar(canvas, window)
-    
-        # Put toolbar + canvas into a vertical layout and set it on the dialog
-        window.addSpanningWidget(toolbar, name='toolbar')
-        window.addSpanningWidget(canvas, name='canvas')
+            x, contrast, dissimilarity = self.texture_analysis(np_texture_data, distances, angles)
 
+            for a in angles:
+                ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+                ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+            ax[2].imshow(np_texture_data, cmap='gray')
+
+            canvas = FigureCanvas(fig)
+            toolbar = NavigationToolbar(canvas, window)
+        
+            # Put toolbar + canvas into a vertical layout and set it on the dialog
+            window.addSpanningWidget(toolbar, name='toolbar')
+            window.addSpanningWidget(canvas, name='canvas')
+
+            window.ax = ax
+            window.fig = fig
+        else:
+            ax = window.ax
+            fig = window.fig
+            for el in ax:
+                el.clear()
+            texture_data = frame.viewer.voi.GetOutput()
+            np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
+
+            x, contrast, dissimilarity = self.texture_analysis(np_texture_data, distances, angles)
+            
+            for a in angles:
+                ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+                ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+            ax[2].imshow(np_texture_data, cmap='gray')
+            
+            fig.canvas.draw_idle()
         
         window.exec_()
+
+    def texture_analysis(self, image, distances, angles):
+        from skimage.feature import graycomatrix, graycoprops
+        result = graycomatrix(image, distances=distances, angles=angles, levels=256, 
+                      symmetric=False, normed=False)
+        contrast = graycoprops(result, 'contrast')
+        dissimilarity = graycoprops(result, 'dissimilarity')
+        x = distances*2
+        return x, contrast , dissimilarity
+
 
     def displaySubvolumePreview(self):
         if self.pointcloud_parameters['subvolume_preview_check'].isChecked():
