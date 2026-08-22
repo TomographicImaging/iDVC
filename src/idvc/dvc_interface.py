@@ -3144,8 +3144,6 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         self.pointcloud_is = 'generated'
         self.createSavePointCloudWindow(save_only=False)
 
-    import pysnooper
-    @pysnooper.snoop()
     def displaySubvolumeTexture(self):
         window = FormDialog(None, "Image Texture Analysis")
         self.texture_form = window
@@ -3183,15 +3181,15 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         style = frame.viewer.style
         style.AddObserver("MouseWheelForwardEvent", self.updateTextureAnalysis, 0.5)
         style.AddObserver("MouseWheelBackwardEvent", self.updateTextureAnalysis, 0.5)
+        style.AddObserver("CharEvent", self.updateTextureAnalysis, 0.5)
 
         window.addSpanningWidget(frame, name='viewer')
         
         self.updateTextureAnalysis(None, None, True)
 
-    import pysnooper
-    @pysnooper.snoop()
     def updateTextureAnalysis(self, obj, event, first=False):
-
+        if event == "CharEvent" and not obj.GetKeyCode() in ['x','y','z']:
+            return
         window = self.texture_form
         
         frame = window.getWidget('viewer')
@@ -3200,22 +3198,20 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         
         distances = np.asarray([i for i in range(max_size)])
         angles = [ i * np.pi/4 for i in range(4)]
-    
+        texture_data = frame.viewer.voi.GetOutput()
+        np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
+        w = frame.viewer.getSliceColorWindow()
+        l = frame.viewer.getSliceColorLevel()
+
+        x, contrast, dissimilarity = self.texture_analysis(np_texture_data, distances, angles)
+
+        
         
         if first:
             fig, ax = plt.subplots(1, 3, figsize=(5, 5))
             # ax[0].plot(distances, label='Distances')
             # ax[0].legend()
 
-            texture_data = frame.viewer.voi.GetOutput()
-            np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
-
-            x, contrast, dissimilarity = self.texture_analysis(np_texture_data, distances, angles)
-
-            for a in angles:
-                ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
-                ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
-            ax[2].imshow(np_texture_data, cmap='gray')
 
             canvas = FigureCanvas(fig)
             toolbar = NavigationToolbar(canvas, window)
@@ -3231,17 +3227,13 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
             fig = window.fig
             for el in ax:
                 el.clear()
-            texture_data = frame.viewer.voi.GetOutput()
-            np_texture_data = np.squeeze(Converter.vtk2numpy(texture_data))
-
-            x, contrast, dissimilarity = self.texture_analysis(np_texture_data, distances, angles)
             
-            for a in angles:
-                ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
-                ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
-            ax[2].imshow(np_texture_data, cmap='gray')
+        for a in angles:
+            ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+            ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+        ax[2].imshow(np_texture_data, vmin=l - w/2, vmax=l + w/2, cmap='gray')
             
-            fig.canvas.draw_idle()
+        fig.canvas.draw_idle()
         
         window.exec_()
 
