@@ -3193,8 +3193,9 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         window = self.texture_form
         
         frame = window.getWidget('viewer')
-        
-        max_size = 40
+
+        # this should be the size of the box
+        max_size = self.registration_parameters['registration_box_size_entry'].value() // 2
         
         distances = np.asarray([i for i in range(max_size)])
         angles = [ i * np.pi/4 for i in range(4)]
@@ -3209,9 +3210,7 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         
         if first:
             fig, ax = plt.subplots(1, 3, figsize=(5, 5))
-            # ax[0].plot(distances, label='Distances')
-            # ax[0].legend()
-
+            
 
             canvas = FigureCanvas(fig)
             toolbar = NavigationToolbar(canvas, window)
@@ -3232,10 +3231,16 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
             ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
             ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
         ax[2].imshow(np_texture_data, vmin=l - w/2, vmax=l + w/2, cmap='gray')
-            
+        ax[0].set_title('Contrast')
+        ax[1].set_title('Dissimilarity')
+        ax[1].set_xlabel('Subvolume size')
+        ax[2].set_title('Measurement data')
+        ax[0].legend()
+        ax[1].legend()
         fig.canvas.draw_idle()
         
-        window.exec_()
+        if first:
+            window.exec_()
 
     def texture_analysis(self, image, distances, angles):
         from skimage.feature import graycomatrix, graycoprops
