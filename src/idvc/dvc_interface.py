@@ -3145,14 +3145,31 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
         self.createSavePointCloudWindow(save_only=False)
 
     def displaySubvolumeTexture(self):
+        if not hasattr(self, 'unsampled_corr_image_data') or self.unsampled_corr_image_data is None:
+            self.warningDialog("Please run the initial image registration on Tab 2.", "Error")
+            return
         window = FormDialog(None, "Image Texture Analysis")
+        
         self.texture_form = window
         # read as list
         p0 = eval(str(self.registration_parameters['point_zero_entry'].text()))
         regbox = self.registration_parameters['registration_box_size_entry'].value()
 
-        window.addWidget(QLabel(f"Point 0: {p0}"), qlabel="P0", name='P0',)
-        window.addWidget(QLabel(f"Registration box size: {regbox}"), qlabel="RegBox", name='RegBox',)
+
+        msg = f"""Contrast and dissimilarity metric on the Gray Level Co-occurrence Matrix (GLCM) on a patch around point zero: {p0} with size {regbox}, i.e. the registration box size (see tab 2). 
+
+        When dissimilarity and contrast saturate, the patch contains approximately all features that make the texture. We suggest to choose the subvolume size to be at least the size of the patch where dissimilarity and contrast saturate.
+
+        Press x, y, or z to change the slice orientation. Use the mouse wheel to scroll through slices and check the texture analysis on different slices. 
+"""
+        qmsg = QTextEdit(msg)
+        # qmsg.setDefaultFont(QFont("Arial", 10))
+        qmsg.setMarkdown(msg)
+        qmsg.setLineWrapMode(QTextEdit.WidgetWidth)
+        window.addWidget(QLabel(""), 
+                         qlabel="Texture measurement", name='P0',)
+        window.addSpanningWidget(qmsg, name='explanation',)
+        window.addWidget(QLabel(f"Data centred in {p0} with size: {regbox}"), qlabel="RegBox", name='RegBox',)
 
         origin = self.target_cropped_image_origin 
         z_extent = self.target_cropped_image_z_extent

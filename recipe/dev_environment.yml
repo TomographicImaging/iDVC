@@ -17,4 +17,5 @@ dependencies:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
+    - scikit-image
     - vtk

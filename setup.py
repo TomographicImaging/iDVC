@@ -71,6 +71,7 @@ setup(
         "qdarkstyle",
         "vtk",
         "openpyxl",
+        "scikit-image",
       ],
       # metadata for upload to PyPI
       author="Edoardo Pasca, Laura Murgatroyd",
