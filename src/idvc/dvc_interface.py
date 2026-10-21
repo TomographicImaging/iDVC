@@ -4929,9 +4929,9 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['interp_type'] = self.rdvc_widgets['run_iterp_type_entry'].currentText().lower()
 
             if (hasattr(self, 'translate')):
-                run_config['rigid_trans'] = str(self.translate.GetTranslation()[0]*-1) + " " + str(self.translate.GetTranslation()[1]*-1) + " " + str(self.translate.GetTranslation()[2]*-1)
+                run_config['start_estimate'] = str(self.translate.GetTranslation()[0]*-1) + " " + str(self.translate.GetTranslation()[1]*-1) + " " + str(self.translate.GetTranslation()[2]*-1)
             else:
-                run_config['rigid_trans']= "0.0 0.0 0.0"
+                run_config['start_estimate']= "0.0 0.0 0.0"
 
             self.run_folder = "Results/" + folder_name
             run_config['run_folder'] = self.run_folder
