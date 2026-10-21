@@ -4384,6 +4384,9 @@ Tricubic is computationally expensive, but is the choice if strain is of interst
         rdvc_widgets['run_iterp_type_entry'].addItem('Nearest')
         rdvc_widgets['run_iterp_type_entry'].addItem('Trilinear')
         rdvc_widgets['run_iterp_type_entry'].addItem('Tricubic')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_3')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_5')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_7')
         rdvc_widgets['run_iterp_type_entry'].setCurrentIndex(2)
         rdvc_widgets['run_iterp_type_entry'].setToolTip(interp_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_iterp_type_entry'])
@@ -4753,7 +4756,7 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['subvol_geom'] = self.pointcloud_parameters['pointcloud_volume_shape_entry'].currentText().lower()
             run_config['subvol_npts'] = self.subvolume_points
 
-            run_config['disp_max'] = self.rdvc_widgets['run_max_displacement_entry'].value(), #38 for test image
+            run_config['step_max'] = self.rdvc_widgets['run_max_displacement_entry'].value(), #38 for test image
             run_config['dof'] = self.rdvc_widgets['run_ndof_entry'].currentText()
             run_config['obj'] = self.rdvc_widgets['run_objf_entry'].currentText()
             run_config['interp_type'] = self.rdvc_widgets['run_iterp_type_entry'].currentText().lower()
