@@ -3245,15 +3245,28 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
                 el.clear()
             
         for a in angles:
-            ax[0].plot(x, contrast.T[angles.index(a)], label=f'angle {np.degrees(a)}')
-            ax[1].plot(x, dissimilarity.T[angles.index(a)], label=f'angle {np.degrees(a)}')
+            if a < np.pi:
+                ls = '-'
+            else:
+                ls = ':'
+            mean = np.mean(contrast.T)
+
+            ax[0].plot(x, contrast.T[angles.index(a)], 
+                       label=f'angle {np.degrees(a)}', 
+                       linestyle=ls)
+            ax[0].plot(x, mean)
+            ax[1].plot(x, dissimilarity.T[angles.index(a)], 
+                       label=f'angle {np.degrees(a)}', 
+                       linestyle=ls)
         ax[2].imshow(np_texture_data, vmin=l - w/2, vmax=l + w/2, cmap='gray')
         ax[0].set_title('Contrast')
         ax[1].set_title('Dissimilarity')
+        ax[0].set_xlabel('Subvolume size')
         ax[1].set_xlabel('Subvolume size')
         ax[2].set_title('Measurement data')
         ax[0].legend()
         ax[1].legend()
+        fig.tight_layout()
         fig.canvas.draw_idle()
         
         if first:
@@ -4538,6 +4551,9 @@ Tricubic is computationally expensive, but is the choice if strain is of interst
         rdvc_widgets['run_iterp_type_entry'].addItem('Nearest')
         rdvc_widgets['run_iterp_type_entry'].addItem('Trilinear')
         rdvc_widgets['run_iterp_type_entry'].addItem('Tricubic')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_3')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_5')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_7')
         rdvc_widgets['run_iterp_type_entry'].setCurrentIndex(2)
         rdvc_widgets['run_iterp_type_entry'].setToolTip(interp_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_iterp_type_entry'])
@@ -4907,7 +4923,7 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['subvol_geom'] = self.pointcloud_parameters['pointcloud_volume_shape_entry'].currentText().lower()
             run_config['subvol_npts'] = self.subvolume_points
 
-            run_config['disp_max'] = self.rdvc_widgets['run_max_displacement_entry'].value(), #38 for test image
+            run_config['step_max'] = self.rdvc_widgets['run_max_displacement_entry'].value(), #38 for test image
             run_config['dof'] = self.rdvc_widgets['run_ndof_entry'].currentText()
             run_config['obj'] = self.rdvc_widgets['run_objf_entry'].currentText()
             run_config['interp_type'] = self.rdvc_widgets['run_iterp_type_entry'].currentText().lower()
