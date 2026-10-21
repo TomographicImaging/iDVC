@@ -32,25 +32,16 @@ class PrintCallback(object):
 count = 0
 runs_completed = 0
 
-blank_config = '''###############################################################################
-#																	
-#
-#		example dvc process control file		
-#
-#
-###############################################################################
-
-# all lines beginning with a # character are ignored
-# some parameters are conditionally required, depending on the setting of other parameters
-# for example, if subvol_thresh is off, the threshold description parameters are not required
-
+blank_config = '''
 ### file names
 
-reference_filename	{reference_filename}		### reference tomography image volume
-correlate_filename	{correlate_filename}		### correlation tomography image volume
+reference_filename	{reference_filename}		### single raster file (raw) of same dimensions as the correlate_volume
+correlate_filename	{correlate_filename}		### single raster file (raw) of same dimensions as the reference_volume
 
-point_cloud_filename	{point_cloud_filename}	### file of search point locations
-output_filename		{output_filename}		### base name for output files
+point_cloud_filename	{point_cloud_filename}	### tab/space/comma delimited text file with point cloud labels (n) and (xyz) locations
+output_filename		{output_filename}		### base name for run status (.stat) and displacement data (.disp) output files
+
+num_points_to_process   {num_points_to_process}  ### Number of points in the point cloud to process
 
 ### description of the image data files, all must be the same size and structure
 
@@ -59,33 +50,35 @@ vol_hdr_lngth		{vol_hdr_lngth}		### fixed-length header size, may be zero
 vol_wide		{vol_wide}			### width in pixels of each slice
 vol_high		{vol_high}			### height in pixels of each slice
 vol_tall		{vol_tall}			### number of slices in the stack
-vol_endian		{vol_endian}        ### big or little endian byte ordering
+vol_endian		{vol_endian}        ### big or little endian byte ordering, ignored if vol_bit_depth is 8
 
 ### parameters defining the subvolumes that will be created at each search point
 
-subvol_geom		{subvol_geom}			### cube, sphere
+subvol_geom		{subvol_geom}			### cube, sphere: geometry of the subvolumes
 subvol_size		{subvol_size}			### side length or diameter, in voxels
 subvol_npts		{subvol_npts}			### number of points to distribute within the subvol
+subvol_aspect	{subvol_aspect}	### stretch or contract the subvolume in any coordinate direction between 0.5 and 2.0
 
-subvol_thresh		{subvol_thresh}			### on or off, evaluate subvolumes based on threshold
-gray_thresh_min		{gray_thresh_min}			### lower limit of a gray threshold range if subvol_thresh is on
-gray_thresh_max		{gray_thresh_max}			### upper limit of a gray threshold range if subvol_thresh is on
-min_vol_fract		{min_vol_fract}			### only search if subvol fraction is greater than
+###
+###	 Keywords in group opt_mthd
+###
 
-### required parameters defining the basic the search process
-
-disp_max		{disp_max}			### in voxels, used for range checking and global search limits
-num_srch_dof		{num_srch_dof}			### 3, 6, or 12
-obj_function		{obj_function}			### sad, ssd, zssd, nssd, znssd 
-interp_type		{interp_type}		### trilinear, tricubic
+num_srch_dof	{num_srch_dof}	### 3 (translation), 6 (+rotation), or 12 (+strain)
+obj_function		{obj_function}			### ssd, zssd, nssd, znssd 
+interp_type		{interp_type}	### trilinear tricubic tri_bspline_3 tri_bspline_5 tri_bspline_7
+start_position	{starting_point}	### x,y,z location of starting point for DVC analysisstart_estimate 
+start_estimate	{start_estimate}	### x,y,z displacement (u,v,w) in voxels at the start_position
+step_max		{step_max}	### maximum parameter step allowed during optimization, see also step_tol
 
 ### optional parameters tuning and refining the search process
 
-rigid_trans		{rigid_trans}		### rigid body offset of target volume, in voxels
-basin_radius		{basin_radius}			### coarse-search resolution, in voxels, 0.0 = none
-subvol_aspect		{subvol_aspect}		### subvolume aspect ratio
-num_points_to_process   {num_points_to_process}  ### Number of points in the point cloud to process
-starting_point  {starting_point}    ### x,y,z location of starting point for DVC analysis
+###
+###	 Keywords in group opt_tune
+###
+
+# cost_tol	1.0e-06	### optional tuning of objective function convergence tolerance
+# step_tol	1.0e-04	### optional tuning of parameter vector convergence tolerance
+# max_iter	20	### optional change in the maximum number of optimization iterations
 '''
 
 def update_progress(main_window, process, total_points, required_runs, run_succeeded, start_time, num_points_to_process):
@@ -232,7 +225,8 @@ class DVC_runner(object):
         - disp_max: maximum displacement in voxels
         - dof: number of parameters in the optimisation, 3,6, or 12
         - obj: objective function, either sad, ssd, zssd, nssd, or znssd
-        - interp_type: interpolation type, either trilinear or tricubic
+        - interp_type: interpolation type, either trilinear, tricubic, or bspline
+        - bspline_order: order of the B-spline interpolation, only used if interp_type is bspline
         - run_folder: folder to save the run results and configurations
         - rigid_trans: rigid translation between the reference and correlation volumes
         - point0_world_coordinate: world coordinates of the starting point for the DVC analysis
@@ -314,13 +308,13 @@ class DVC_runner(object):
 
         subvol_npts = config['subvol_npts']
 
-        disp_max = int(config['disp_max'][0]) #TODO: need to change
+        step_max = int(config['step_max'][0]) #TODO: need to change
         dof = int(config['dof'])
         obj = config['obj']
         interp_type = config['interp_type']
 
-        rigid_trans = config['rigid_trans']
-        starting_point = config['point0_world_coordinate']
+        start_estimate = config['start_estimate']
+        start_position = config['point0_world_coordinate']
 
         # Change directory into the folder where the run will be saved:
         os.chdir(self.session_folder)
@@ -394,33 +388,29 @@ class DVC_runner(object):
                     return
                 
                 
+
                 config =  blank_config.format(
-                    reference_filename=  reference_file, # reference tomography image volume
-                    correlate_filename=  correlate_file, # correlation tomography image volume
+                    reference_filename=    reference_file, # reference tomography image volume
+                    correlate_filename=    correlate_file, # correlation tomography image volume
                     point_cloud_filename = grid_roi_fname,
-                    output_filename= output_filename,
+                    output_filename=       output_filename,
                     vol_bit_depth=  vol_bit_depth, # get from ref, 8 or 16
-                    vol_hdr_lngth=vol_hdr_lngth,# get from ref, fixed-length header size, may be zero
-                    vol_wide= dims[0], # number of x slices
-                    vol_high= dims[1], # number of y slices
-                    vol_tall= dims[2], #number of z slices
-                    vol_endian = endian,
-                    subvol_geom=  subvol_geom,
-                    subvol_size=  subvolume_size, 
-                    subvol_npts= subvolume_point,
-                    subvol_thresh='off',
-                    gray_thresh_min='27',
-                    gray_thresh_max='127',
-                    min_vol_fract='0.2',
-                    disp_max=  disp_max, #38 for test image
-                    num_srch_dof=  dof, #6 for test image
-                    obj_function=  obj, 
-                    interp_type=  interp_type, #tricubic for test image
-                    rigid_trans= rigid_trans, #translation between ref and cor - determined from image registration
-                    basin_radius='0.0',
+                    vol_hdr_lngth=  vol_hdr_lngth,# get from ref, fixed-length header size, may be zero
+                    vol_wide=       dims[0], # number of x slices
+                    vol_high=       dims[1], # number of y slices
+                    vol_tall=       dims[2], #number of z slices
+                    vol_endian =    endian,
+                    subvol_geom=    subvol_geom,
+                    subvol_size=    subvolume_size, 
+                    subvol_npts=    subvolume_point,
+                    step_max=       step_max, #38 for test image
+                    num_srch_dof=   dof, #6 for test image
+                    obj_function=   obj, 
+                    interp_type=    interp_type, #tricubic for test image
+                    start_estimate=    start_estimate, #translation between ref and cor - determined from image registration
                     subvol_aspect='1.0 1.0 1.0',# image spacing
                     num_points_to_process=num_points_to_process, 
-                    starting_point='{} {} {}'.format(*starting_point)) 
+                    starting_point='{} {} {}'.format(*start_position)) 
                 time.sleep(1)
                 with open(config_filename,"w") as config_file:
                     config_file.write(config)
