@@ -5176,7 +5176,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         scroll_area = dockWidget.widget()
         scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
-     
+        
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -5210,16 +5210,16 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             try:
                 subvol_size = int(self.result_widgets['pc_entry'].currentText())
             except ValueError as ve:
-                self.warningDialog("Invalid input at Subvolume Size", "Error")
+                self.warningDialog(message="Invalid input at Subvolume Size", window_title="Parse Error", detailed_text=f"{ve}")
                 return
             try:
                 subvol_points = int(self.result_widgets['subvol_entry'].currentText())
             except ValueError as ve:
-                self.warningDialog("Invalid input at Subvolume Size", "Error")
+                self.warningDialog(message="Invalid input at Subvolume Entry", window_title="Parse Error", detailed_text=f"{ve}")
                 return
 
             if(subvol_points == ""):
-                self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
+                self.warningDialog(message="An error occurred with this run so the results could not be displayed.", window_title="Error")
                 return
 
 
