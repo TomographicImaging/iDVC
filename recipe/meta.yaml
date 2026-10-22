@@ -42,7 +42,7 @@ requirements:
     - pyside2
     - scipy
     - ccpi-viewer >=25.0.0
-    - ccpi-dvc >=22.0.0
+    - ccpi-dvc >=25.0.0
     - natsort
     - docopt
     - matplotlib
