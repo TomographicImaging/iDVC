@@ -1,7 +1,7 @@
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from qtpy import QtWidgets, QtCore
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy.QtGui import *
 import shutil
 import os
 import tempfile
@@ -31,8 +31,8 @@ class SaveObjectWindow(QtWidgets.QWidget):
         #self.setInputMode(QtWidgets.QInputDialog.TextInput)
 
         self.textbox = QLineEdit(self)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, self.textbox) #need to check this
+        rx = QRegularExpression("[A-Za-z0-9]+")
+        validator = QRegularExpressionValidator(rx, self.textbox) #need to check this
         self.textbox.setValidator(validator)
 
         self.save_button = QPushButton("Save")

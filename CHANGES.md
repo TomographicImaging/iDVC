@@ -1,5 +1,12 @@
 # ChangeLog
 
+## v26.0.0
+
+Enhancements:
+  * use QtPy abstraction layer
+  * enables use of Qt6
+  * removes legacy qdarkstyle
+
 ## v25.0.0
 
 Enhancements:

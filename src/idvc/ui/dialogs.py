@@ -1,7 +1,7 @@
-import PySide2
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+import qtpy
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy.QtGui import *
 import multiprocessing
 import vtk
 
@@ -24,18 +24,6 @@ class SettingsWindow(FormDialog):
         self.fontsize_widget.setSingleStep(1)
         self.fontsize_widget.setValue(12)
         self.addWidget(self.fontsize_widget, self.fontsize_label, 'fontsize')
-        self.dark_checkbox = QCheckBox("Dark Mode")
-        # populate from settings
-        if self.parent.settings.value("dark_mode") is not None:
-            if self.parent.settings.value("dark_mode") == "true":
-                self.dark_checkbox.setChecked(True)
-            else:
-                self.dark_checkbox.setChecked(False)
-        else:
-            self.dark_checkbox.setChecked(True)
-
-        self.addWidget(self.dark_checkbox, '', 'darkmode')
-
         self.copy_files_checkbox = QCheckBox("Allow a copy of the image files to be stored. ")
         self.copy_files_checkbox.setChecked(False)
         self.addWidget(self.copy_files_checkbox, '', 'copy_file_checkbox')
@@ -89,14 +77,10 @@ class SettingsWindow(FormDialog):
 
 
     def onOk(self):
-        default_font_family = PySide2.QtWidgets.QApplication.font().family() 
-        font = PySide2.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
-        PySide2.QtWidgets.QApplication.setFont(font)
+        default_font_family = qtpy.QtWidgets.QApplication.font().family() 
+        font = qtpy.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
+        qtpy.QtWidgets.QApplication.setFont(font)
         #self.parent.settings.setValue("settings_chosen", 1)
-        if self.dark_checkbox.isChecked():
-            self.parent.settings.setValue("dark_mode", True)
-        else:
-            self.parent.settings.setValue("dark_mode", False)
         self.parent.SetAppStyle()
 
         if self.copy_files_checkbox.isChecked():

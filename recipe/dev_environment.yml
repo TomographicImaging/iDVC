@@ -8,13 +8,17 @@ dependencies:
     - python
     - numpy
     - pandas
-    - pyside2
+    - pyside6
     - scipy
     - ccpi::ccpi-viewer >=25.0.0
-    - ccpi::ccpi-dvc >=22.0.0
+    - ccpi/label/dev::ccpi-dvc >=25.0.0
     - natsort
     - docopt
-    - matplotlib
-    - openmp                # [osx]
-    - qdarkstyle
     - vtk
+    - matplotlib-base
+    - llvm-openmp                
+    - h5py
+    - pyyaml
+    - schema
+    - qtpy
+    - filetype
