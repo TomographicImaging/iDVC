@@ -11,3 +11,21 @@ iDVC depends on code initially developed by Prof. Brian K. Bay and collaborators
 [1] B. K. Bay, T. S. Smith, D. P. Fyhrie, M. Saad "Digital volume correlation: Three-dimensional strain mapping using x-ray tomography", *Experimental Mechanics* **39** 217–226, 1999. [DOI: 10.1007/BF02323555](https://doi.org/10.1007/BF02323555)
 
 [2] B. K. Bay "Methods and applications of digital volume correlation", *J. Strain Analysis* **43** 745-760, 2008. [DOI: 10.1243/03093247JSA436](https://doi.org/10.1243/03093247JSA436)
+
+
+# MacOS + Qt + VTK
+
+`conda-forge`'s VTK package depends on Qt6 and we only tested this app with Qt5. On MacOS this seems to be a problem as the OS finds 2 files which provide the same functionality so it raises an error and nothing works. The suggested workaround is to install the CILViewer (from the repo), `PySide2` (`conda-forge`) and [VTK](https://docs.vtk.org/en/latest/advanced/available_python_wheels.html) (from Kitware's wheels) manually.
+
+
+```bash
+pip install --extra-index-url https://wheels.vtk.org vtk
+```
+
+```yaml
+dependencies:
+  - pip
+  - pip:
+    - --extra-index-url https://wheels.vtk.org
+    - vtk
+```

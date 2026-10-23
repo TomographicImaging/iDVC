@@ -42,8 +42,8 @@ min_vol_fract	{min_vol_fract}			### only search if subvol fraction is greater th
 disp_max		{disp_max}			### in voxels, used for range checking and global search limits
 num_srch_dof		{num_srch_dof}			### 3, 6, or 12
 obj_function		{obj_function}			### sad, ssd, zssd, nssd, znssd 
-interp_type		{interp_type}		### trilinear, tricubic
-
+interp_type		{interp_type}		### trilinear, tricubic, tri_bspline_3, tri_bspline_5, tri_bspline_7
+{bspline_order}
 ### optional parameters tuning and refining the search process
 
 rigid_trans		{rigid_trans}		### rigid body offset of target volume, in voxels

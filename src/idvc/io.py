@@ -13,7 +13,7 @@
 #   Author: Laura Murgatroyd (UKRI-STFC)
 #   Author: Edoardo Pasca (UKRI-STFC)
 
-import imghdr
+import filetype
 import os
 import shutil
 import sys
@@ -116,7 +116,8 @@ class ImageDataCreator(object):
             file_extension = os.path.splitext(self.image)[1]
         else:
             for image in self.image_files:
-                file_extension = imghdr.what(image)
+                kind = filetype.guess(image)
+                file_extension = kind.extension if kind is not None else ""
                 if file_extension.lower() not in ['tiff', 'tif']:
                     error_title = "Read Error"
                     error_text = "Error reading file: ({filename})".format(

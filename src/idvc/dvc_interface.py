@@ -54,7 +54,7 @@ from ccpi.viewer.utils.error_handling import ErrorObserver
 from ccpi.viewer.utils.colormaps import CILColorMaps
 
 from natsort import natsorted
-import imghdr
+import filetype
 import glob
 
 # from vtk.numpy_interface import algorithms as algs
@@ -762,8 +762,9 @@ class MainWindow(QMainWindow):
             N = len(start_location)
             for i,fs in enumerate(zip(start_location, end_location)):
                 if N > 1:
-                    ftype = imghdr.what(fs[0])
-                    if ftype != 'tiff':
+                    kind = filetype.guess(fs[0])
+                    ftype = kind.extension if kind is not None else ""
+                    if ftype not in ['tiff', 'tif']:
                         raise ValueError('File type not supported: {}'.format(fs[0]))
                 progress_callback.emit(i/N*100)
                 shutil.copyfile(fs[0], fs[1])
@@ -4384,6 +4385,9 @@ Tricubic is computationally expensive, but is the choice if strain is of interst
         rdvc_widgets['run_iterp_type_entry'].addItem('Nearest')
         rdvc_widgets['run_iterp_type_entry'].addItem('Trilinear')
         rdvc_widgets['run_iterp_type_entry'].addItem('Tricubic')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_3')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_5')
+        rdvc_widgets['run_iterp_type_entry'].addItem('tri_bspline_7')
         rdvc_widgets['run_iterp_type_entry'].setCurrentIndex(2)
         rdvc_widgets['run_iterp_type_entry'].setToolTip(interp_text)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['run_iterp_type_entry'])
@@ -4753,15 +4757,15 @@ This parameter has a strong effect on computation time, so be careful."
             run_config['subvol_geom'] = self.pointcloud_parameters['pointcloud_volume_shape_entry'].currentText().lower()
             run_config['subvol_npts'] = self.subvolume_points
 
-            run_config['disp_max'] = self.rdvc_widgets['run_max_displacement_entry'].value(), #38 for test image
+            run_config['step_max'] = self.rdvc_widgets['run_max_displacement_entry'].value(), #38 for test image
             run_config['dof'] = self.rdvc_widgets['run_ndof_entry'].currentText()
             run_config['obj'] = self.rdvc_widgets['run_objf_entry'].currentText()
             run_config['interp_type'] = self.rdvc_widgets['run_iterp_type_entry'].currentText().lower()
 
             if (hasattr(self, 'translate')):
-                run_config['rigid_trans'] = str(self.translate.GetTranslation()[0]*-1) + " " + str(self.translate.GetTranslation()[1]*-1) + " " + str(self.translate.GetTranslation()[2]*-1)
+                run_config['start_estimate'] = str(self.translate.GetTranslation()[0]*-1) + " " + str(self.translate.GetTranslation()[1]*-1) + " " + str(self.translate.GetTranslation()[2]*-1)
             else:
-                run_config['rigid_trans']= "0.0 0.0 0.0"
+                run_config['start_estimate']= "0.0 0.0 0.0"
 
             self.run_folder = "Results/" + folder_name
             run_config['run_folder'] = self.run_folder
@@ -5006,7 +5010,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
 
         scroll_area = dockWidget.widget()
         scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
-     
+        
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -5040,16 +5044,16 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             try:
                 subvol_size = int(self.result_widgets['pc_entry'].currentText())
             except ValueError as ve:
-                self.warningDialog("Invalid input at Subvolume Size", "Error")
+                self.warningDialog(message="Invalid input at Subvolume Size", window_title="Parse Error", detailed_text=f"{ve}")
                 return
             try:
                 subvol_points = int(self.result_widgets['subvol_entry'].currentText())
             except ValueError as ve:
-                self.warningDialog("Invalid input at Subvolume Size", "Error")
+                self.warningDialog(message="Invalid input at Subvolume Entry", window_title="Parse Error", detailed_text=f"{ve}")
                 return
 
             if(subvol_points == ""):
-                self.warningDialog("An error occurred with this run so the results could not be displayed.", "Error")
+                self.warningDialog(message="An error occurred with this run so the results could not be displayed.", window_title="Error")
                 return
 
 

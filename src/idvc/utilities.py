@@ -7,7 +7,114 @@ import numpy as np
 import os
 from eqt.ui.NoBorderScrollArea import NoBorderScrollArea
 
+import re
+import sys
 
+def parse_stat_file(filepath):
+    data = {}
+    
+    with open(filepath, 'r') as f:
+        lines = f.readlines()
+        
+    in_echo = False
+    
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+            
+        if line == '### echo of the input file for this run':
+            in_echo = True
+            continue
+        elif line == '### end of input file echo':
+            in_echo = False
+            continue
+            
+        if in_echo:
+            parts = line.split()
+            if not parts:
+                continue
+            key = parts[0]
+            values = parts[1:]
+            
+            parsed_values = []
+            for v in values:
+                try:
+                    if '.' in v or 'e' in v.lower():
+                        parsed_values.append(float(v))
+                    else:
+                        parsed_values.append(int(v))
+                except ValueError:
+                    parsed_values.append(v)
+            
+            if len(parsed_values) == 1:
+                data[key] = parsed_values[0]
+            elif len(parsed_values) > 1:
+                data[key] = parsed_values
+                
+        else:
+            # Parse the post-echo summary stats
+            try:
+                if line.startswith("Point Cloud contains"):
+                    m = re.search(r'contains (\d+) points', line)
+                    if m: data['point_cloud_points'] = int(m.group(1))
+                
+                elif line.startswith("bounding box min"):
+                    m = re.search(r'\[(.*?)\]', line)
+                    if m: data['bounding_box_min'] = [int(x) for x in m.group(1).split()]
+                    
+                elif line.startswith("bounding box max"):
+                    m = re.search(r'\[(.*?)\]', line)
+                    if m: data['bounding_box_max'] = [int(x) for x in m.group(1).split()]
+                    
+                elif line.startswith("running under dvc code version:"):
+                    parts = line.split(": ")
+                    if len(parts) > 1:
+                        data['dvc_code_version'] = parts[1].strip()
+                    
+                elif line.startswith("Run start:"):
+                    data['run_start'] = line.split(":\t")[1].strip() if ":\t" in line else line.replace("Run start:", "").strip()
+                    
+                elif line.startswith("Run finish:"):
+                    data['run_finish'] = line.split(":\t")[1].strip() if ":\t" in line else line.replace("Run finish:", "").strip()
+                    
+                elif "points processed in" in line:
+                    m = re.search(r'(\d+) points processed in (\d+) seconds', line)
+                    if m:
+                        data['points_processed'] = int(m.group(1))
+                        data['time_seconds'] = int(m.group(2))
+                        
+                elif line.endswith("sec/pt"):
+                    parts = line.split()
+                    if parts:
+                        data['sec_per_pt'] = float(parts[0])
+                    
+                elif line.endswith("pt/sec"):
+                    parts = line.split()
+                    if parts:
+                        data['pt_per_sec'] = float(parts[0])
+                    
+                elif line.startswith("number successful"):
+                    m = re.search(r'number successful = (\d+)\s+\((.*?)\%\)', line)
+                    if m:
+                        data['num_successful'] = int(m.group(1))
+                        data['pct_successful'] = float(m.group(2))
+                        
+                elif line.startswith("number range fail"):
+                    m = re.search(r'number range fail = (\d+)\s+\((.*?)\%\)', line)
+                    if m:
+                        data['num_range_fail'] = int(m.group(1))
+                        data['pct_range_fail'] = float(m.group(2))
+                        
+                elif line.startswith("number convg fail"):
+                    m = re.search(r'number convg fail = (\d+)\s+\((.*?)\%\)', line)
+                    if m:
+                        data['num_convg_fail'] = int(m.group(1))
+                        data['pct_convg_fail'] = float(m.group(2))
+            except (ValueError, IndexError, AttributeError) as e:
+                print(f"Warning: Failed to parse line '{line}'. Error: {e}", file=sys.stderr)
+
+    return data
         
 class RunResults(object):
     def __init__(self, folder):
@@ -16,36 +123,17 @@ class RunResults(object):
         disp_file_name = file_name + ".disp"
         stat_file_name = file_name + ".stat"
 
-        with open(stat_file_name,"r") as stat_file:
-            
-            count = 0
-            offset = 0
-            for line in stat_file:
-                if count == 9:
-                    if line.split('\t')[0] == "vol_endian":
-                        offset = 1
-
-                if count == 14 + offset:
-                    self.subvol_geom = str(line.split('\t')[1])
-                if count == 15 + offset:
-                    self.subvol_size = round(int(line.split('\t')[1]))
-                if count == 16 +offset:
-                    self.subvol_points = int(line.split('\t')[1])
-                if count == 20 + offset:
-                    self.disp_max = int(line.split('\t')[1])
-                if count == 21 + offset:
-                    self.num_srch_dof = int(line.split('\t')[1])
-                if count == 22 + offset:
-                    self.obj_function = str(line.split('\t')[1])
-                if count == 23 + offset:
-                    self.interp_type = str(line.split('\t')[1])
-                if count == 25 + offset:
-                    self.rigid_trans = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
-                # if count == 26 + offset:
-                #     self.basin_radius = int(line.split('\t')[1])
-                # if count == 27 + offset:
-                #     self.subvol_aspect = [int(line.split('\t')[1]),int(line.split('\t')[2]), int(line.split('\t')[3])]
-                count+=1
+        stat_data = parse_stat_file(stat_file_name)
+        self.stat_data = stat_data
+        self.subvol_geom = stat_data.get('subvol_geom')
+        self.subvol_size = stat_data.get('subvol_size')
+        self.subvol_points = stat_data.get('subvol_npts')
+        self.disp_max = stat_data.get('disp_max')
+        self.num_srch_dof = stat_data.get('num_srch_dof')
+        self.obj_function = stat_data.get('obj_function')
+        self.interp_type = stat_data.get('interp_type')
+        self.rigid_trans = stat_data.get('rigid_trans')
+        
 
         data_label_dict = {
             'objmin': "Objective minimum", 'u': "Displacement x component", 'v':"Displacement y component", 'w':"Displacement z component",
