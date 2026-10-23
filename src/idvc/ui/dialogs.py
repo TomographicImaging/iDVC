@@ -1,7 +1,7 @@
-import PySide2
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+import qtpy
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy.QtGui import *
 import multiprocessing
 import vtk
 
@@ -89,9 +89,9 @@ class SettingsWindow(FormDialog):
 
 
     def onOk(self):
-        default_font_family = PySide2.QtWidgets.QApplication.font().family() 
-        font = PySide2.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
-        PySide2.QtWidgets.QApplication.setFont(font)
+        default_font_family = qtpy.QtWidgets.QApplication.font().family() 
+        font = qtpy.QtGui.QFont(default_font_family, self.fontsize_widget.value()) 
+        qtpy.QtWidgets.QApplication.setFont(font)
         #self.parent.settings.setValue("settings_chosen", 1)
         if self.dark_checkbox.isChecked():
             self.parent.settings.setValue("dark_mode", True)

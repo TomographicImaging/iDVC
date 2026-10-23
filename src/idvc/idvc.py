@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets, QtGui
+from qtpy import QtWidgets, QtGui
 import os, sys
 import logging
 import argparse
@@ -42,7 +42,7 @@ def main():
 
     
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()

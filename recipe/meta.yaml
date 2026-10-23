@@ -48,6 +48,8 @@ requirements:
     - matplotlib
     - openmp                # [osx]
     - qdarkstyle
+    - qtpy
+    - pyside2
 
 about:
   home: http://www.ccpi.ac.uk

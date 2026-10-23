@@ -1,8 +1,8 @@
-import PySide2
-from PySide2 import QtWidgets, QtCore, QtGui
-from PySide2.QtWidgets import *
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+import qtpy
+from qtpy import QtWidgets, QtCore, QtGui
+from qtpy.QtWidgets import *
+from qtpy.QtCore import *
+from qtpy.QtGui import *
 import numpy as np
 import os
 from eqt.ui.NoBorderScrollArea import NoBorderScrollArea
