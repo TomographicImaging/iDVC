@@ -82,9 +82,6 @@ from idvc.dvc_runner import DVC_runner
 
 from eqt.ui import FormDialog
 
-import qdarkstyle
-from qdarkstyle.dark.palette import DarkPalette
-from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
 
@@ -219,13 +216,9 @@ class MainWindow(QMainWindow):
         return QtWidgets.QMenu(self) # Create a new menu
     
     def SetAppStyle(self):
-        if self.settings.value("dark_mode") is None:
-            self.settings.setValue("dark_mode", True)
-        if self.settings.value("dark_mode") == "true":
-            style = qdarkstyle.load_stylesheet(palette=DarkPalette)
-        else:
-            style = qdarkstyle.load_stylesheet(palette=LightPalette)
-        self.setStyleSheet(style)
+        # No stylesheet is applied: the application follows the system theme.
+        # The qdarkstyle stylesheet hid the VTK viewers with Qt6 on macOS.
+        pass
 
         
 #Setting up the session:
@@ -417,7 +410,6 @@ class MainWindow(QMainWindow):
         self.visualisation_setting_widgets = vs_widgets
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.viewer_settings_panel[1])
 
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
@@ -640,7 +632,6 @@ class MainWindow(QMainWindow):
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
         
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.select_image_panel[1])
 
         self.si_widgets = si_widgets
     
@@ -1313,7 +1304,6 @@ It is used as a global starting point and a translation reference."
         self.registration_parameters = rp
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.registration_panel[1])
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -2355,7 +2345,6 @@ It is used as a global starting point and a translation reference."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.mask_panel[1])
 
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
@@ -3109,7 +3098,6 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
 
-        scroll_area_point_cloud.apply_qdarkstyle_to_buttons(self.dockWidget)
 
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
@@ -4548,7 +4536,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.rdvc_widgets = rdvc_widgets
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.run_dvc_panel[1])
 
     def _set_num_points_in_run_to_all(self):
         if hasattr(self, 'pc_no_points'):
@@ -5008,7 +4995,6 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets = result_widgets
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
         
     def show_run_pcs(self):
         #show pointcloud files in list
