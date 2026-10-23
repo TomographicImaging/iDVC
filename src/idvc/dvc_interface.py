@@ -54,7 +54,7 @@ from ccpi.viewer.utils.error_handling import ErrorObserver
 from ccpi.viewer.utils.colormaps import CILColorMaps
 
 from natsort import natsorted
-import imghdr
+import filetype
 import glob
 
 # from vtk.numpy_interface import algorithms as algs
@@ -762,8 +762,9 @@ class MainWindow(QMainWindow):
             N = len(start_location)
             for i,fs in enumerate(zip(start_location, end_location)):
                 if N > 1:
-                    ftype = imghdr.what(fs[0])
-                    if ftype != 'tiff':
+                    kind = filetype.guess(fs[0])
+                    ftype = kind.extension if kind is not None else ""
+                    if ftype not in ['tiff', 'tif']:
                         raise ValueError('File type not supported: {}'.format(fs[0]))
                 progress_callback.emit(i/N*100)
                 shutil.copyfile(fs[0], fs[1])
