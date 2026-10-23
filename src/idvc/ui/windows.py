@@ -8,7 +8,7 @@ from ccpi.viewer.CILViewer2D import (SLICE_ORIENTATION_XY,
 from ccpi.viewer.QCILViewerWidget import QCILViewerWidget
 from ccpi.viewer.utils import *
 from ccpi.viewer.utils.error_handling import ErrorObserver
-from PySide2 import QtCore, QtGui, QtWidgets
+from qtpy import QtCore, QtGui, QtWidgets
 
 from idvc.ui.graphs_widgets import *
 import logging 
@@ -216,7 +216,7 @@ class GraphsWindow(QtWidgets.QMainWindow):
         self.setDockOptions(QMainWindow.ForceTabbedDocks)
              
         # Window dimensions
-        geometry = qApp.desktop().availableGeometry(self)
+        geometry = QtWidgets.QApplication.primaryScreen().availableGeometry()
 
         self.setGeometry(50,50, geometry.width()-100, geometry.height()-100)
         #self.setFixedSize(geometry.width() * 0.6, geometry.height() * 0.8)

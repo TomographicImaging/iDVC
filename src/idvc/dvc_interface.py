@@ -16,11 +16,11 @@
 import os
 from openpyxl import load_workbook
 import sys
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import (QByteArray, QRegularExpression, QSettings, QSize, Qt,
                             QThreadPool)
-from PySide2.QtGui import QCloseEvent, QKeySequence, QRegExpValidator
-from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
+from qtpy.QtGui import QCloseEvent, QKeySequence, QRegularExpressionValidator
+from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QDockWidget,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
@@ -180,7 +180,7 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(exit_action)
 
         # # Window dimensions
-        geometry = qApp.desktop().availableGeometry(self)
+        geometry = QtWidgets.QApplication.primaryScreen().availableGeometry()
 
         border = 50
         self.setGeometry(border, border, geometry.width()-2*border, geometry.height()-2*border)
@@ -792,7 +792,7 @@ class MainWindow(QMainWindow):
             pass
         if action_button is not None:
             msg.addButton(action_button, msg.ActionRole)
-        msg.exec_()
+        msg.exec()
 
     def view_image(self):
         """Called when the view image button is clicked in the first tab, or
@@ -4267,8 +4267,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['name_label'])
 
         rdvc_widgets['name_entry'] = QLineEdit(self)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, rdvc_widgets['name_entry']) #need to check this
+        rx = QRegularExpression("[A-Za-z0-9]+")
+        validator = QRegularExpressionValidator(rx, rdvc_widgets['name_entry']) #need to check this
         rdvc_widgets['name_entry'].setValidator(validator)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['name_entry'])
         widgetno += 1
@@ -5120,8 +5120,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         qlabel.setText("Save session as:")
         qwidget = QtWidgets.QLineEdit(dialog.groupBox)
         qwidget.setClearButtonEnabled(True)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, dialog) #need to check this
+        rx = QRegularExpression("[A-Za-z0-9]+")
+        validator = QRegularExpressionValidator(rx, dialog) #need to check this
         qwidget.setValidator(validator)
         # finally add to the form widget
         dialog.addWidget(qwidget, qlabel, 'session_name')
@@ -5530,7 +5530,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
             # Try to centre the load session window
-            # from PySide2.QtGui import QScreen
+            # from qtpy.QtGui import QScreen
             # geom = QScreen().availableGeometry()
             # print (geom)
             # centrex = geom.topRight().x() + geom.topLeft().x()
@@ -5896,7 +5896,7 @@ Please select the new location of the file, or move it back to where it was orig
         dialog.setWindowTitle(window_title)
         dialog.setDetailedText(detailed_text)
         dialog.setStandardButtons(QMessageBox.Ok)
-        retval = dialog.exec_()
+        retval = dialog.exec()
         return retval
 
 # Loading and Error windows:
