@@ -4,3 +4,4 @@ docs/source/_build/*
 src/idvc/version.py
 build/*
 *.profraw
+__pycache__/
