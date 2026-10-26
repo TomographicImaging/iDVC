@@ -8,13 +8,13 @@ def main():
 
     parser = argparse.ArgumentParser(description='iDVC - Digital Volume Correlation Software')
 
-    parser.add_argument('--debug', type=str)
+    parser.add_argument('--log', type=str)
     args = parser.parse_args()
 
-    if args.debug in ['debug', 'info', 'warning', 'error', 'critical']:
-        level = eval(f'logging.{args.debug.upper()}')
+    if args.log in ['debug', 'info', 'warning', 'error', 'critical']:
+        level = eval(f'logging.{args.log.upper()}')
         logging.basicConfig(level=level)
-        logging.info(f"iDVC: Setting debugging level to {args.debug.upper()}")
+        logging.info(f"iDVC: Setting debugging level to {args.log.upper()}")
     app = QtWidgets.QApplication([])
     # Set a global font for the application
     default_font_family = app.font().family() 
