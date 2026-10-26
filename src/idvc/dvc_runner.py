@@ -24,6 +24,9 @@ import shutil
 import platform
 from .io import save_tiff_stack_as_raw, save_nxs_as_raw
 
+import logging
+logger = logging.getLogger(__name__) 
+
 class PrintCallback(object):
     '''Class to handle the emit call when no callback is provided'''
     def emit(self, *args, **kwargs):
@@ -518,11 +521,14 @@ class DVC_runner(object):
               .format(self.process_num + 1, required_runs,
                 len(self.processes), exitCode, exitStatus))
         
-        if exitStatus == 0:
+        logger.debug("Finished process {} with exit code {} and status {}".format(self.process_num + 
+                                                                                 1, exitCode, exitStatus))
+        logger.debug("Pre self.run_succeeded: {}".format(self.run_succeeded))
+        if exitCode == 0:
             self.run_succeeded = self.run_succeeded and True
         else:
             self.run_succeeded = self.run_succeeded and False
-            
+        logger.debug("Post self.run_succeeded: {}".format(self.run_succeeded))
         if self.process_num == required_runs-1:
             main_window.progress_window.close()
             if self.run_succeeded:

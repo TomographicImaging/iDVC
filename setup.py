@@ -68,7 +68,6 @@ setup(
         "docopt",
         "matplotlib",
         # "openmp; platform_system=='Darwin'",
-        "qdarkstyle",
         "vtk",
         "openpyxl",
       ],
