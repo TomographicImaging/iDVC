@@ -1,4 +1,4 @@
-name: idvc__qt6
+name: idvc_qt6
 channels:
   - conda-forge
   - ccpi
