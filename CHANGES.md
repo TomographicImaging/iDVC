@@ -1,5 +1,14 @@
 # ChangeLog
 
+## v26.0.0
+
+Enhancements:
+  * use QtPy abstraction layer
+  * enables use of Qt6
+  * removes legacy qdarkstyle
+  * cancels DVC run correctly (probably due to Qt6 changes)
+
+
 ## v25.0.0
 
 Enhancements:

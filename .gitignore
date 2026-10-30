@@ -3,3 +3,4 @@ docs/build/*
 docs/source/_build/*
 src/idvc/version.py
 build/*
+__pycache__/

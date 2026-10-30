@@ -15,14 +15,17 @@
 
 import os
 import numpy as np
-from PySide2 import QtCore
+from qtpy import QtCore
 from datetime import datetime
-from PySide2.QtWidgets import QMessageBox
+from qtpy.QtWidgets import QMessageBox
 import json
 import time
 import shutil
 import platform
 from .io import save_tiff_stack_as_raw, save_nxs_as_raw
+
+import logging
+logger = logging.getLogger(__name__) 
 
 class PrintCallback(object):
     '''Class to handle the emit call when no callback is provided'''
@@ -155,7 +158,7 @@ def displayFileErrorDialog(main_window, message, title):
     msg.setWindowTitle(title)
     msg.setText(message)
     #msg.setDetailedText(main_window.e.ErrorMessage())
-    msg.exec_()
+    msg.exec()
 
 def cancel_run(main_window, process, run_succeeded):
     
@@ -442,6 +445,7 @@ class DVC_runner(object):
             progress_callback.emit(100)
         
     def run_dvc(self, **kwargs):
+        logger.debug("Starting DVC run")
         main_window = self.main_window
         input_file = self.input_file
         finish_fn = self.finish_fn
@@ -474,6 +478,7 @@ class DVC_runner(object):
         process.finished.connect(self.finished_run)
         process.started.connect(self.onStarted)
         if self.process_num == 0:
+            logger.debug("Creating progress window for the first process")
             main_window.create_progress_window("Running", 
                 "Running DVC code {}/{}".format(self.process_num +1, len(self.processes)), 100,
                 #lambda: cancel_run(main_window, process, run_succeeded)
@@ -494,18 +499,19 @@ class DVC_runner(object):
         pass
 
     def onCancel(self, process):
+        logger.debug("Cancelling run for process with state: {}".format(process.state()))
         main_window = self.main_window
         run_succeeded = self.run_succeeded
         state = process.state()
         # print ("Process state", state)
-        if state in [2,1]:
-            # print ("Cancelling run")
+        if state == QtCore.QProcess.ProcessState.Running:
+            logger.debug ("Cancelling run")
             process.kill()
             main_window.alert = QMessageBox(QMessageBox.NoIcon,"Cancelled","The run was cancelled.", QMessageBox.Ok)  
             main_window.alert.show()
             self.run_succeeded = False
-        elif state == 0:
-            print ("all OK, all processes ended")
+        else:
+            logger.info (f"Processes state: {state}")
 
     def finished_run(self, exitCode, exitStatus):
         main_window = self.main_window
@@ -518,11 +524,14 @@ class DVC_runner(object):
               .format(self.process_num + 1, required_runs,
                 len(self.processes), exitCode, exitStatus))
         
-        if exitStatus == 0:
+        logger.debug("Finished process {} with exit code {} and status {}".format(self.process_num + 
+                                                                                 1, exitCode, exitStatus))
+        logger.debug("Pre self.run_succeeded: {}".format(self.run_succeeded))
+        if exitCode == 0:
             self.run_succeeded = self.run_succeeded and True
         else:
             self.run_succeeded = self.run_succeeded and False
-            
+        logger.debug("Post self.run_succeeded: {}".format(self.run_succeeded))
         if self.process_num == required_runs-1:
             main_window.progress_window.close()
             if self.run_succeeded:

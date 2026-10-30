@@ -1,20 +1,33 @@
-name: idvc_dev
+name: idvc_qt6
 channels:
   - conda-forge
   - ccpi
 dependencies:
-    - eqt >=1.0.1
-    - openpyxl
-    - python
-    - numpy
-    - pandas
-    - pyside2
-    - scipy
-    - ccpi::ccpi-viewer >=25.0.0
-    - ccpi::ccpi-dvc >=22.0.0
-    - natsort
-    - docopt
-    - matplotlib
-    - openmp                # [osx]
-    - qdarkstyle
-    - vtk
+  - python =3.11
+  - pip
+  - numpy #=2.4.6
+  - scipy #=1.17.1
+  - pandas #=3.1.0
+  - matplotlib-base >3.8 #=3.11.2
+  - h5py #=3.16.0
+  - openpyxl
+  - pyyaml
+  - schema
+  - natsort
+  - docopt
+  - filetype
+  - qtpy #=2.4.3
+  - pyside6 #=6.11.2
+  - llvm-openmp
+  - ccpi::ccpi-dvc =25.0.0
+  - pip:
+    # Kitware wheels (not conda-forge vtk) to avoid Qt5/Qt6 conflicts on macOS.
+    # 9.7.x crashes with this app; 9.4.2 works.
+    - --extra-index-url https://wheels.vtk.org
+    - vtk==9.4.2
+    - git+https://github.com/TomographicImaging/eqt.git@remove-qdarkstyle
+    - git+https://github.com/TomographicImaging/CILViewer.git@macos-fix#subdirectory=Wrappers/Python
+    # dev tools
+    - pre-commit
+    - pysnooper
+

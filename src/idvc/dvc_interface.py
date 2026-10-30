@@ -16,11 +16,11 @@
 import os
 from openpyxl import load_workbook
 import sys
-from PySide2 import QtCore, QtGui, QtWidgets
-from PySide2.QtCore import (QByteArray, QRegExp, QSettings, QSize, Qt,
+from qtpy import QtCore, QtGui, QtWidgets
+from qtpy.QtCore import (QByteArray, QRegularExpression, QSettings, QSize, Qt,
                             QThreadPool)
-from PySide2.QtGui import QCloseEvent, QKeySequence, QRegExpValidator
-from PySide2.QtWidgets import (QAction, QCheckBox, QComboBox,
+from qtpy.QtGui import QCloseEvent, QKeySequence, QRegularExpressionValidator
+from qtpy.QtWidgets import (QAction, QCheckBox, QComboBox,
                                QDockWidget,
                                QDoubleSpinBox, QFileDialog, QFormLayout,
                                QFrame, QGroupBox, QLabel, QLineEdit,
@@ -82,9 +82,6 @@ from idvc.dvc_runner import DVC_runner
 
 from eqt.ui import FormDialog
 
-import qdarkstyle
-from qdarkstyle.dark.palette import DarkPalette
-from qdarkstyle.light.palette import LightPalette
 
 from idvc import version as gui_version
 
@@ -104,7 +101,8 @@ from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, logger=None):
+        self.logger = logger if logger is not None else logging.getLogger(__name__)
         """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
@@ -180,7 +178,7 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction(exit_action)
 
         # # Window dimensions
-        geometry = qApp.desktop().availableGeometry(self)
+        geometry = QtWidgets.QApplication.primaryScreen().availableGeometry()
 
         border = 50
         self.setGeometry(border, border, geometry.width()-2*border, geometry.height()-2*border)
@@ -219,13 +217,9 @@ class MainWindow(QMainWindow):
         return QtWidgets.QMenu(self) # Create a new menu
     
     def SetAppStyle(self):
-        if self.settings.value("dark_mode") is None:
-            self.settings.setValue("dark_mode", True)
-        if self.settings.value("dark_mode") == "true":
-            style = qdarkstyle.load_stylesheet(palette=DarkPalette)
-        else:
-            style = qdarkstyle.load_stylesheet(palette=LightPalette)
-        self.setStyleSheet(style)
+        # No stylesheet is applied: the application follows the system theme.
+        # The qdarkstyle stylesheet hid the VTK viewers with Qt6 on macOS.
+        pass
 
         
 #Setting up the session:
@@ -417,7 +411,6 @@ class MainWindow(QMainWindow):
         self.visualisation_setting_widgets = vs_widgets
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.viewer_settings_panel[1])
 
     def updateCoordinates(self):
         viewers_2D = [self.vis_widget_2D.frame.viewer]
@@ -640,7 +633,6 @@ class MainWindow(QMainWindow):
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea,dockWidget)
         
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.select_image_panel[1])
 
         self.si_widgets = si_widgets
     
@@ -792,7 +784,7 @@ class MainWindow(QMainWindow):
             pass
         if action_button is not None:
             msg.addButton(action_button, msg.ActionRole)
-        msg.exec_()
+        msg.exec()
 
     def view_image(self):
         """Called when the view image button is clicked in the first tab, or
@@ -973,6 +965,7 @@ class MainWindow(QMainWindow):
             self.select_image_dock.raise_() 
 
     def create_progress_window(self, title, text, max = 100, cancel = None):
+        self.logger.debug("Creating progress window with title: '{}' and text: '{}'".format(title, text))
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Dialog) 
         self.progress_window.setWindowTitle(title)
         
@@ -981,8 +974,10 @@ class MainWindow(QMainWindow):
         self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, True)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         self.progress_window.setAutoClose(True)
+        self.logger.debug(f"Cancel callback is {'set' if cancel is not None else 'not set'}")
         if cancel is None:
             self.progress_window.setCancelButton(None)
+
         else:
             self.progress_window.canceled.connect(cancel)
 
@@ -1313,7 +1308,6 @@ It is used as a global starting point and a translation reference."
         self.registration_parameters = rp
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.registration_panel[1])
 
     def createRegistrationViewer(self):
         # print("Create reg viewer")
@@ -2355,7 +2349,6 @@ It is used as a global starting point and a translation reference."
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, dockWidget)
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.mask_panel[1])
 
     def warnIfUnchecking(self):
         if not self.mask_parameters['extendMaskCheck'].isChecked() and self.mask_parameters['extendMaskCheck'].isEnabled():
@@ -3109,7 +3102,6 @@ File format allowed: 'roi', 'txt', 'csv, 'xlxs', 'inp'.")
 
         self.graphWidgetFL.setWidget(widgetno, QFormLayout.FieldRole, pc['pc_points_value'])
 
-        scroll_area_point_cloud.apply_qdarkstyle_to_buttons(self.dockWidget)
 
     def _generatePointCloudClicked(self):
         self.pointcloud_is = 'generated'
@@ -4267,8 +4259,8 @@ Try modifying the subvolume size before creating a new pointcloud, and make sure
         formLayout.setWidget(widgetno, QFormLayout.LabelRole, rdvc_widgets['name_label'])
 
         rdvc_widgets['name_entry'] = QLineEdit(self)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, rdvc_widgets['name_entry']) #need to check this
+        rx = QRegularExpression("[A-Za-z0-9]+")
+        validator = QRegularExpressionValidator(rx, rdvc_widgets['name_entry']) #need to check this
         rdvc_widgets['name_entry'].setValidator(validator)
         formLayout.setWidget(widgetno, QFormLayout.FieldRole, rdvc_widgets['name_entry'])
         widgetno += 1
@@ -4545,7 +4537,6 @@ This parameter has a strong effect on computation time, so be careful."
         self.rdvc_widgets = rdvc_widgets
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.run_dvc_panel[1])
 
     def _set_num_points_in_run_to_all(self):
         if hasattr(self, 'pc_no_points'):
@@ -5005,8 +4996,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         self.result_widgets = result_widgets
 
         scroll_area = dockWidget.widget()
-        scroll_area.apply_qdarkstyle_to_buttons(self.dvc_results_panel[1])
-     
+        
     def show_run_pcs(self):
         #show pointcloud files in list
         self.result_widgets['pc_entry'].clear()
@@ -5120,8 +5110,8 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
         qlabel.setText("Save session as:")
         qwidget = QtWidgets.QLineEdit(dialog.groupBox)
         qwidget.setClearButtonEnabled(True)
-        rx = QRegExp("[A-Za-z0-9]+")
-        validator = QRegExpValidator(rx, dialog) #need to check this
+        rx = QRegularExpression("[A-Za-z0-9]+")
+        validator = QRegularExpressionValidator(rx, dialog) #need to check this
         qwidget.setValidator(validator)
         # finally add to the form widget
         dialog.addWidget(qwidget, qlabel, 'session_name')
@@ -5530,7 +5520,7 @@ The dimensionality of the pointcloud can also be changed in the Point Cloud pane
             dialog.Cancel.clicked.connect(self.load_session_new)
             self.SessionSelectionWindow = dialog
             # Try to centre the load session window
-            # from PySide2.QtGui import QScreen
+            # from qtpy.QtGui import QScreen
             # geom = QScreen().availableGeometry()
             # print (geom)
             # centrex = geom.topRight().x() + geom.topLeft().x()
@@ -5896,7 +5886,7 @@ Please select the new location of the file, or move it back to where it was orig
         dialog.setWindowTitle(window_title)
         dialog.setDetailedText(detailed_text)
         dialog.setStandardButtons(QMessageBox.Ok)
-        retval = dialog.exec_()
+        retval = dialog.exec()
         return retval
 
 # Loading and Error windows:
