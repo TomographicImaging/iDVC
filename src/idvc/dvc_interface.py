@@ -101,7 +101,8 @@ from idvc.utils.point_cloud_io import extract_point_cloud_from_inp_file
 allowed_point_cloud_file_formats = ('.roi', '.txt', '.csv', '.xlsx', '.inp')
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, logger=None):
+        self.logger = logger if logger is not None else logging.getLogger(__name__)
         """Creates the menu bar: File, Settings, Help."""
         QMainWindow.__init__(self)
         
@@ -964,6 +965,7 @@ class MainWindow(QMainWindow):
             self.select_image_dock.raise_() 
 
     def create_progress_window(self, title, text, max = 100, cancel = None):
+        self.logger.debug("Creating progress window with title: '{}' and text: '{}'".format(title, text))
         self.progress_window = QProgressDialog(text, "Cancel", 0,max, self, QtCore.Qt.Dialog) 
         self.progress_window.setWindowTitle(title)
         
@@ -972,8 +974,10 @@ class MainWindow(QMainWindow):
         self.progress_window.setWindowFlag(QtCore.Qt.WindowCloseButtonHint, True)
         self.progress_window.setWindowFlag(QtCore.Qt.WindowMaximizeButtonHint, False)
         self.progress_window.setAutoClose(True)
+        self.logger.debug(f"Cancel callback is {'set' if cancel is not None else 'not set'}")
         if cancel is None:
             self.progress_window.setCancelButton(None)
+
         else:
             self.progress_window.canceled.connect(cancel)
 

@@ -3,7 +3,7 @@ import os, sys
 import logging
 import argparse
 
-
+logger = logging.getLogger(__name__)
 def main():
 
     parser = argparse.ArgumentParser(description='iDVC - Digital Volume Correlation Software')
@@ -14,7 +14,7 @@ def main():
     if args.log in ['debug', 'info', 'warning', 'error', 'critical']:
         level = eval(f'logging.{args.log.upper()}')
         logging.basicConfig(level=level)
-        logging.info(f"iDVC: Setting debugging level to {args.log.upper()}")
+        logger.info(f"iDVC: Setting debugging level to {args.log.upper()}")
     app = QtWidgets.QApplication([])
     # Set a global font for the application
     default_font_family = app.font().family() 
@@ -35,7 +35,7 @@ def main():
     vtk.vtkOutputWindow.SetInstance(err)
 
     from idvc.dvc_interface import MainWindow
-    window = MainWindow()
+    window = MainWindow(logger)
     
     window.show()
     splash.finish(window)
