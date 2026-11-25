@@ -15,7 +15,7 @@
 #   Author: Edoardo Pasca (UKRI-STFC)
 
 import os
-from distutils.core import setup
+from setuptools import setup
 import subprocess
 
 def version2pep440(version):
