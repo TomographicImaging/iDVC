@@ -13,7 +13,6 @@
 #   Author: Laura Murgatroyd (UKRI-STFC)
 #   Author: Edoardo Pasca (UKRI-STFC)
 
-import imghdr
 import os
 import shutil
 import sys
@@ -46,6 +45,14 @@ import logging
 import warnings
 
 logger = logging.getLogger(__name__)
+
+
+def is_tiff(path):
+    """True if the file starts with a TIFF header (what imghdr.what() checked
+    before the imghdr module was removed in Python 3.13)."""
+    with open(path, 'rb') as f:
+        return f.read(2) in (b'MM', b'II')
+
 # ImageCreator class
 
 
@@ -116,8 +123,8 @@ class ImageDataCreator(object):
             file_extension = os.path.splitext(self.image)[1]
         else:
             for image in self.image_files:
-                file_extension = imghdr.what(image)
-                if file_extension.lower() not in ['tiff', 'tif']:
+                file_extension = 'tiff' if is_tiff(image) else None
+                if file_extension is None:
                     error_title = "Read Error"
                     error_text = "Error reading file: ({filename})".format(
                         filename=image)

@@ -54,7 +54,6 @@ from ccpi.viewer.utils.error_handling import ErrorObserver
 from ccpi.viewer.utils.colormaps import CILColorMaps
 
 from natsort import natsorted
-import imghdr
 import glob
 
 # from vtk.numpy_interface import algorithms as algs
@@ -74,7 +73,7 @@ from functools import reduce
 
 import copy
 
-from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker, warningDialog
+from idvc.io import ImageDataCreator, getProgress, displayErrorDialogFromWorker, warningDialog, is_tiff
 
 from idvc.pointcloud_conversion import cilRegularPointCloudToPolyData, cilNumpyPointCloudToPolyData, PointCloudConverter
 
@@ -762,8 +761,7 @@ class MainWindow(QMainWindow):
             N = len(start_location)
             for i,fs in enumerate(zip(start_location, end_location)):
                 if N > 1:
-                    ftype = imghdr.what(fs[0])
-                    if ftype != 'tiff':
+                    if not is_tiff(fs[0]):
                         raise ValueError('File type not supported: {}'.format(fs[0]))
                 progress_callback.emit(i/N*100)
                 shutil.copyfile(fs[0], fs[1])
